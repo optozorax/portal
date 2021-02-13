@@ -70,8 +70,8 @@ vec3 mobiusO(in float u) {
 }
 
 vec3 mobiusD(in float u) {
-    return vec3(cos(u/2.)*cos(u), sin(u/2.), cos(u/2.)*sin(u))/2.;
-    // return vec3(0.1, 1., 0.);
+    return vec3(cos(u/2.)*cos(u), sin(u/2.), cos(u/2.)*sin(u))/2.; // mobius
+    // return vec3(0, 1., 0.); // cylinder
 }
 
 vec3 mobiusStep(in float u, in Ray r) {
@@ -277,7 +277,7 @@ vec3 intersectScene(Ray r) {
         p.repr.pos.z = -size;
         hitp = intersectPlane(r, p);
         if (hitp.hit && abs(hitp.u) < size && abs(hitp.v) < size && hitp.t < current_t) {
-            current_color = addNormalToColor(gridColor(vec3(0.6, 0.2, 0.2), vec2(hitp.u, hitp.v)), hitp.n, r.d);
+            current_color = addNormalToColor(gridColor(vec3(0.6, 0.2, 0.6), vec2(hitp.u, hitp.v)), hitp.n, r.d);
             current_t = hitp.t;
         }
 
@@ -295,7 +295,7 @@ vec3 intersectScene(Ray r) {
         p.repr.pos.x = -size;
         hitp = intersectPlane(r, p);
         if (hitp.hit && abs(hitp.u) < size && abs(hitp.v) < size && hitp.t < current_t) {
-            current_color = addNormalToColor(gridColor(vec3(0.2, 0.6, 0.2), vec2(hitp.u, hitp.v)), hitp.n, r.d);
+            current_color = addNormalToColor(gridColor(vec3(0.6, 0.6, 0.2), vec2(hitp.u, hitp.v)), hitp.n, r.d);
             current_t = hitp.t;
         }
 
@@ -327,8 +327,8 @@ vec3 intersectScene(Ray r) {
             // float coef = length(mobius_d1(0., hit.u)) / length(mobius_d1(hit.v, hit.u));
 
             if (abs(hit.v) > 0.90) {
-                return addNormalToColor(gridColor(vec3(0.6, 0.6, 0.6), vec2(hit.u, hit.v)), hit.n, r.d);
-                // return vec3(0., 0., 1.);
+                // return addNormalToColor(gridColor(vec3(0.6, 0.6, 0.6), vec2(hit.u, hit.v)), hit.n, r.d);
+                return vec3(0., 0., 1.);
             } else {
                 vec3 i = normalize(mobiusD(hit.u));
                 vec3 j = normalize(vec3(-sin(hit.u), 0., cos(hit.u)));
