@@ -1,8 +1,12 @@
+use std::f32::consts::PI;
 use macroquad::prelude::*;
 use macroquad_profiler as profiler;
+use glam::Mat4;
 
-#[macroquad::main("MACROQUAD")]
+#[macroquad::main("Mobius portal")]
 async fn main() {
+    let texture: Texture2D = load_texture("watermark.png").await;
+
     let lens_material = load_material(
         LENS_VERTEX_SHADER,
         LENS_FRAGMENT_SHADER,
@@ -10,6 +14,11 @@ async fn main() {
             uniforms: vec![
                 ("angles".to_owned(), UniformType::Float3),
                 ("resolution".to_owned(), UniformType::Float2),
+                ("add_gray_after_teleportation".to_owned(), UniformType::Float1),
+                ("first".to_owned(), UniformType::Mat4),
+                ("first_inv".to_owned(), UniformType::Mat4),
+                ("second".to_owned(), UniformType::Mat4),
+                ("second_inv".to_owned(), UniformType::Mat4),
             ],
             ..Default::default()
         },
@@ -18,7 +27,7 @@ async fn main() {
 
     let mouse_sensitivity = 100.;
 
-    let mut angles: (f32, f32, f32) = (20., 30., 3.);
+    let mut angles: (f32, f32, f32) = (180., 0., 3.5);
     let angles_min: (f32, f32, f32) = (-f32::INFINITY, -89., 0.);
     let angles_max: (f32, f32, f32) = (f32::INFINITY, 89., 100.);
 
@@ -26,7 +35,25 @@ async fn main() {
 
     const SCALE_FACTOR: f32 = 1.1;
 
+    let mut first = Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(-Vec3::new(0., 0., -2.));
+    let second = Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(-Vec3::new(0., 0., 2.));
+
+    let mut first_inv = first.inverse() * second;
+    let mut second_inv = second.inverse() * first;
+
     loop {
+        
+        if is_key_down(KeyCode::A) {
+            first = Mat4::from_rotation_y(PI) * Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(-Vec3::new(0., 0., -2.));
+            first_inv = first.inverse() * second;
+            second_inv = second.inverse() * first;
+        }
+        if is_key_down(KeyCode::B) {
+            first = Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(-Vec3::new(0., 0., -2.));
+            first_inv = first.inverse() * second;
+            second_inv = second.inverse() * first;
+        }
+
         let mouse_pos: Vec2 = mouse_position_local();
 
         if is_mouse_button_down(MouseButton::Left) {
@@ -46,9 +73,23 @@ async fn main() {
 
         lens_material.set_uniform("angles", angles);
         lens_material.set_uniform("resolution", (screen_width(), screen_height()));
+        lens_material.set_uniform("add_gray_after_teleportation", 1.0f32);
+        lens_material.set_uniform("first", first);
+        lens_material.set_uniform("second", second);
+        lens_material.set_uniform("first_inv", first_inv);
+        lens_material.set_uniform("second_inv", second_inv);
 
         gl_use_material(lens_material);
-        draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
+        draw_texture_ex(
+            texture,
+            0.,
+            0.,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(screen_width(), screen_height())),
+                ..Default::default()
+            },
+        );
         gl_use_default_material();
 
         previous_mouse = mouse_pos;
