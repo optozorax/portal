@@ -3,6 +3,12 @@ use macroquad::prelude::*;
 use macroquad_profiler as profiler;
 use glam::Mat4;
 
+fn draw_multiline_text(text: &str, x: f32, y: f32, font_size: f32, color: Color) {
+    for (pos, text) in text.split('\n').enumerate() {
+        draw_text(text, x, y + (pos as f32) * font_size, font_size, color);
+    }
+}
+
 #[macroquad::main("Mobius portal")]
 async fn main() {
     let texture: Texture2D = load_texture("watermark.png").await;
@@ -19,6 +25,7 @@ async fn main() {
                 ("first_inv".to_owned(), UniformType::Mat4),
                 ("second".to_owned(), UniformType::Mat4),
                 ("second_inv".to_owned(), UniformType::Mat4),
+                ("teleport_light".to_owned(), UniformType::Int1),
             ],
             ..Default::default()
         },
@@ -27,11 +34,17 @@ async fn main() {
 
     let mouse_sensitivity = 100.;
 
+    let mut rotation_angle = 0.0f32;
+
     let mut angles: (f32, f32, f32) = (180., 0., 3.5);
     let angles_min: (f32, f32, f32) = (-f32::INFINITY, -89., 0.);
     let angles_max: (f32, f32, f32) = (f32::INFINITY, 89., 100.);
 
     let mut previous_mouse = Vec2::default();
+
+    let mut add_gray_after_teleportation = 1.0f32;
+
+    let mut teleport_light = false;
 
     const SCALE_FACTOR: f32 = 1.1;
 
@@ -41,17 +54,32 @@ async fn main() {
     let mut first_inv = first.inverse() * second;
     let mut second_inv = second.inverse() * first;
 
+    let mut show_help = true;
+
     loop {
-        
+        if is_key_pressed(KeyCode::H) {
+            show_help = !show_help;
+        }
+        if is_key_pressed(KeyCode::T) {
+            teleport_light = !teleport_light;
+        }
         if is_key_down(KeyCode::A) {
-            first = Mat4::from_rotation_y(PI) * Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(-Vec3::new(0., 0., -2.));
+            rotation_angle = clamp(rotation_angle + 1./180.*PI, 0., PI);
+            first = Mat4::from_rotation_y(rotation_angle) * Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(-Vec3::new(0., 0., -2.));
             first_inv = first.inverse() * second;
             second_inv = second.inverse() * first;
         }
         if is_key_down(KeyCode::B) {
-            first = Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(-Vec3::new(0., 0., -2.));
+            rotation_angle = clamp(rotation_angle - 1./180.*PI, 0., PI);
+            first = Mat4::from_rotation_y(rotation_angle) * Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(-Vec3::new(0., 0., -2.));
             first_inv = first.inverse() * second;
             second_inv = second.inverse() * first;
+        }
+        if is_key_down(KeyCode::X) {
+            add_gray_after_teleportation = clamp(add_gray_after_teleportation - 0.01, 0., 1.);
+        }
+        if is_key_down(KeyCode::Y) {
+            add_gray_after_teleportation = clamp(add_gray_after_teleportation + 0.01, 0., 1.);
         }
 
         let mouse_pos: Vec2 = mouse_position_local();
@@ -73,11 +101,12 @@ async fn main() {
 
         lens_material.set_uniform("angles", angles);
         lens_material.set_uniform("resolution", (screen_width(), screen_height()));
-        lens_material.set_uniform("add_gray_after_teleportation", 1.0f32);
+        lens_material.set_uniform("add_gray_after_teleportation", add_gray_after_teleportation);
         lens_material.set_uniform("first", first);
         lens_material.set_uniform("second", second);
         lens_material.set_uniform("first_inv", first_inv);
         lens_material.set_uniform("second_inv", second_inv);
+        lens_material.set_uniform("teleport_light", teleport_light as i32);
 
         gl_use_material(lens_material);
         draw_texture_ex(
@@ -92,13 +121,22 @@ async fn main() {
         );
         gl_use_default_material();
 
+        if show_help {
+            draw_multiline_text(
+                "h - hide this message\nt - enable texture on Mobius strip\na/b - rotate blue portal\nx/y - make teleported rays darker",
+                5.0,
+                15.0,
+                20.0,
+                BLACK,
+            );
+        }
+
         previous_mouse = mouse_pos;
 
-        set_default_camera();
-
-        profiler::profiler(profiler::ProfilerParams {
-            fps_counter_pos: vec2(10.0, 10.0),
-        });
+        // set_default_camera();
+        // profiler::profiler(profiler::ProfilerParams {
+        //     fps_counter_pos: vec2(10.0, 10.0),
+        // });
 
         next_frame().await
     }
