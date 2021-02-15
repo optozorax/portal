@@ -1,3 +1,11 @@
-# Портал в форме ленты Мёбиуса
+# Portals in form of a Mobius strip
 
-![](img/screenshot.png)
+Online demo: https://optozorax.github.io/mobius_portal/
+
+If you have a low FPS, you can reduce window size of your browser.
+
+![](img/1.png)
+
+![](img/2.png)
+
+![](img/3.png)
