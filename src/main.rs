@@ -55,6 +55,7 @@ async fn main() {
     let mut second_inv = second.inverse() * first;
 
     let mut show_help = true;
+    let mut show_profiler = false;
 
     loop {
         if is_key_pressed(KeyCode::H) {
@@ -62,6 +63,9 @@ async fn main() {
         }
         if is_key_pressed(KeyCode::T) {
             teleport_light = !teleport_light;
+        }
+        if is_key_pressed(KeyCode::P) {
+            show_profiler = !show_profiler;
         }
         if is_key_down(KeyCode::A) {
             rotation_angle = clamp(rotation_angle + 1./180.*PI, 0., PI);
@@ -123,7 +127,7 @@ async fn main() {
 
         if show_help {
             draw_multiline_text(
-                "h - hide this message\nt - enable texture on Mobius strip\na/b - rotate blue portal\nx/y - make teleported rays darker",
+                "h - hide this message\nt - enable texture on Mobius strip\na/b - rotate blue portal\nx/y - make teleported rays darker\np - enable profiler",
                 5.0,
                 15.0,
                 20.0,
@@ -133,10 +137,12 @@ async fn main() {
 
         previous_mouse = mouse_pos;
 
-        // set_default_camera();
-        // profiler::profiler(profiler::ProfilerParams {
-        //     fps_counter_pos: vec2(10.0, 10.0),
-        // });
+        if show_profiler {
+            set_default_camera();
+            profiler::profiler(profiler::ProfilerParams {
+                fps_counter_pos: vec2(10.0, 10.0),
+            });
+        }
 
         next_frame().await
     }

@@ -112,9 +112,13 @@ vec3 unprojectCrd(crd3 crd, vec3 d) {
 }
 
 vec2 twoLinesNearestPoints(Ray a, Ray b) {
-    crd3 crd = crd3(a.d, b.d, cross(a.d, b.d), a.o);
-    vec3 pos = projectCrd(crd, b.o);
-    return vec2(pos.x, -pos.y);
+    vec3 n = cross(a.d, b.d);
+    vec3 n1 = cross(a.d, n);
+    vec3 n2 = cross(b.d, n);
+    return vec2(
+        dot(b.o-a.o, n2)/dot(a.d, n2),
+        dot(a.o-b.o, n1)/dot(b.d, n1)
+    );
 }
 
 vec3 mobiusO(float u) {
@@ -260,21 +264,28 @@ SearchResult findBest(Ray r) {
     if (best.t < 0.) {
         return best;
     }
-    for (int i = 0; i < 2; i++) {
-        float u = float(i*2 + 1)/16. * 2. * PI;
-        best = updateBestApprox(best, findBestApprox(u, r, 0.0001, best));
-    }
+    best = updateBestApprox(best, findBestApprox(float(8 - 1)/16. * 2. * PI, r, 0.0001, best));
+    best = updateBestApprox(best, findBestApprox(float(8 + 1)/16. * 2. * PI, r, 0.0001, best));
     return best;
 }
 
+bool intersect_mobius_sphere(Ray r) {
+    vec3 op = -r.o;
+    float b = dot(op, r.d);
+    float det = b * b - dot(op, op) + 2.4055; // 1.55²
+    return det >= 0.;
+}
+
 MobiusIntersect intersectMobius2(Ray r) {
-    SearchResult best = findBest(r);
-    if (best.t >= 0.) {
-        vec3 normal = normalizeNormal(cross(mobius_d1(best.v, best.u), mobius_d2(best.v, best.u)), r);
-        return MobiusIntersect(true, best.t, best.u, best.v, normal);
-    } else {
-        return MobiusIntersect(false, 0., 0., 0., vec3(0.));
+    if (intersect_mobius_sphere(r)) {
+        SearchResult best = findBest(r);
+        if (best.t >= 0.) {
+            vec3 normal = normalizeNormal(cross(mobius_d1(best.v, best.u), mobius_d2(best.v, best.u)), r);
+            return MobiusIntersect(true, best.t, best.u, best.v, normal);
+        }
     }
+
+    return MobiusIntersect(false, 0., 0., 0., vec3(0.));
 }
 
 struct Plane {
