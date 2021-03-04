@@ -413,7 +413,15 @@ impl UniformStruct for Window {
     }
 }
 
-#[macroquad::main("Portal visualization")]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Portal visualization".to_owned(),
+        high_dpi: true,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     let mut window = Window::new().await;
 
@@ -435,11 +443,41 @@ async fn main() {
         std::process::exit(1)
     });
 
+    let mut texture = load_texture_from_image(&get_screen_data());
+    let mut w = screen_width();
+    let mut h = screen_height();
+    let mut image_size_changed = true;
+
     loop {
-        window.process_mouse_and_keys();
-        window.set_uniforms(lens_material);
-        window.draw(lens_material);
-        next_frame().await
+        clear_background(BLACK);
+
+        if (screen_width() - w).abs() > 0.5 {
+            w = screen_width();
+            image_size_changed = true;
+        }
+        if (screen_height() - h).abs() > 0.5 {
+            h = screen_height();
+            image_size_changed = true;
+        }
+        if image_size_changed {
+            texture = load_texture_from_image(&get_screen_data());
+        }
+
+        if window.process_mouse_and_keys() || image_size_changed {
+            window.set_uniforms(lens_material);
+            window.draw(lens_material);
+            set_default_camera();
+            texture.grab_screen();
+            image_size_changed = false;
+        } else {
+            draw_texture_ex(texture, 0., 0., WHITE, DrawTextureParams {
+                dest_size: Some(Vec2::new(screen_width(), screen_height())),
+                flip_y: true,
+                ..Default::default()
+            });
+        }
+
+        next_frame().await;
     }
 }
 
