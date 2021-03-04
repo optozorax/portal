@@ -1,36 +1,20 @@
 #version 100
-
 precision highp float;
 
-varying vec2 uv;
-varying vec2 uv_screen;
-uniform vec3 angles;
-
-uniform mat4 first;
-uniform mat4 first_inv;
-uniform mat4 second;
-uniform mat4 second_inv;
-
-uniform float add_gray_after_teleportation;
-
-uniform int teleport_light;
-
-uniform sampler2D Texture;
+// ---------------------------------------------------------------------------
+// Utils ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 #define PI acos(-1.)
+#define PI2 (acos(-1.) / 2.0)
 
 struct Ray
 {
-    vec3 o;     // origin
-    vec3 d;     // direction
+    vec3 o; // origin
+    vec3 d; // direction
 };
 
-struct crd3 {
-    vec3 i;
-    vec3 j;
-    vec3 k;
-    vec3 pos;
-};
+const Ray no_ray = Ray(vec3(0.), vec3(0.));
 
 mat3 transpose(mat3 matrix) {
     vec3 row0 = matrix[0];
@@ -74,7 +58,13 @@ mat3 inverse(mat3 matrix) {
     return (1.0 / dot(row0, minors0)) * adj;
 }
 
-const crd3 crdDefault = crd3(vec3(1., 0., 0.), vec3(0., 1., 0.), vec3(0., 0., 1.), vec3(0.));
+vec3 mul_dir(mat4 matrix, vec3 vec) {
+    return (matrix * vec4(vec, 0.)).xyz;
+}
+
+vec3 mul_pos(mat4 matrix, vec3 vec) {
+    return (matrix * vec4(vec, 1.)).xyz;
+}
 
 float project(vec3 a, vec3 to) {
     return dot(a, to) / dot(to, to);
@@ -84,34 +74,7 @@ vec3 projection(vec3 a, vec3 to) {
     return to * project(a, to);
 }
 
-crd3 orthonormalize(crd3 a) {
-    a.i = normalize(a.i);
-    a.j = normalize(a.j);
-    a.k = normalize(a.k);
-    a.j = a.j - projection(a.j, a.i);
-    a.k = a.k - projection(a.k, a.i) - projection(a.k, a.j);
-    return a;
-}
-
-vec3 projectDir(crd3 crd, vec3 d) {
-    // i*result.x + j*result.y + k*result.z = d
-    return inverse(mat3(crd.i, crd.j, crd.k))*d;
-}
-
-vec3 projectCrd(crd3 crd, vec3 o) {
-    // i*result.x + j*result.y + k*result.z + pos = o
-    return projectDir(crd, o-crd.pos);
-}
-
-vec3 unprojectDir(crd3 crd, vec3 d) {
-    return crd.i * d.x + crd.j * d.y + crd.k * d.z;
-}
-
-vec3 unprojectCrd(crd3 crd, vec3 d) {
-    return crd.i * d.x + crd.j * d.y + crd.k * d.z + crd.pos;
-}
-
-vec2 twoLinesNearestPoints(Ray a, Ray b) {
+vec2 two_lines_nearest_points(Ray a, Ray b) {
     vec3 n = cross(a.d, b.d);
     vec3 n1 = cross(a.d, n);
     vec3 n2 = cross(b.d, n);
@@ -121,20 +84,79 @@ vec2 twoLinesNearestPoints(Ray a, Ray b) {
     );
 }
 
-vec3 mobiusO(float u) {
+float clamp_mod(float a, float max) {
+    a = max + mod(a, max);
+    if (a < 0.) {
+        a += max;
+    }
+    if (a > max) {
+        a -= max;
+    }
+    return a;
+}
+
+float clamp_angle(float a) {
+    return clamp_mod(a, 2. * PI);
+}
+
+vec3 normalize_normal(vec3 normal, Ray r) {
+    normal = normalize(normal);
+    if (dot(normal, r.d) > 0.) {
+        normal *= -1.;
+    }
+    return normal;
+}
+
+vec3 color(float r, float g, float b) {
+    return vec3(r*r, g*g, b*b);
+}
+
+float deg2rad(float deg) {
+    return deg/180. * PI;
+}
+
+// ---------------------------------------------------------------------------
+// Ray tracing of other objects ----------------------------------------------
+// ---------------------------------------------------------------------------
+
+struct SurfaceIntersect {
+    bool hit;
+    float t;
+    float u;
+    float v;
+    vec3 n;
+};
+
+const SurfaceIntersect no_intersect = SurfaceIntersect(false, 1e10, 0., 0., vec3(0.));
+
+SurfaceIntersect plane_intersect(Ray r, mat4 plane, vec3 normal) {
+    vec3 ro = (plane * vec4(r.o, 1.)).xyz;
+    vec3 rd = (plane * vec4(r.d, 0.)).xyz;
+
+    float t = -ro.z/rd.z;
+    if (t < 0.) {
+        return no_intersect;
+    } else {
+        vec3 pos = ro + rd * t; 
+        return SurfaceIntersect(true, t, pos.x, pos.y, normalize_normal(normal, r));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Mobius strip calculation --------------------------------------------------
+// ---------------------------------------------------------------------------
+
+vec3 mobius_o(float u) {
     return vec3(cos(u), 0, sin(u));
 }
 
-vec3 mobiusD(float u) {
+vec3 mobius_d(float u) {
     return vec3(cos(u/2.)*cos(u), sin(u/2.), cos(u/2.)*sin(u))/2.; // mobius
 }
 
-vec3 mobiusStep(float u, Ray r) {
-    vec3 o = mobiusO(u);
-    vec3 d = mobiusD(u);
-    
-    Ray l = Ray(o, d);
-    vec2 ts = twoLinesNearestPoints(l, r);
+vec3 mobius_step(float u, Ray r) {
+    Ray l = Ray(mobius_o(u), mobius_d(u));
+    vec2 ts = two_lines_nearest_points(l, r);
 
     vec3 lnearest = l.o + l.d * ts.x;
     vec3 rnearest = r.o + r.d * ts.y;
@@ -176,46 +198,23 @@ vec3 mobius_d2(float v, float u) {
     );
 }
 
-struct MobiusIntersect {
-    bool hit;
-    float t;
-    float u;
-    float v;
-    vec3 n;
-};
-
-float clampmod(float a, float max) {
-    a = max + mod(a, max);
-    if (a < 0.) {
-        a += max;
-    }
-    if (a > max) {
-        a -= max;
-    }
-    return a;
-}
-
-float clampangle(float a) {
-    return clampmod(a, 2. * PI);
-}
-
 struct SearchResult {
     float t;
     float u;
     float v;
 };
 
-SearchResult findBestApprox(float u, Ray r, float eps_newton, SearchResult best) {
+SearchResult mobius_best_approx(float u, Ray r, float eps_newton, SearchResult best) {
     float eps_der = 0.0001;
 
-    vec3 step = mobiusStep(u, r);
+    vec3 step = mobius_step(u, r);
     for (int k = 0; k < 10; k++) {
         if (step.x < eps_newton) {
             break;
         }
-        float du = -step.x/(mobiusStep(u + eps_der, r).x - step.x)*eps_der;
-        u = clampangle(u + du);
-        step = mobiusStep(u, r);
+        float du = -step.x/(mobius_step(u + eps_der, r).x - step.x)*eps_der;
+        u = clamp_angle(u + du);
+        step = mobius_step(u, r);
         if (best.t > 0. && abs(u-best.u) < 0.01) {
             return SearchResult(-1., 0., 0.);
         }
@@ -228,7 +227,7 @@ SearchResult findBestApprox(float u, Ray r, float eps_newton, SearchResult best)
     }
 }
 
-SearchResult updateBestApprox(SearchResult best, SearchResult current) {
+SearchResult update_best_approx(SearchResult best, SearchResult current) {
     if (current.t > 0. && (current.v > -1. && current.v < 1.)) {
         if (best.t < 0.) {
             best = current;
@@ -241,31 +240,23 @@ SearchResult updateBestApprox(SearchResult best, SearchResult current) {
     return best;
 }
 
-vec3 normalizeNormal(vec3 normal, Ray r) {
-    normal = normalize(normal);
-    if (dot(normal, r.d) > 0.) {
-        normal *= -1.;
-    }
-    return normal;
-}
-
-SearchResult findBest(Ray r) {
+SearchResult mobius_find_best(Ray r) {
     SearchResult best = SearchResult(-1., 0., 0.);
-    best = updateBestApprox(best, findBestApprox(0., r, 0.0001, best));
-    best = updateBestApprox(best, findBestApprox(PI, r, 0.0001, best));
+    best = update_best_approx(best, mobius_best_approx(0., r, 0.0001, best));
+    best = update_best_approx(best, mobius_best_approx(PI, r, 0.0001, best));
     for (int i = 0; i < 2; i++) {
         float u = float(i*2 + 1)/4. * 2. * PI;
-        best = updateBestApprox(best, findBestApprox(u, r, 0.0001, best));
+        best = update_best_approx(best, mobius_best_approx(u, r, 0.0001, best));
     }
     for (int i = 0; i < 4; i++) {
         float u = float(i*2 + 1)/8. * 2. * PI;
-        best = updateBestApprox(best, findBestApprox(u, r, 0.0001, best));
+        best = update_best_approx(best, mobius_best_approx(u, r, 0.0001, best));
     }
     if (best.t < 0.) {
         return best;
     }
-    best = updateBestApprox(best, findBestApprox(float(8 - 1)/16. * 2. * PI, r, 0.0001, best));
-    best = updateBestApprox(best, findBestApprox(float(8 + 1)/16. * 2. * PI, r, 0.0001, best));
+    best = update_best_approx(best, mobius_best_approx(float(8 - 1)/16. * 2. * PI, r, 0.0001, best));
+    best = update_best_approx(best, mobius_best_approx(float(8 + 1)/16. * 2. * PI, r, 0.0001, best));
     return best;
 }
 
@@ -276,58 +267,29 @@ bool intersect_mobius_sphere(Ray r) {
     return det >= 0.;
 }
 
-MobiusIntersect intersectMobius2(Ray r) {
+SurfaceIntersect mobius_intersect(Ray r) {
     if (intersect_mobius_sphere(r)) {
-        SearchResult best = findBest(r);
+        SearchResult best = mobius_find_best(r);
         if (best.t >= 0.) {
-            vec3 normal = normalizeNormal(cross(mobius_d1(best.v, best.u), mobius_d2(best.v, best.u)), r);
-            return MobiusIntersect(true, best.t, best.u, best.v, normal);
+            vec3 normal = normalize_normal(cross(mobius_d1(best.v, best.u), mobius_d2(best.v, best.u)), r);
+            return SurfaceIntersect(true, best.t, best.u, best.v, normal);
         }
     }
 
-    return MobiusIntersect(false, 0., 0., 0., vec3(0.));
+    return no_intersect;
 }
 
-struct Plane {
-    crd3 repr;
-};
+// ---------------------------------------------------------------------------
+// Material utils ------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
-struct PlaneIntersect {
-    bool hit;
-    float t;
-    float u;
-    float v;
-    vec3 n;
-};
-
-vec3 color(float r, float g, float b) {
-    return vec3(r*r, g*g, b*b);
-}
-
-PlaneIntersect intersectPlane(Ray r, Plane p) {
-    vec3 ro = projectCrd(p.repr, r.o);
-    vec3 rd = projectDir(p.repr, r.d);
-
-    float t = -ro.z/rd.z;
-    if (t < 0.) {
-        return PlaneIntersect(false, 0., 0., 0., vec3(0.));
-    } else {
-        vec3 pos = ro + rd * t; 
-        return PlaneIntersect(true, t, pos.x, pos.y, normalizeNormal(p.repr.k, r));
-    }
-}
-
-float deg2rad(float deg) {
-    return deg/180. * PI;
-}
-
-vec3 addNormalToColor(vec3 color, vec3 normal, vec3 direction) {
+vec3 add_normal_to_color(vec3 color, vec3 normal, vec3 direction) {
     const float not_dark_count = 0.4;
     color *= (abs(dot(normalize(direction), normalize(normal))) + not_dark_count) / (1. + not_dark_count);
     return color;
 }
 
-vec3 gridColor(vec3 start, vec2 uv) {
+vec3 grid_color(vec3 start, vec2 uv) {
     uv = uv - vec2(0.125, 0.125);
     const float fr = 3.14159*8.0;
     vec3 col = start;
@@ -338,167 +300,220 @@ vec3 gridColor(vec3 start, vec2 uv) {
     return col;
 }
 
-vec3 mulDir(mat4 matrix, vec3 vec) {
-    return (matrix * vec4(vec, 0.)).xyz;
-}
+// ---------------------------------------------------------------------------
+// Scene intersection --------------------------------------------------------
+// ---------------------------------------------------------------------------
 
-vec3 mulCrd(mat4 matrix, vec3 vec) {
-    return (matrix * vec4(vec, 1.)).xyz;
-}
+struct SceneIntersection {
+    int material;
+    SurfaceIntersect hit;
+};
 
-vec3 intersectScene(Ray r) {
-    Plane p = Plane(crdDefault);
+uniform mat4 mobius_mat_first;
+uniform mat4 mobius_mat_first_teleport;
+uniform mat4 mobius_mat_second;
+uniform mat4 mobius_mat_second_teleport;
+
+uniform mat4 plane1;
+uniform mat4 plane1_inv;
+uniform mat4 plane2;
+uniform mat4 plane2_inv;
+uniform mat4 plane3;
+uniform mat4 plane3_inv;
+uniform mat4 plane4;
+uniform mat4 plane4_inv;
+uniform mat4 plane5;
+uniform mat4 plane5_inv;
+uniform mat4 plane6;
+uniform mat4 plane6_inv;
+
+uniform int teleport_light;
+
+SceneIntersection scene_intersect(Ray r) {
+    SceneIntersection i = SceneIntersection(0, no_intersect);
+    SurfaceIntersect hit = no_intersect;
+
+    // Cube room -------------------------------------------------------------
     float size = 4.5;
     float scale = 1./(size * 2.);
 
-    PlaneIntersect hitp;
-
-    float gray = 1.;
-    
-    for (int i = 0; i < 100; ++i) {
-        float current_t = 1e10;
-        vec3 current_color = color(0.6, 0.6, 0.6);
-
-        p.repr.pos.z = size;
-        hitp = intersectPlane(r, p);
-        if (hitp.hit && abs(hitp.u) < size && abs(hitp.v) < size && hitp.t < current_t) {
-            current_color = addNormalToColor(gridColor(color(0.6, 0.2, 0.2), vec2(hitp.u, hitp.v) * scale), hitp.n, r.d);
-            current_t = hitp.t;
+    hit = plane_intersect(r, plane1_inv, plane1[2].xyz);
+    if (hit.hit && hit.t < i.hit.t) {
+        if (abs(hit.u) < size && abs(hit.v) < size) {
+            i.hit = hit;
+            i.material = 0;
         }
-
-        p.repr.pos.z = -size;
-        hitp = intersectPlane(r, p);
-        if (hitp.hit && abs(hitp.u) < size && abs(hitp.v) < size && hitp.t < current_t) {
-            current_color = addNormalToColor(gridColor(color(0.6, 0.2, 0.6), vec2(hitp.u, hitp.v) * scale), hitp.n, r.d);
-            current_t = hitp.t;
-        }
-
-        p.repr.pos.z = 0.;
-        p.repr.i = crdDefault.k;
-        p.repr.k = crdDefault.i;
-
-        p.repr.pos.x = size;
-        hitp = intersectPlane(r, p);
-        if (hitp.hit && abs(hitp.u) < size && abs(hitp.v) < size && hitp.t < current_t) {
-            current_color = color(0.2, 0.6, 0.2);
-            vec3 new_color = gridColor(current_color, vec2(hitp.u, hitp.v) * scale);
-            current_color = (current_color*2. + new_color)/3.;
-            current_color = addNormalToColor(current_color, hitp.n, r.d);
-            current_color *= texture2D(Texture, (vec2(-hitp.u, -hitp.v) + vec2(size, size))/(size * 2.)).rgb;
-            current_t = hitp.t;
-        }
-
-        p.repr.pos.x = -size;
-        hitp = intersectPlane(r, p);
-        if (hitp.hit && abs(hitp.u) < size && abs(hitp.v) < size && hitp.t < current_t) {
-            current_color = addNormalToColor(gridColor(color(0.6, 0.6, 0.2), vec2(hitp.u, hitp.v) * scale), hitp.n, r.d);
-            current_t = hitp.t;
-        }
-
-        p.repr.pos.x = 0.;
-        p.repr.i = crdDefault.i;
-        p.repr.j = crdDefault.k;
-        p.repr.k = crdDefault.j;
-
-        p.repr.pos.y = size;
-        hitp = intersectPlane(r, p);
-        if (hitp.hit && abs(hitp.u) < size && abs(hitp.v) < size && hitp.t < current_t) {
-            current_color = addNormalToColor(gridColor(color(0.6, 0.6, 0.6), vec2(hitp.u, hitp.v) * scale), hitp.n, r.d);
-            current_t = hitp.t;
-        }
-
-        p.repr.pos.y = -size;
-        hitp = intersectPlane(r, p);
-        if (hitp.hit && abs(hitp.u) < size && abs(hitp.v) < size && hitp.t < current_t) {
-            current_color = addNormalToColor(gridColor(color(0.2, 0.2, 0.6), vec2(hitp.u, hitp.v) * scale), hitp.n, r.d);
-            current_t = hitp.t;
-        }
-
-        p.repr.pos = vec3(0., 0., 0.);
-        p.repr.j = crdDefault.j;
-        p.repr.k = crdDefault.k;
-
-        MobiusIntersect hit = intersectMobius2(Ray(mulCrd(first, r.o), mulDir(first, r.d)));
-        MobiusIntersect hit2 = intersectMobius2(Ray(mulCrd(second, r.o), mulDir(second, r.d)));
-
-        int portal_to_process = 0;
-
-        if (hit.hit && hit2.hit && min(hit.t, hit2.t) < current_t) {
-            if (hit.t < hit2.t) {
-                portal_to_process = 1;
-            } else {
-                portal_to_process = 2;
-            }
-        } else if (hit.hit && hit.t < current_t) {
-            portal_to_process = 1;
-        } else if (hit2.hit && hit2.t < current_t) {
-            portal_to_process = 2;
-        } else {
-            portal_to_process = 0;
-        }
-
-        if (portal_to_process == 1) {
-            current_t = hit.t;
-            if (abs(hit.v) > 0.80) {
-                current_color = addNormalToColor(color(0.1, 0.15, 1.), hit.n, r.d);
-            } else {
-                if (teleport_light == 1) {
-                    current_color = gridColor(color(0.6, 0.6, 0.6), vec2(hit.u, hit.v));
-                } else {
-                    r.o += r.d * hit.t;
-                    r.o += r.d * 0.01;
-
-                    r.o = mulCrd(second_inv, r.o);
-                    r.d = mulDir(second_inv, r.d);
-
-                    gray *= add_gray_after_teleportation;
-                    continue;
-                }
-            }
-        }
-
-        if (portal_to_process == 2) {
-            current_t = hit2.t;
-            if (abs(hit2.v) > 0.80) {
-                current_color = addNormalToColor(color(1., 0.55, 0.15), hit2.n, r.d);
-            } else {
-                if (teleport_light == 1) {
-                    current_color = gridColor(color(0.6, 0.6, 0.6), vec2(hit2.u, hit2.v));
-                } else {
-                    r.o += r.d * hit2.t;
-                    r.o += r.d * 0.01;
-
-                    r.o = mulCrd(first_inv, r.o);
-                    r.d = mulDir(first_inv, r.d);
-
-                    gray *= add_gray_after_teleportation;
-                    continue;
-                }
-            }
-        }
-
-        return current_color * gray;
     }
-    return color(0., 1., 1.);
+
+    hit = plane_intersect(r, plane2_inv, plane2[2].xyz);
+    if (hit.hit && hit.t < i.hit.t) {
+        if (abs(hit.u) < size && abs(hit.v) < size) {
+            i.hit = hit;
+            i.material = 1;
+        }
+    }
+
+    hit = plane_intersect(r, plane3_inv, plane3[2].xyz);
+    if (hit.hit && hit.t < i.hit.t) {
+        if (abs(hit.u) < size && abs(hit.v) < size) {
+            i.hit = hit;
+            i.material = 2;
+        }
+    }
+
+    hit = plane_intersect(r, plane4_inv, plane4[2].xyz);
+    if (hit.hit && hit.t < i.hit.t) {
+        if (abs(hit.u) < size && abs(hit.v) < size) {
+            i.hit = hit;
+            i.material = 3;
+        }
+    }
+
+    hit = plane_intersect(r, plane5_inv, plane5[2].xyz);
+    if (hit.hit && hit.t < i.hit.t) {
+        if (abs(hit.u) < size && abs(hit.v) < size) {
+            i.hit = hit;
+            i.material = 4;
+        }
+    }
+
+    hit = plane_intersect(r, plane6_inv, plane6[2].xyz);
+    if (hit.hit && hit.t < i.hit.t) {
+        if (abs(hit.u) < size && abs(hit.v) < size) {
+            i.hit = hit;
+            i.material = 5;
+        }
+    }
+
+    // Mobius portals --------------------------------------------------------
+
+    hit = mobius_intersect(Ray(mul_pos(mobius_mat_first, r.o), mul_dir(mobius_mat_first, r.d)));
+    if (hit.hit && hit.t < i.hit.t) {
+        i.hit = hit;
+        if (abs(hit.v) > 0.80) {
+            i.material = 6;
+        } else {
+            if (teleport_light == 0) {
+                i.material = 7;
+            } else {
+                i.material = 8;
+            }
+        }        
+    }
+
+    hit = mobius_intersect(Ray(mul_pos(mobius_mat_second, r.o), mul_dir(mobius_mat_second, r.d)));
+    if (hit.hit && hit.t < i.hit.t) {
+        i.hit = hit;
+        if (abs(hit.v) > 0.80) {
+            i.material = 9;
+        } else {
+            if (teleport_light == 0) {
+                i.material = 10;
+            } else {
+                i.material = 11;
+            }
+        }        
+    }
+
+    return i;
 }
 
+// ---------------------------------------------------------------------------
+// Scene materials processing ------------------------------------------------
+// ---------------------------------------------------------------------------
+
+struct MaterialProcessing {
+    bool is_final;
+    vec3 mul_to_color;
+    Ray new_ray;
+};
+
+uniform float add_gray_after_teleportation;
+uniform sampler2D watermark;
+
+MaterialProcessing material_process(Ray r, SceneIntersection i) {
+    float size = 4.5;
+    float scale = 1./(size * 2.);
+
+    if (i.material == 0) {
+        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.6, 0.2, 0.2), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+    } else if (i.material == 1) {
+        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.6, 0.2, 0.6), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+    } else if (i.material == 2) {
+        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.6, 0.6, 0.6), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+    } else if (i.material == 3) {
+        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.2, 0.2, 0.6), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+    } else if (i.material == 4) {
+        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.2, 0.6, 0.6), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+    } else if (i.material == 5) {
+        vec3 current_color = color(0.2, 0.6, 0.2);
+        vec3 new_color = grid_color(current_color, vec2(i.hit.u, i.hit.v) * scale);
+        current_color = (current_color*2. + new_color)/3.;
+        current_color = add_normal_to_color(current_color, i.hit.n, r.d);
+        current_color *= texture2D(watermark, (vec2(i.hit.u, i.hit.v) + vec2(size, size))/(size * 2.)).rgb;
+        return MaterialProcessing(true, current_color, no_ray);
+    } else if (i.material == 6) {
+        return MaterialProcessing(true, add_normal_to_color(color(0.1, 0.15, 1.), i.hit.n, r.d), no_ray);
+    } else if (i.material == 7) {
+        return MaterialProcessing(true, grid_color(color(0.6, 0.6, 0.6), vec2(i.hit.u, i.hit.v)), no_ray);
+    } else if (i.material == 8) {
+        r.o += r.d * i.hit.t;
+        r.o += r.d * 0.01;
+
+        r.o = mul_pos(mobius_mat_first_teleport, r.o);
+        r.d = mul_dir(mobius_mat_first_teleport, r.d);
+
+        return MaterialProcessing(false, vec3(add_gray_after_teleportation), r);
+    } else if (i.material == 9) {
+        return MaterialProcessing(true, add_normal_to_color(color(1., 0.55, 0.15), i.hit.n, r.d), no_ray);
+    } else if (i.material == 10) {
+        return MaterialProcessing(true, grid_color(color(0.6, 0.6, 0.6), vec2(i.hit.u, i.hit.v)), no_ray);
+    } else if (i.material == 11) {
+        r.o += r.d * i.hit.t;
+        r.o += r.d * 0.01;
+
+        r.o = mul_pos(mobius_mat_second_teleport, r.o);
+        r.d = mul_dir(mobius_mat_second_teleport, r.d);
+
+        return MaterialProcessing(false, vec3(add_gray_after_teleportation), r);
+    }
+    return MaterialProcessing(false, vec3(0.), Ray(vec3(0.), vec3(0.)));
+}
+
+// ---------------------------------------------------------------------------
+// Ray tracing ---------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
+vec3 ray_tracing(Ray r) {
+    vec3 current_color = vec3(1.);
+    for (int j = 0; j < 100; j++) {
+        SceneIntersection i = scene_intersect(r);
+        if (i.hit.hit) {
+            MaterialProcessing m = material_process(r, i);
+            current_color *= m.mul_to_color;
+            if (m.is_final) {
+                return current_color;
+            } else {
+                r = m.new_ray;
+            }
+        } else {
+            return current_color * vec3(0.6, 0.6, 0.6);
+        }
+    }
+    return current_color;
+}
+
+// ---------------------------------------------------------------------------
+// Draw image ----------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
+uniform mat4 camera;
+varying vec2 uv;
+varying vec2 uv_screen;
+
 void main() {
-    float viewAngle = deg2rad(80.);
-    float h = tan(viewAngle / 2.);
-
-    vec2 uv = uv_screen * h;
-
-    float alpha = deg2rad(angles.x);
-    float beta = deg2rad(angles.y);
-    float radius = angles.z;
-
-    vec3 lookAt = vec3(0., 0., 0.);
-    vec3 pos = vec3(sin(PI/2. - beta) * cos(alpha), cos(PI/2. - beta), sin(PI/2. - beta) * sin(alpha)) * radius + lookAt;
-
-    vec3 k = normalize(lookAt - pos);
-    vec3 i = normalize(cross(vec3(0., 1., 0.), k));
-    vec3 j = normalize(cross(k, i));
-    
-    Ray r = Ray(pos, normalize(i * uv.x + j * uv.y + k));
-    gl_FragColor = vec4(sqrt(intersectScene(r)), 1.);
+    vec3 o = mul_pos(camera, vec3(0.));
+    vec3 d = normalize(mul_dir(camera, vec3(uv_screen.x, uv_screen.y, 1.)));
+    Ray r = Ray(o, d);
+    gl_FragColor = vec4(sqrt(ray_tracing(r)), 1.);
 }

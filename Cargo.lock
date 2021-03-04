@@ -140,8 +140,7 @@ checksum = "b7282d924be3275cec7f6756ff4121987bc6481325397dde6ba3e7802b1a8b1c"
 
 [[package]]
 name = "macroquad"
-version = "0.3.0-alpha.14"
-source = "git+https://github.com/not-fl3/macroquad#d2c1f0e14e8ed8b9df51c4c5fe729153f80a5a54"
+version = "0.3.0-alpha.15"
 dependencies = [
  "bumpalo",
  "fontdue",
@@ -155,7 +154,6 @@ dependencies = [
 [[package]]
 name = "macroquad-profiler"
 version = "0.1.0"
-source = "git+https://github.com/not-fl3/macroquad#d2c1f0e14e8ed8b9df51c4c5fe729153f80a5a54"
 dependencies = [
  "macroquad",
  "megaui-macroquad",
@@ -164,7 +162,6 @@ dependencies = [
 [[package]]
 name = "macroquad_macro"
 version = "0.1.2"
-source = "git+https://github.com/not-fl3/macroquad#d2c1f0e14e8ed8b9df51c4c5fe729153f80a5a54"
 
 [[package]]
 name = "megaui"
@@ -290,9 +287,9 @@ dependencies = [
 
 [[package]]
 name = "quad-rand"
-version = "0.1.1"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec3e8eb9b1d9b58a43bac8f20985768ddcc03b928a909d4d39ced327b971fec5"
+checksum = "658fa1faf7a4cc5f057c9ee5ef560f717ad9d8dc66d975267f709624d6e1ab88"
 
 [[package]]
 name = "rusttype"
