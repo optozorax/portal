@@ -329,91 +329,56 @@ uniform mat4 plane6_inv;
 
 uniform int teleport_light;
 
+const float plane_size = 4.5;
+const float plane_scale = 1./(plane_size * 2.);
+
+bool nearer(SurfaceIntersect hit, SceneIntersection i) {
+    return hit.hit && hit.t < i.hit.t;
+}
+
+bool on_plane(SurfaceIntersect hit) {
+    return abs(hit.u) < plane_size && abs(hit.v) < plane_size;
+}
+
+SceneIntersection plane_process_intersection(SceneIntersection i, SurfaceIntersect hit, int material) {
+    if (nearer(hit, i) && on_plane(hit)) {
+        i.hit = hit;
+        i.material = material;
+    }
+    return i;
+}
+
+SceneIntersection mobius_process_intersection(SceneIntersection i, SurfaceIntersect hit, int material) {
+    if (nearer(hit, i)) {
+        i.hit = hit;
+        if (abs(hit.v) > 0.80) {
+            i.material = material;
+        } else {
+            if (teleport_light == 0) {
+                i.material = material + 1;
+            } else {
+                i.material = material + 2;
+            }
+        }        
+    }
+    return i;
+}
+
 SceneIntersection scene_intersect(Ray r) {
     SceneIntersection i = SceneIntersection(0, no_intersect);
     SurfaceIntersect hit = no_intersect;
 
     // Cube room -------------------------------------------------------------
-    float size = 4.5;
-    float scale = 1./(size * 2.);
-
-    hit = plane_intersect(r, plane1_inv, plane1[2].xyz);
-    if (hit.hit && hit.t < i.hit.t) {
-        if (abs(hit.u) < size && abs(hit.v) < size) {
-            i.hit = hit;
-            i.material = 0;
-        }
-    }
-
-    hit = plane_intersect(r, plane2_inv, plane2[2].xyz);
-    if (hit.hit && hit.t < i.hit.t) {
-        if (abs(hit.u) < size && abs(hit.v) < size) {
-            i.hit = hit;
-            i.material = 1;
-        }
-    }
-
-    hit = plane_intersect(r, plane3_inv, plane3[2].xyz);
-    if (hit.hit && hit.t < i.hit.t) {
-        if (abs(hit.u) < size && abs(hit.v) < size) {
-            i.hit = hit;
-            i.material = 2;
-        }
-    }
-
-    hit = plane_intersect(r, plane4_inv, plane4[2].xyz);
-    if (hit.hit && hit.t < i.hit.t) {
-        if (abs(hit.u) < size && abs(hit.v) < size) {
-            i.hit = hit;
-            i.material = 3;
-        }
-    }
-
-    hit = plane_intersect(r, plane5_inv, plane5[2].xyz);
-    if (hit.hit && hit.t < i.hit.t) {
-        if (abs(hit.u) < size && abs(hit.v) < size) {
-            i.hit = hit;
-            i.material = 4;
-        }
-    }
-
-    hit = plane_intersect(r, plane6_inv, plane6[2].xyz);
-    if (hit.hit && hit.t < i.hit.t) {
-        if (abs(hit.u) < size && abs(hit.v) < size) {
-            i.hit = hit;
-            i.material = 5;
-        }
-    }
+    i = plane_process_intersection(i, plane_intersect(r, plane1_inv, plane1[2].xyz), 0);
+    i = plane_process_intersection(i, plane_intersect(r, plane2_inv, plane2[2].xyz), 1);
+    i = plane_process_intersection(i, plane_intersect(r, plane3_inv, plane3[2].xyz), 2);
+    i = plane_process_intersection(i, plane_intersect(r, plane4_inv, plane4[2].xyz), 3);
+    i = plane_process_intersection(i, plane_intersect(r, plane5_inv, plane5[2].xyz), 4);
+    i = plane_process_intersection(i, plane_intersect(r, plane6_inv, plane6[2].xyz), 5);
 
     // Mobius portals --------------------------------------------------------
-
-    hit = mobius_intersect(Ray(mul_pos(mobius_mat_first, r.o), mul_dir(mobius_mat_first, r.d)));
-    if (hit.hit && hit.t < i.hit.t) {
-        i.hit = hit;
-        if (abs(hit.v) > 0.80) {
-            i.material = 6;
-        } else {
-            if (teleport_light == 0) {
-                i.material = 7;
-            } else {
-                i.material = 8;
-            }
-        }        
-    }
-
-    hit = mobius_intersect(Ray(mul_pos(mobius_mat_second, r.o), mul_dir(mobius_mat_second, r.d)));
-    if (hit.hit && hit.t < i.hit.t) {
-        i.hit = hit;
-        if (abs(hit.v) > 0.80) {
-            i.material = 9;
-        } else {
-            if (teleport_light == 0) {
-                i.material = 10;
-            } else {
-                i.material = 11;
-            }
-        }        
-    }
+    i = mobius_process_intersection(i, mobius_intersect(Ray(mul_pos(mobius_mat_first, r.o), mul_dir(mobius_mat_first, r.d))), 6);
+    i = mobius_process_intersection(i, mobius_intersect(Ray(mul_pos(mobius_mat_second, r.o), mul_dir(mobius_mat_second, r.d))), 9);
 
     return i;
 }
@@ -431,51 +396,50 @@ struct MaterialProcessing {
 uniform float add_gray_after_teleportation;
 uniform sampler2D watermark;
 
-MaterialProcessing material_process(Ray r, SceneIntersection i) {
-    float size = 4.5;
-    float scale = 1./(size * 2.);
+MaterialProcessing plane_process_material(SurfaceIntersect hit, Ray r, vec3 clr) {
+    return MaterialProcessing(true, add_normal_to_color(grid_color(clr, vec2(hit.u, hit.v) * plane_scale), hit.n, r.d), no_ray);
+}
 
+MaterialProcessing teleport(float t, mat4 matrix, Ray r) {
+    r.o += r.d * t;
+    r.o += r.d * 0.01;
+
+    r.o = mul_pos(matrix, r.o);
+    r.d = mul_dir(matrix, r.d);
+
+    return MaterialProcessing(false, vec3(add_gray_after_teleportation), r);
+}
+
+MaterialProcessing material_process(Ray r, SceneIntersection i) {
     if (i.material == 0) {
-        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.6, 0.2, 0.2), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+        return plane_process_material(i.hit, r, color(0.6, 0.2, 0.2));
     } else if (i.material == 1) {
-        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.6, 0.2, 0.6), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+        return plane_process_material(i.hit, r, color(0.6, 0.2, 0.6));
     } else if (i.material == 2) {
-        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.6, 0.6, 0.6), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+        return plane_process_material(i.hit, r, color(0.6, 0.6, 0.6));
     } else if (i.material == 3) {
-        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.2, 0.2, 0.6), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+        return plane_process_material(i.hit, r, color(0.2, 0.2, 0.6));
     } else if (i.material == 4) {
-        return MaterialProcessing(true, add_normal_to_color(grid_color(color(0.2, 0.6, 0.6), vec2(i.hit.u, i.hit.v) * scale), i.hit.n, r.d), no_ray);
+        return plane_process_material(i.hit, r, color(0.6, 0.6, 0.2));
     } else if (i.material == 5) {
         vec3 current_color = color(0.2, 0.6, 0.2);
-        vec3 new_color = grid_color(current_color, vec2(i.hit.u, i.hit.v) * scale);
+        vec3 new_color = grid_color(current_color, vec2(i.hit.u, i.hit.v) * plane_scale);
         current_color = (current_color*2. + new_color)/3.;
         current_color = add_normal_to_color(current_color, i.hit.n, r.d);
-        current_color *= texture2D(watermark, (vec2(i.hit.u, i.hit.v) + vec2(size, size))/(size * 2.)).rgb;
+        current_color *= texture2D(watermark, (vec2(i.hit.u, i.hit.v) + vec2(plane_size, plane_size))/(plane_size * 2.)).rgb;
         return MaterialProcessing(true, current_color, no_ray);
     } else if (i.material == 6) {
         return MaterialProcessing(true, add_normal_to_color(color(0.1, 0.15, 1.), i.hit.n, r.d), no_ray);
     } else if (i.material == 7) {
         return MaterialProcessing(true, grid_color(color(0.6, 0.6, 0.6), vec2(i.hit.u, i.hit.v)), no_ray);
     } else if (i.material == 8) {
-        r.o += r.d * i.hit.t;
-        r.o += r.d * 0.01;
-
-        r.o = mul_pos(mobius_mat_first_teleport, r.o);
-        r.d = mul_dir(mobius_mat_first_teleport, r.d);
-
-        return MaterialProcessing(false, vec3(add_gray_after_teleportation), r);
+        return teleport(i.hit.t, mobius_mat_first_teleport, r);      
     } else if (i.material == 9) {
         return MaterialProcessing(true, add_normal_to_color(color(1., 0.55, 0.15), i.hit.n, r.d), no_ray);
     } else if (i.material == 10) {
         return MaterialProcessing(true, grid_color(color(0.6, 0.6, 0.6), vec2(i.hit.u, i.hit.v)), no_ray);
     } else if (i.material == 11) {
-        r.o += r.d * i.hit.t;
-        r.o += r.d * 0.01;
-
-        r.o = mul_pos(mobius_mat_second_teleport, r.o);
-        r.d = mul_dir(mobius_mat_second_teleport, r.d);
-
-        return MaterialProcessing(false, vec3(add_gray_after_teleportation), r);
+        return teleport(i.hit.t, mobius_mat_second_teleport, r);
     }
     return MaterialProcessing(false, vec3(0.), Ray(vec3(0.), vec3(0.)));
 }

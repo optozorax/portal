@@ -1,7 +1,7 @@
-use std::f32::consts::PI;
+use glam::Mat4;
 use macroquad::prelude::*;
 use macroquad_profiler as profiler;
-use glam::Mat4;
+use std::f32::consts::PI;
 
 fn draw_multiline_text(text: &str, x: f32, y: f32, font_size: f32, color: Color) {
     for (pos, text) in text.split('\n').enumerate() {
@@ -70,7 +70,7 @@ pub struct MatPortal {
     name_first: String,
     name_first_teleport: String,
     name_second: String,
-    name_second_teleport: String, 
+    name_second_teleport: String,
 }
 
 impl MatPortal {
@@ -89,14 +89,17 @@ impl MatPortal {
     }
 
     pub fn set(&mut self, first: Option<Mat4>, second: Option<Mat4>) {
-        if let Some(new_first) = first { self.first = new_first; }
-        if let Some(new_second) = second { self.second = new_second; }
+        if let Some(new_first) = first {
+            self.first = new_first;
+        }
+        if let Some(new_second) = second {
+            self.second = new_second;
+        }
 
         self.first_teleport = self.second.inverse() * self.first;
         self.second_teleport = self.first.inverse() * self.second;
     }
 }
-
 
 impl UniformStruct for MatPortal {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
@@ -131,28 +134,32 @@ struct Scene {
     rotation_angle: f32,
 }
 
-
 impl Scene {
     fn textures(&self) -> Vec<String> {
         vec!["watermark".to_owned()]
     }
 
     fn first_portal() -> Mat4 {
-        Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(Vec3::new(0., 0., 2.))
+        Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., 2.))
     }
 
     async fn new() -> Self {
         let watermark: Texture2D = load_texture("watermark.png").await;
 
         let first = Self::first_portal();
-        let second = Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(Vec3::new(0., 0., -2.));
+        let second =
+            Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., -2.));
 
         let plane1 = Mat4::from_translation(Vec3::new(0., 0., 4.5));
         let plane2 = Mat4::from_translation(Vec3::new(0., 0., -4.5));
-        let plane3 = Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(Vec3::new(0., 0., 4.5));
-        let plane4 = Mat4::from_rotation_x(PI/2.) * Mat4::from_translation(Vec3::new(0., 0., -4.5));
-        let plane5 = Mat4::from_rotation_y(PI/2.) * Mat4::from_translation(Vec3::new(0., 0., 4.5));
-        let plane6 = Mat4::from_rotation_y(PI/2.) * Mat4::from_translation(Vec3::new(0., 0., -4.5));
+        let plane3 =
+            Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., 4.5));
+        let plane4 =
+            Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., -4.5));
+        let plane5 =
+            Mat4::from_rotation_y(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., 4.5));
+        let plane6 =
+            Mat4::from_rotation_y(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., -4.5));
 
         Self {
             mobius_portal: MatPortal::new(first, second, "mobius_mat"),
@@ -167,15 +174,27 @@ impl Scene {
         }
     }
 
-    fn process_keys(&mut self) {
+    fn process_mouse_and_keys(&mut self) -> bool {
+        let mut is_something_changed = false;
+
         if is_key_down(KeyCode::A) {
-            self.rotation_angle = clamp(self.rotation_angle + 1./180.*PI, 0., PI);
-            self.mobius_portal.set(Some(Mat4::from_rotation_y(self.rotation_angle) * Self::first_portal()), None);
+            self.rotation_angle = clamp(self.rotation_angle + 1. / 180. * PI, 0., PI);
+            self.mobius_portal.set(
+                Some(Mat4::from_rotation_y(self.rotation_angle) * Self::first_portal()),
+                None,
+            );
+            is_something_changed = true;
         }
         if is_key_down(KeyCode::B) {
-            self.rotation_angle = clamp(self.rotation_angle - 1./180.*PI, 0., PI);
-            self.mobius_portal.set(Some(Mat4::from_rotation_y(self.rotation_angle) * Self::first_portal()), None);
+            self.rotation_angle = clamp(self.rotation_angle - 1. / 180. * PI, 0., PI);
+            self.mobius_portal.set(
+                Some(Mat4::from_rotation_y(self.rotation_angle) * Self::first_portal()),
+                None,
+            );
+            is_something_changed = true;
         }
+
+        return is_something_changed;
     }
 }
 
@@ -200,7 +219,7 @@ impl UniformStruct for Scene {
         self.plane4.set_uniforms(material);
         self.plane5.set_uniforms(material);
         self.plane6.set_uniforms(material);
-        material.set_texture("watermark", self.watermark);        
+        material.set_texture("watermark", self.watermark);
     }
 }
 
@@ -227,7 +246,9 @@ impl RotateAroundCam {
         }
     }
 
-    fn process_mouse_and_keys(&mut self) {
+    fn process_mouse_and_keys(&mut self) -> bool {
+        let mut is_something_changed = false;
+
         let mouse_pos: Vec2 = mouse_position_local();
 
         if is_mouse_button_down(MouseButton::Left) {
@@ -236,20 +257,30 @@ impl RotateAroundCam {
 
             self.alpha += dalpha;
             self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
+
+            is_something_changed = true;
         }
 
         let wheel_value = mouse_wheel().1;
         if wheel_value > 0. {
             self.r *= 1.0 / Self::SCALE_FACTOR;
+            is_something_changed = true;
         } else if wheel_value < 0. {
             self.r *= Self::SCALE_FACTOR;
+            is_something_changed = true;
         }
 
         self.previous_mouse = mouse_pos;
+
+        return is_something_changed;
     }
 
     fn get_matrix(&self) -> Mat4 {
-        let pos = Vec3::new(-self.beta.sin() * self.alpha.cos(), self.beta.cos(), -self.beta.sin() * self.alpha.sin()) * self.r;
+        let pos = Vec3::new(
+            -self.beta.sin() * self.alpha.cos(),
+            self.beta.cos(),
+            -self.beta.sin() * self.alpha.sin(),
+        ) * self.r;
         let look_at = Vec3::new(0., 0., 0.);
 
         let h = (Self::VIEW_ANGLE / 2.).tan();
@@ -259,9 +290,9 @@ impl RotateAroundCam {
         let j = k.cross(i).normalize() * h;
 
         Mat4::from_cols(
-            Vec4::new(i.x, i.y, i.z, 0.), 
-            Vec4::new(j.x, j.y, j.z, 0.), 
-            Vec4::new(k.x, k.y, k.z, 0.), 
+            Vec4::new(i.x, i.y, i.z, 0.),
+            Vec4::new(j.x, j.y, j.z, 0.),
+            Vec4::new(k.x, k.y, k.z, 0.),
             Vec4::new(pos.x, pos.y, pos.z, 1.),
         )
     }
@@ -269,9 +300,7 @@ impl RotateAroundCam {
 
 impl UniformStruct for RotateAroundCam {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
-        vec![
-            ("camera".to_owned(), UniformType::Mat4),
-        ]
+        vec![("camera".to_owned(), UniformType::Mat4)]
     }
 
     fn set_uniforms(&self, material: Material) {
@@ -302,18 +331,35 @@ impl Window {
         }
     }
 
-    fn process_mouse_and_keys(&mut self) {
-        if is_key_pressed(KeyCode::H) { self.show_help = !self.show_help; }
-        if is_key_pressed(KeyCode::T) { self.teleport_light = !self.teleport_light; }
-        if is_key_pressed(KeyCode::P) { self.show_profiler = !self.show_profiler; }
+    fn process_mouse_and_keys(&mut self) -> bool {
+        let mut is_something_changed = false;
+
+        if is_key_pressed(KeyCode::H) {
+            self.show_help = !self.show_help;
+            is_something_changed = true;
+        }
+        if is_key_pressed(KeyCode::T) {
+            self.teleport_light = !self.teleport_light;
+            is_something_changed = true;
+        }
+        if is_key_pressed(KeyCode::P) {
+            self.show_profiler = !self.show_profiler;
+            is_something_changed = true;
+        }
         if is_key_down(KeyCode::X) {
-            self.add_gray_after_teleportation = clamp(self.add_gray_after_teleportation - 0.01, 0., 1.);
+            self.add_gray_after_teleportation =
+                clamp(self.add_gray_after_teleportation - 0.01, 0., 1.);
+            is_something_changed = true;
         }
         if is_key_down(KeyCode::Y) {
-            self.add_gray_after_teleportation = clamp(self.add_gray_after_teleportation + 0.01, 0., 1.);
+            self.add_gray_after_teleportation =
+                clamp(self.add_gray_after_teleportation + 0.01, 0., 1.);
+            is_something_changed = true;
         }
-        self.scene.process_keys();
-        self.cam.process_mouse_and_keys();
+        is_something_changed |= self.scene.process_mouse_and_keys();
+        is_something_changed |= self.cam.process_mouse_and_keys();
+
+        return is_something_changed;
     }
 
     fn draw(&self, material: Material) {
@@ -343,7 +389,10 @@ impl UniformStruct for Window {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
         let mut result = vec![
             ("resolution".to_owned(), UniformType::Float2),
-            ("add_gray_after_teleportation".to_owned(), UniformType::Float1),
+            (
+                "add_gray_after_teleportation".to_owned(),
+                UniformType::Float1,
+            ),
             ("teleport_light".to_owned(), UniformType::Int1),
         ];
         result.extend(self.scene.uniforms());
@@ -353,7 +402,10 @@ impl UniformStruct for Window {
 
     fn set_uniforms(&self, material: Material) {
         material.set_uniform("resolution", (screen_width(), screen_height()));
-        material.set_uniform("add_gray_after_teleportation", self.add_gray_after_teleportation);
+        material.set_uniform(
+            "add_gray_after_teleportation",
+            self.add_gray_after_teleportation,
+        );
         material.set_uniform("teleport_light", self.teleport_light as i32);
 
         self.scene.set_uniforms(material);
@@ -376,9 +428,9 @@ async fn main() {
     )
     .unwrap_or_else(|err| {
         if let miniquad::graphics::ShaderError::CompilationError { error_message, .. } = err {
-            println!("{}", error_message); 
+            println!("Fragment shader compilation error:\n{}", error_message);
         } else {
-            println!("{:#?}", err);
+            println!("Other material error:\n{:#?}", err);
         }
         std::process::exit(1)
     });
