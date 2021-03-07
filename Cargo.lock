@@ -283,6 +283,7 @@ version = "0.1.0"
 dependencies = [
  "macroquad",
  "macroquad-profiler",
+ "megaui-macroquad",
 ]
 
 [[package]]

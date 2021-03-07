@@ -1,13 +1,13 @@
-use glam::Mat4;
+use crate::megaui::Vector2;
 use macroquad::prelude::*;
 use macroquad_profiler as profiler;
 use std::f32::consts::PI;
 
-fn draw_multiline_text(text: &str, x: f32, y: f32, font_size: f32, color: Color) {
-    for (pos, text) in text.split('\n').enumerate() {
-        draw_text(text, x, y + (pos as f32) * font_size, font_size, color);
-    }
-}
+use megaui_macroquad::{
+    draw_megaui, draw_window,
+    megaui::{self, hash},
+    WindowParams,
+};
 
 pub trait UniformStruct {
     fn uniforms(&self) -> Vec<(String, UniformType)>;
@@ -63,29 +63,39 @@ impl UniformStruct for MatWithInversion {
 
 pub struct MatPortal {
     first: Mat4,
+    first_inverse: Mat4,
     first_teleport: Mat4,
     second: Mat4,
+    second_inverse: Mat4,
     second_teleport: Mat4,
 
     name_first: String,
+    name_first_inverse: String,
     name_first_teleport: String,
     name_second: String,
+    name_second_inverse: String,
     name_second_teleport: String,
 }
 
 impl MatPortal {
     pub fn new(first: Mat4, second: Mat4, name: &str) -> Self {
-        Self {
-            first_teleport: second.inverse() * first,
-            second_teleport: first.inverse() * second,
-            first,
-            second,
+        let mut result = Self {
+            first: Mat4::default(),
+            first_inverse: Mat4::default(),
+            first_teleport: Mat4::default(),
+            second: Mat4::default(),
+            second_inverse: Mat4::default(),
+            second_teleport: Mat4::default(),
 
             name_first: format!("{}_first", name),
+            name_first_inverse: format!("{}_first_inverse", name),
             name_first_teleport: format!("{}_first_teleport", name),
             name_second: format!("{}_second", name),
+            name_second_inverse: format!("{}_second_inverse", name),
             name_second_teleport: format!("{}_second_teleport", name),
-        }
+        };
+        result.set(Some(first), Some(second));
+        result
     }
 
     pub fn set(&mut self, first: Option<Mat4>, second: Option<Mat4>) {
@@ -96,8 +106,11 @@ impl MatPortal {
             self.second = new_second;
         }
 
-        self.first_teleport = self.second.inverse() * self.first;
-        self.second_teleport = self.first.inverse() * self.second;
+        self.first_inverse = self.first.inverse();
+        self.second_inverse = self.second.inverse();
+
+        self.first_teleport = self.second * self.first.inverse();
+        self.second_teleport = self.first * self.second.inverse();
     }
 }
 
@@ -105,33 +118,62 @@ impl UniformStruct for MatPortal {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
         vec![
             (self.name_first.clone(), UniformType::Mat4),
+            (self.name_first_inverse.clone(), UniformType::Mat4),
             (self.name_first_teleport.clone(), UniformType::Mat4),
             (self.name_second.clone(), UniformType::Mat4),
+            (self.name_second_inverse.clone(), UniformType::Mat4),
             (self.name_second_teleport.clone(), UniformType::Mat4),
         ]
     }
 
     fn set_uniforms(&self, material: Material) {
         material.set_uniform(&self.name_first, self.first);
+        material.set_uniform(&self.name_first_inverse, self.first_inverse);
         material.set_uniform(&self.name_first_teleport, self.first_teleport);
         material.set_uniform(&self.name_second, self.second);
+        material.set_uniform(&self.name_second_inverse, self.second_inverse);
         material.set_uniform(&self.name_second_teleport, self.second_teleport);
     }
 }
 
 struct Scene {
-    mobius_portal: MatPortal,
+    portals: Vec<MatPortal>,
+    planes: Vec<MatWithInversion>,
+    images: Vec<Texture2D>,
 
-    plane1: MatWithInversion,
-    plane2: MatWithInversion,
-    plane3: MatWithInversion,
-    plane4: MatWithInversion,
-    plane5: MatWithInversion,
-    plane6: MatWithInversion,
+    portal_rotation: f32,
+    portal_offset: f32,
 
-    watermark: Texture2D,
+    triangle_offset: Vec3,
+    triangle_size: f32,
+    portal_color_blend: f32,
+    side_border_progress: f32,
+    teleportation_enabled: bool,
+    second_portal_disabled: bool,
 
-    rotation_angle: f32,
+    teleport_light: bool,
+    add_gray_after_teleportation: f32,
+}
+
+enum SceneStage {
+    DoorwayToPortal { progress: f32 },
+    RotatePortal { progress: f32 },
+    DisableBorders { progress: f32 },
+    ShowTriangle { progress: f32 },
+    Final { triangle_offset: Vec3 },
+}
+
+fn progress_on_segment<F: Fn(f32) -> f32>(
+    segment: std::ops::Range<f32>,
+    value: f32,
+    outside: f32,
+    f: F,
+) -> f32 {
+    if segment.start <= value && value <= segment.end {
+        f((value - segment.start) / (segment.end - segment.start))
+    } else {
+        outside
+    }
 }
 
 impl Scene {
@@ -139,87 +181,223 @@ impl Scene {
         vec!["watermark".to_owned()]
     }
 
-    fn first_portal() -> Mat4 {
-        Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., 2.))
+    fn first_portal(change: f32, offset: f32) -> Mat4 {
+        Mat4::from_rotation_y(PI / 2. - PI * change)
+            * Mat4::from_scale(Vec3::new(2., 2., 2.))
+            * Mat4::from_translation(Vec3::new(0., 0., offset))
     }
 
     async fn new() -> Self {
-        let watermark: Texture2D = load_texture("watermark.png").await;
+        let portal_rotation = 1.;
+        let portal_offset = 0.;
 
-        let first = Self::first_portal();
-        let second =
-            Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., -2.));
+        let triangle_offset = Vec3::new(-1.4, 0.5, 0.);
 
-        let plane1 = Mat4::from_translation(Vec3::new(0., 0., 4.5));
-        let plane2 = Mat4::from_translation(Vec3::new(0., 0., -4.5));
-        let plane3 =
-            Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., 4.5));
-        let plane4 =
-            Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., -4.5));
-        let plane5 =
-            Mat4::from_rotation_y(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., 4.5));
-        let plane6 =
-            Mat4::from_rotation_y(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., -4.5));
+        let portals = vec![MatPortal::new(
+            Self::first_portal(portal_rotation, portal_offset),
+            Mat4::from_rotation_y(PI / 2.) * Mat4::from_scale(Vec3::new(2., 2., 2.)),
+            "portal_mat",
+        )];
+
+        let planes = vec![
+            MatWithInversion::new(Mat4::from_translation(Vec3::new(0., 0., 4.5)), "plane1"),
+            MatWithInversion::new(Mat4::from_translation(Vec3::new(0., 0., -4.5)), "plane2"),
+            MatWithInversion::new(
+                Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., 4.5)),
+                "plane3",
+            ),
+            MatWithInversion::new(
+                Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., -4.5)),
+                "plane4",
+            ),
+            MatWithInversion::new(
+                Mat4::from_rotation_y(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., 4.5)),
+                "plane5",
+            ),
+            MatWithInversion::new(
+                Mat4::from_rotation_y(PI / 2.) * Mat4::from_translation(Vec3::new(0., 0., -4.5)),
+                "plane6",
+            ),
+            MatWithInversion::new(
+                Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(triangle_offset),
+                "triangle",
+            ),
+        ];
+
+        let images = vec![load_texture("monoportal.png").await];
 
         Self {
-            mobius_portal: MatPortal::new(first, second, "mobius_mat"),
-            plane1: MatWithInversion::new(plane1, "plane1"),
-            plane2: MatWithInversion::new(plane2, "plane2"),
-            plane3: MatWithInversion::new(plane3, "plane3"),
-            plane4: MatWithInversion::new(plane4, "plane4"),
-            plane5: MatWithInversion::new(plane5, "plane5"),
-            plane6: MatWithInversion::new(plane6, "plane6"),
-            rotation_angle: 0.,
-            watermark,
+            portals,
+            planes,
+            images,
+
+            portal_rotation,
+            portal_offset,
+            triangle_size: 1.4,
+            portal_color_blend: 1.,
+            triangle_offset,
+            add_gray_after_teleportation: 1.0,
+            teleport_light: true,
+            teleportation_enabled: true,
+            second_portal_disabled: false,
+            side_border_progress: 1.0,
         }
     }
 
     fn process_mouse_and_keys(&mut self) -> bool {
         let mut is_something_changed = false;
 
-        if is_key_down(KeyCode::A) {
-            self.rotation_angle = clamp(self.rotation_angle + 1. / 180. * PI, 0., PI);
-            self.mobius_portal.set(
-                Some(Mat4::from_rotation_y(self.rotation_angle) * Self::first_portal()),
-                None,
-            );
+        if is_key_down(KeyCode::E) {
+            self.triangle_offset.x += 0.01;
             is_something_changed = true;
         }
-        if is_key_down(KeyCode::B) {
-            self.rotation_angle = clamp(self.rotation_angle - 1. / 180. * PI, 0., PI);
-            self.mobius_portal.set(
-                Some(Mat4::from_rotation_y(self.rotation_angle) * Self::first_portal()),
-                None,
-            );
+        if is_key_down(KeyCode::O) {
+            self.triangle_offset.x -= 0.01;
             is_something_changed = true;
         }
 
+        if is_key_down(KeyCode::U) {
+            self.triangle_offset.y += 0.01;
+            is_something_changed = true;
+        }
+        if is_key_down(KeyCode::A) {
+            self.triangle_offset.y -= 0.01;
+            is_something_changed = true;
+        }
+
+        if is_key_down(KeyCode::Y) {
+            self.triangle_offset.z += 0.01;
+            is_something_changed = true;
+        }
+        if is_key_down(KeyCode::X) {
+            self.triangle_offset.z -= 0.01;
+            is_something_changed = true;
+        }
+
+        if is_key_pressed(KeyCode::T) {}
+
         return is_something_changed;
+    }
+
+    fn process_stage(&mut self, stage: SceneStage) {
+        use SceneStage::*;
+        match stage {
+            DoorwayToPortal { progress } => {
+                self.portal_rotation = 0.;
+                self.portal_offset = progress * 0.3;
+
+                self.triangle_offset = Vec3::default();
+                self.triangle_size = 0.;
+                self.portal_color_blend = progress;
+                self.side_border_progress = 1.;
+                if progress == 0. {
+                    self.teleportation_enabled = false;
+                    self.second_portal_disabled = true;
+                } else {
+                    self.teleportation_enabled = true;
+                    self.second_portal_disabled = false;
+                }
+            }
+            RotatePortal { progress } => {
+                self.portal_rotation = progress;
+                self.portal_offset =
+                    progress_on_segment(0.0..0.2, progress, 0., |p| (1. - p) * 0.3);
+
+                self.triangle_offset = Vec3::default();
+                self.triangle_size = 0.;
+                self.portal_color_blend = 1.;
+                self.side_border_progress = 1.;
+                self.teleportation_enabled = true;
+                self.second_portal_disabled = false;
+            }
+            DisableBorders { progress } => {
+                self.portal_rotation = 1.;
+                self.portal_offset = 0.;
+
+                self.triangle_offset = Vec3::default();
+                self.triangle_size = 0.;
+                self.portal_color_blend = 1. - progress;
+                self.side_border_progress = 1. - progress;
+                self.teleportation_enabled = true;
+                self.second_portal_disabled = false;
+            }
+            ShowTriangle { progress } => {
+                self.portal_rotation = 1.;
+                self.portal_offset = 0.;
+
+                self.triangle_offset = Vec3::new(-1.4, 0.5, 0.);
+                self.triangle_size = progress * 1.2;
+                self.portal_color_blend = 0.;
+                self.side_border_progress = 0.;
+                self.teleportation_enabled = true;
+                self.second_portal_disabled = false;
+            }
+            Final { triangle_offset } => {
+                self.portal_rotation = 1.;
+                self.portal_offset = 0.;
+
+                self.triangle_offset = triangle_offset;
+                self.triangle_size = 1.2;
+                self.portal_color_blend = 0.;
+                self.side_border_progress = 0.;
+                self.teleportation_enabled = true;
+                self.second_portal_disabled = false;
+            }
+        }
+        self.planes[6]
+            .set(Mat4::from_rotation_x(PI / 2.) * Mat4::from_translation(self.triangle_offset));
+        self.portals[0].set(
+            Some(Self::first_portal(self.portal_rotation, self.portal_offset)),
+            None,
+        );
     }
 }
 
 impl UniformStruct for Scene {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
-        let mut result = vec![];
-        result.extend(self.mobius_portal.uniforms());
-        result.extend(self.plane1.uniforms());
-        result.extend(self.plane2.uniforms());
-        result.extend(self.plane3.uniforms());
-        result.extend(self.plane4.uniforms());
-        result.extend(self.plane5.uniforms());
-        result.extend(self.plane6.uniforms());
+        let mut result = vec![
+            ("triangle_size".to_owned(), UniformType::Float1),
+            ("portal_color_blend".to_owned(), UniformType::Float1),
+            ("teleportation_enabled".to_owned(), UniformType::Int1),
+            ("second_portal_disabled".to_owned(), UniformType::Int1),
+            ("side_border_progress".to_owned(), UniformType::Float1),
+            (
+                "add_gray_after_teleportation".to_owned(),
+                UniformType::Float1,
+            ),
+            ("teleport_light".to_owned(), UniformType::Int1),
+        ];
+
+        for i in &self.portals {
+            result.extend(i.uniforms());
+        }
+        for i in &self.planes {
+            result.extend(i.uniforms());
+        }
+
         result
     }
 
     fn set_uniforms(&self, material: Material) {
-        self.mobius_portal.set_uniforms(material);
-        self.plane1.set_uniforms(material);
-        self.plane2.set_uniforms(material);
-        self.plane3.set_uniforms(material);
-        self.plane4.set_uniforms(material);
-        self.plane5.set_uniforms(material);
-        self.plane6.set_uniforms(material);
-        material.set_texture("watermark", self.watermark);
+        material.set_uniform("triangle_size", self.triangle_size);
+        material.set_uniform("portal_color_blend", self.portal_color_blend);
+        material.set_uniform(
+            "add_gray_after_teleportation",
+            self.add_gray_after_teleportation,
+        );
+        material.set_uniform("teleport_light", self.teleport_light as i32);
+        material.set_uniform("teleportation_enabled", self.teleportation_enabled as i32);
+        material.set_uniform("second_portal_disabled", self.second_portal_disabled as i32);
+        material.set_uniform("side_border_progress", self.side_border_progress);
+
+        for i in &self.portals {
+            i.set_uniforms(material);
+        }
+        for i in &self.planes {
+            i.set_uniforms(material);
+        }
+
+        material.set_texture("watermark", self.images[0]);
     }
 }
 
@@ -239,19 +417,19 @@ impl RotateAroundCam {
 
     fn new() -> Self {
         Self {
-            alpha: PI,
-            beta: PI / 2.,
+            alpha: 0.,
+            beta: 5. * PI / 7.,
             r: 3.5,
             previous_mouse: Vec2::default(),
         }
     }
 
-    fn process_mouse_and_keys(&mut self) -> bool {
+    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool) -> bool {
         let mut is_something_changed = false;
 
         let mouse_pos: Vec2 = mouse_position_local();
 
-        if is_mouse_button_down(MouseButton::Left) {
+        if is_mouse_button_down(MouseButton::Left) && mouse_over_canvas {
             let dalpha = (mouse_pos.x - self.previous_mouse.x) * Self::MOUSE_SENSITIVITY;
             let dbeta = (mouse_pos.y - self.previous_mouse.y) * Self::MOUSE_SENSITIVITY;
 
@@ -262,12 +440,14 @@ impl RotateAroundCam {
         }
 
         let wheel_value = mouse_wheel().1;
-        if wheel_value > 0. {
-            self.r *= 1.0 / Self::SCALE_FACTOR;
-            is_something_changed = true;
-        } else if wheel_value < 0. {
-            self.r *= Self::SCALE_FACTOR;
-            is_something_changed = true;
+        if mouse_over_canvas {
+            if wheel_value > 0. {
+                self.r *= 1.0 / Self::SCALE_FACTOR;
+                is_something_changed = true;
+            } else if wheel_value < 0. {
+                self.r *= Self::SCALE_FACTOR;
+                is_something_changed = true;
+            }
         }
 
         self.previous_mouse = mouse_pos;
@@ -309,55 +489,166 @@ impl UniformStruct for RotateAroundCam {
 }
 
 struct Window {
-    add_gray_after_teleportation: f32,
-    teleport_light: bool,
-    show_help: bool,
     show_profiler: bool,
 
     scene: Scene,
     cam: RotateAroundCam,
+
+    chosen: usize,
+    progress1: f32,
+    progress2: f32,
+    progress3: f32,
+    progress4: f32,
+    progress5: f32,
+    progress6: f32,
+    progress7: f32,
 }
 
 impl Window {
     async fn new() -> Self {
         Window {
-            add_gray_after_teleportation: 1.0,
-            teleport_light: true,
-            show_help: true,
             show_profiler: false,
 
-            scene: Scene::new().await,
+            scene: {
+                let mut result = Scene::new().await;
+                result.process_stage(SceneStage::Final {
+                    triangle_offset: Vec3::new(-1.4, 0.5, 0.),
+                });
+                result
+            },
             cam: RotateAroundCam::new(),
+
+            chosen: 4,
+            progress1: 0.,
+            progress2: 0.,
+            progress3: 0.,
+            progress4: 0.,
+            progress5: 0.,
+            progress6: 0.5,
+            progress7: -1.4,
         }
     }
 
     fn process_mouse_and_keys(&mut self) -> bool {
         let mut is_something_changed = false;
 
-        if is_key_pressed(KeyCode::H) {
-            self.show_help = !self.show_help;
-            is_something_changed = true;
-        }
-        if is_key_pressed(KeyCode::T) {
-            self.teleport_light = !self.teleport_light;
-            is_something_changed = true;
-        }
-        if is_key_pressed(KeyCode::P) {
-            self.show_profiler = !self.show_profiler;
-            is_something_changed = true;
-        }
-        if is_key_down(KeyCode::X) {
-            self.add_gray_after_teleportation =
-                clamp(self.add_gray_after_teleportation - 0.01, 0., 1.);
-            is_something_changed = true;
-        }
-        if is_key_down(KeyCode::Y) {
-            self.add_gray_after_teleportation =
-                clamp(self.add_gray_after_teleportation + 0.01, 0., 1.);
+        let mut mouse_over_canvas = true;
+
+        let mut scene_changed = false;
+
+        draw_window(
+            hash!(),
+            vec2(20., 400.),
+            vec2(400., 150.),
+            WindowParams {
+                label: "Configure scene".to_owned(),
+                close_button: false,
+                ..Default::default()
+            },
+            |ui| {
+                mouse_over_canvas &=
+                    !ui.is_mouse_over(Vector2::new(mouse_position().0, mouse_position().1));
+
+                if ui.button(None, "Teleport light") {
+                    self.scene.teleport_light = !self.scene.teleport_light;
+                    is_something_changed = true;
+                }
+
+                ui.same_line(0.);
+
+                if ui.button(None, "Show profiler") {
+                    self.show_profiler = !self.show_profiler;
+                    is_something_changed = true;
+                }
+
+                ui.separator();
+
+                let previous = self.chosen;
+                let new = ui.combo_box(
+                    hash!(),
+                    "Step",
+                    &[
+                        "From doorway to portals",
+                        "Rotate one of portal",
+                        "Disable borders",
+                        "Show triangle",
+                        "Move triangle",
+                    ],
+                    Some(&mut self.chosen),
+                );
+
+                if previous != new {
+                    scene_changed = true;
+                }
+
+                if self.chosen == 0 {
+                    let previous = self.progress1;
+                    ui.slider(hash!(), "Progress", 0.0..1.0, &mut self.progress1);
+                    if previous != self.progress1 {
+                        scene_changed = true;
+                    }
+                } else if self.chosen == 1 {
+                    let previous = self.progress2;
+                    ui.slider(hash!(), "Progress", 0.0..1.0, &mut self.progress2);
+                    if previous != self.progress2 {
+                        scene_changed = true;
+                    }
+                } else if self.chosen == 2 {
+                    let previous = self.progress3;
+                    ui.slider(hash!(), "Progress", 0.0..1.0, &mut self.progress3);
+                    if previous != self.progress3 {
+                        scene_changed = true;
+                    }
+                } else if self.chosen == 3 {
+                    let previous = self.progress4;
+                    ui.slider(hash!(), "Progress", 0.0..1.0, &mut self.progress4);
+                    if previous != self.progress4 {
+                        scene_changed = true;
+                    }
+                } else if self.chosen == 4 {
+                    let previous = (self.progress5, self.progress6, self.progress7);
+                    ui.slider(hash!(), "Vertical", -1.6..1.6, &mut self.progress5);
+                    ui.slider(hash!(), "Horizontal", -0.5..0.5, &mut self.progress6);
+                    ui.slider(hash!(), "Into portal", -1.4..1.4, &mut self.progress7);
+                    if previous != (self.progress5, self.progress6, self.progress7) {
+                        scene_changed = true;
+                    }
+                    if ui.button(None, "Clear") {
+                        self.progress5 = 0.;
+                        self.progress6 = 0.5;
+                        self.progress7 = -1.4;
+                        scene_changed = true;
+                    }
+                }
+            },
+        );
+
+        if scene_changed {
+            if self.chosen == 0 {
+                self.scene.process_stage(SceneStage::DoorwayToPortal {
+                    progress: self.progress1,
+                });
+            } else if self.chosen == 1 {
+                self.scene.process_stage(SceneStage::RotatePortal {
+                    progress: self.progress2,
+                });
+            } else if self.chosen == 2 {
+                self.scene.process_stage(SceneStage::DisableBorders {
+                    progress: self.progress3,
+                });
+            } else if self.chosen == 3 {
+                self.scene.process_stage(SceneStage::ShowTriangle {
+                    progress: self.progress4,
+                });
+            } else if self.chosen == 4 {
+                self.scene.process_stage(SceneStage::Final {
+                    triangle_offset: Vec3::new(self.progress7, self.progress6, self.progress5),
+                });
+            }
             is_something_changed = true;
         }
         is_something_changed |= self.scene.process_mouse_and_keys();
-        is_something_changed |= self.cam.process_mouse_and_keys();
+        is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas);
 
         return is_something_changed;
     }
@@ -367,15 +658,6 @@ impl Window {
         draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
         gl_use_default_material();
 
-        if self.show_help {
-            draw_multiline_text(
-                "h - hide this message\nt - enable texture on Mobius strip\na/b - rotate blue portal\nx/y - make teleported rays darker\np - enable profiler",
-                5.0,
-                15.0,
-                20.0,
-                BLACK,
-            );
-        }
         if self.show_profiler {
             set_default_camera();
             profiler::profiler(profiler::ProfilerParams {
@@ -387,14 +669,7 @@ impl Window {
 
 impl UniformStruct for Window {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
-        let mut result = vec![
-            ("resolution".to_owned(), UniformType::Float2),
-            (
-                "add_gray_after_teleportation".to_owned(),
-                UniformType::Float1,
-            ),
-            ("teleport_light".to_owned(), UniformType::Int1),
-        ];
+        let mut result = vec![("resolution".to_owned(), UniformType::Float2)];
         result.extend(self.scene.uniforms());
         result.extend(self.cam.uniforms());
         result
@@ -402,11 +677,6 @@ impl UniformStruct for Window {
 
     fn set_uniforms(&self, material: Material) {
         material.set_uniform("resolution", (screen_width(), screen_height()));
-        material.set_uniform(
-            "add_gray_after_teleportation",
-            self.add_gray_after_teleportation,
-        );
-        material.set_uniform("teleport_light", self.teleport_light as i32);
 
         self.scene.set_uniforms(material);
         self.cam.set_uniforms(material);
@@ -467,14 +737,22 @@ async fn main() {
             window.set_uniforms(lens_material);
             window.draw(lens_material);
             set_default_camera();
+            draw_megaui();
             texture.grab_screen();
             image_size_changed = false;
         } else {
-            draw_texture_ex(texture, 0., 0., WHITE, DrawTextureParams {
-                dest_size: Some(Vec2::new(screen_width(), screen_height())),
-                flip_y: true,
-                ..Default::default()
-            });
+            draw_texture_ex(
+                texture,
+                0.,
+                0.,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(Vec2::new(screen_width(), screen_height())),
+                    flip_y: true,
+                    ..Default::default()
+                },
+            );
+            draw_megaui();
         }
 
         next_frame().await;

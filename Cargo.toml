@@ -4,11 +4,13 @@ version = "0.1.0"
 authors = ["ilya sheprut <optozorax@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-macroquad = { git = "https://github.com/not-fl3/macroquad", commit = "d2c1f0e" }
-macroquad-profiler = { git = "https://github.com/not-fl3/macroquad" }
+# macroquad = { git = "https://github.com/not-fl3/macroquad", commit = "d2c1f0e" }
+# macroquad-profiler = { git = "https://github.com/not-fl3/macroquad" }
+macroquad = { path = "../macroquad" }
+macroquad-profiler = { path = "../macroquad/profiler" }
+megaui-macroquad = "0.1.3"
 
 [patch.crates-io]
-macroquad = { git = "https://github.com/not-fl3/macroquad.git", commit = "d2c1f0e" }
+# macroquad = { git = "https://github.com/not-fl3/macroquad.git", commit = "d2c1f0e" }
+macroquad = { path = "../macroquad" }
