@@ -278,7 +278,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "portals"
+name = "portal"
 version = "0.1.0"
 dependencies = [
  "macroquad",
