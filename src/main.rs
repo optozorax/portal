@@ -556,10 +556,10 @@ impl Window {
 
                 ui.same_line(0.);
 
-                if ui.button(None, "Show profiler") {
-                    self.show_profiler = !self.show_profiler;
-                    is_something_changed = true;
-                }
+                // if ui.button(None, "Show profiler") {
+                //     self.show_profiler = !self.show_profiler;
+                //     is_something_changed = true;
+                // }
 
                 ui.separator();
 
