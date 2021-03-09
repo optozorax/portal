@@ -316,6 +316,13 @@ uniform mat4 portal_mat_second;
 uniform mat4 portal_mat_second_inverse;
 uniform mat4 portal_mat_second_teleport;
 
+uniform mat4 portal1_mat_first;
+uniform mat4 portal1_mat_first_inverse;
+uniform mat4 portal1_mat_first_teleport;
+uniform mat4 portal1_mat_second;
+uniform mat4 portal1_mat_second_inverse;
+uniform mat4 portal1_mat_second_teleport;
+
 uniform mat4 plane1;
 uniform mat4 plane1_inv;
 uniform mat4 plane2;
@@ -401,36 +408,18 @@ SceneIntersection half_ellipse_process_intersection(SceneIntersection i, Ray r, 
 
     SurfaceIntersect hit = plane_intersect(r, plane_matrix, normal);
     if (hit.hit && nearer(hit, i)) {
-        float ellipse_pos = 4. * hit.u * hit.u + hit.v * hit.v;
-        if (ellipse_pos < ellipse_black_border && hit.u > 0.) {
-            bool is_on_portal = 
-                between(0., ellipse_pos, ellipse_portal) && 
-                (border + black_border) * side_border_progress < hit.u;
-            bool is_on_portal_side = is_collinear(hit.n, normal);
-
-            bool is_on_border = 
-                between(black_border * side_border_progress, hit.u, (border + black_border) * side_border_progress) || 
-                between(ellipse_portal, ellipse_pos, ellipse_border);
-
-            bool is_on_black_side = 
-                between(0., hit.u, black_border * side_border_progress) || 
-                between(ellipse_border, ellipse_pos, ellipse_black_border);
-
-            if (is_on_portal && is_on_portal_side) {
-                if (teleport_light == 1 && teleportation_enabled == 1) {
-                    i.hit = hit;
-                    i.material = material;
-                } else if (teleport_light == 0) {
-                    i.hit = hit;
-                    i.material = material + 2;
-                }
-            } else if (is_on_black_side) {
+        float circle_pos = hit.u * hit.u + hit.v * hit.v;
+        if (between(0., circle_pos, ellipse_portal) && hit.u > 0. && hit.v > 0.) {
+            i.hit = hit;
+            if (is_collinear(hit.n, normal)) {
+                i.material = material;
+            } else {
                 i.material = 6;
-                i.hit = hit;
-            } else if (is_on_border || (is_on_portal && !is_on_portal_side && teleportation_enabled == 1)) {
-                i.material = material + 1;
-                i.hit = hit;
             }
+        }
+        if (between(ellipse_portal, circle_pos, ellipse_border)) {
+            i.hit = hit;
+            i.material = 6;
         }
     }
     return i;
@@ -464,26 +453,26 @@ SceneIntersection scene_intersect_1(Ray r) {
         }
     }
 
-
-    hit = plane_intersect(r, triangle_inv * portal_mat_first_teleport, triangle[2].xyz);
-    if (nearer(hit, i) && hit.u > 0. && hit.u < -abs(3. * hit.v) + triangle_size) {
-        vec3 pos = r.o + r.d * hit.t;
-        if (pos.x < 0.) {
-            i.hit = hit;
-            if (hit.u < triangle_border_size/3. || hit.u > -abs(3. * hit.v) + triangle_size - triangle_border_size) {
-                i.material = 6;
-            } else {
-                i.material = 7;
-            }
-        }
-    }
+    // hit = plane_intersect(r, triangle_inv * portal_mat_first_teleport, triangle[2].xyz);
+    // if (nearer(hit, i) && hit.u > 0. && hit.u < -abs(3. * hit.v) + triangle_size) {
+    //     vec3 pos = r.o + r.d * hit.t;
+    //     if (pos.x < 0.) {
+    //         i.hit = hit;
+    //         if (hit.u < triangle_border_size/3. || hit.u > -abs(3. * hit.v) + triangle_size - triangle_border_size) {
+    //             i.material = 6;
+    //         } else {
+    //             i.material = 7;
+    //         }
+    //     }
+    // }
 
     // Portals --------------------------------------------------------
     i = half_ellipse_process_intersection(i, r, 100, portal_mat_first_inverse, portal_mat_first[2].xyz);
+    // i = half_ellipse_process_intersection(i, r, 101, portal_mat_second_inverse, -portal_mat_second[2].xyz);
 
-    if (second_portal_disabled == 0) {
-        i = half_ellipse_process_intersection(i, r, 103, portal_mat_second_inverse, -portal_mat_second[2].xyz);
-    }
+    // i = half_ellipse_process_intersection(i, r, 200, portal1_mat_first_inverse, portal1_mat_first[2].xyz);
+    // i = half_ellipse_process_intersection(i, r, 201, portal1_mat_second_inverse, -portal1_mat_second[2].xyz);
+
 
     return i;
 }
@@ -552,17 +541,13 @@ MaterialProcessing material_process_1(Ray r, SceneIntersection i) {
     } else if (i.material == 100) {
         return teleport(i.hit.t, portal_mat_first_teleport, r);
     } else if (i.material == 101) {
-        return MaterialProcessing(true, portal_color_blend * add_normal_to_color(color(0.1, 0.15, 1.), i.hit.n, r.d), no_ray);
-    } else if (i.material == 102) {
-        return MaterialProcessing(true, grid_color(color(0.1, 0.15, 1.), vec2(i.hit.u, i.hit.v)), no_ray);
-
-    } else if (i.material == 103) {
         return teleport(i.hit.t, portal_mat_second_teleport, r);
-    } else if (i.material == 104) {
-        return MaterialProcessing(true, portal_color_blend * add_normal_to_color(color(1., 0.55, 0.15), i.hit.n, r.d), no_ray);
-    } else if (i.material == 105) {
-        return MaterialProcessing(true, grid_color(color(1., 0.55, 0.15), vec2(i.hit.u, i.hit.v)), no_ray);
 
+
+    } else if (i.material == 200) {
+        return teleport(i.hit.t, portal1_mat_first_teleport, r);
+    } else if (i.material == 201) {
+        return teleport(i.hit.t, portal1_mat_second_teleport, r);
 
     // End    
     }

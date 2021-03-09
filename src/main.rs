@@ -1,7 +1,11 @@
+use crate::megaui::Ui;
 use crate::megaui::Vector2;
 use macroquad::prelude::*;
 use macroquad_profiler as profiler;
 use std::f32::consts::PI;
+
+mod gui;
+use crate::gui::*;
 
 use megaui_macroquad::{
     draw_megaui, draw_window,
@@ -184,6 +188,7 @@ impl Scene {
     fn first_portal(change: f32, offset: f32) -> Mat4 {
         Mat4::from_rotation_y(PI / 2. - PI * change)
             * Mat4::from_scale(Vec3::new(2., 2., 2.))
+            * Mat4::from_rotation_z(0.)
             * Mat4::from_translation(Vec3::new(0., 0., offset))
     }
 
@@ -191,13 +196,26 @@ impl Scene {
         let portal_rotation = 1.;
         let portal_offset = 0.;
 
-        let triangle_offset = Vec3::new(-1.4, 0.5, 0.);
+        let triangle_offset = Vec3::new(-1.2, 0.5, 0.);
 
-        let portals = vec![MatPortal::new(
-            Self::first_portal(portal_rotation, portal_offset),
-            Mat4::from_rotation_y(PI / 2.) * Mat4::from_scale(Vec3::new(2., 2., 2.)),
-            "portal_mat",
-        )];
+        let portals = vec![
+            MatPortal::new(
+                Self::first_portal(portal_rotation, portal_offset),
+                Mat4::from_rotation_y(PI / 2.)
+                    * Mat4::from_scale(Vec3::new(-2., 2., 2.))
+                    * Mat4::from_rotation_z(1. * PI),
+                "portal_mat",
+            ),
+            MatPortal::new(
+                Mat4::from_rotation_y(PI / 2. - PI)
+                    * Mat4::from_scale(Vec3::new(2., 2., 2.))
+                    * Mat4::from_rotation_z(1.5 * PI),
+                Mat4::from_rotation_y(PI / 2.)
+                    * Mat4::from_scale(Vec3::new(-2., 2., 2.))
+                    * Mat4::from_rotation_z(0.5 * PI),
+                "portal1_mat",
+            ),
+        ];
 
         let planes = vec![
             MatWithInversion::new(Mat4::from_translation(Vec3::new(0., 0., 4.5)), "plane1"),
@@ -246,35 +264,6 @@ impl Scene {
 
     fn process_mouse_and_keys(&mut self) -> bool {
         let mut is_something_changed = false;
-
-        if is_key_down(KeyCode::E) {
-            self.triangle_offset.x += 0.01;
-            is_something_changed = true;
-        }
-        if is_key_down(KeyCode::O) {
-            self.triangle_offset.x -= 0.01;
-            is_something_changed = true;
-        }
-
-        if is_key_down(KeyCode::U) {
-            self.triangle_offset.y += 0.01;
-            is_something_changed = true;
-        }
-        if is_key_down(KeyCode::A) {
-            self.triangle_offset.y -= 0.01;
-            is_something_changed = true;
-        }
-
-        if is_key_down(KeyCode::Y) {
-            self.triangle_offset.z += 0.01;
-            is_something_changed = true;
-        }
-        if is_key_down(KeyCode::X) {
-            self.triangle_offset.z -= 0.01;
-            is_something_changed = true;
-        }
-
-        if is_key_pressed(KeyCode::T) {}
 
         return is_something_changed;
     }
@@ -325,7 +314,7 @@ impl Scene {
                 self.portal_rotation = 1.;
                 self.portal_offset = 0.;
 
-                self.triangle_offset = Vec3::new(-1.4, 0.5, 0.);
+                self.triangle_offset = Vec3::new(-1.2, 0.5, 0.);
                 self.triangle_size = progress * 1.2;
                 self.portal_color_blend = 0.;
                 self.side_border_progress = 0.;
@@ -502,6 +491,8 @@ struct Window {
     progress5: f32,
     progress6: f32,
     progress7: f32,
+
+    matrix: Matrix,
 }
 
 impl Window {
@@ -512,7 +503,7 @@ impl Window {
             scene: {
                 let mut result = Scene::new().await;
                 result.process_stage(SceneStage::Final {
-                    triangle_offset: Vec3::new(-1.4, 0.5, 0.),
+                    triangle_offset: Vec3::new(-1.2, 0.5, 0.),
                 });
                 result
             },
@@ -525,7 +516,9 @@ impl Window {
             progress4: 0.,
             progress5: 0.,
             progress6: 0.5,
-            progress7: -1.4,
+            progress7: -1.2,
+
+            matrix: Matrix::Mul(vec![]),
         }
     }
 
@@ -608,7 +601,7 @@ impl Window {
                 } else if self.chosen == 4 {
                     let previous = (self.progress5, self.progress6, self.progress7);
                     ui.slider(hash!(), "Vertical", -1.6..1.6, &mut self.progress5);
-                    ui.slider(hash!(), "Horizontal", -0.5..0.5, &mut self.progress6);
+                    ui.slider(hash!(), "Horizontal", -1.6..1.6, &mut self.progress6);
                     ui.slider(hash!(), "Into portal", -1.4..1.4, &mut self.progress7);
                     if previous != (self.progress5, self.progress6, self.progress7) {
                         scene_changed = true;
@@ -619,6 +612,26 @@ impl Window {
                         self.progress7 = -1.4;
                         scene_changed = true;
                     }
+                }
+            },
+        );
+
+        draw_window(
+            hash!(),
+            vec2(300., 400.),
+            vec2(400., 650.),
+            WindowParams {
+                label: "Configure matrix".to_owned(),
+                close_button: false,
+                ..Default::default()
+            },
+            |ui| {
+                mouse_over_canvas &=
+                    !ui.is_mouse_over(Vector2::new(mouse_position().0, mouse_position().1));
+
+                if self.matrix.full_ui(ui, hash!()) {
+                    is_something_changed = true;
+                    self.scene.portals[0].set(Some(self.matrix.clone().into()), None);
                 }
             },
         );
