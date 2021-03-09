@@ -1,4 +1,3 @@
-use crate::megaui::Ui;
 use crate::megaui::Vector2;
 use macroquad::prelude::*;
 use macroquad_profiler as profiler;
@@ -263,9 +262,7 @@ impl Scene {
     }
 
     fn process_mouse_and_keys(&mut self) -> bool {
-        let mut is_something_changed = false;
-
-        return is_something_changed;
+        false
     }
 
     fn process_stage(&mut self, stage: SceneStage) {
@@ -492,7 +489,7 @@ struct Window {
     progress6: f32,
     progress7: f32,
 
-    matrices: Matrices,
+    matrices: StorageWithNames<Matrix>,
 }
 
 impl Window {
@@ -518,7 +515,7 @@ impl Window {
             progress6: 0.5,
             progress7: -1.2,
 
-            matrices: Matrices::default(),
+            matrices: Default::default(),
         }
     }
 
@@ -631,14 +628,13 @@ impl Window {
 
                 if self.matrices.ui(ui, hash!()) {
                     is_something_changed = true;
-                    if let Some(matrix) = self.matrices.get_matrix("portal1") {
+                    if let Some(matrix) = self.matrices.get("portal1") {
                         self.scene.portals[0].set(Some(matrix), None);
                     }
                 }
-                if self.matrices.get_matrix("portal1").is_none() {
-                    ui.label(None, "Can't get matrix, these is errror somewhere");
+                if self.matrices.get("portal1").is_none() {
+                    ui.label(None, "Can't get matrix, there is errror somewhere");
                 }
-                
             },
         );
 
