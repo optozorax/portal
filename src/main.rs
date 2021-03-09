@@ -492,7 +492,7 @@ struct Window {
     progress6: f32,
     progress7: f32,
 
-    matrix: Matrix,
+    matrices: Matrices,
 }
 
 impl Window {
@@ -518,7 +518,7 @@ impl Window {
             progress6: 0.5,
             progress7: -1.2,
 
-            matrix: Matrix::Mul(vec![]),
+            matrices: Matrices::default(),
         }
     }
 
@@ -629,10 +629,16 @@ impl Window {
                 mouse_over_canvas &=
                     !ui.is_mouse_over(Vector2::new(mouse_position().0, mouse_position().1));
 
-                if self.matrix.full_ui(ui, hash!()) {
+                if self.matrices.ui(ui, hash!()) {
                     is_something_changed = true;
-                    self.scene.portals[0].set(Some(self.matrix.clone().into()), None);
+                    if let Some(matrix) = self.matrices.get_matrix("portal1") {
+                        self.scene.portals[0].set(Some(matrix), None);
+                    }
                 }
+                if self.matrices.get_matrix("portal1").is_none() {
+                    ui.label(None, "Can't get matrix, these is errror somewhere");
+                }
+                
             },
         );
 
