@@ -104,8 +104,16 @@ version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "579160312273c954cc51bd440f059dde741029ac8daf8c84fece76cb77f62c15"
 dependencies = [
- "serde",
  "version_check",
+]
+
+[[package]]
+name = "glam"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27e6eecbd94ac86b2e1f3b0065ed5f17c097c15d668dddb84208a141e271403b"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -134,6 +142,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "itoa"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
+
+[[package]]
 name = "libc"
 version = "0.2.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -145,7 +159,7 @@ version = "0.3.0-alpha.15"
 dependencies = [
  "bumpalo",
  "fontdue",
- "glam",
+ "glam 0.10.2",
  "image",
  "macroquad_macro",
  "miniquad",
@@ -282,11 +296,12 @@ dependencies = [
 name = "portal"
 version = "0.1.0"
 dependencies = [
- "glam",
+ "glam 0.13.0",
  "macroquad",
  "macroquad-profiler",
  "megaui-macroquad",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -332,6 +347,12 @@ dependencies = [
  "ordered-float",
  "stb_truetype",
 ]
+
+[[package]]
+name = "ryu"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 
 [[package]]
 name = "sapp-android"
@@ -411,6 +432,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.64"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
 ]
 
 [[package]]

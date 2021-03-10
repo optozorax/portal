@@ -1,7 +1,10 @@
 use crate::megaui::Ui;
 use crate::megaui::*;
 use glam::*;
+use macroquad::prelude::Material;
+use macroquad::prelude::UniformType;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::f32::consts::PI;
 
 fn mymax(a: f32, b: f32) -> f32 {
@@ -142,11 +145,55 @@ impl ComboBoxChoosable for Matrix {
     }
 }
 
-struct MatrixAndNames<'a, 'b>(&'a mut Matrix, &'b [String]);
+pub trait UiWithNames {
+    fn ui_with_names_inner(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool;
+}
 
-impl<'a, 'b> ComboBoxChoosable for MatrixAndNames<'a, 'b> {
+impl UiWithNames for Matrix {
+    fn ui_with_names_inner(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool {
+        use Matrix::*;
+        let mut is_changed = false;
+        match self {
+            Mul { to, what } => {
+                is_changed |= ui_existing_name(ui, hash!(id, 0), "Mul to", to, names);
+                is_changed |= ui_existing_name(ui, hash!(id, 1), "What", what, names);
+            }
+            Teleport {
+                first_portal,
+                second_portal,
+                what,
+            } => {
+                is_changed |=
+                    ui_existing_name(ui, hash!(id, 2), "First portal", first_portal, names);
+                is_changed |=
+                    ui_existing_name(ui, hash!(id, 3), "Second portal", second_portal, names);
+                is_changed |= ui_existing_name(ui, hash!(id, 4), "What", what, names);
+            }
+            Simple {
+                offset,
+                scale,
+                rotate,
+                mirror,
+            } => {
+                is_changed |= ui_any_vector(ui, hash!(id, 5), offset);
+                is_changed |= ui_positive_number(ui, hash!(id, 6), "Scale", scale);
+                is_changed |= ui_angle(ui, hash!(id, 7), "Rotate X", &mut rotate.x);
+                is_changed |= ui_angle(ui, hash!(id, 8), "Rotate Y", &mut rotate.y);
+                is_changed |= ui_angle(ui, hash!(id, 9), "Rotate Z", &mut rotate.z);
+                is_changed |= ui_bool(ui, hash!(id, 10), "Mirror X", &mut mirror.0);
+                is_changed |= ui_bool(ui, hash!(id, 11), "Mirror Y", &mut mirror.1);
+                is_changed |= ui_bool(ui, hash!(id, 12), "Mirror Z", &mut mirror.2);
+            }
+        }
+        is_changed
+    }
+}
+
+struct ObjectAndNames<'a, 'b, T>(&'a mut T, &'b [String]);
+
+impl<'a, 'b, T: ComboBoxChoosable> ComboBoxChoosable for ObjectAndNames<'a, 'b, T> {
     fn variants() -> &'static [&'static str] {
-        Matrix::variants()
+        T::variants()
     }
     fn get_number(&self) -> usize {
         self.0.get_number()
@@ -156,48 +203,10 @@ impl<'a, 'b> ComboBoxChoosable for MatrixAndNames<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Uiable for MatrixAndNames<'a, 'b> {
+impl<'a, 'b, T: UiWithNames> Uiable for ObjectAndNames<'a, 'b, T> {
     fn ui(&mut self, ui: &mut Ui, id: Id) -> bool {
-        use Matrix::*;
-        let MatrixAndNames(matrix, names) = &mut *self;
-        match matrix {
-            Mul { to, what } => {
-                let mut is_changed = false;
-                is_changed |= ui_existing_name(ui, hash!(id, 0), "Mul to", to, names);
-                is_changed |= ui_existing_name(ui, hash!(id, 1), "What", what, names);
-                is_changed
-            }
-            Teleport {
-                first_portal,
-                second_portal,
-                what,
-            } => {
-                let mut is_changed = false;
-                is_changed |=
-                    ui_existing_name(ui, hash!(id, 2), "First portal", first_portal, names);
-                is_changed |=
-                    ui_existing_name(ui, hash!(id, 3), "Second portal", second_portal, names);
-                is_changed |= ui_existing_name(ui, hash!(id, 4), "What", what, names);
-                is_changed
-            }
-            Simple {
-                offset,
-                scale,
-                rotate,
-                mirror,
-            } => {
-                let mut is_changed = false;
-                is_changed |= ui_any_vector(ui, hash!(id, 5), offset);
-                is_changed |= ui_positive_number(ui, hash!(id, 6), "Scale", scale);
-                is_changed |= ui_angle(ui, hash!(id, 7), "Rotate X", &mut rotate.x);
-                is_changed |= ui_angle(ui, hash!(id, 8), "Rotate Y", &mut rotate.y);
-                is_changed |= ui_angle(ui, hash!(id, 9), "Rotate Z", &mut rotate.z);
-                is_changed |= ui_bool(ui, hash!(id, 10), "Mirror X", &mut mirror.0);
-                is_changed |= ui_bool(ui, hash!(id, 11), "Mirror Y", &mut mirror.1);
-                is_changed |= ui_bool(ui, hash!(id, 12), "Mirror Z", &mut mirror.2);
-                is_changed
-            }
-        }
+        let ObjectAndNames(t, names) = &mut *self;
+        UiWithNames::ui_with_names_inner(*t, ui, id, names)
     }
 }
 
@@ -262,7 +271,7 @@ impl StorageElem for Matrix {
                 rotate,
                 mirror,
             } => {
-                let mut result = Mat4::identity();
+                let mut result = Mat4::IDENTITY;
 
                 result = result * Mat4::from_translation(*offset);
 
@@ -288,11 +297,14 @@ impl StorageElem for Matrix {
     }
 
     fn ui_with_names(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool {
-        ui_combo_box(ui, id, "Type", &mut MatrixAndNames(self, &names))
+        ui_combo_box(ui, id, "Type", &mut ObjectAndNames(self, &names))
     }
 
     fn defaults() -> (Vec<String>, Vec<Self>) {
-        (vec!["id".to_owned(), "portal1".to_owned()], vec![Matrix::default(), Matrix::default()])
+        (
+            vec!["id".to_owned(), "portal1".to_owned()],
+            vec![Matrix::default(), Matrix::default()],
+        )
     }
 }
 
@@ -306,10 +318,7 @@ pub struct StorageWithNames<T: StorageElem> {
 impl<T: StorageElem> Default for StorageWithNames<T> {
     fn default() -> Self {
         let (names, storage) = T::defaults();
-        StorageWithNames {
-            names,
-            storage,
-        }
+        StorageWithNames { names, storage }
     }
 }
 
@@ -329,11 +338,15 @@ impl<T: StorageElem> StorageWithNames<T> {
         self.storage.remove(pos);
     }
 
-    pub fn iter(&self) -> std::iter::Zip<std::slice::Iter<String>, std::slice::Iter<T>> {
-        self.names.iter().zip(self.storage.iter())
+    pub fn names_iter(&self) -> std::slice::Iter<String> {
+        self.names.iter()
     }
 
-    fn get_matrix_inner<'a>(&'a self, name: &'a str, visited: &mut Vec<String>) -> Option<T::GetType> {
+    fn get_matrix_inner<'a>(
+        &'a self,
+        name: &'a str,
+        visited: &mut Vec<String>,
+    ) -> Option<T::GetType> {
         if visited.iter().any(|x| *x == name) {
             return None;
         }
@@ -346,42 +359,54 @@ impl<T: StorageElem> StorageWithNames<T> {
     }
 }
 
-impl<T: StorageElem> Uiable for StorageWithNames<T> {
-    fn ui(&mut self, ui: &mut Ui, id: Id) -> bool {
-        let mut is_changed = false;
+#[derive(Debug, Clone, Default)]
+pub struct WhatChanged {
+    pub inner: bool,
+    pub outer: bool,
+}
+
+pub trait ComplexUiable {
+    fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged;
+}
+
+impl<T: StorageElem> ComplexUiable for StorageWithNames<T> {
+    fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged {
+        let mut changed = WhatChanged::default();
         let mut to_delete = None;
         if ui.button(None, "Add matrix") {
-            is_changed = true;
+            changed.outer = true;
             self.add("new".to_owned(), T::default());
         }
         let mut names = &mut self.names;
         for (pos, t) in self.storage.iter_mut().enumerate().skip(1) {
             ui.tree_node(hash!(id, 0, pos), &names[pos].clone(), |ui| {
-                ui.separator();
                 if ui.button(None, "Delete") {
                     to_delete = Some(pos);
                 }
-                is_changed |= ui_name(ui, hash!(id, 1, pos), "Name", &mut names, pos);
-                is_changed |= t.ui_with_names(ui, hash!(id, 2, pos), &names);
+                changed.outer |= ui_name(ui, hash!(id, 1, pos), "Name", &mut names, pos);
+                changed.inner |= t.ui_with_names(ui, hash!(id, 2, pos), &names);
             });
         }
         if let Some(pos) = to_delete {
+            changed.outer = true;
             self.remove(pos);
         }
-        is_changed
+        changed
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlslCode(String);
+pub struct GlslCode(pub String);
 
 // Code must return vec3 at the end
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MaterialCode(GlslCode);
+pub struct MaterialCode(pub GlslCode);
 
 impl Default for MaterialCode {
     fn default() -> Self {
-        MaterialCode(GlslCode("return vec3(1.0); // return black color".to_owned()))
+        MaterialCode(GlslCode(
+            "return plane_process_material(hit, r, color(0.2, 0.6, 0.6));".to_owned(),
+        ))
     }
 }
 
@@ -407,11 +432,14 @@ impl StorageElem for MaterialCode {
 
 // Code must return integer - material. NOT_INSIDE if not inside. TELEPORT is should be teleported by current matrix.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IsInsideCode(GlslCode);
+pub struct IsInsideCode(pub GlslCode);
 
 impl Default for IsInsideCode {
     fn default() -> Self {
-        IsInsideCode(GlslCode("if (x*x + y*y < 1.) {\n  return TELEPORT;\n} else {\n  return NOT_INSIDE;\n}".to_owned()))
+        IsInsideCode(GlslCode(
+            "if (x*x + y*y < 1.) {\n  return black_M;\n} else {\n  return NOT_INSIDE;\n}"
+                .to_owned(),
+        ))
     }
 }
 
@@ -424,9 +452,70 @@ pub enum Object {
     FlatPortal {
         first: String,
         second: String,
+        // back_material: String,
         is_inside: IsInsideCode,
-        disabled_teleportation_material: String,
     },
+}
+
+impl Default for Object {
+    fn default() -> Self {
+        Object::Flat {
+            plane: "id".to_owned(),
+            is_inside: Default::default(),
+        }
+    }
+}
+
+impl ComboBoxChoosable for Object {
+    fn variants() -> &'static [&'static str] {
+        &["Flat object", "Flat portal"]
+    }
+    fn get_number(&self) -> usize {
+        use Object::*;
+        match self {
+            Flat { .. } => 0,
+            FlatPortal { .. } => 1,
+        }
+    }
+    fn set_number(&mut self, number: usize) {
+        use Object::*;
+        *self = match number {
+            0 => Flat {
+                plane: "id".to_owned(),
+                is_inside: Default::default(),
+            },
+            1 => FlatPortal {
+                first: "id".to_owned(),
+                second: "id".to_owned(),
+
+                is_inside: Default::default(),
+            },
+            _ => unreachable!(),
+        };
+    }
+}
+
+impl UiWithNames for Object {
+    fn ui_with_names_inner(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool {
+        use Object::*;
+        let mut is_changed = false;
+        match self {
+            Flat { plane, is_inside } => {
+                is_changed |= ui_existing_name(ui, hash!(id, 0), "Plane", plane, names);
+                is_changed |= ui_editbox(ui, hash!(id, 1), &mut is_inside.0.0);
+            }
+            FlatPortal {
+                first,
+                second,
+                is_inside,
+            } => {
+                is_changed |= ui_existing_name(ui, hash!(id, 0), "First portal", first, names);
+                is_changed |= ui_existing_name(ui, hash!(id, 1), "Second portal", second, names);
+                is_changed |= ui_editbox(ui, hash!(id, 2), &mut is_inside.0.0);
+            }
+        }
+        is_changed
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -438,7 +527,363 @@ pub struct Scene {
     library: GlslCode,
 }
 
+impl ComplexUiable for Scene {
+    fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        ui.tree_node(hash!(id, 0), "Matrices", |ui| {
+            let WhatChanged { inner, outer } = self.matrices.ui(ui, hash!(id, 1));
+            changed.inner |= inner;
+            changed.outer |= outer;
+        });
+        ui.tree_node(hash!(id, 2), "Objects", |ui| {
+            let mut to_delete = None;
+            if ui.button(None, "Add object") {
+                changed.outer = true;
+                self.objects.push(Object::default());
+            }
+            let names = &self.matrices.names;
+            for (pos, t) in self.objects.iter_mut().enumerate() {
+                ui.tree_node(hash!(id, 3, pos), &pos.to_string(), |ui| {
+                    if ui.button(None, "Delete") {
+                        to_delete = Some(pos);
+                    }
+                    changed.outer |= ui_combo_box(
+                        ui,
+                        hash!(id, 4, pos),
+                        "Type",
+                        &mut ObjectAndNames(t, &names),
+                    );
+                });
+            }
+            if let Some(pos) = to_delete {
+                changed.outer = true;
+                self.objects.remove(pos);
+            }
+        });
+        ui.tree_node(hash!(id, 5), "Materials", |ui| {
+            let WhatChanged { inner, outer } = self.materials.ui(ui, hash!(id, 6));
+            changed.outer |= inner;
+            changed.outer |= outer;
+        });
+        ui.tree_node(hash!(id, 7), "Library", |ui| {
+            changed.outer |= ui_editbox(ui, hash!(id, 7), &mut self.library.0);
+        });
+        if ui.button(None, "Save") {
+            let s = serde_json::to_string(self).unwrap();
+            std::fs::write("scene.json", s).unwrap();
+        }
+        if ui.button(None, "Load") {
+            let s = std::fs::read_to_string("scene.json").unwrap();
+            *self = serde_json::from_str(&s).unwrap();
+            changed.outer = true;
+        }
+        changed
+    }
+}
 
+pub trait UniformStruct {
+    fn uniforms(&self) -> Vec<(String, UniformType)>;
+    fn set_uniforms(&self, material: Material);
+}
+
+impl UniformStruct for Scene {
+    fn uniforms(&self) -> Vec<(String, UniformType)> {
+        self.objects
+            .iter()
+            .map(|object| match object {
+                Object::Flat {
+                    plane,
+                    is_inside: _,
+                } => vec![format!("{}_mat", plane), format!("{}_mat_inv", plane)].into_iter(),
+                Object::FlatPortal {
+                    first,
+                    second,
+                    is_inside: _,
+                } => vec![
+                    format!("{}_mat", first),
+                    format!("{}_mat_inv", first),
+                    format!("{}_mat", second),
+                    format!("{}_mat_inv", second),
+                    format!("{}_to_{}_mat_teleport", first, second),
+                    format!("{}_to_{}_mat_teleport", second, first),
+                ]
+                .into_iter(),
+            })
+            .flatten()
+            .map(|name| (name, UniformType::Mat4))
+            .chain(
+                vec![
+                    ("_camera".to_owned(), UniformType::Mat4),
+                    ("_resolution".to_owned(), UniformType::Float2),
+                ]
+                .into_iter(),
+            )
+            .collect()
+    }
+
+    fn set_uniforms(&self, material: Material) {
+        for i in &self.objects {
+            match i {
+                Object::Flat {
+                    plane,
+                    is_inside: _,
+                } => {
+                    if let Some(m) = self.matrices.get(&plane) {
+                        material.set_uniform(&format!("{}_mat_inv", plane), m.inverse());
+                        material.set_uniform(&format!("{}_mat", plane), m);
+                    }
+                }
+                Object::FlatPortal {
+                    first,
+                    second,
+                    is_inside: _,
+                } => {
+                    if let Some((m1, m2)) =
+                        self.matrices.get(&first).zip(self.matrices.get(&second))
+                    {
+                        material.set_uniform(
+                            &format!("{}_to_{}_mat_teleport", first, second),
+                            m2 * m1.inverse(),
+                        );
+                        material.set_uniform(
+                            &format!("{}_to_{}_mat_teleport", second, first),
+                            m1 * m2.inverse(),
+                        );
+                        material.set_uniform(&format!("{}_mat_inv", first), m1.inverse());
+                        material.set_uniform(&format!("{}_mat", first), m1);
+                        material.set_uniform(&format!("{}_mat_inv", second), m2.inverse());
+                        material.set_uniform(&format!("{}_mat", second), m2);
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl Scene {
+    pub fn new() -> Self {
+        Self {
+            matrices: Default::default(),
+            objects: vec![Object::default()],
+            materials: Default::default(),
+            library: GlslCode("".to_owned()),
+        }
+    }
+
+    pub fn generate_shader_code(&self) -> GlslCode {
+        /*
+           %%uniforms%%
+           %%materials_defines%%
+           %%intersection_functions%%
+           %%intersections%%
+           %%material_processing%%
+        */
+
+        let uniforms = {
+            self.uniforms()
+                .into_iter()
+                .map(|x| x.0)
+                .filter(|name| !name.starts_with("_"))
+                .map(|name| format!("uniform mat4 {};", name))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+
+        const MATERIAL_OFFSET: usize = 10;
+
+        let materials = {
+            let mut result = BTreeMap::new();
+            for name in self.materials.names_iter() {
+                result.insert(format!("{}_M", name), self.materials.get(&name).unwrap());
+            }
+            for (pos, first, second) in
+                self.objects
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(pos, x)| match x {
+                        Object::Flat { .. } => None,
+                        Object::FlatPortal { first, second, .. } => Some((pos, first, second)),
+                    })
+            {
+                result.insert(
+                    format!("teleport_{}_1_M", pos),
+                    MaterialCode(GlslCode(format!(
+                        "return teleport(i.hit.t, {}_to_{}_mat_teleport, r);",
+                        first, second
+                    ))),
+                );
+                result.insert(
+                    format!("teleport_{}_2_M", pos),
+                    MaterialCode(GlslCode(format!(
+                        "return teleport(i.hit.t, {}_to_{}_mat_teleport, r);",
+                        first, second
+                    ))),
+                );
+            }
+            result
+        };
+
+        let materials_defines = {
+            materials
+                .iter()
+                .enumerate()
+                .map(|(pos, (name, _))| format!("#define {} {}", name, pos + MATERIAL_OFFSET))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+
+        let intersection_functions = {
+            let mut result = String::new();
+            for (pos, i) in self.objects.iter().enumerate() {
+                let code = match i {
+                    Object::Flat {
+                        plane: _,
+                        is_inside,
+                    } => is_inside,
+                    Object::FlatPortal {
+                        first: _,
+                        second: _,
+                        is_inside,
+                    } => is_inside,
+                };
+                result += &format!("int is_inside_{}(float x, float y) {{\n", pos);
+                result += &code.0.0;
+                result += "\n}\n";
+            }
+            result
+        };
+
+        let intersections = {
+            let mut result = String::new();
+            for (pos, i) in self.objects.iter().enumerate() {
+                match i {
+                    Object::Flat {
+                        plane,
+                        is_inside: _,
+                    } => {
+                        result += &format!(
+                            "hit = plane_intersect(r, {}_mat_inv, {}_mat[2].xyz);\n",
+                            plane, plane
+                        );
+                        result += &format!(
+                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v); }}\n",
+                            pos
+                        );
+                        result += "i = process_plane_intersection(i, hit, inside);\n";
+                        result += "\n";
+                        result += "\n";
+                    }
+                    Object::FlatPortal {
+                        first,
+                        second,
+                        is_inside: _,
+                    } => {
+                        result += &format!(
+                            "hit = plane_intersect(r, {}_mat_inv, {}_mat[2].xyz);\n",
+                            first, first
+                        );
+                        result += &format!(
+                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v); }}\n",
+                            pos
+                        );
+                        result += &format!(
+                            "i = process_portal_intersection(i, hit, inside, teleport_{}_1_M, {}_mat[2].xyz);\n",
+                            pos, first
+                        );
+                        result += "\n";
+
+                        result += &format!(
+                            "hit = plane_intersect(r, {}_mat_inv, {}_mat[2].xyz);\n",
+                            second, second
+                        );
+                        result += &format!(
+                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v); }}\n",
+                            pos
+                        );
+                        result += &format!(
+                            "i = process_portal_intersection(i, hit, inside, teleport_{}_2_M, -{}_mat[2].xyz);\n",
+                            pos, second
+                        );
+                        result += "\n";
+                        result += "\n";
+                    }
+                }
+            }
+            result
+        };
+
+        let material_processing = {
+            let mut result = String::new();
+            for (name, code) in &materials {
+                result += &format!("}} else if (i.material == {}) {{\n", name);
+                result += &code.0.0;
+                result += "\n";
+            }
+            result
+        };
+
+        let mut result = FRAGMENT_SHADER.to_owned();
+        result = result.replace("%%uniforms%%", &uniforms);
+        result = result.replace("%%materials_defines%%", &materials_defines);
+        result = result.replace("%%intersection_functions%%", &intersection_functions);
+        result = result.replace("%%intersections%%", &intersections);
+        result = result.replace("%%material_processing%%", &material_processing);
+        GlslCode(result)
+    }
+
+    pub fn get_new_material(&self) -> Result<macroquad::prelude::Material, (String, String)> {
+        let code = self.generate_shader_code();
+
+        use macroquad::prelude::load_material;
+        use macroquad::prelude::MaterialParams;
+
+        load_material(
+            VERTEX_SHADER,
+            &code.0,
+            MaterialParams {
+                uniforms: self.uniforms(),
+                ..Default::default()
+            },
+        )
+        .map_err(|err| {
+            if let macroquad::prelude::miniquad::graphics::ShaderError::CompilationError {
+                error_message,
+                ..
+            } = err
+            {
+                (code.0, error_message)
+            } else {
+                panic!(err);
+            }
+        })
+    }
+}
+
+const FRAGMENT_SHADER: &'static str = include_str!("frag.glsl");
+
+const VERTEX_SHADER: &'static str = "#version 100
+attribute vec3 position;
+attribute vec2 texcoord;
+
+varying lowp vec2 uv;
+varying lowp vec2 uv_screen;
+
+uniform mat4 Model;
+uniform mat4 Projection;
+
+uniform vec2 Center;
+uniform vec2 _resolution;
+
+void main() {
+    vec4 res = Projection * Model * vec4(position, 1);
+
+    uv_screen = (position.xy - _resolution/2.) / min(_resolution.x, _resolution.y) * 2.;
+    uv_screen.y *= -1.;
+    uv = texcoord;
+
+    gl_Position = res;
+}
+";
 
 /*
     // ComplexPortal {

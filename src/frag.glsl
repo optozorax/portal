@@ -309,76 +309,18 @@ struct SceneIntersection {
     SurfaceIntersect hit;
 };
 
-uniform mat4 portal_mat_first;
-uniform mat4 portal_mat_first_inverse;
-uniform mat4 portal_mat_first_teleport;
-uniform mat4 portal_mat_second;
-uniform mat4 portal_mat_second_inverse;
-uniform mat4 portal_mat_second_teleport;
+%%uniforms%%
 
-uniform mat4 portal1_mat_first;
-uniform mat4 portal1_mat_first_inverse;
-uniform mat4 portal1_mat_first_teleport;
-uniform mat4 portal1_mat_second;
-uniform mat4 portal1_mat_second_inverse;
-uniform mat4 portal1_mat_second_teleport;
+#define NOT_INSIDE 0
+#define TELEPORT 1
 
-uniform mat4 plane1;
-uniform mat4 plane1_inv;
-uniform mat4 plane2;
-uniform mat4 plane2_inv;
-uniform mat4 plane3;
-uniform mat4 plane3_inv;
-uniform mat4 plane4;
-uniform mat4 plane4_inv;
-uniform mat4 plane5;
-uniform mat4 plane5_inv;
-uniform mat4 plane6;
-uniform mat4 plane6_inv;
-uniform mat4 triangle;
-uniform mat4 triangle_inv;
-
-uniform int teleport_light;
-uniform int second_portal_disabled;
-uniform int teleportation_enabled;
-
-uniform float side_border_progress;
-uniform float portal_color_blend;
-uniform float triangle_size;
+%%materials_defines%%
 
 const float plane_size = 4.5;
 const float plane_scale = 1./(plane_size * 2.);
 
 bool nearer(SurfaceIntersect hit, SceneIntersection i) {
     return hit.hit && hit.t < i.hit.t;
-}
-
-bool on_plane(SurfaceIntersect hit) {
-    return abs(hit.u) < plane_size && abs(hit.v) < plane_size;
-}
-
-SceneIntersection plane_process_intersection(SceneIntersection i, SurfaceIntersect hit, int material) {
-    if (nearer(hit, i) && on_plane(hit)) {
-        i.hit = hit;
-        i.material = material;
-    }
-    return i;
-}
-
-SceneIntersection mobius_process_intersection(SceneIntersection i, SurfaceIntersect hit, int material) {
-    if (nearer(hit, i)) {
-        i.hit = hit;
-        if (abs(hit.v) > 0.80) {
-            i.material = material;
-        } else {
-            if (teleport_light == 0) {
-                i.material = material + 1;
-            } else {
-                i.material = material + 2;
-            }
-        }        
-    }
-    return i;
 }
 
 bool is_collinear(vec3 a, vec3 b) {
@@ -393,86 +335,51 @@ float sqr(float a) {
     return a*a;
 }
 
-// `r` is original ellipse radius, `b` is border radius. For better results `r` must be 1, and `b` must lie in [0; 0.1].
-float ellipse_parallel_curve_approximation(float r, float b, float x) {
-    return sqr(r + b + sqrt(abs(abs(x) - 1. - b)) * b);
-}
+%%intersection_functions%%
 
-SceneIntersection half_ellipse_process_intersection(SceneIntersection i, Ray r, int material, mat4 plane_matrix, vec3 normal) {
-    float border = 0.05;
-    float black_border = 0.02;
-    float portal_size = 1.;
-    float ellipse_portal = sqr(portal_size);
-    float ellipse_border = sqr(portal_size + border);
-    float ellipse_black_border = sqr(portal_size + border + black_border);
-
-    SurfaceIntersect hit = plane_intersect(r, plane_matrix, normal);
-    if (hit.hit && nearer(hit, i)) {
-        float circle_pos = hit.u * hit.u + hit.v * hit.v;
-        if (between(0., circle_pos, ellipse_portal) && hit.u > 0. && hit.v > 0.) {
+SceneIntersection process_plane_intersection(SceneIntersection i, SurfaceIntersect hit, int inside) {
+    if (hit.hit && hit.t < i.hit.t) {
+        if (inside == NOT_INSIDE) {
+            // Not inside, do nothing
+        } else if (inside == TELEPORT) {
+            // This is wrong code, do nothing
+        } else {
             i.hit = hit;
-            if (is_collinear(hit.n, normal)) {
-                i.material = material;
-            } else {
-                i.material = 6;
-            }
-        }
-        if (between(ellipse_portal, circle_pos, ellipse_border)) {
-            i.hit = hit;
-            i.material = 6;
+            i.material = inside;
         }
     }
     return i;
 }
 
-SceneIntersection scene_intersect_1(Ray r) {
-    SceneIntersection i = SceneIntersection(0, no_intersect);
-    SurfaceIntersect hit = no_intersect;
-
-    // Cube room -------------------------------------------------------------
-    i = plane_process_intersection(i, plane_intersect(r, plane1_inv, plane1[2].xyz), 0);
-    i = plane_process_intersection(i, plane_intersect(r, plane2_inv, plane2[2].xyz), 1);
-    i = plane_process_intersection(i, plane_intersect(r, plane3_inv, plane3[2].xyz), 2);
-    i = plane_process_intersection(i, plane_intersect(r, plane4_inv, plane4[2].xyz), 3);
-    i = plane_process_intersection(i, plane_intersect(r, plane5_inv, plane5[2].xyz), 4);
-    i = plane_process_intersection(i, plane_intersect(r, plane6_inv, plane6[2].xyz), 5);
-
-    // Triangle
-    float triangle_border_size = 0.05;
-
-    hit = plane_intersect(r, triangle_inv, triangle[2].xyz);
-    if (nearer(hit, i) && hit.u > 0. && hit.u < -abs(3. * hit.v) + triangle_size) {
-        vec3 pos = r.o + r.d * hit.t;
-        if (pos.x < 0.) {
+SceneIntersection process_portal_intersection(SceneIntersection i, SurfaceIntersect hit, int inside, int material, vec3 normal) {
+    if (hit.hit && hit.t < i.hit.t && is_collinear(hit.n, normal)) {
+        if (inside == NOT_INSIDE) {
+            // Not inside, do nothing
+        } else if (inside == TELEPORT) {
             i.hit = hit;
-            if (hit.u < triangle_border_size/3. || hit.u > -abs(3. * hit.v) + triangle_size - triangle_border_size) {
-                i.material = 6;
-            } else {
-                i.material = 7;
-            }
+            i.material = material;
+        } else {
+            i.hit = hit;
+            i.material = inside;
         }
     }
+    return i;
+}
 
-    // hit = plane_intersect(r, triangle_inv * portal_mat_first_teleport, triangle[2].xyz);
-    // if (nearer(hit, i) && hit.u > 0. && hit.u < -abs(3. * hit.v) + triangle_size) {
-    //     vec3 pos = r.o + r.d * hit.t;
-    //     if (pos.x < 0.) {
-    //         i.hit = hit;
-    //         if (hit.u < triangle_border_size/3. || hit.u > -abs(3. * hit.v) + triangle_size - triangle_border_size) {
-    //             i.material = 6;
-    //         } else {
-    //             i.material = 7;
-    //         }
-    //     }
-    // }
+int is_inside_1(float x, float y) {
+if (x*x + y*y < 1.) {
+  return black_M;
+} else {
+  return NOT_INSIDE;
+}
+}
 
-    // Portals --------------------------------------------------------
-    i = half_ellipse_process_intersection(i, r, 100, portal_mat_first_inverse, portal_mat_first[2].xyz);
-    // i = half_ellipse_process_intersection(i, r, 101, portal_mat_second_inverse, -portal_mat_second[2].xyz);
+SceneIntersection scene_intersect(Ray r) {
+    SceneIntersection i = SceneIntersection(0, no_intersect);
+    SurfaceIntersect hit = no_intersect;
+    int inside = NOT_INSIDE;
 
-    // i = half_ellipse_process_intersection(i, r, 200, portal1_mat_first_inverse, portal1_mat_first[2].xyz);
-    // i = half_ellipse_process_intersection(i, r, 201, portal1_mat_second_inverse, -portal1_mat_second[2].xyz);
-
+%%intersections%%
 
     return i;
 }
@@ -487,9 +394,6 @@ struct MaterialProcessing {
     Ray new_ray;
 };
 
-uniform float add_gray_after_teleportation;
-uniform sampler2D watermark;
-
 MaterialProcessing plane_process_material(SurfaceIntersect hit, Ray r, vec3 clr) {
     vec3 new_clr = grid_color(clr, vec2(hit.u, hit.v) * plane_scale);
     clr = (clr*2. + new_clr)/3.;
@@ -503,53 +407,15 @@ MaterialProcessing teleport(float t, mat4 matrix, Ray r) {
     r.o = mul_pos(matrix, r.o);
     r.d = mul_dir(matrix, r.d);
 
-    return MaterialProcessing(false, vec3(add_gray_after_teleportation), r);
+    return MaterialProcessing(false, vec3(1.0), r);
 }
 
-MaterialProcessing material_process_1(Ray r, SceneIntersection i) {
+MaterialProcessing material_process(Ray r, SceneIntersection i) {
+    SurfaceIntersect hit = i.hit;
     if (i.material == -1) {
 
+%%material_processing%%
 
-    // Box around
-    } else if (i.material == 0) {
-        return plane_process_material(i.hit, r, color(0.6, 0.2, 0.2));
-    } else if (i.material == 1) {
-        return plane_process_material(i.hit, r, color(0.6, 0.2, 0.6));
-    } else if (i.material == 2) {
-        return plane_process_material(i.hit, r, color(0.6, 0.6, 0.6));
-    } else if (i.material == 3) {
-        return plane_process_material(i.hit, r, color(0.2, 0.2, 0.6));
-    } else if (i.material == 4) {
-        return plane_process_material(i.hit, r, color(0.6, 0.6, 0.2));
-    } else if (i.material == 5) {
-        vec3 current_color = color(0.2, 0.6, 0.2);
-        vec3 new_color = grid_color(current_color, vec2(i.hit.u, i.hit.v) * plane_scale);
-        current_color = (current_color*2. + new_color)/3.;
-        current_color = add_normal_to_color(current_color, i.hit.n, r.d);
-        current_color *= texture2D(watermark, (vec2(i.hit.u, i.hit.v) + vec2(plane_size, plane_size))/(plane_size * 2.)).rgb;
-        return MaterialProcessing(true, current_color, no_ray);
-
-
-    // Triangle and borders
-    } else if (i.material == 6) {
-        return MaterialProcessing(true, add_normal_to_color(color(0., 0., 0.), i.hit.n, r.d), no_ray);
-    } else if (i.material == 7) {
-        return MaterialProcessing(true, add_normal_to_color(color(0.6, 0.6, 0.6), i.hit.n, r.d), no_ray);
-
-
-    // Portals
-    } else if (i.material == 100) {
-        return teleport(i.hit.t, portal_mat_first_teleport, r);
-    } else if (i.material == 101) {
-        return teleport(i.hit.t, portal_mat_second_teleport, r);
-
-
-    } else if (i.material == 200) {
-        return teleport(i.hit.t, portal1_mat_first_teleport, r);
-    } else if (i.material == 201) {
-        return teleport(i.hit.t, portal1_mat_second_teleport, r);
-
-    // End    
     }
     return MaterialProcessing(false, vec3(0.), Ray(vec3(0.), vec3(0.)));
 }
@@ -562,9 +428,9 @@ MaterialProcessing material_process_1(Ray r, SceneIntersection i) {
 vec3 ray_tracing(Ray r) {
     vec3 current_color = vec3(1.);
     for (int j = 0; j < 100; j++) {
-        SceneIntersection i = scene_intersect_1(r);
+        SceneIntersection i = scene_intersect(r);
         if (i.hit.hit) {
-            MaterialProcessing m = material_process_1(r, i);
+            MaterialProcessing m = material_process(r, i);
             current_color *= m.mul_to_color;
             if (m.is_final) {
                 return current_color;
@@ -582,13 +448,13 @@ vec3 ray_tracing(Ray r) {
 // Draw image ----------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-uniform mat4 camera;
+uniform mat4 _camera;
 varying vec2 uv;
 varying vec2 uv_screen;
 
 void main() {
-    vec3 o = mul_pos(camera, vec3(0.));
-    vec3 d = normalize(mul_dir(camera, vec3(uv_screen.x, uv_screen.y, 1.)));
+    vec3 o = mul_pos(_camera, vec3(0.));
+    vec3 d = normalize(mul_dir(_camera, vec3(uv_screen.x, uv_screen.y, 1.)));
     Ray r = Ray(o, d);
     gl_FragColor = vec4(sqrt(ray_tracing(r)), 1.);
 }
