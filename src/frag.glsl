@@ -351,8 +351,8 @@ SceneIntersection process_plane_intersection(SceneIntersection i, SurfaceInterse
     return i;
 }
 
-SceneIntersection process_portal_intersection(SceneIntersection i, SurfaceIntersect hit, int inside, int material, vec3 normal) {
-    if (hit.hit && hit.t < i.hit.t && is_collinear(hit.n, normal)) {
+SceneIntersection process_portal_intersection(SceneIntersection i, SurfaceIntersect hit, int inside, int material) {
+    if (hit.hit && hit.t < i.hit.t) {
         if (inside == NOT_INSIDE) {
             // Not inside, do nothing
         } else if (inside == TELEPORT) {

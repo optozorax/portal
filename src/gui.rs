@@ -373,12 +373,12 @@ impl<T: StorageElem> ComplexUiable for StorageWithNames<T> {
     fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged {
         let mut changed = WhatChanged::default();
         let mut to_delete = None;
-        if ui.button(None, "Add matrix") {
+        if ui.button(None, "Add") {
             changed.outer = true;
             self.add("new".to_owned(), T::default());
         }
         let mut names = &mut self.names;
-        for (pos, t) in self.storage.iter_mut().enumerate().skip(1) {
+        for (pos, t) in self.storage.iter_mut().enumerate() {
             ui.tree_node(hash!(id, 0, pos), &names[pos].clone(), |ui| {
                 if ui.button(None, "Delete") {
                     to_delete = Some(pos);
@@ -452,7 +452,6 @@ pub enum Object {
     FlatPortal {
         first: String,
         second: String,
-        // back_material: String,
         is_inside: IsInsideCode,
     },
 }
@@ -530,6 +529,16 @@ pub struct Scene {
 impl ComplexUiable for Scene {
     fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged {
         let mut changed = WhatChanged::default();
+        if ui.button(None, "Save") {
+            let s = serde_json::to_string(self).unwrap();
+            std::fs::write("scene.json", s).unwrap();
+        }
+        ui.same_line(0.0);
+        if ui.button(None, "Load") {
+            let s = std::fs::read_to_string("scene.json").unwrap();
+            *self = serde_json::from_str(&s).unwrap();
+            changed.outer = true;
+        }
         ui.tree_node(hash!(id, 0), "Matrices", |ui| {
             let WhatChanged { inner, outer } = self.matrices.ui(ui, hash!(id, 1));
             changed.inner |= inner;
@@ -568,15 +577,6 @@ impl ComplexUiable for Scene {
         ui.tree_node(hash!(id, 7), "Library", |ui| {
             changed.outer |= ui_editbox(ui, hash!(id, 7), &mut self.library.0);
         });
-        if ui.button(None, "Save") {
-            let s = serde_json::to_string(self).unwrap();
-            std::fs::write("scene.json", s).unwrap();
-        }
-        if ui.button(None, "Load") {
-            let s = std::fs::read_to_string("scene.json").unwrap();
-            *self = serde_json::from_str(&s).unwrap();
-            changed.outer = true;
-        }
         changed
     }
 }
@@ -716,7 +716,7 @@ impl Scene {
                     format!("teleport_{}_2_M", pos),
                     MaterialCode(GlslCode(format!(
                         "return teleport(i.hit.t, {}_to_{}_mat_teleport, r);",
-                        first, second
+                        second, first
                     ))),
                 );
             }
@@ -735,20 +735,26 @@ impl Scene {
         let intersection_functions = {
             let mut result = String::new();
             for (pos, i) in self.objects.iter().enumerate() {
-                let code = match i {
+                match i {
                     Object::Flat {
                         plane: _,
                         is_inside,
-                    } => is_inside,
+                    } => {
+                        result += &format!("int is_inside_{}(float x, float y) {{\n", pos);
+                        result += &is_inside.0.0;
+                        result += "\n}\n";
+                    },
                     Object::FlatPortal {
                         first: _,
                         second: _,
                         is_inside,
-                    } => is_inside,
-                };
-                result += &format!("int is_inside_{}(float x, float y) {{\n", pos);
-                result += &code.0.0;
-                result += "\n}\n";
+                    } => {
+                        result += &format!("int is_inside_{}(float x, float y, bool first, bool back) {{\n", pos);
+                        result += &is_inside.0.0;
+                        result += "\n}\n";
+                    },
+                }
+                
             }
             result
         };
@@ -783,12 +789,12 @@ impl Scene {
                             first, first
                         );
                         result += &format!(
-                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v); }}\n",
-                            pos
+                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v, true, !is_collinear(hit.n, {}_mat[2].xyz)); }}\n",
+                            pos, first
                         );
                         result += &format!(
-                            "i = process_portal_intersection(i, hit, inside, teleport_{}_1_M, {}_mat[2].xyz);\n",
-                            pos, first
+                            "i = process_portal_intersection(i, hit, inside, teleport_{}_1_M);\n",
+                            pos
                         );
                         result += "\n";
 
@@ -797,12 +803,12 @@ impl Scene {
                             second, second
                         );
                         result += &format!(
-                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v); }}\n",
-                            pos
+                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v, false, !is_collinear(hit.n, -{}_mat[2].xyz)); }}\n",
+                            pos, second
                         );
                         result += &format!(
-                            "i = process_portal_intersection(i, hit, inside, teleport_{}_2_M, -{}_mat[2].xyz);\n",
-                            pos, second
+                            "i = process_portal_intersection(i, hit, inside, teleport_{}_2_M);\n",
+                            pos,
                         );
                         result += "\n";
                         result += "\n";
@@ -833,6 +839,8 @@ impl Scene {
 
     pub fn get_new_material(&self) -> Result<macroquad::prelude::Material, (String, String)> {
         let code = self.generate_shader_code();
+
+        // println!("{}", code.0);
 
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;

@@ -155,6 +155,7 @@ impl Window {
                             }
                         }            
                     }
+                    ui.same_line(0.0);
                 }
 
                 changed = self.scene.ui(ui, hash!());
