@@ -1,3 +1,4 @@
+use egui_macroquad::Egui;
 use crate::megaui::Vector2;
 use macroquad::prelude::*;
 use std::f32::consts::PI;
@@ -207,6 +208,8 @@ async fn main() {
     let mut h = screen_height();
     let mut image_size_changed = true;
 
+    let mut egui = Egui::new();
+
     loop {
         clear_background(BLACK);
 
@@ -242,6 +245,17 @@ async fn main() {
             );
             draw_megaui();
         }
+
+        egui.ui(|egui_ctx| {
+            egui::Window::new("Debug").show(egui_ctx, |ui| {
+                ui.add(egui::Label::new("Egui on Macroquad").text_style(egui::TextStyle::Heading));
+                ui.separator();
+                ui.label("Woooohoooo!");
+                if ui.button("Quit").clicked() {
+                    std::process::exit(0);
+                }
+            });
+        });
 
         next_frame().await;
     }
