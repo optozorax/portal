@@ -26,11 +26,11 @@ pub fn ui_any_vector(ui: &mut Ui, id: Id, number: &mut Vec3) -> bool {
 }
 
 pub fn ui_angle(ui: &mut Ui, id: Id, label: &str, angle: &mut f32) -> bool {
-    let mut current = *angle / (2. * PI);
+    let mut current = *angle / PI;
     let previous = current;
     ui.slider(id, label, 0.0..2.0, &mut current);
     if previous != current {
-        *angle = current * 2. * PI;
+        *angle = current * PI;
         true
     } else {
         false

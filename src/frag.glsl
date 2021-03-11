@@ -366,14 +366,6 @@ SceneIntersection process_portal_intersection(SceneIntersection i, SurfaceInters
     return i;
 }
 
-int is_inside_1(float x, float y) {
-if (x*x + y*y < 1.) {
-  return black_M;
-} else {
-  return NOT_INSIDE;
-}
-}
-
 SceneIntersection scene_intersect(Ray r) {
     SceneIntersection i = SceneIntersection(0, no_intersect);
     SurfaceIntersect hit = no_intersect;

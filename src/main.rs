@@ -21,7 +21,7 @@ struct RotateAroundCam {
 impl RotateAroundCam {
     const BETA_MIN: f32 = 0.01;
     const BETA_MAX: f32 = PI - 0.01;
-    const MOUSE_SENSITIVITY: f32 = 1.2;
+    const MOUSE_SENSITIVITY: f32 = 1.4;
     const SCALE_FACTOR: f32 = 1.1;
     const VIEW_ANGLE: f32 = 80. / 180. * PI;
 
@@ -131,7 +131,7 @@ impl Window {
         draw_window(
             hash!(),
             vec2(20., 20.),
-            vec2(400., 450.),
+            vec2(300., 450.),
             WindowParams {
                 label: "Configure scene".to_owned(),
                 close_button: false,
