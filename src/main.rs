@@ -159,7 +159,7 @@ impl RotateAroundCam {
 struct Window {
     scene: Scene,
     cam: RotateAroundCam,
-    material: Material,
+    material: macroquad::material::Material,
     should_recompile: bool,
 
     edit_scene_opened: bool,

@@ -1,6 +1,5 @@
 use egui::*;
 use glam::*;
-use macroquad::prelude::Material;
 use macroquad::prelude::UniformType;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -59,6 +58,7 @@ pub fn check_changed<T: PartialEq + Clone, F: FnOnce(&mut T)>(t: &mut T, f: F) -
 }
 
 pub trait Eguiable {
+    #[must_use]
     fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged;
 }
 
@@ -108,10 +108,8 @@ pub fn egui_f32_positive(ui: &mut Ui, value: &mut f32) -> bool {
 }
 
 pub fn egui_label(ui: &mut Ui, label: &str, size: f32) {
-    ui.put(
-        Rect::from_min_size(ui.min_rect().min, egui::vec2(size, 0.)),
-        Label::new(label),
-    );
+    let (rect, _) = ui.allocate_at_least(egui::vec2(size, 0.), Sense::hover());
+    ui.painter().text(rect.max, Align2::RIGHT_CENTER, label, TextStyle::Body, Color32::WHITE);
 }
 
 pub fn egui_existing_name(
@@ -561,33 +559,196 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
 }
 
 // ----------------------------------------------------------------------------------------------------------
-// Glsl code things
+// Material
 // ----------------------------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlslCode(pub String);
+pub enum Material {
+    Simple {
+        color: [f32; 3],
+        k: f32, // 0..1
+        s: f32, // 0..1
+        grid: bool,
+        grid_scale: f32,
+    },
+    Reflect {
+        add_to_color: [f32; 3],
+    },
+    Refract {
+        refractive_index: f32,
+        add_to_color: [f32; 3],
+    },
+    Complex {
+        code: MaterialCode, // gets (SphereIntersection hit, Ray r) -> MaterialProcessing, must use material_next or material_final
+    },
+}
 
-// Code must return vec3 at the end
+impl Default for Material {
+    fn default() -> Self {
+        Material::Simple {
+            color: [0.0, 0.0, 0.0],
+            k: 1.0,
+            s: 0.5,
+            grid: false,
+            grid_scale: 1.0,
+        }
+    }
+}
+
+impl StorageElem for MaterialComboBox {
+    type GetType = Material;
+
+    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, _: F) -> Option<Self::GetType> {
+        Some(self.0.clone())
+    }
+
+    fn defaults() -> (Vec<String>, Vec<Self>) {
+        (vec!["black".to_owned()], vec![MaterialComboBox(Material::default())])
+    }
+}
+
+impl ComboBoxChoosable for Material {
+    fn variants() -> &'static [&'static str] {
+        &["Simple", "Reflect", "Refract", "Complex"]
+    }
+    fn get_number(&self) -> usize {
+        use Material::*;
+        match self {
+            Simple { .. } => 0,
+            Reflect { .. } => 1,
+            Refract { .. } => 2,
+            Complex { .. } => 3,
+        }
+    }
+    fn set_number(&mut self, number: usize) {
+        use Material::*;
+        *self = match number {
+            0 => Default::default(),
+            1 => Reflect { add_to_color: Default::default() },
+            2 => Refract { add_to_color: Default::default(), refractive_index: 1.5 },
+            3 => Complex { code: Default::default() },
+            _ => unreachable!(),
+        };
+    }
+}
+
+const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);
+const COLOR_FUNCTION: Color32 = Color32::from_rgb(0x2B, 0xAB, 0x63);
+const COLOR_COMMENT: Color32 = Color32::from_rgb(0x8c, 0xa3, 0x75);
+
+impl Eguiable for Material {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+        use Material::*;
+        let mut changed = false;
+        match self {
+            Simple { color, k, s, grid, grid_scale } => {
+                ui.horizontal(|ui| {
+                    ui.label("Color");
+                    changed |= check_changed(color, |color| drop(ui.color_edit_button_rgb(color)));
+                    ui.separator();
+                    ui.label("k");
+                    changed |= check_changed(k, |k| drop(ui.add(
+                        DragValue::f32(k)
+                            .speed(0.01)
+                            .clamp_range(0.0..=1.0)
+                            .min_decimals(0)
+                            .max_decimals(2),
+                    )));
+                    ui.separator();
+                    ui.label("s");
+                    changed |= check_changed(s, |s| drop(ui.add(
+                        DragValue::f32(s)
+                            .speed(0.01)
+                            .clamp_range(0.0..=1.0)
+                            .min_decimals(0)
+                            .max_decimals(2),
+                    )));
+                });
+                ui.horizontal(|ui| {
+                    changed |= check_changed(grid, |grid| drop(ui.add(Checkbox::new(grid, "Grid"))));
+                    ui.set_enabled(*grid);
+                    ui.separator();
+                    ui.label("Grid scale");
+                    changed |= check_changed(grid_scale, |grid_scale| drop(
+                    ui.add(
+                        DragValue::f32(grid_scale)
+                            .speed(0.01)
+                            .clamp_range(0.0..=1000.0)
+                            .min_decimals(0)
+                            .max_decimals(2)
+                    )));
+                });
+            },
+            Reflect { add_to_color } => {
+                ui.horizontal(|ui| {
+                    ui.label("Add to color");
+                    changed |= check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
+                });
+            },
+            Refract { refractive_index, add_to_color } => {
+                ui.horizontal(|ui| {
+                    ui.label("Add to color");
+                    changed |= check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Refractive index");
+                    changed |= check_changed(refractive_index, |r| drop(
+                    ui.add(
+                        DragValue::f32(r)
+                            .speed(0.01)
+                            .clamp_range(0.0..=10.0)
+                            .min_decimals(0)
+                            .max_decimals(2)
+                    )));
+                });
+            },
+            Complex { code } => {
+                ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+                    ui.spacing_mut().item_spacing.x = 0.;
+                    ui.add(Label::new("MaterialProcessing ").text_color(COLOR_TYPE).monospace());
+                    ui.add(Label::new("process_material").text_color(COLOR_FUNCTION).monospace());
+                    ui.add(Label::new("(\n  ").monospace());
+                    ui.add(Label::new("SurfaceIntersect ").text_color(COLOR_TYPE).monospace());
+                    ui.add(Label::new("hit,\n  ").monospace());
+                    ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
+                    ui.add(Label::new("r\n) {").monospace());
+                });
+                changed |= code.0.egui(ui, data).shader;
+                ui.add(Label::new("}").monospace());
+            },
+        }
+        WhatChanged::from_shader(changed)
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct MaterialComboBox(pub Material);
+
+impl Eguiable for MaterialComboBox {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+        let mut changed =
+            WhatChanged::from_uniform(egui_combo_box(ui, "Type:", 45., &mut self.0, *data.get()));
+        ui.separator();
+        changed |= self.0.egui(ui, data);
+        changed
+    }
+}
+
+// ----------------------------------------------------------------------------------------------------------
+// Glsl code in objects and materials
+// ----------------------------------------------------------------------------------------------------------
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MaterialCode(pub GlslCode);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GlslCode(pub String);
 
 impl Default for MaterialCode {
     fn default() -> Self {
         MaterialCode(GlslCode(
             "return plane_process_material(hit, r, color(0.2, 0.6, 0.6));".to_owned(),
         ))
-    }
-}
-
-impl StorageElem for MaterialCode {
-    type GetType = MaterialCode;
-
-    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, _: F) -> Option<Self::GetType> {
-        Some(self.clone())
-    }
-
-    fn defaults() -> (Vec<String>, Vec<Self>) {
-        (vec!["black".to_owned()], vec![MaterialCode::default()])
     }
 }
 
@@ -619,58 +780,124 @@ impl Default for IsInsideCode {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntersectCode(pub GlslCode);
+
+impl Default for IntersectCode {
+    fn default() -> Self {
+        Self(GlslCode("// todo add sphere intersect code".to_owned()))
+    }
+}
+
 // ----------------------------------------------------------------------------------------------------------
 // Scene object
 // ----------------------------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MatrixName(String);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ObjectType {
+    Simple(MatrixName),
+    Portal(MatrixName, MatrixName),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
+    DebugMatrix(MatrixName),
     Flat {
-        plane: String,
-        is_inside: IsInsideCode,
+        kind: ObjectType,
+        is_inside: IsInsideCode, // gets current position (vec4), surface x y, must return material number. if this is portal, then additionally gets `first`, `back`
     },
-    FlatPortal {
-        first: String,
-        second: String,
-        is_inside: IsInsideCode,
+    Complex {
+        kind: ObjectType,
+        intersect: IntersectCode, // gets transformed Ray, must return SurfaceIntersect
     },
+}
+
+impl Default for MatrixName {
+    fn default() -> Self {
+        Self("id".into())
+    }
+}
+
+impl Default for ObjectType {
+    fn default() -> Self {
+        Self::Simple(Default::default())
+    }
 }
 
 impl Default for Object {
     fn default() -> Self {
-        Object::Flat {
-            plane: "id".to_owned(),
-            is_inside: Default::default(),
+        Object::DebugMatrix(Default::default())
+    }
+}
+
+impl ComboBoxChoosable for ObjectType {
+    fn variants() -> &'static [&'static str] {
+        &["Simple", "Portal"]
+    }
+    fn get_number(&self) -> usize {
+        use ObjectType::*;
+        match self {
+            Simple { .. } => 0,
+            Portal { .. } => 1,
         }
+    }
+    fn set_number(&mut self, number: usize) {
+        use ObjectType::*;
+        *self = match number {
+            0 => Simple(Default::default()),
+            1 => Portal(Default::default(), Default::default()),
+            _ => unreachable!(),
+        };
     }
 }
 
 impl ComboBoxChoosable for Object {
     fn variants() -> &'static [&'static str] {
-        &["Flat object", "Flat portal"]
+        &["Debug", "Flat", "Complex"]
     }
     fn get_number(&self) -> usize {
         use Object::*;
         match self {
-            Flat { .. } => 0,
-            FlatPortal { .. } => 1,
+            DebugMatrix { .. } => 0,
+            Flat { .. } => 1,
+            Complex { .. } => 2,
         }
     }
     fn set_number(&mut self, number: usize) {
         use Object::*;
         *self = match number {
-            0 => Flat {
-                plane: "id".to_owned(),
+            0 => DebugMatrix(Default::default()),
+            1 => Flat {
+                kind: Default::default(),
                 is_inside: Default::default(),
             },
-            1 => FlatPortal {
-                first: "id".to_owned(),
-                second: "id".to_owned(),
-
-                is_inside: Default::default(),
+            2 => Complex {
+                kind: Default::default(),
+                intersect: Default::default(),
             },
             _ => unreachable!(),
         };
+    }
+}
+
+impl Eguiable for ObjectType {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+        use ObjectType::*;
+        let names = data.get::<Arc<Vec<String>>>();
+        let mut is_changed = false;
+        match self {
+            Simple(a) => {
+                is_changed |= egui_existing_name(ui, "Matrix:", 45., &mut a.0, names)
+            },
+            Portal(a, b) => {
+                is_changed |= egui_existing_name(ui, "First:", 45., &mut a.0, names);
+                is_changed |= egui_existing_name(ui, "Second:", 45., &mut b.0, names);
+            },
+        }
+        WhatChanged::from_shader(is_changed)
     }
 }
 
@@ -680,18 +907,61 @@ impl Eguiable for Object {
         let names = data.get::<Arc<Vec<String>>>();
         let mut is_changed = WhatChanged::default();
         match self {
-            Flat { plane, is_inside } => {
-                is_changed.shader |= egui_existing_name(ui, "Plane:", 45., plane, names);
+            DebugMatrix(a) => {
+                is_changed.shader |= egui_existing_name(ui, "Matrix:", 45., &mut a.0, names);
+            },
+            Flat { kind, is_inside } => {
+                is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
+                is_changed |= kind.egui(ui, data);
+                ui.separator();
+                if matches!(kind, ObjectType::Portal { .. }) {
+                    ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+                        ui.spacing_mut().item_spacing.x = 0.;
+                        ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("is_inside").text_color(COLOR_FUNCTION).monospace());
+                        ui.add(Label::new("(").monospace());
+                        ui.add(Label::new("vec4 ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("pos, ").monospace());
+                        ui.add(Label::new("float ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("x, ").monospace());
+                        ui.add(Label::new("float ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("y, \n              ").monospace());
+                        ui.add(Label::new("bool ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("back, ").monospace());
+                        ui.add(Label::new("bool ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("first) {").monospace());
+                    });
+                } else {
+                    ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+                        ui.spacing_mut().item_spacing.x = 0.;
+                        ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("is_inside").text_color(COLOR_FUNCTION).monospace());
+                        ui.add(Label::new("(").monospace());
+                        ui.add(Label::new("vec4 ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("pos, ").monospace());
+                        ui.add(Label::new("float ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("x, ").monospace());
+                        ui.add(Label::new("float ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("y) {").monospace());
+                    });
+                }
                 is_changed |= is_inside.0.egui(ui, data);
+                ui.add(Label::new("}").monospace());
             }
-            FlatPortal {
-                first,
-                second,
-                is_inside,
-            } => {
-                is_changed.shader |= egui_existing_name(ui, "First:", 45., first, names);
-                is_changed.shader |= egui_existing_name(ui, "Second:", 45., second, names);
-                is_changed |= is_inside.0.egui(ui, data);
+            Complex { kind, intersect } => {
+                is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
+                is_changed |= kind.egui(ui, data);
+                ui.separator();
+                ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+                    ui.spacing_mut().item_spacing.x = 0.;
+                    ui.add(Label::new("SurfaceIntersect ").text_color(COLOR_TYPE).monospace());
+                    ui.add(Label::new("intersect").text_color(COLOR_FUNCTION).monospace());
+                    ui.add(Label::new("(").monospace());
+                    ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
+                    ui.add(Label::new("r) {").monospace());
+                });
+                is_changed |= intersect.0.egui(ui, data);
+                ui.add(Label::new("}").monospace());
             }
         }
         is_changed
@@ -704,7 +974,7 @@ pub struct ObjectComboBox(pub Object);
 impl Eguiable for ObjectComboBox {
     fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
         let mut changed =
-            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, *data.get()));
+            WhatChanged::from_shader(egui_combo_label(ui, "Type:", 45., &mut self.0));
         ui.separator();
         changed |= self.0.egui(ui, data);
         changed
@@ -720,7 +990,7 @@ pub struct Scene {
     matrices: StorageWithNames<MatrixComboBox>,
     objects: Vec<ObjectComboBox>,
 
-    materials: StorageWithNames<MaterialCode>,
+    materials: StorageWithNames<MaterialComboBox>,
     library: GlslCode,
 }
 
@@ -801,7 +1071,7 @@ impl Scene {
         CollapsingHeader::new("Glsl Library")
             .default_open(false)
             .show(ui, |ui| {
-                self.library.egui(ui, &mut data);
+                changed |= self.library.egui(ui, &mut data);
             });
 
         (changed, material)
@@ -814,11 +1084,12 @@ impl Scene {
 
 pub trait UniformStruct {
     fn uniforms(&self) -> Vec<(String, UniformType)>;
-    fn set_uniforms(&self, material: Material);
+    fn set_uniforms(&self, material: macroquad::material::Material);
 }
 
 impl UniformStruct for Scene {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
+        /*
         self.objects
             .iter()
             .map(|object| match &object.0 {
@@ -850,9 +1121,12 @@ impl UniformStruct for Scene {
                 .into_iter(),
             )
             .collect()
+        */
+        vec![]
     }
 
-    fn set_uniforms(&self, material: Material) {
+    fn set_uniforms(&self, material: macroquad::material::Material) {
+        /*
         for i in &self.objects {
             match &i.0 {
                 Object::Flat {
@@ -888,6 +1162,7 @@ impl UniformStruct for Scene {
                 }
             }
         }
+        */
     }
 }
 
@@ -904,7 +1179,7 @@ impl Scene {
            %%intersections%%
            %%material_processing%%
         */
-
+        /*
         let uniforms = {
             self.uniforms()
                 .into_iter()
@@ -1063,6 +1338,8 @@ impl Scene {
         result = result.replace("%%intersections%%", &intersections);
         result = result.replace("%%material_processing%%", &material_processing);
         GlslCode(result)
+        */
+        GlslCode(Default::default())
     }
 
     pub fn get_new_material(&self) -> Result<macroquad::prelude::Material, (String, String)> {
@@ -1120,45 +1397,3 @@ void main() {
     gl_Position = res;
 }
 ";
-
-
-/*
-
-enum Material {
-    Simple {
-        color: [f32; 3],
-        k: f32, // 0..1
-        s: f32, // 0..1
-        grid: bool,
-        grid_scale: f32,
-    },
-    Reflect {
-        add_to_color: [f32; 3],
-    },
-    Refract {
-        refractive_index: f32,
-        add_to_color: [f32; 3],
-    }
-    Complex {
-        code: MaterialCode, // gets (SphereIntersection hit, Ray r) -> MaterialProcessing, must use material_next or material_final
-    },
-}
-
-enum ObjectType {
-    Simple(String),
-    Portal(String, String),
-}
-
-enum Object {
-    DebugMatrix(String),
-    Flat {
-        kind: ObjectType,
-        is_inside: IsInside, // gets current position (vec4), surface x y, must return material number. if this is portal, then additionally gets `first`, `back`
-    },
-    Complex {
-        kind: ObjectType,
-        intersect: IntersectCode, // gets transformed Ray, must return SurfaceIntersect
-    }
-}
-
- */
