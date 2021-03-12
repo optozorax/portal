@@ -7,8 +7,16 @@ use std::collections::BTreeMap;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
-fn mymax(a: f32, b: f32) -> f32 {
+pub fn mymax(a: f32, b: f32) -> f32 {
     if a > b { a } else { b }
+}
+
+pub fn deg2rad(deg: f32) -> f32 {
+    deg / 180. * PI
+}
+
+pub fn rad2deg(rad: f32) -> f32 {
+    rad * 180. / PI
 }
 
 // ----------------------------------------------------------------------------------------------------------
@@ -44,18 +52,22 @@ impl std::ops::BitOrAssign for WhatChanged {
     }
 }
 
+pub fn check_changed<T: PartialEq + Clone, F: FnOnce(&mut T)>(t: &mut T, f: F) -> bool {
+    let previous = t.clone();
+    f(t);
+    previous != *t
+}
+
 pub trait Eguiable {
     fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged;
 }
 
 pub fn egui_bool(ui: &mut Ui, flag: &mut bool) -> bool {
-    let previous = *flag;
-    ui.add(Checkbox::new(flag, ""));
-    previous != *flag
+    check_changed(flag, |flag| drop(ui.add(Checkbox::new(flag, ""))))
 }
 
 pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
-    let mut current = (*angle / PI * 180.) as i32;
+    let mut current = rad2deg(*angle) as i32;
     let previous = current;
     ui.add(
         DragValue::i32(&mut current)
@@ -64,7 +76,7 @@ pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
             .clamp_range(0.0..=360.0),
     );
     if previous != current {
-        *angle = current as f32 * PI / 180.;
+        *angle = deg2rad(current as f32);
         true
     } else {
         false
@@ -72,27 +84,27 @@ pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
 }
 
 pub fn egui_f32(ui: &mut Ui, value: &mut f32) -> bool {
-    let previous = *value;
-    ui.add(
-        DragValue::f32(value)
-            .speed(0.01)
-            .min_decimals(0)
-            .max_decimals(2),
-    );
-    if previous != *value { true } else { false }
+    check_changed(value, |value| {
+        ui.add(
+            DragValue::f32(value)
+                .speed(0.01)
+                .min_decimals(0)
+                .max_decimals(2),
+        );
+    })
 }
 
 pub fn egui_f32_positive(ui: &mut Ui, value: &mut f32) -> bool {
-    let previous = *value;
-    ui.add(
-        DragValue::f32(value)
-            .speed(0.01)
-            .prefix("×")
-            .clamp_range(0.0..=1000.0)
-            .min_decimals(0)
-            .max_decimals(2),
-    );
-    if previous != *value { true } else { false }
+    check_changed(value, |value| {
+        ui.add(
+            DragValue::f32(value)
+                .speed(0.01)
+                .prefix("×")
+                .clamp_range(0.0..=1000.0)
+                .min_decimals(0)
+                .max_decimals(2),
+        );
+    })
 }
 
 pub fn egui_label(ui: &mut Ui, label: &str, size: f32) {
@@ -109,18 +121,18 @@ pub fn egui_existing_name(
     current: &mut String,
     names: &[String],
 ) -> bool {
-    let previous = current.clone();
-    ui.horizontal(|ui| {
-        egui_label(ui, label, size);
-        ui.text_edit_singleline(current);
-    });
-    if !names.contains(current) {
-        ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
-            ui.add(Label::new("Error: ").text_color(Color32::RED));
-            ui.label(format!("name '{}' not found", current));
+    check_changed(current, |current| {
+        ui.horizontal(|ui| {
+            egui_label(ui, label, size);
+            ui.text_edit_singleline(current);
         });
-    }
-    previous != *current
+        if !names.contains(current) {
+            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                ui.add(Label::new("Error: ").text_color(Color32::RED));
+                ui.label(format!("name '{}' not found", current));
+            });
+        }
+    })
 }
 
 // ----------------------------------------------------------------------------------------------------------
@@ -581,7 +593,10 @@ impl StorageElem for MaterialCode {
 
 impl Eguiable for GlslCode {
     fn egui(&mut self, ui: &mut Ui, _: &mut state::Container) -> WhatChanged {
-        WhatChanged::from_shader(ui.add(TextEdit::multiline(&mut self.0).text_style(TextStyle::Monospace)).changed())
+        WhatChanged::from_shader(
+            ui.add(TextEdit::multiline(&mut self.0).text_style(TextStyle::Monospace))
+                .changed(),
+        )
     }
 }
 
@@ -1107,7 +1122,7 @@ void main() {
 ";
 
 
-/* 
+/*
 
 enum Material {
     Simple {
@@ -1127,6 +1142,23 @@ enum Material {
     Complex {
         code: MaterialCode, // gets (SphereIntersection hit, Ray r) -> MaterialProcessing, must use material_next or material_final
     },
+}
+
+enum ObjectType {
+    Simple(String),
+    Portal(String, String),
+}
+
+enum Object {
+    DebugMatrix(String),
+    Flat {
+        kind: ObjectType,
+        is_inside: IsInside, // gets current position (vec4), surface x y, must return material number. if this is portal, then additionally gets `first`, `back`
+    },
+    Complex {
+        kind: ObjectType,
+        intersect: IntersectCode, // gets transformed Ray, must return SurfaceIntersect
+    }
 }
 
  */

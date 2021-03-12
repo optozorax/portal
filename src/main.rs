@@ -1,3 +1,4 @@
+use egui::{DragValue, Ui};
 use egui_macroquad::Egui;
 use macroquad::prelude::*;
 use std::f32::consts::PI;
@@ -10,14 +11,15 @@ struct RotateAroundCam {
     beta: f32,
     r: f32,
     previous_mouse: Vec2,
+
+    mouse_sensitivity: f32,
+    scale_factor: f32,
+    view_angle: f32,
 }
 
 impl RotateAroundCam {
     const BETA_MIN: f32 = 0.01;
     const BETA_MAX: f32 = PI - 0.01;
-    const MOUSE_SENSITIVITY: f32 = 1.4;
-    const SCALE_FACTOR: f32 = 1.1;
-    const VIEW_ANGLE: f32 = 80. / 180. * PI;
 
     fn new() -> Self {
         Self {
@@ -25,6 +27,10 @@ impl RotateAroundCam {
             beta: 5. * PI / 7.,
             r: 3.5,
             previous_mouse: Vec2::default(),
+
+            mouse_sensitivity: 1.4,
+            scale_factor: 1.1,
+            view_angle: deg2rad(80.),
         }
     }
 
@@ -34,8 +40,11 @@ impl RotateAroundCam {
         let mouse_pos: Vec2 = mouse_position_local();
 
         if is_mouse_button_down(MouseButton::Left) && mouse_over_canvas {
-            let dalpha = (mouse_pos.x - self.previous_mouse.x) * Self::MOUSE_SENSITIVITY;
-            let dbeta = (mouse_pos.y - self.previous_mouse.y) * Self::MOUSE_SENSITIVITY;
+            let size = mymax(screen_width(), screen_height());
+            let dalpha =
+                (mouse_pos.x - self.previous_mouse.x) * self.mouse_sensitivity * size / 800.;
+            let dbeta =
+                (mouse_pos.y - self.previous_mouse.y) * self.mouse_sensitivity * size / 800.;
 
             self.alpha += dalpha;
             self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
@@ -46,10 +55,10 @@ impl RotateAroundCam {
         let wheel_value = mouse_wheel().1;
         if mouse_over_canvas {
             if wheel_value > 0. {
-                self.r *= 1.0 / Self::SCALE_FACTOR;
+                self.r *= 1.0 / self.scale_factor;
                 is_something_changed = true;
             } else if wheel_value < 0. {
-                self.r *= Self::SCALE_FACTOR;
+                self.r *= self.scale_factor;
                 is_something_changed = true;
             }
         }
@@ -67,7 +76,7 @@ impl RotateAroundCam {
         ) * self.r;
         let look_at = Vec3::new(0., 0., 0.);
 
-        let h = (Self::VIEW_ANGLE / 2.).tan();
+        let h = (self.view_angle / 2.).tan();
 
         let k = (look_at - pos).normalize();
         let i = k.cross(Vec3::new(0., 1., 0.)).normalize() * h;
@@ -82,6 +91,71 @@ impl RotateAroundCam {
     }
 }
 
+impl RotateAroundCam {
+    fn egui(&mut self, ui: &mut Ui) -> WhatChanged {
+        let mut changed = false;
+        ui.horizontal(|ui| {
+            ui.label("α");
+            changed |= check_changed(&mut self.alpha, |alpha| {
+                let mut current = rad2deg(*alpha);
+                ui.add(
+                    DragValue::f32(&mut current)
+                        .speed(1.0)
+                        .suffix("°")
+                        .min_decimals(0)
+                        .max_decimals(1),
+                );
+                *alpha = deg2rad(current);
+            });
+            ui.separator();
+            ui.label("β");
+            changed |= check_changed(&mut self.beta, |beta| {
+                let mut current = rad2deg(*beta);
+                ui.add(
+                    DragValue::f32(&mut current)
+                        .speed(1.0)
+                        .clamp_range(rad2deg(Self::BETA_MIN)..=rad2deg(Self::BETA_MAX))
+                        .suffix("°")
+                        .min_decimals(0)
+                        .max_decimals(1),
+                );
+                *beta = deg2rad(current);
+            });
+            ui.separator();
+            ui.label("R");
+            changed |= check_changed(&mut self.r, |r| {
+                ui.add(
+                    DragValue::f32(r)
+                        .speed(0.01)
+                        .clamp_range(0.01..=1000.0)
+                        .min_decimals(0)
+                        .max_decimals(2),
+                );
+            });
+        });
+
+        // TODO add inverse by X axis and inverse by Y axis
+
+        changed |= check_changed(&mut self.mouse_sensitivity, |m| {
+            ui.add(egui::Slider::f32(m, 0.0..=3.0).text("Mouse sensivity"));
+        });
+        changed |= check_changed(&mut self.scale_factor, |m| {
+            ui.add(egui::Slider::f32(m, 1.0..=2.0).text("Wheel R multiplier"));
+        });
+        changed |= check_changed(&mut self.view_angle, |m| {
+            let mut current = rad2deg(*m);
+            ui.add(
+                egui::Slider::f32(&mut current, 20.0..=130.)
+                    .text("View angle")
+                    .suffix("°"),
+            );
+            *m = deg2rad(current);
+        });
+
+        WhatChanged::from_uniform(changed)
+    }
+}
+
 struct Window {
     scene: Scene,
     cam: RotateAroundCam,
@@ -89,6 +163,7 @@ struct Window {
     should_recompile: bool,
 
     edit_scene_opened: bool,
+    camera_settings_opened: bool,
 }
 
 impl Window {
@@ -107,6 +182,7 @@ impl Window {
             material,
 
             edit_scene_opened: true,
+            camera_settings_opened: false,
         }
     }
 
@@ -122,7 +198,9 @@ impl Window {
                 if ui.button("Edit scene").clicked() {
                     self.edit_scene_opened = true;
                 }
-                ui.button("Camera settings").clicked();
+                if ui.button("Camera settings").clicked() {
+                    self.camera_settings_opened = true;
+                }
                 ui.button("Rendering options").clicked();
             });
         });
@@ -143,6 +221,13 @@ impl Window {
                 }
             });
         self.edit_scene_opened = edit_scene_opened;
+        let mut camera_settings_opened = self.camera_settings_opened;
+        egui::Window::new("Camera settings")
+            .open(&mut camera_settings_opened)
+            .show(ctx, |ui| {
+                changed |= self.cam.egui(ui);
+            });
+        self.camera_settings_opened = camera_settings_opened;
         let mouse_over_canvas = !ctx.is_using_pointer();
 
         if changed.uniform {
