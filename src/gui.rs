@@ -6,6 +6,11 @@ use macroquad::prelude::UniformType;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::f32::consts::PI;
+use std::sync::Arc;
+
+pub trait Eguiable {
+    fn egui(&mut self, ui: &mut egui::Ui, data: &mut state::Container) -> bool;
+}
 
 fn mymax(a: f32, b: f32) -> f32 {
     if a > b { a } else { b }
@@ -116,30 +121,30 @@ impl Default for Matrix {
 
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
-        &["Multiplication", "Teleport", "Customizable"]
+        &["Simple", "Mul", "Teleport"]
     }
     fn get_number(&self) -> usize {
         use Matrix::*;
         match self {
-            Mul { .. } => 0,
-            Teleport { .. } => 1,
-            Simple { .. } => 2,
+            Simple { .. } => 0,
+            Mul { .. } => 1,
+            Teleport { .. } => 2,
         }
     }
     fn set_number(&mut self, number: usize) {
         use Matrix::*;
         *self = match number {
-            0 => Mul {
+            1 => Mul {
                 to: "id".to_owned(),
                 what: "id".to_owned(),
             },
-            1 => Teleport {
+            2 => Teleport {
                 first_portal: "id".to_owned(),
                 second_portal: "id".to_owned(),
 
                 what: "id".to_owned(),
             },
-            2 => Self::default(),
+            0 => Self::default(),
             _ => unreachable!(),
         };
     }
@@ -187,6 +192,205 @@ impl UiWithNames for Matrix {
         }
         is_changed
     }
+}
+
+pub fn egui_existing_name(
+    ui: &mut egui::Ui,
+    label: &str,
+    size: f32,
+    current: &mut String,
+    names: &[String],
+) -> bool {
+    use egui::*;
+    let previous = current.clone();
+    ui.horizontal(|ui| {
+        ui.put(
+            egui::Rect::from_min_size(ui.min_rect().min, egui::vec2(size, 0.)),
+            egui::Label::new(label),
+        );
+        ui.text_edit_singleline(current);
+    });
+    if !names.contains(current) {
+        ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+            ui.add(Label::new("Error: ").text_color(Color32::RED));
+            ui.label(format!("name '{}' not found", current));
+        });
+    }
+    previous != *current
+}
+
+pub fn egui_bool(ui: &mut egui::Ui, flag: &mut bool) -> bool {
+    let previous = *flag;
+    ui.add(egui::Checkbox::new(flag, ""));
+    previous != *flag
+}
+
+pub fn egui_angle(ui: &mut egui::Ui, angle: &mut f32) -> bool {
+    let mut current = (*angle / PI * 180.) as i32;
+    let previous = current;
+    ui.add(
+        egui::DragValue::i32(&mut current)
+            .speed(1)
+            .suffix("°")
+            .clamp_range(0.0..=360.0),
+    );
+    if previous != current {
+        *angle = current as f32 * PI / 180.;
+        true
+    } else {
+        false
+    }
+}
+
+pub fn egui_f32(ui: &mut egui::Ui, value: &mut f32) -> bool {
+    let previous = *value;
+    ui.add(
+        egui::DragValue::f32(value)
+            .speed(0.01)
+            .min_decimals(0)
+            .max_decimals(2),
+    );
+    if previous != *value { true } else { false }
+}
+
+pub fn egui_f32_positive(ui: &mut egui::Ui, value: &mut f32) -> bool {
+    let previous = *value;
+    ui.add(
+        egui::DragValue::f32(value)
+            .speed(0.01)
+            .prefix("×")
+            .clamp_range(0.0..=1000.0)
+            .min_decimals(0)
+            .max_decimals(2),
+    );
+    if previous != *value { true } else { false }
+}
+
+pub trait ErrorCount {
+    fn errors(&self, data: &mut state::Container) -> usize;
+}
+
+pub fn egui_name(
+    ui: &mut egui::Ui,
+    label: &str,
+    size: f32,
+    names: &mut [String],
+    pos: usize,
+) -> bool {
+    use egui::*;
+    let previous = names[pos].clone();
+    ui.horizontal(|ui| {
+        ui.put(
+            egui::Rect::from_min_size(ui.min_rect().min, egui::vec2(size, 0.)),
+            egui::Label::new(label),
+        );
+        ui.text_edit_singleline(&mut names[pos]);
+    });
+    if names[..pos].contains(&names[pos]) {
+        ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+            ui.add(Label::new("Error: ").text_color(Color32::RED));
+            ui.label(format!("name '{}' already used", names[pos]));
+        });
+    }
+    previous != names[pos]
+}
+
+impl Eguiable for Matrix {
+    fn egui(&mut self, ui: &mut egui::Ui, data: &mut state::Container) -> bool {
+        use Matrix::*;
+        let names = data.get::<Arc<Vec<String>>>();
+        let mut is_changed = false;
+        match self {
+            Mul { to, what } => {
+                is_changed |= egui_existing_name(ui, "Mul to:", 45., to, names);
+                is_changed |= egui_existing_name(ui, "What:", 45., what, names);
+            }
+            Teleport {
+                first_portal,
+                second_portal,
+                what,
+            } => {
+                is_changed |= egui_existing_name(ui, "From:", 45., first_portal, names);
+                is_changed |= egui_existing_name(ui, "To:", 45., second_portal, names);
+                is_changed |= egui_existing_name(ui, "What:", 45., what, names);
+            }
+            Simple {
+                offset,
+                scale,
+                rotate,
+                mirror,
+            } => {
+                egui::Grid::new("matrix")
+                    .striped(true)
+                    .min_col_width(45.)
+                    .max_col_width(45.)
+                    .show(ui, |ui| {
+                        ui.label("");
+                        ui.centered_and_justified(|ui| ui.label("X"));
+                        ui.centered_and_justified(|ui| ui.label("Y"));
+                        ui.centered_and_justified(|ui| ui.label("Z"));
+                        ui.end_row();
+
+                        ui.label("Offset: ");
+                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.x));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.y));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.z));
+                        ui.end_row();
+
+                        ui.label("Rotate: ");
+                        ui.centered_and_justified(|ui| is_changed |= egui_angle(ui, &mut rotate.x));
+                        ui.centered_and_justified(|ui| is_changed |= egui_angle(ui, &mut rotate.y));
+                        ui.centered_and_justified(|ui| is_changed |= egui_angle(ui, &mut rotate.z));
+                        ui.end_row();
+
+                        ui.label("Mirror: ");
+                        ui.centered_and_justified(|ui| is_changed |= egui_bool(ui, &mut mirror.0));
+                        ui.centered_and_justified(|ui| is_changed |= egui_bool(ui, &mut mirror.1));
+                        ui.centered_and_justified(|ui| is_changed |= egui_bool(ui, &mut mirror.2));
+                        ui.end_row();
+
+                        ui.label("Scale: ");
+                        is_changed |= egui_f32_positive(ui, scale);
+                        ui.end_row();
+                    });
+            }
+        }
+        is_changed
+    }
+}
+
+pub fn egui_combo_box<T: ComboBoxChoosable + Eguiable>(
+    ui: &mut egui::Ui,
+    label: &str,
+    size: f32,
+    t: &mut T,
+    data: &mut state::Container,
+) -> bool {
+    let mut is_changed = false;
+
+    let mut current_type = t.get_number();
+    let previous_type = current_type;
+
+    ui.horizontal(|ui| {
+        ui.put(
+            egui::Rect::from_min_size(ui.min_rect().min, egui::vec2(size, 0.)),
+            egui::Label::new(label),
+        );
+        for (pos, name) in T::variants().iter().enumerate() {
+            ui.selectable_value(&mut current_type, pos, *name);
+        }
+    });
+
+    if current_type != previous_type {
+        t.set_number(current_type);
+        is_changed = true;
+    }
+
+    ui.separator();
+
+    is_changed |= t.egui(ui, data);
+
+    is_changed
 }
 
 struct ObjectAndNames<'a, 'b, T>(&'a mut T, &'b [String]);
@@ -526,6 +730,128 @@ pub struct Scene {
     library: GlslCode,
 }
 
+pub fn add_line_numbers(s: &str) -> String {
+    s.split("\n")
+        .enumerate()
+        .map(|(line, text)| format!("{}|{}", line + 1, text))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+impl Scene {
+    pub fn egui(
+        &mut self,
+        ui: &mut egui::Ui,
+        should_recompile: &mut bool,
+    ) -> (WhatChanged, Option<macroquad::material::Material>) {
+        let mut changed = WhatChanged::default();
+        let mut material = None;
+
+        ui.horizontal(|ui| {
+            if ui.button("Save").clicked() {
+                let s = serde_json::to_string(self).unwrap();
+                std::fs::write("scene.json", s).unwrap();
+            }
+            if ui.button("Load").clicked() {
+                let s = std::fs::read_to_string("scene.json").unwrap();
+                *self = serde_json::from_str(&s).unwrap();
+                changed.outer = true;
+            }
+            if ui
+                .add(egui::Button::new("Recompile").enabled(*should_recompile))
+                .clicked()
+            {
+                match self.get_new_material() {
+                    Ok(m) => {
+                        material = Some(m);
+                        *should_recompile = false;
+                        changed.inner = true;
+                    }
+                    Err(err) => {
+                        println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+                    }
+                }
+            }
+        });
+
+        // other ui
+
+        let mut data = state::Container::new();
+
+        egui::CollapsingHeader::new("Matrices")
+            .default_open(false)
+            .show(ui, |ui| {
+                data.set(Arc::new(self.matrices.names.clone()));
+                let mut to_delete = None;
+                let storage = &mut self.matrices.storage;
+                let names = &mut self.matrices.names;
+                for (pos, matrix) in storage.iter_mut().enumerate() {
+                    egui::CollapsingHeader::new(&names[pos])
+                        .id_source(pos)
+                        .show(ui, |ui| {
+                            use egui::*;
+                            let previous = names[pos].clone();
+                            ui.horizontal(|ui| {
+                                ui.put(
+                                    egui::Rect::from_min_size(
+                                        ui.min_rect().min,
+                                        egui::vec2(45., 0.),
+                                    ),
+                                    egui::Label::new("Name:"),
+                                );
+                                ui.put(
+                                    egui::Rect::from_min_size(
+                                        ui.min_rect().min + egui::vec2(49., 0.),
+                                        egui::vec2(ui.available_width() - 65., 0.),
+                                    ),
+                                    egui::TextEdit::singleline(&mut names[pos]),
+                                );
+                                if ui
+                                    .add(egui::Button::new("Delete").text_color(egui::Color32::RED))
+                                    .clicked()
+                                {
+                                    to_delete = Some(pos);
+                                }
+                            });
+                            if names[..pos].contains(&names[pos]) {
+                                ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                                    ui.add(Label::new("Error: ").text_color(Color32::RED));
+                                    ui.label(format!("name '{}' already used", names[pos]));
+                                });
+                            }
+
+                            changed.outer |= previous != names[pos];
+                            changed.inner |= egui_combo_box(ui, "Type: ", 45.0, matrix, &mut data);
+                        });
+                }
+                if let Some(pos) = to_delete {
+                    changed.outer = true;
+                    self.matrices.remove(pos);
+                }
+                if ui
+                    .add(egui::Button::new("Add").text_color(egui::Color32::GREEN))
+                    .clicked()
+                {
+                    self.matrices.add(
+                        format!("m{}", self.matrices.names.len()),
+                        Default::default(),
+                    );
+                }
+            });
+        egui::CollapsingHeader::new("Objects")
+            .default_open(false)
+            .show(ui, |ui| {});
+        egui::CollapsingHeader::new("Materials")
+            .default_open(false)
+            .show(ui, |ui| {});
+        egui::CollapsingHeader::new("Glsl Library")
+            .default_open(false)
+            .show(ui, |ui| {});
+
+        (changed, material)
+    }
+}
+
 impl ComplexUiable for Scene {
     fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged {
         let mut changed = WhatChanged::default();
@@ -743,18 +1069,20 @@ impl Scene {
                         result += &format!("int is_inside_{}(float x, float y) {{\n", pos);
                         result += &is_inside.0.0;
                         result += "\n}\n";
-                    },
+                    }
                     Object::FlatPortal {
                         first: _,
                         second: _,
                         is_inside,
                     } => {
-                        result += &format!("int is_inside_{}(float x, float y, bool first, bool back) {{\n", pos);
+                        result += &format!(
+                            "int is_inside_{}(float x, float y, bool first, bool back) {{\n",
+                            pos
+                        );
                         result += &is_inside.0.0;
                         result += "\n}\n";
-                    },
+                    }
                 }
-                
             }
             result
         };

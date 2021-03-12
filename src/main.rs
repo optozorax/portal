@@ -1,5 +1,4 @@
 use egui_macroquad::Egui;
-use crate::megaui::Vector2;
 use macroquad::prelude::*;
 use std::f32::consts::PI;
 
@@ -94,14 +93,8 @@ struct Window {
     cam: RotateAroundCam,
     material: Material,
     should_recompile: bool,
-}
 
-fn add_line_numbers(s: &str) -> String {
-    s.split("\n")
-        .enumerate()
-        .map(|(line, text)| format!("{}|{}", line + 1, text))
-        .collect::<Vec<_>>()
-        .join("\n")
+    edit_scene_opened: bool,
 }
 
 impl Window {
@@ -118,56 +111,85 @@ impl Window {
             cam: RotateAroundCam::new(),
 
             material,
+
+            edit_scene_opened: true,
         }
     }
 
-    fn process_mouse_and_keys(&mut self) -> bool {
+    fn process_mouse_and_keys(&mut self, ctx: &egui::CtxRef) -> bool {
         let mut is_something_changed = false;
 
-        let mut mouse_over_canvas = true;
-
         let mut changed = WhatChanged::default();
-        let mut changed_inner = false;
 
-        draw_window(
-            hash!(),
-            vec2(20., 20.),
-            vec2(300., 450.),
-            WindowParams {
-                label: "Configure scene".to_owned(),
-                close_button: false,
-                ..Default::default()
-            },
-            |ui| {
-                mouse_over_canvas &=
-                    !ui.is_mouse_over(Vector2::new(mouse_position().0, mouse_position().1));
-
-                if self.should_recompile {
-                    if ui.button(None, "Recompile") {
-                        match self.scene.get_new_material() {
-                            Ok(material) => {
-                                self.material = material;
-                                self.should_recompile = false;
-                                changed_inner = true;
-                                is_something_changed = true;
-                            }
-                            Err(err) => {
-                                println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
-                            }
-                        }            
-                    }
-                    ui.same_line(0.0);
+        egui::TopPanel::top("my top").show(ctx, |ui| {
+            use egui::menu;
+            menu::bar(ui, |ui| {
+                ui.button("Control scene").clicked();
+                if ui.button("Edit scene").clicked() {
+                    self.edit_scene_opened = true;
                 }
+                ui.button("Camera settings").clicked();
+                ui.button("Rendering options").clicked();
+            });
+        });
+        let mut edit_scene_opened = self.edit_scene_opened;
+        egui::Window::new("Edit scene")
+            .open(&mut edit_scene_opened)
+            .show(ctx, |ui| {
+                let (changed1, material) = self.scene.egui(ui, &mut self.should_recompile);
 
-                changed = self.scene.ui(ui, hash!());
+                changed = changed1;
 
                 if changed.outer {
                     self.should_recompile = true;
                 }
-            },
-        );
 
-        if changed.inner || changed_inner {
+                if let Some(material) = material {
+                    self.material = material;
+                }
+            });
+        self.edit_scene_opened = edit_scene_opened;
+        let mouse_over_canvas = !ctx.is_using_pointer();
+
+        // draw_window(
+        //     hash!(),
+        //     vec2(20., 20.),
+        //     vec2(300., 450.),
+        //     WindowParams {
+        //         label: "Configure scene".to_owned(),
+        //         close_button: false,
+        //         ..Default::default()
+        //     },
+        //     |ui| {
+        //         mouse_over_canvas &=
+        //             !ui.is_mouse_over(Vector2::new(mouse_position().0, mouse_position().1));
+
+        //         if self.should_recompile {
+        //             if ui.button(None, "Recompile") {
+        //                 match self.scene.get_new_material() {
+        //                     Ok(material) => {
+        //                         self.material = material;
+        //                         self.should_recompile = false;
+        //                         changed_inner = true;
+        //                         is_something_changed = true;
+        //                     }
+        //                     Err(err) => {
+        //                         println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+        //                     }
+        //                 }
+        //             }
+        //             ui.same_line(0.0);
+        //         }
+
+        //         changed = self.scene.ui(ui, hash!());
+
+        //         if changed.outer {
+        //             self.should_recompile = true;
+        //         }
+        //     },
+        // );
+
+        if changed.inner {
             self.scene.set_uniforms(self.material);
             self.material
                 .set_uniform("_resolution", (screen_width(), screen_height()));
@@ -210,6 +232,8 @@ async fn main() {
 
     let mut egui = Egui::new();
 
+    let mut ui_changed_image = true;
+
     loop {
         clear_background(BLACK);
 
@@ -225,12 +249,12 @@ async fn main() {
             texture = load_texture_from_image(&get_screen_data());
         }
 
-        if window.process_mouse_and_keys() || image_size_changed {
+        if image_size_changed || ui_changed_image {
             window.draw();
             set_default_camera();
-            draw_megaui();
             texture.grab_screen();
             image_size_changed = false;
+            ui_changed_image = false;
         } else {
             draw_texture_ex(
                 texture,
@@ -243,18 +267,10 @@ async fn main() {
                     ..Default::default()
                 },
             );
-            draw_megaui();
         }
 
-        egui.ui(|egui_ctx| {
-            egui::Window::new("Debug").show(egui_ctx, |ui| {
-                ui.add(egui::Label::new("Egui on Macroquad").text_style(egui::TextStyle::Heading));
-                ui.separator();
-                ui.label("Woooohoooo!");
-                if ui.button("Quit").clicked() {
-                    std::process::exit(0);
-                }
-            });
+        egui.ui(|ctx| {
+            ui_changed_image = window.process_mouse_and_keys(ctx);
         });
 
         next_frame().await;
