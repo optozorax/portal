@@ -1,5 +1,4 @@
-use crate::megaui::Ui;
-use crate::megaui::*;
+use egui::*;
 use glam::*;
 use macroquad::prelude::Material;
 use macroquad::prelude::UniformType;
@@ -8,55 +7,125 @@ use std::collections::BTreeMap;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
-pub trait Eguiable {
-    fn egui(&mut self, ui: &mut egui::Ui, data: &mut state::Container) -> bool;
-}
-
 fn mymax(a: f32, b: f32) -> f32 {
     if a > b { a } else { b }
 }
 
-pub fn ui_any_number(ui: &mut Ui, id: Id, label: &str, number: &mut f32) -> bool {
-    let previous = *number;
-    ui.slider(id, label, *number - 0.1..*number + 0.1, number);
-    previous != *number
+// ----------------------------------------------------------------------------------------------------------
+// Common UI things
+// ----------------------------------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Default)]
+pub struct WhatChanged {
+    pub uniform: bool,
+    pub shader: bool,
 }
 
-pub fn ui_any_vector(ui: &mut Ui, id: Id, number: &mut Vec3) -> bool {
-    let mut is_changed = false;
-    is_changed |= ui_any_number(ui, hash!(id, 0), "x", &mut number.x);
-    is_changed |= ui_any_number(ui, hash!(id, 1), "y", &mut number.y);
-    is_changed |= ui_any_number(ui, hash!(id, 2), "z", &mut number.z);
-    is_changed
+impl WhatChanged {
+    pub fn from_uniform(uniform: bool) -> Self {
+        Self {
+            uniform,
+            shader: false,
+        }
+    }
+
+    pub fn from_shader(shader: bool) -> Self {
+        Self {
+            uniform: false,
+            shader,
+        }
+    }
 }
 
-pub fn ui_angle(ui: &mut Ui, id: Id, label: &str, angle: &mut f32) -> bool {
-    let mut current = *angle / PI;
+impl std::ops::BitOrAssign for WhatChanged {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.uniform |= rhs.uniform;
+        self.shader |= rhs.shader;
+    }
+}
+
+pub trait Eguiable {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged;
+}
+
+pub fn egui_bool(ui: &mut Ui, flag: &mut bool) -> bool {
+    let previous = *flag;
+    ui.add(Checkbox::new(flag, ""));
+    previous != *flag
+}
+
+pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
+    let mut current = (*angle / PI * 180.) as i32;
     let previous = current;
-    ui.slider(id, label, 0.0..2.0, &mut current);
+    ui.add(
+        DragValue::i32(&mut current)
+            .speed(1)
+            .suffix("°")
+            .clamp_range(0.0..=360.0),
+    );
     if previous != current {
-        *angle = current * PI;
+        *angle = current as f32 * PI / 180.;
         true
     } else {
         false
     }
 }
 
-pub fn ui_positive_number(ui: &mut Ui, id: Id, label: &str, number: &mut f32) -> bool {
-    let previous = *number;
-    ui.slider(id, label, mymax(*number - 0.1, 0.0)..*number + 0.1, number);
-    previous != *number
+pub fn egui_f32(ui: &mut Ui, value: &mut f32) -> bool {
+    let previous = *value;
+    ui.add(
+        DragValue::f32(value)
+            .speed(0.01)
+            .min_decimals(0)
+            .max_decimals(2),
+    );
+    if previous != *value { true } else { false }
 }
 
-pub fn ui_bool(ui: &mut Ui, id: Id, label: &str, flag: &mut bool) -> bool {
-    let previous = *flag;
-    ui.checkbox(id, label, flag);
-    previous != *flag
+pub fn egui_f32_positive(ui: &mut Ui, value: &mut f32) -> bool {
+    let previous = *value;
+    ui.add(
+        DragValue::f32(value)
+            .speed(0.01)
+            .prefix("×")
+            .clamp_range(0.0..=1000.0)
+            .min_decimals(0)
+            .max_decimals(2),
+    );
+    if previous != *value { true } else { false }
 }
 
-pub trait Uiable {
-    fn ui(&mut self, ui: &mut Ui, id: Id) -> bool;
+pub fn egui_label(ui: &mut Ui, label: &str, size: f32) {
+    ui.put(
+        Rect::from_min_size(ui.min_rect().min, egui::vec2(size, 0.)),
+        Label::new(label),
+    );
 }
+
+pub fn egui_existing_name(
+    ui: &mut Ui,
+    label: &str,
+    size: f32,
+    current: &mut String,
+    names: &[String],
+) -> bool {
+    let previous = current.clone();
+    ui.horizontal(|ui| {
+        egui_label(ui, label, size);
+        ui.text_edit_singleline(current);
+    });
+    if !names.contains(current) {
+        ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+            ui.add(Label::new("Error: ").text_color(Color32::RED));
+            ui.label(format!("name '{}' not found", current));
+        });
+    }
+    previous != *current
+}
+
+// ----------------------------------------------------------------------------------------------------------
+// Combo box things
+// ----------------------------------------------------------------------------------------------------------
 
 pub trait ComboBoxChoosable {
     fn variants() -> &'static [&'static str];
@@ -64,10 +133,10 @@ pub trait ComboBoxChoosable {
     fn set_number(&mut self, number: usize);
 }
 
-pub fn ui_combo_box<T: ComboBoxChoosable + Uiable>(
+pub fn egui_combo_label<T: ComboBoxChoosable>(
     ui: &mut Ui,
-    id: Id,
     label: &str,
+    size: f32,
     t: &mut T,
 ) -> bool {
     let mut is_changed = false;
@@ -75,17 +144,54 @@ pub fn ui_combo_box<T: ComboBoxChoosable + Uiable>(
     let mut current_type = t.get_number();
     let previous_type = current_type;
 
-    ui.combo_box(hash!(id, 0), label, &T::variants(), Some(&mut current_type));
+    ui.horizontal(|ui| {
+        egui_label(ui, label, size);
+        for (pos, name) in T::variants().iter().enumerate() {
+            ui.selectable_value(&mut current_type, pos, *name);
+        }
+    });
 
     if current_type != previous_type {
         t.set_number(current_type);
         is_changed = true;
     }
 
-    is_changed |= t.ui(ui, hash!(id, 1));
+    is_changed
+}
+
+pub fn egui_combo_box<T: ComboBoxChoosable>(
+    ui: &mut Ui,
+    label: &str,
+    size: f32,
+    t: &mut T,
+    id: u64,
+) -> bool {
+    let mut is_changed = false;
+
+    let mut current_type = t.get_number();
+    let previous_type = current_type;
+
+    let id = ui.make_persistent_id(id);
+    ui.horizontal(|ui| {
+        egui_label(ui, label, size);
+        egui::combo_box(ui, id, T::variants()[current_type], |ui| {
+            for (pos, name) in T::variants().iter().enumerate() {
+                ui.selectable_value(&mut current_type, pos, *name);
+            }
+        });
+    });
+
+    if current_type != previous_type {
+        t.set_number(current_type);
+        is_changed = true;
+    }
 
     is_changed
 }
+
+// ----------------------------------------------------------------------------------------------------------
+// Matrix
+// ----------------------------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Matrix {
@@ -150,153 +256,8 @@ impl ComboBoxChoosable for Matrix {
     }
 }
 
-pub trait UiWithNames {
-    fn ui_with_names_inner(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool;
-}
-
-impl UiWithNames for Matrix {
-    fn ui_with_names_inner(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool {
-        use Matrix::*;
-        let mut is_changed = false;
-        match self {
-            Mul { to, what } => {
-                is_changed |= ui_existing_name(ui, hash!(id, 0), "Mul to", to, names);
-                is_changed |= ui_existing_name(ui, hash!(id, 1), "What", what, names);
-            }
-            Teleport {
-                first_portal,
-                second_portal,
-                what,
-            } => {
-                is_changed |=
-                    ui_existing_name(ui, hash!(id, 2), "First portal", first_portal, names);
-                is_changed |=
-                    ui_existing_name(ui, hash!(id, 3), "Second portal", second_portal, names);
-                is_changed |= ui_existing_name(ui, hash!(id, 4), "What", what, names);
-            }
-            Simple {
-                offset,
-                scale,
-                rotate,
-                mirror,
-            } => {
-                is_changed |= ui_any_vector(ui, hash!(id, 5), offset);
-                is_changed |= ui_positive_number(ui, hash!(id, 6), "Scale", scale);
-                is_changed |= ui_angle(ui, hash!(id, 7), "Rotate X", &mut rotate.x);
-                is_changed |= ui_angle(ui, hash!(id, 8), "Rotate Y", &mut rotate.y);
-                is_changed |= ui_angle(ui, hash!(id, 9), "Rotate Z", &mut rotate.z);
-                is_changed |= ui_bool(ui, hash!(id, 10), "Mirror X", &mut mirror.0);
-                is_changed |= ui_bool(ui, hash!(id, 11), "Mirror Y", &mut mirror.1);
-                is_changed |= ui_bool(ui, hash!(id, 12), "Mirror Z", &mut mirror.2);
-            }
-        }
-        is_changed
-    }
-}
-
-pub fn egui_existing_name(
-    ui: &mut egui::Ui,
-    label: &str,
-    size: f32,
-    current: &mut String,
-    names: &[String],
-) -> bool {
-    use egui::*;
-    let previous = current.clone();
-    ui.horizontal(|ui| {
-        ui.put(
-            egui::Rect::from_min_size(ui.min_rect().min, egui::vec2(size, 0.)),
-            egui::Label::new(label),
-        );
-        ui.text_edit_singleline(current);
-    });
-    if !names.contains(current) {
-        ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
-            ui.add(Label::new("Error: ").text_color(Color32::RED));
-            ui.label(format!("name '{}' not found", current));
-        });
-    }
-    previous != *current
-}
-
-pub fn egui_bool(ui: &mut egui::Ui, flag: &mut bool) -> bool {
-    let previous = *flag;
-    ui.add(egui::Checkbox::new(flag, ""));
-    previous != *flag
-}
-
-pub fn egui_angle(ui: &mut egui::Ui, angle: &mut f32) -> bool {
-    let mut current = (*angle / PI * 180.) as i32;
-    let previous = current;
-    ui.add(
-        egui::DragValue::i32(&mut current)
-            .speed(1)
-            .suffix("°")
-            .clamp_range(0.0..=360.0),
-    );
-    if previous != current {
-        *angle = current as f32 * PI / 180.;
-        true
-    } else {
-        false
-    }
-}
-
-pub fn egui_f32(ui: &mut egui::Ui, value: &mut f32) -> bool {
-    let previous = *value;
-    ui.add(
-        egui::DragValue::f32(value)
-            .speed(0.01)
-            .min_decimals(0)
-            .max_decimals(2),
-    );
-    if previous != *value { true } else { false }
-}
-
-pub fn egui_f32_positive(ui: &mut egui::Ui, value: &mut f32) -> bool {
-    let previous = *value;
-    ui.add(
-        egui::DragValue::f32(value)
-            .speed(0.01)
-            .prefix("×")
-            .clamp_range(0.0..=1000.0)
-            .min_decimals(0)
-            .max_decimals(2),
-    );
-    if previous != *value { true } else { false }
-}
-
-pub trait ErrorCount {
-    fn errors(&self, data: &mut state::Container) -> usize;
-}
-
-pub fn egui_name(
-    ui: &mut egui::Ui,
-    label: &str,
-    size: f32,
-    names: &mut [String],
-    pos: usize,
-) -> bool {
-    use egui::*;
-    let previous = names[pos].clone();
-    ui.horizontal(|ui| {
-        ui.put(
-            egui::Rect::from_min_size(ui.min_rect().min, egui::vec2(size, 0.)),
-            egui::Label::new(label),
-        );
-        ui.text_edit_singleline(&mut names[pos]);
-    });
-    if names[..pos].contains(&names[pos]) {
-        ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
-            ui.add(Label::new("Error: ").text_color(Color32::RED));
-            ui.label(format!("name '{}' already used", names[pos]));
-        });
-    }
-    previous != names[pos]
-}
-
 impl Eguiable for Matrix {
-    fn egui(&mut self, ui: &mut egui::Ui, data: &mut state::Container) -> bool {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
         use Matrix::*;
         let names = data.get::<Arc<Vec<String>>>();
         let mut is_changed = false;
@@ -320,7 +281,7 @@ impl Eguiable for Matrix {
                 rotate,
                 mirror,
             } => {
-                egui::Grid::new("matrix")
+                Grid::new("matrix")
                     .striped(true)
                     .min_col_width(45.)
                     .max_col_width(45.)
@@ -355,105 +316,29 @@ impl Eguiable for Matrix {
                     });
             }
         }
-        is_changed
+        WhatChanged::from_uniform(is_changed)
     }
 }
 
-pub fn egui_combo_box<T: ComboBoxChoosable + Eguiable>(
-    ui: &mut egui::Ui,
-    label: &str,
-    size: f32,
-    t: &mut T,
-    data: &mut state::Container,
-) -> bool {
-    let mut is_changed = false;
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct MatrixComboBox(pub Matrix);
 
-    let mut current_type = t.get_number();
-    let previous_type = current_type;
-
-    ui.horizontal(|ui| {
-        ui.put(
-            egui::Rect::from_min_size(ui.min_rect().min, egui::vec2(size, 0.)),
-            egui::Label::new(label),
-        );
-        for (pos, name) in T::variants().iter().enumerate() {
-            ui.selectable_value(&mut current_type, pos, *name);
-        }
-    });
-
-    if current_type != previous_type {
-        t.set_number(current_type);
-        is_changed = true;
-    }
-
-    ui.separator();
-
-    is_changed |= t.egui(ui, data);
-
-    is_changed
-}
-
-struct ObjectAndNames<'a, 'b, T>(&'a mut T, &'b [String]);
-
-impl<'a, 'b, T: ComboBoxChoosable> ComboBoxChoosable for ObjectAndNames<'a, 'b, T> {
-    fn variants() -> &'static [&'static str] {
-        T::variants()
-    }
-    fn get_number(&self) -> usize {
-        self.0.get_number()
-    }
-    fn set_number(&mut self, number: usize) {
-        self.0.set_number(number);
+impl Eguiable for MatrixComboBox {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+        let mut changed =
+            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
+        ui.separator();
+        changed |= self.0.egui(ui, data);
+        changed
     }
 }
 
-impl<'a, 'b, T: UiWithNames> Uiable for ObjectAndNames<'a, 'b, T> {
-    fn ui(&mut self, ui: &mut Ui, id: Id) -> bool {
-        let ObjectAndNames(t, names) = &mut *self;
-        UiWithNames::ui_with_names_inner(*t, ui, id, names)
-    }
-}
-
-pub fn ui_existing_name(
-    ui: &mut Ui,
-    id: Id,
-    label: &str,
-    current: &mut String,
-    names: &[String],
-) -> bool {
-    let previous = current.clone();
-    ui.input_text(hash!(id, 0), label, current);
-    if !names.contains(current) {
-        ui.label(None, &format!("Error: name `{}` not found", current));
-    }
-    previous != *current
-}
-
-pub fn ui_name(ui: &mut Ui, id: Id, label: &str, names: &mut [String], pos: usize) -> bool {
-    let previous = names[pos].clone();
-    ui.input_text(hash!(id, 0), label, &mut names[pos]);
-    if names[..pos].contains(&names[pos]) {
-        ui.label(None, &format!("Error: name `{}` already used", names[pos]));
-    }
-    previous != names[pos]
-}
-
-pub trait StorageElem: Sized + Default {
-    type GetType;
-
-    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, f: F) -> Option<Self::GetType>;
-
-    fn ui_with_names(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool;
-
-    fn defaults() -> (Vec<String>, Vec<Self>);
-}
-
-impl StorageElem for Matrix {
+impl StorageElem for MatrixComboBox {
     type GetType = Mat4;
 
     fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, mut f: F) -> Option<Self::GetType> {
         use Matrix::*;
-        Some(match self {
+        Some(match &self.0 {
             Mul { to, what } => {
                 let to = f(&to)?;
                 let what = f(&what)?;
@@ -500,16 +385,32 @@ impl StorageElem for Matrix {
         })
     }
 
-    fn ui_with_names(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool {
-        ui_combo_box(ui, id, "Type", &mut ObjectAndNames(self, &names))
-    }
-
     fn defaults() -> (Vec<String>, Vec<Self>) {
         (
-            vec!["id".to_owned(), "portal1".to_owned()],
-            vec![Matrix::default(), Matrix::default()],
+            vec!["id".to_owned(), "a".to_owned()],
+            vec![MatrixComboBox::default(), MatrixComboBox::default()],
         )
     }
+}
+
+// ----------------------------------------------------------------------------------------------------------
+// Errors handling
+// ----------------------------------------------------------------------------------------------------------
+
+pub trait ErrorCount {
+    fn errors(&self, data: &mut state::Container) -> usize;
+}
+
+// ----------------------------------------------------------------------------------------------------------
+// Gui named storage
+// ----------------------------------------------------------------------------------------------------------
+
+pub trait StorageElem: Sized + Default + Eguiable {
+    type GetType;
+
+    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, f: F) -> Option<Self::GetType>;
+
+    fn defaults() -> (Vec<String>, Vec<Self>);
 }
 
 // Checks if this name is used, sends name to
@@ -529,7 +430,7 @@ impl<T: StorageElem> Default for StorageWithNames<T> {
 impl<T: StorageElem> StorageWithNames<T> {
     pub fn get(&self, name: &str) -> Option<T::GetType> {
         let mut visited = vec![];
-        self.get_matrix_inner(name, &mut visited)
+        self.get_inner(name, &mut visited)
     }
 
     pub fn add(&mut self, name: String, t: T) {
@@ -546,58 +447,110 @@ impl<T: StorageElem> StorageWithNames<T> {
         self.names.iter()
     }
 
-    fn get_matrix_inner<'a>(
-        &'a self,
-        name: &'a str,
-        visited: &mut Vec<String>,
-    ) -> Option<T::GetType> {
+    fn get_inner<'a>(&'a self, name: &'a str, visited: &mut Vec<String>) -> Option<T::GetType> {
         if visited.iter().any(|x| *x == name) {
             return None;
         }
 
         visited.push(name.to_owned());
         let pos = self.names.iter().position(|x| x == name)?;
-        let result = self.storage[pos].get(|name| self.get_matrix_inner(name, visited))?;
+        let result = self.storage[pos].get(|name| self.get_inner(name, visited))?;
         visited.pop().unwrap();
         Some(result)
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct WhatChanged {
-    pub inner: bool,
-    pub outer: bool,
-}
-
-pub trait ComplexUiable {
-    fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged;
-}
-
-impl<T: StorageElem> ComplexUiable for StorageWithNames<T> {
-    fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged {
-        let mut changed = WhatChanged::default();
-        let mut to_delete = None;
-        if ui.button(None, "Add") {
-            changed.outer = true;
-            self.add("new".to_owned(), T::default());
-        }
-        let mut names = &mut self.names;
-        for (pos, t) in self.storage.iter_mut().enumerate() {
-            ui.tree_node(hash!(id, 0, pos), &names[pos].clone(), |ui| {
-                if ui.button(None, "Delete") {
+pub fn egui_collection(
+    ui: &mut Ui,
+    collection: &mut Vec<impl Eguiable + Default>,
+    data: &mut state::Container,
+) -> WhatChanged {
+    let mut changed = WhatChanged::default();
+    let mut to_delete = None;
+    for (pos, elem) in collection.iter_mut().enumerate() {
+        CollapsingHeader::new(pos.to_string())
+            .id_source(pos)
+            .show(ui, |ui| {
+                if ui
+                    .add(Button::new("Delete").text_color(Color32::RED))
+                    .clicked()
+                {
                     to_delete = Some(pos);
                 }
-                changed.outer |= ui_name(ui, hash!(id, 1, pos), "Name", &mut names, pos);
-                changed.inner |= t.ui_with_names(ui, hash!(id, 2, pos), &names);
+
+                data.set(pos as u64);
+                changed |= elem.egui(ui, data);
             });
+    }
+    if let Some(pos) = to_delete {
+        changed.shader = true;
+        collection.remove(pos);
+    }
+    if ui
+        .add(Button::new("Add").text_color(Color32::GREEN))
+        .clicked()
+    {
+        collection.push(Default::default());
+    }
+    changed
+}
+
+impl<T: StorageElem> Eguiable for StorageWithNames<T> {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        let mut to_delete = None;
+        let storage = &mut self.storage;
+        let names = &mut self.names;
+        for (pos, elem) in storage.iter_mut().enumerate() {
+            CollapsingHeader::new(&names[pos])
+                .id_source(pos)
+                .show(ui, |ui| {
+                    let previous = names[pos].clone();
+                    ui.horizontal(|ui| {
+                        egui_label(ui, "Name:", 45.);
+                        ui.put(
+                            Rect::from_min_size(
+                                ui.min_rect().min + egui::vec2(49., 0.),
+                                egui::vec2(ui.available_width() - 65., 0.),
+                            ),
+                            TextEdit::singleline(&mut names[pos]),
+                        );
+                        if ui
+                            .add(Button::new("Delete").text_color(Color32::RED))
+                            .clicked()
+                        {
+                            to_delete = Some(pos);
+                        }
+                    });
+                    if names[..pos].contains(&names[pos]) {
+                        ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                            ui.add(Label::new("Error: ").text_color(Color32::RED));
+                            ui.label(format!("name '{}' already used", names[pos]));
+                        });
+                    }
+                    changed.shader |= previous != names[pos];
+
+                    data.set(pos as u64);
+                    changed |= elem.egui(ui, data);
+                });
         }
         if let Some(pos) = to_delete {
-            changed.outer = true;
+            changed.shader = true;
             self.remove(pos);
+        }
+        if ui
+            .add(Button::new("Add").text_color(Color32::GREEN))
+            .clicked()
+        {
+            self.add(format!("_{}", self.names.len()), Default::default());
         }
         changed
     }
 }
+
+// ----------------------------------------------------------------------------------------------------------
+// Glsl code things
+// ----------------------------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlslCode(pub String);
@@ -614,10 +567,6 @@ impl Default for MaterialCode {
     }
 }
 
-pub fn ui_editbox(ui: &mut Ui, id: Id, data: &mut String) -> bool {
-    ui.editbox(id, Vector2::new(300., 200.), data)
-}
-
 impl StorageElem for MaterialCode {
     type GetType = MaterialCode;
 
@@ -625,12 +574,20 @@ impl StorageElem for MaterialCode {
         Some(self.clone())
     }
 
-    fn ui_with_names(&mut self, ui: &mut Ui, id: Id, _: &[String]) -> bool {
-        ui_editbox(ui, id, &mut self.0.0)
-    }
-
     fn defaults() -> (Vec<String>, Vec<Self>) {
         (vec!["black".to_owned()], vec![MaterialCode::default()])
+    }
+}
+
+impl Eguiable for GlslCode {
+    fn egui(&mut self, ui: &mut Ui, _: &mut state::Container) -> WhatChanged {
+        WhatChanged::from_shader(ui.add(TextEdit::multiline(&mut self.0).text_style(TextStyle::Monospace)).changed())
+    }
+}
+
+impl Eguiable for MaterialCode {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+        self.0.egui(ui, data)
     }
 }
 
@@ -646,6 +603,10 @@ impl Default for IsInsideCode {
         ))
     }
 }
+
+// ----------------------------------------------------------------------------------------------------------
+// Scene object
+// ----------------------------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
@@ -698,32 +659,50 @@ impl ComboBoxChoosable for Object {
     }
 }
 
-impl UiWithNames for Object {
-    fn ui_with_names_inner(&mut self, ui: &mut Ui, id: Id, names: &[String]) -> bool {
+impl Eguiable for Object {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
         use Object::*;
-        let mut is_changed = false;
+        let names = data.get::<Arc<Vec<String>>>();
+        let mut is_changed = WhatChanged::default();
         match self {
             Flat { plane, is_inside } => {
-                is_changed |= ui_existing_name(ui, hash!(id, 0), "Plane", plane, names);
-                is_changed |= ui_editbox(ui, hash!(id, 1), &mut is_inside.0.0);
+                is_changed.shader |= egui_existing_name(ui, "Plane:", 45., plane, names);
+                is_changed |= is_inside.0.egui(ui, data);
             }
             FlatPortal {
                 first,
                 second,
                 is_inside,
             } => {
-                is_changed |= ui_existing_name(ui, hash!(id, 0), "First portal", first, names);
-                is_changed |= ui_existing_name(ui, hash!(id, 1), "Second portal", second, names);
-                is_changed |= ui_editbox(ui, hash!(id, 2), &mut is_inside.0.0);
+                is_changed.shader |= egui_existing_name(ui, "First:", 45., first, names);
+                is_changed.shader |= egui_existing_name(ui, "Second:", 45., second, names);
+                is_changed |= is_inside.0.egui(ui, data);
             }
         }
         is_changed
     }
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ObjectComboBox(pub Object);
+
+impl Eguiable for ObjectComboBox {
+    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+        let mut changed =
+            WhatChanged::from_uniform(egui_combo_box(ui, "Type:", 45., &mut self.0, *data.get()));
+        ui.separator();
+        changed |= self.0.egui(ui, data);
+        changed
+    }
+}
+
+// ----------------------------------------------------------------------------------------------------------
+// Scene
+// ----------------------------------------------------------------------------------------------------------
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scene {
-    matrices: StorageWithNames<Matrix>,
+    matrices: StorageWithNames<MatrixComboBox>,
     objects: Vec<Object>,
 
     materials: StorageWithNames<MaterialCode>,
@@ -739,9 +718,18 @@ pub fn add_line_numbers(s: &str) -> String {
 }
 
 impl Scene {
+    pub fn new() -> Self {
+        Self {
+            matrices: Default::default(),
+            objects: vec![Object::default()],
+            materials: Default::default(),
+            library: GlslCode("".to_owned()),
+        }
+    }
+
     pub fn egui(
         &mut self,
-        ui: &mut egui::Ui,
+        ui: &mut Ui,
         should_recompile: &mut bool,
     ) -> (WhatChanged, Option<macroquad::material::Material>) {
         let mut changed = WhatChanged::default();
@@ -755,17 +743,17 @@ impl Scene {
             if ui.button("Load").clicked() {
                 let s = std::fs::read_to_string("scene.json").unwrap();
                 *self = serde_json::from_str(&s).unwrap();
-                changed.outer = true;
+                changed.shader = true;
             }
             if ui
-                .add(egui::Button::new("Recompile").enabled(*should_recompile))
+                .add(Button::new("Recompile").enabled(*should_recompile))
                 .clicked()
             {
                 match self.get_new_material() {
                     Ok(m) => {
                         material = Some(m);
                         *should_recompile = false;
-                        changed.inner = true;
+                        changed.uniform = true;
                     }
                     Err(err) => {
                         println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
@@ -778,134 +766,36 @@ impl Scene {
 
         let mut data = state::Container::new();
 
-        egui::CollapsingHeader::new("Matrices")
+        CollapsingHeader::new("Matrices")
             .default_open(false)
             .show(ui, |ui| {
                 data.set(Arc::new(self.matrices.names.clone()));
-                let mut to_delete = None;
-                let storage = &mut self.matrices.storage;
-                let names = &mut self.matrices.names;
-                for (pos, matrix) in storage.iter_mut().enumerate() {
-                    egui::CollapsingHeader::new(&names[pos])
-                        .id_source(pos)
-                        .show(ui, |ui| {
-                            use egui::*;
-                            let previous = names[pos].clone();
-                            ui.horizontal(|ui| {
-                                ui.put(
-                                    egui::Rect::from_min_size(
-                                        ui.min_rect().min,
-                                        egui::vec2(45., 0.),
-                                    ),
-                                    egui::Label::new("Name:"),
-                                );
-                                ui.put(
-                                    egui::Rect::from_min_size(
-                                        ui.min_rect().min + egui::vec2(49., 0.),
-                                        egui::vec2(ui.available_width() - 65., 0.),
-                                    ),
-                                    egui::TextEdit::singleline(&mut names[pos]),
-                                );
-                                if ui
-                                    .add(egui::Button::new("Delete").text_color(egui::Color32::RED))
-                                    .clicked()
-                                {
-                                    to_delete = Some(pos);
-                                }
-                            });
-                            if names[..pos].contains(&names[pos]) {
-                                ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
-                                    ui.add(Label::new("Error: ").text_color(Color32::RED));
-                                    ui.label(format!("name '{}' already used", names[pos]));
-                                });
-                            }
-
-                            changed.outer |= previous != names[pos];
-                            changed.inner |= egui_combo_box(ui, "Type: ", 45.0, matrix, &mut data);
-                        });
-                }
-                if let Some(pos) = to_delete {
-                    changed.outer = true;
-                    self.matrices.remove(pos);
-                }
-                if ui
-                    .add(egui::Button::new("Add").text_color(egui::Color32::GREEN))
-                    .clicked()
-                {
-                    self.matrices.add(
-                        format!("m{}", self.matrices.names.len()),
-                        Default::default(),
-                    );
-                }
+                changed |= self.matrices.egui(ui, &mut data);
             });
-        egui::CollapsingHeader::new("Objects")
+        CollapsingHeader::new("Objects")
             .default_open(false)
-            .show(ui, |ui| {});
-        egui::CollapsingHeader::new("Materials")
+            .show(ui, |ui| {
+                data.set(Arc::new(self.matrices.names.clone()));
+                changed |= egui_collection(ui, &mut self.objects, &mut data);
+            });
+        CollapsingHeader::new("Materials")
             .default_open(false)
-            .show(ui, |ui| {});
-        egui::CollapsingHeader::new("Glsl Library")
+            .show(ui, |ui| {
+                changed |= self.materials.egui(ui, &mut data);
+            });
+        CollapsingHeader::new("Glsl Library")
             .default_open(false)
-            .show(ui, |ui| {});
+            .show(ui, |ui| {
+                self.library.egui(ui, &mut data);
+            });
 
         (changed, material)
     }
 }
 
-impl ComplexUiable for Scene {
-    fn ui(&mut self, ui: &mut Ui, id: Id) -> WhatChanged {
-        let mut changed = WhatChanged::default();
-        if ui.button(None, "Save") {
-            let s = serde_json::to_string(self).unwrap();
-            std::fs::write("scene.json", s).unwrap();
-        }
-        ui.same_line(0.0);
-        if ui.button(None, "Load") {
-            let s = std::fs::read_to_string("scene.json").unwrap();
-            *self = serde_json::from_str(&s).unwrap();
-            changed.outer = true;
-        }
-        ui.tree_node(hash!(id, 0), "Matrices", |ui| {
-            let WhatChanged { inner, outer } = self.matrices.ui(ui, hash!(id, 1));
-            changed.inner |= inner;
-            changed.outer |= outer;
-        });
-        ui.tree_node(hash!(id, 2), "Objects", |ui| {
-            let mut to_delete = None;
-            if ui.button(None, "Add object") {
-                changed.outer = true;
-                self.objects.push(Object::default());
-            }
-            let names = &self.matrices.names;
-            for (pos, t) in self.objects.iter_mut().enumerate() {
-                ui.tree_node(hash!(id, 3, pos), &pos.to_string(), |ui| {
-                    if ui.button(None, "Delete") {
-                        to_delete = Some(pos);
-                    }
-                    changed.outer |= ui_combo_box(
-                        ui,
-                        hash!(id, 4, pos),
-                        "Type",
-                        &mut ObjectAndNames(t, &names),
-                    );
-                });
-            }
-            if let Some(pos) = to_delete {
-                changed.outer = true;
-                self.objects.remove(pos);
-            }
-        });
-        ui.tree_node(hash!(id, 5), "Materials", |ui| {
-            let WhatChanged { inner, outer } = self.materials.ui(ui, hash!(id, 6));
-            changed.outer |= inner;
-            changed.outer |= outer;
-        });
-        ui.tree_node(hash!(id, 7), "Library", |ui| {
-            changed.outer |= ui_editbox(ui, hash!(id, 7), &mut self.library.0);
-        });
-        changed
-    }
-}
+// ----------------------------------------------------------------------------------------------------------
+// Uniforms
+// ----------------------------------------------------------------------------------------------------------
 
 pub trait UniformStruct {
     fn uniforms(&self) -> Vec<(String, UniformType)>;
@@ -986,16 +876,11 @@ impl UniformStruct for Scene {
     }
 }
 
-impl Scene {
-    pub fn new() -> Self {
-        Self {
-            matrices: Default::default(),
-            objects: vec![Object::default()],
-            materials: Default::default(),
-            library: GlslCode("".to_owned()),
-        }
-    }
+// ----------------------------------------------------------------------------------------------------------
+// Code generation
+// ----------------------------------------------------------------------------------------------------------
 
+impl Scene {
     pub fn generate_shader_code(&self) -> GlslCode {
         /*
            %%uniforms%%
@@ -1220,27 +1105,3 @@ void main() {
     gl_Position = res;
 }
 ";
-
-/*
-    // ComplexPortal {
-    //  name: String,
-    //  crd: Matrix,
-    //  intersect: GlslCode,
-    //  disabled_teleportation_material: String,
-    // },
-}
-
-
-
-enum Parameter {
-    /// [0..1]
-    Progress(f32),
-
-    AnyFloat(f32),
-
-    // [0..2] * PI
-    Angle(f32),
-
-    Boolean(bool),
-}
-*/

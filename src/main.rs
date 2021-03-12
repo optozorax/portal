@@ -5,12 +5,6 @@ use std::f32::consts::PI;
 mod gui;
 use crate::gui::*;
 
-use megaui_macroquad::{
-    draw_megaui, draw_window,
-    megaui::{self, hash},
-    WindowParams,
-};
-
 struct RotateAroundCam {
     alpha: f32,
     beta: f32,
@@ -140,7 +134,7 @@ impl Window {
 
                 changed = changed1;
 
-                if changed.outer {
+                if changed.shader {
                     self.should_recompile = true;
                 }
 
@@ -151,45 +145,7 @@ impl Window {
         self.edit_scene_opened = edit_scene_opened;
         let mouse_over_canvas = !ctx.is_using_pointer();
 
-        // draw_window(
-        //     hash!(),
-        //     vec2(20., 20.),
-        //     vec2(300., 450.),
-        //     WindowParams {
-        //         label: "Configure scene".to_owned(),
-        //         close_button: false,
-        //         ..Default::default()
-        //     },
-        //     |ui| {
-        //         mouse_over_canvas &=
-        //             !ui.is_mouse_over(Vector2::new(mouse_position().0, mouse_position().1));
-
-        //         if self.should_recompile {
-        //             if ui.button(None, "Recompile") {
-        //                 match self.scene.get_new_material() {
-        //                     Ok(material) => {
-        //                         self.material = material;
-        //                         self.should_recompile = false;
-        //                         changed_inner = true;
-        //                         is_something_changed = true;
-        //                     }
-        //                     Err(err) => {
-        //                         println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
-        //                     }
-        //                 }
-        //             }
-        //             ui.same_line(0.0);
-        //         }
-
-        //         changed = self.scene.ui(ui, hash!());
-
-        //         if changed.outer {
-        //             self.should_recompile = true;
-        //         }
-        //     },
-        // );
-
-        if changed.inner {
+        if changed.uniform {
             self.scene.set_uniforms(self.material);
             self.material
                 .set_uniform("_resolution", (screen_width(), screen_height()));

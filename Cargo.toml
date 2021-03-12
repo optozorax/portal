@@ -8,7 +8,6 @@ edition = "2018"
 # macroquad = { git = "https://github.com/not-fl3/macroquad", commit = "d2c1f0e" }
 # macroquad-profiler = { git = "https://github.com/not-fl3/macroquad" }
 macroquad = { path = "../macroquad" }
-megaui-macroquad = { path = "../../testing/megaui-macroquad" }
 egui-macroquad = { path = "../../testing/egui-macroquad" }
 glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
