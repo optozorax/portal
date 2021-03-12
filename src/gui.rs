@@ -689,7 +689,7 @@ pub struct ObjectComboBox(pub Object);
 impl Eguiable for ObjectComboBox {
     fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
         let mut changed =
-            WhatChanged::from_uniform(egui_combo_box(ui, "Type:", 45., &mut self.0, *data.get()));
+            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, *data.get()));
         ui.separator();
         changed |= self.0.egui(ui, data);
         changed
@@ -703,7 +703,7 @@ impl Eguiable for ObjectComboBox {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scene {
     matrices: StorageWithNames<MatrixComboBox>,
-    objects: Vec<Object>,
+    objects: Vec<ObjectComboBox>,
 
     materials: StorageWithNames<MaterialCode>,
     library: GlslCode,
@@ -721,7 +721,7 @@ impl Scene {
     pub fn new() -> Self {
         Self {
             matrices: Default::default(),
-            objects: vec![Object::default()],
+            objects: vec![Default::default()],
             materials: Default::default(),
             library: GlslCode("".to_owned()),
         }
@@ -806,7 +806,7 @@ impl UniformStruct for Scene {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
         self.objects
             .iter()
-            .map(|object| match object {
+            .map(|object| match &object.0 {
                 Object::Flat {
                     plane,
                     is_inside: _,
@@ -839,7 +839,7 @@ impl UniformStruct for Scene {
 
     fn set_uniforms(&self, material: Material) {
         for i in &self.objects {
-            match i {
+            match &i.0 {
                 Object::Flat {
                     plane,
                     is_inside: _,
@@ -911,7 +911,7 @@ impl Scene {
                 self.objects
                     .iter()
                     .enumerate()
-                    .filter_map(|(pos, x)| match x {
+                    .filter_map(|(pos, x)| match &x.0 {
                         Object::Flat { .. } => None,
                         Object::FlatPortal { first, second, .. } => Some((pos, first, second)),
                     })
@@ -919,14 +919,14 @@ impl Scene {
                 result.insert(
                     format!("teleport_{}_1_M", pos),
                     MaterialCode(GlslCode(format!(
-                        "return teleport(i.hit.t, {}_to_{}_mat_teleport, r);",
+                        "return teleport({}_to_{}_mat_teleport, r);",
                         first, second
                     ))),
                 );
                 result.insert(
                     format!("teleport_{}_2_M", pos),
                     MaterialCode(GlslCode(format!(
-                        "return teleport(i.hit.t, {}_to_{}_mat_teleport, r);",
+                        "return teleport({}_to_{}_mat_teleport, r);",
                         second, first
                     ))),
                 );
@@ -946,7 +946,7 @@ impl Scene {
         let intersection_functions = {
             let mut result = String::new();
             for (pos, i) in self.objects.iter().enumerate() {
-                match i {
+                match &i.0 {
                     Object::Flat {
                         plane: _,
                         is_inside,
@@ -975,7 +975,7 @@ impl Scene {
         let intersections = {
             let mut result = String::new();
             for (pos, i) in self.objects.iter().enumerate() {
-                match i {
+                match &i.0 {
                     Object::Flat {
                         plane,
                         is_inside: _,
@@ -1105,3 +1105,28 @@ void main() {
     gl_Position = res;
 }
 ";
+
+
+/* 
+
+enum Material {
+    Simple {
+        color: [f32; 3],
+        k: f32, // 0..1
+        s: f32, // 0..1
+        grid: bool,
+        grid_scale: f32,
+    },
+    Reflect {
+        add_to_color: [f32; 3],
+    },
+    Refract {
+        refractive_index: f32,
+        add_to_color: [f32; 3],
+    }
+    Complex {
+        code: MaterialCode, // gets (SphereIntersection hit, Ray r) -> MaterialProcessing, must use material_next or material_final
+    },
+}
+
+ */
