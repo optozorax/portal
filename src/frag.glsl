@@ -149,7 +149,7 @@ vec3 color_add_weighted(vec3 a, vec3 b, float coef) {
 // Materials processing ------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-uniform float offset_after_material; // Normally should equals to 0.0001, but for mobile can be different
+uniform float _offset_after_material; // Normally should equals to 0.0001, but for mobile can be different
 
 // Result after material processing.
 struct MaterialProcessing {
@@ -186,7 +186,7 @@ MaterialProcessing material_reflect(
     SurfaceIntersection hit, Ray r,
     vec3 add_to_color
 ) {
-    r.o += r.d * offset_after_material;
+    r.o += r.d * _offset_after_material;
     r.d = vec4(reflect(r.d.xyz, hit.n), 0.);
     return material_next(add_to_color, r);
 }
@@ -196,7 +196,7 @@ MaterialProcessing material_refract(
     SurfaceIntersection hit, Ray r,
     vec3 add_to_color, float refractive_index
 ) {
-    r.o += r.d * offset_after_material;
+    r.o += r.d * _offset_after_material;
     r.d = vec4(refract(r.d.xyz, hit.n, refractive_index), 0.);
     return material_next(add_to_color, r);
 }
@@ -206,7 +206,7 @@ MaterialProcessing material_teleport(
     SurfaceIntersection hit, Ray r,
     mat4 teleport_matrix
 ) {
-    r.o += r.d * offset_after_material;
+    r.o += r.d * _offset_after_material;
     // todo add add_gray_after_teleportation
     return material_next(vec3(1.), transform(teleport_matrix, r));
 }
@@ -252,6 +252,12 @@ bool nearer(SceneIntersection result, SurfaceIntersection current) {
 bool nearer(SceneIntersection result, SceneIntersection current) {
     return nearer(result, current.hit);
 }
+
+// ---------------------------------------------------------------------------
+// User library --------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
+%%library%%
 
 // ---------------------------------------------------------------------------
 // Code for current scene ----------------------------------------------------

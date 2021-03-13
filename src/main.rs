@@ -207,6 +207,7 @@ impl Window {
         let mut edit_scene_opened = self.edit_scene_opened;
         egui::Window::new("Edit scene")
             .open(&mut edit_scene_opened)
+            .scroll(true)
             .show(ctx, |ui| {
                 let (changed1, material) = self.scene.egui(ui, &mut self.should_recompile);
 
@@ -246,6 +247,7 @@ impl Window {
             .set_uniform("_resolution", (screen_width(), screen_height()));
         self.material.set_uniform("_camera", self.cam.get_matrix());
         self.material.set_uniform("_ray_tracing_depth", 100);
+        self.material.set_uniform("_offset_after_material", 0.001f32);
     }
 
     fn draw(&self) {

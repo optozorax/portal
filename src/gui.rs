@@ -1064,7 +1064,9 @@ impl Eguiable for Object {
                         ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
                         ui.add(Label::new("r, ").monospace());
                         ui.add(Label::new("bool ").text_color(COLOR_TYPE).monospace());
-                        ui.add(Label::new("first) {").monospace());
+                        ui.add(Label::new("first, ").monospace());
+                        ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("material) {").monospace());
                     } else {
                         ui.add(
                             Label::new("SceneIntersection ")
@@ -1249,6 +1251,7 @@ impl UniformStruct for Scene {
             ("_camera".to_owned(), UniformType::Mat4),
             ("_resolution".to_owned(), UniformType::Float2),
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
+            ("_offset_after_material".to_owned(), UniformType::Float1),
         ]);
 
         result
@@ -1269,7 +1272,7 @@ impl UniformStruct for Scene {
                         Simple(matrix) => {
                             if let Some(m) = self.matrices.get(&matrix.0) {
                                 material.set_uniform(&matrix.normal_name(), m);
-                                material.set_uniform(&matrix.inverse_name(), m);
+                                material.set_uniform(&matrix.inverse_name(), m.inverse());
                             } else {
                                 // todo add error processing in this case
                             }
@@ -1278,14 +1281,14 @@ impl UniformStruct for Scene {
                             if let Some((ma, mb)) =
                                 self.matrices.get(&a.0).zip(self.matrices.get(&b.0))
                             {
+                                material.set_uniform(&a.normal_name(), ma);
+                                material.set_uniform(&a.inverse_name(), ma.inverse());
+                                material.set_uniform(&b.normal_name(), mb);
+                                material.set_uniform(&b.inverse_name(), mb.inverse());
                                 material.set_uniform(&a.teleport_to_name(b), mb * ma.inverse());
                                 if a != b {
                                     material.set_uniform(&b.teleport_to_name(a), ma * mb.inverse());
                                 }
-                                material.set_uniform(&b.inverse_name(), mb.inverse());
-                                material.set_uniform(&b.normal_name(), mb);
-                                material.set_uniform(&a.inverse_name(), ma.inverse());
-                                material.set_uniform(&a.normal_name(), ma);
                             } else {
                                 // todo add error processing in this case
                             }
@@ -1458,6 +1461,7 @@ impl Scene {
                             matrix.normal_name()
                         );
                         result += "if (nearer(i, ihit)) { i = ihit; }\n";
+                        result += "\n";
                     }
                     Flat { kind, is_inside: _ } => match kind {
                         Simple(matrix) => {
@@ -1470,24 +1474,26 @@ impl Scene {
                                 "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v)); }}\n",
                                 pos
                             );
+                            result += "\n";
                         }
                         Portal(a, b) => {
-                            let mut add = |matrix: &MatrixName, first| {
+                            let mut add = |matrix: &MatrixName, first, material| {
                                 result +=
-                                    &format!("normal = get_normal({});\n", matrix.normal_name());
+                                    &format!("normal = {}get_normal({});\n", if first { "" } else { "-" }, matrix.normal_name());
                                 result += &format!(
                                     "hit = plane_intersect(r, {}, normal);\n",
                                     matrix.inverse_name()
                                 );
                                 result += &format!(
-                                    "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, {}is_collinear(r.d, normal), {})); }}\n",
+                                    "if (nearer(i, hit)) {{ i = process_portal_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(r.d.xyz, normal), {}), {}); }}\n",
                                     pos,
-                                    if first { "" } else { "-" },
-                                    first
+                                    first,
+                                    material
                                 );
+                                result += "\n";
                             };
-                            add(a, true);
-                            add(b, false);
+                            add(a, true, format!("teleport_{}_1_M", pos));
+                            add(b, false, format!("teleport_{}_2_M", pos));
                         }
                     },
                     Complex { kind, intersect: _ } => match kind {
@@ -1498,22 +1504,26 @@ impl Scene {
                                 matrix.inverse_name()
                             );
                             result += "if (nearer(i, ihit)) {{ i = ihit; }}\n";
+                            result += "\n";
                         }
                         Portal(a, b) => {
-                            let mut add = |matrix: &MatrixName, first| {
+                            let mut add = |matrix: &MatrixName, first, material| {
                                 result += &format!(
-                                    "ihit = intersect_{}(transform({}, r), {});\n",
+                                    "ihit = intersect_{}(transform({}, r), {}, {});\n",
                                     pos,
                                     matrix.inverse_name(),
-                                    first
+                                    first,
+                                    material
                                 );
                                 result += &"if (nearer(i, ihit)) {{ i = ihit; }}\n";
+                                result += "\n";
                             };
-                            add(a, true);
-                            add(b, false);
+                            add(a, true, format!("teleport_{}_1_M", pos));
+                            add(b, false, format!("teleport_{}_2_M", pos));
                         }
                     },
                 }
+                result += "\n";
             }
             result
         };
@@ -1534,13 +1544,14 @@ impl Scene {
         result = result.replace("%%intersection_functions%%", &intersection_functions);
         result = result.replace("%%intersections%%", &intersections);
         result = result.replace("%%material_processing%%", &material_processing);
+        result = result.replace("%%library%%", &self.library.0);
         GlslCode(result)
     }
 
     pub fn get_new_material(&self) -> Result<macroquad::prelude::Material, (String, String)> {
         let code = self.generate_shader_code();
 
-        // println!("{}", add_line_numbers(&code.0));
+        println!("{}", add_line_numbers(&code.0));
 
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
