@@ -232,9 +232,7 @@ impl Window {
 
         if changed.uniform {
             self.scene.set_uniforms(self.material);
-            self.material
-                .set_uniform("_resolution", (screen_width(), screen_height()));
-            self.material.set_uniform("_camera", self.cam.get_matrix());
+            self.set_uniforms();
             is_something_changed = true;
         }
 
@@ -243,10 +241,15 @@ impl Window {
         return is_something_changed;
     }
 
-    fn draw(&self) {
+    fn set_uniforms(&self) {
         self.material
             .set_uniform("_resolution", (screen_width(), screen_height()));
         self.material.set_uniform("_camera", self.cam.get_matrix());
+        self.material.set_uniform("_ray_tracing_depth", 100);
+    }
+
+    fn draw(&self) {
+        self.set_uniforms();
 
         gl_use_material(self.material);
         draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);

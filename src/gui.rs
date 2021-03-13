@@ -3,6 +3,7 @@ use glam::*;
 use macroquad::prelude::UniformType;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
@@ -109,7 +110,13 @@ pub fn egui_f32_positive(ui: &mut Ui, value: &mut f32) -> bool {
 
 pub fn egui_label(ui: &mut Ui, label: &str, size: f32) {
     let (rect, _) = ui.allocate_at_least(egui::vec2(size, 0.), Sense::hover());
-    ui.painter().text(rect.max, Align2::RIGHT_CENTER, label, TextStyle::Body, Color32::WHITE);
+    ui.painter().text(
+        rect.max,
+        Align2::RIGHT_CENTER,
+        label,
+        TextStyle::Body,
+        Color32::WHITE,
+    );
 }
 
 pub fn egui_existing_name(
@@ -566,10 +573,10 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
 pub enum Material {
     Simple {
         color: [f32; 3],
-        k: f32, // 0..1
-        s: f32, // 0..1
+        normal_coef: f32, // 0..1
         grid: bool,
         grid_scale: f32,
+        grid_coef: f32, // 0..1
     },
     Reflect {
         add_to_color: [f32; 3],
@@ -586,11 +593,11 @@ pub enum Material {
 impl Default for Material {
     fn default() -> Self {
         Material::Simple {
-            color: [0.0, 0.0, 0.0],
-            k: 1.0,
-            s: 0.5,
-            grid: false,
-            grid_scale: 1.0,
+            color: [0.5, 0.2, 0.2],
+            normal_coef: 0.5,
+            grid: true,
+            grid_scale: 4.0,
+            grid_coef: 0.3,
         }
     }
 }
@@ -603,7 +610,10 @@ impl StorageElem for MaterialComboBox {
     }
 
     fn defaults() -> (Vec<String>, Vec<Self>) {
-        (vec!["black".to_owned()], vec![MaterialComboBox(Material::default())])
+        (
+            vec!["black".to_owned()],
+            vec![MaterialComboBox(Material::default())],
+        )
     }
 }
 
@@ -624,9 +634,16 @@ impl ComboBoxChoosable for Material {
         use Material::*;
         *self = match number {
             0 => Default::default(),
-            1 => Reflect { add_to_color: Default::default() },
-            2 => Refract { add_to_color: Default::default(), refractive_index: 1.5 },
-            3 => Complex { code: Default::default() },
+            1 => Reflect {
+                add_to_color: Default::default(),
+            },
+            2 => Refract {
+                add_to_color: Default::default(),
+                refractive_index: 1.5,
+            },
+            3 => Complex {
+                code: Default::default(),
+            },
             _ => unreachable!(),
         };
     }
@@ -634,88 +651,125 @@ impl ComboBoxChoosable for Material {
 
 const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);
 const COLOR_FUNCTION: Color32 = Color32::from_rgb(0x2B, 0xAB, 0x63);
-const COLOR_COMMENT: Color32 = Color32::from_rgb(0x8c, 0xa3, 0x75);
 
 impl Eguiable for Material {
     fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
         use Material::*;
         let mut changed = false;
         match self {
-            Simple { color, k, s, grid, grid_scale } => {
+            Simple {
+                color,
+                normal_coef,
+                grid,
+                grid_scale,
+                grid_coef,
+            } => {
                 ui.horizontal(|ui| {
                     ui.label("Color");
                     changed |= check_changed(color, |color| drop(ui.color_edit_button_rgb(color)));
                     ui.separator();
-                    ui.label("k");
-                    changed |= check_changed(k, |k| drop(ui.add(
-                        DragValue::f32(k)
-                            .speed(0.01)
-                            .clamp_range(0.0..=1.0)
-                            .min_decimals(0)
-                            .max_decimals(2),
-                    )));
-                    ui.separator();
-                    ui.label("s");
-                    changed |= check_changed(s, |s| drop(ui.add(
-                        DragValue::f32(s)
-                            .speed(0.01)
-                            .clamp_range(0.0..=1.0)
-                            .min_decimals(0)
-                            .max_decimals(2),
-                    )));
+                    ui.label("Normal coef");
+                    changed |= check_changed(normal_coef, |normal_coef| {
+                        drop(
+                            ui.add(
+                                DragValue::f32(normal_coef)
+                                    .speed(0.01)
+                                    .clamp_range(0.0..=1.0)
+                                    .min_decimals(0)
+                                    .max_decimals(2),
+                            ),
+                        )
+                    });
                 });
                 ui.horizontal(|ui| {
-                    changed |= check_changed(grid, |grid| drop(ui.add(Checkbox::new(grid, "Grid"))));
+                    changed |=
+                        check_changed(grid, |grid| drop(ui.add(Checkbox::new(grid, "Grid"))));
                     ui.set_enabled(*grid);
                     ui.separator();
                     ui.label("Grid scale");
-                    changed |= check_changed(grid_scale, |grid_scale| drop(
-                    ui.add(
-                        DragValue::f32(grid_scale)
-                            .speed(0.01)
-                            .clamp_range(0.0..=1000.0)
-                            .min_decimals(0)
-                            .max_decimals(2)
-                    )));
+                    changed |= check_changed(grid_scale, |grid_scale| {
+                        drop(
+                            ui.add(
+                                DragValue::f32(grid_scale)
+                                    .speed(0.01)
+                                    .clamp_range(0.0..=1000.0)
+                                    .min_decimals(0)
+                                    .max_decimals(2),
+                            ),
+                        )
+                    });
+                    ui.separator();
+                    ui.label("Grid coef");
+                    changed |= check_changed(grid_coef, |grid_coef| {
+                        drop(
+                            ui.add(
+                                DragValue::f32(grid_coef)
+                                    .speed(0.01)
+                                    .clamp_range(0.0..=1.0)
+                                    .min_decimals(0)
+                                    .max_decimals(2),
+                            ),
+                        )
+                    });
                 });
-            },
+            }
             Reflect { add_to_color } => {
                 ui.horizontal(|ui| {
                     ui.label("Add to color");
-                    changed |= check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
+                    changed |=
+                        check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
                 });
-            },
-            Refract { refractive_index, add_to_color } => {
+            }
+            Refract {
+                refractive_index,
+                add_to_color,
+            } => {
                 ui.horizontal(|ui| {
                     ui.label("Add to color");
-                    changed |= check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
+                    changed |=
+                        check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
                 });
                 ui.horizontal(|ui| {
                     ui.label("Refractive index");
-                    changed |= check_changed(refractive_index, |r| drop(
-                    ui.add(
-                        DragValue::f32(r)
-                            .speed(0.01)
-                            .clamp_range(0.0..=10.0)
-                            .min_decimals(0)
-                            .max_decimals(2)
-                    )));
+                    changed |= check_changed(refractive_index, |r| {
+                        drop(
+                            ui.add(
+                                DragValue::f32(r)
+                                    .speed(0.01)
+                                    .clamp_range(0.0..=10.0)
+                                    .min_decimals(0)
+                                    .max_decimals(2),
+                            ),
+                        )
+                    });
                 });
-            },
+            }
             Complex { code } => {
                 ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
-                    ui.add(Label::new("MaterialProcessing ").text_color(COLOR_TYPE).monospace());
-                    ui.add(Label::new("process_material").text_color(COLOR_FUNCTION).monospace());
+                    ui.add(
+                        Label::new("MaterialProcessing ")
+                            .text_color(COLOR_TYPE)
+                            .monospace(),
+                    );
+                    ui.add(
+                        Label::new("process_material")
+                            .text_color(COLOR_FUNCTION)
+                            .monospace(),
+                    );
                     ui.add(Label::new("(\n  ").monospace());
-                    ui.add(Label::new("SurfaceIntersect ").text_color(COLOR_TYPE).monospace());
+                    ui.add(
+                        Label::new("SurfaceIntersect ")
+                            .text_color(COLOR_TYPE)
+                            .monospace(),
+                    );
                     ui.add(Label::new("hit,\n  ").monospace());
                     ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
                     ui.add(Label::new("r\n) {").monospace());
                 });
                 changed |= code.0.egui(ui, data).shader;
                 ui.add(Label::new("}").monospace());
-            },
+            }
         }
         WhatChanged::from_shader(changed)
     }
@@ -785,7 +839,26 @@ pub struct IntersectCode(pub GlslCode);
 
 impl Default for IntersectCode {
     fn default() -> Self {
-        Self(GlslCode("// todo add sphere intersect code".to_owned()))
+        Self(GlslCode(
+            r#"vec3 op = -r.o.xyz;
+float b = dot(op, r.d.xyz);
+float det = b*b - dot(op, op) + 1.0;
+if (det < 0.) return scene_intersection_none;
+
+det = sqrt(det);
+float t = b - det;
+if (t < 0.) t = b + det;
+if (t < 0.) return scene_intersection_none;
+
+vec4 pos = r.o + r.d * t;
+vec3 n = normalize(pos.xyz);
+
+float u = atan(pos.z, pos.x);
+float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
+
+return SceneIntersection(black_M, SurfaceIntersection(true, t, u, v, n));"#
+                .to_owned(),
+        ))
     }
 }
 
@@ -793,8 +866,22 @@ impl Default for IntersectCode {
 // Scene object
 // ----------------------------------------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MatrixName(String);
+
+impl MatrixName {
+    pub fn normal_name(&self) -> String {
+        format!("{}_mat", self.0)
+    }
+
+    pub fn inverse_name(&self) -> String {
+        format!("{}_mat_inv", self.0)
+    }
+
+    pub fn teleport_to_name(&self, to: &MatrixName) -> String {
+        format!("{}_to_{}_mat_teleport", self.0, to.0)
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ObjectType {
@@ -889,13 +976,11 @@ impl Eguiable for ObjectType {
         let names = data.get::<Arc<Vec<String>>>();
         let mut is_changed = false;
         match self {
-            Simple(a) => {
-                is_changed |= egui_existing_name(ui, "Matrix:", 45., &mut a.0, names)
-            },
+            Simple(a) => is_changed |= egui_existing_name(ui, "Matrix:", 45., &mut a.0, names),
             Portal(a, b) => {
                 is_changed |= egui_existing_name(ui, "First:", 45., &mut a.0, names);
                 is_changed |= egui_existing_name(ui, "Second:", 45., &mut b.0, names);
-            },
+            }
         }
         WhatChanged::from_shader(is_changed)
     }
@@ -909,7 +994,7 @@ impl Eguiable for Object {
         match self {
             DebugMatrix(a) => {
                 is_changed.shader |= egui_existing_name(ui, "Matrix:", 45., &mut a.0, names);
-            },
+            }
             Flat { kind, is_inside } => {
                 is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
                 is_changed |= kind.egui(ui, data);
@@ -918,7 +1003,11 @@ impl Eguiable for Object {
                     ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
                         ui.spacing_mut().item_spacing.x = 0.;
                         ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
-                        ui.add(Label::new("is_inside").text_color(COLOR_FUNCTION).monospace());
+                        ui.add(
+                            Label::new("is_inside")
+                                .text_color(COLOR_FUNCTION)
+                                .monospace(),
+                        );
                         ui.add(Label::new("(").monospace());
                         ui.add(Label::new("vec4 ").text_color(COLOR_TYPE).monospace());
                         ui.add(Label::new("pos, ").monospace());
@@ -935,7 +1024,11 @@ impl Eguiable for Object {
                     ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
                         ui.spacing_mut().item_spacing.x = 0.;
                         ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
-                        ui.add(Label::new("is_inside").text_color(COLOR_FUNCTION).monospace());
+                        ui.add(
+                            Label::new("is_inside")
+                                .text_color(COLOR_FUNCTION)
+                                .monospace(),
+                        );
                         ui.add(Label::new("(").monospace());
                         ui.add(Label::new("vec4 ").text_color(COLOR_TYPE).monospace());
                         ui.add(Label::new("pos, ").monospace());
@@ -952,13 +1045,41 @@ impl Eguiable for Object {
                 is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
                 is_changed |= kind.egui(ui, data);
                 ui.separator();
+
                 ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
-                    ui.add(Label::new("SurfaceIntersect ").text_color(COLOR_TYPE).monospace());
-                    ui.add(Label::new("intersect").text_color(COLOR_FUNCTION).monospace());
-                    ui.add(Label::new("(").monospace());
-                    ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
-                    ui.add(Label::new("r) {").monospace());
+
+                    if matches!(kind, ObjectType::Portal { .. }) {
+                        ui.add(
+                            Label::new("SceneIntersection ")
+                                .text_color(COLOR_TYPE)
+                                .monospace(),
+                        );
+                        ui.add(
+                            Label::new("intersect")
+                                .text_color(COLOR_FUNCTION)
+                                .monospace(),
+                        );
+                        ui.add(Label::new("(").monospace());
+                        ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("r, ").monospace());
+                        ui.add(Label::new("bool ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("first) {").monospace());
+                    } else {
+                        ui.add(
+                            Label::new("SceneIntersection ")
+                                .text_color(COLOR_TYPE)
+                                .monospace(),
+                        );
+                        ui.add(
+                            Label::new("intersect")
+                                .text_color(COLOR_FUNCTION)
+                                .monospace(),
+                        );
+                        ui.add(Label::new("(").monospace());
+                        ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("r) {").monospace());
+                    }
                 });
                 is_changed |= intersect.0.egui(ui, data);
                 ui.add(Label::new("}").monospace());
@@ -973,8 +1094,7 @@ pub struct ObjectComboBox(pub Object);
 
 impl Eguiable for ObjectComboBox {
     fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_shader(egui_combo_label(ui, "Type:", 45., &mut self.0));
+        let mut changed = WhatChanged::from_shader(egui_combo_label(ui, "Type:", 45., &mut self.0));
         ui.separator();
         changed |= self.0.egui(ui, data);
         changed
@@ -1089,80 +1209,91 @@ pub trait UniformStruct {
 
 impl UniformStruct for Scene {
     fn uniforms(&self) -> Vec<(String, UniformType)> {
-        /*
-        self.objects
-            .iter()
-            .map(|object| match &object.0 {
-                Object::Flat {
-                    plane,
-                    is_inside: _,
-                } => vec![format!("{}_mat", plane), format!("{}_mat_inv", plane)].into_iter(),
-                Object::FlatPortal {
-                    first,
-                    second,
-                    is_inside: _,
-                } => vec![
-                    format!("{}_mat", first),
-                    format!("{}_mat_inv", first),
-                    format!("{}_mat", second),
-                    format!("{}_mat_inv", second),
-                    format!("{}_to_{}_mat_teleport", first, second),
-                    format!("{}_to_{}_mat_teleport", second, first),
-                ]
-                .into_iter(),
-            })
-            .flatten()
+        use Object::*;
+        use ObjectType::*;
+
+        let mut result = Vec::new();
+        for object in &self.objects {
+            match &object.0 {
+                DebugMatrix(matrix) => {
+                    result.push(matrix.normal_name());
+                }
+                Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
+                    Simple(matrix) => {
+                        result.push(matrix.normal_name());
+                        result.push(matrix.inverse_name());
+                    }
+                    Portal(a, b) => {
+                        result.push(a.normal_name());
+                        result.push(a.inverse_name());
+                        result.push(b.normal_name());
+                        result.push(b.inverse_name());
+                        result.push(a.teleport_to_name(b));
+                        if *b != *a {
+                            result.push(b.teleport_to_name(a));
+                        }
+                    }
+                },
+            }
+        }
+
+        let mut result = result
+            .into_iter()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
             .map(|name| (name, UniformType::Mat4))
-            .chain(
-                vec![
-                    ("_camera".to_owned(), UniformType::Mat4),
-                    ("_resolution".to_owned(), UniformType::Float2),
-                ]
-                .into_iter(),
-            )
-            .collect()
-        */
-        vec![]
+            .collect::<Vec<_>>();
+
+        // TODO move this out from scene, and set all this parameters outside of scene
+        result.extend(vec![
+            ("_camera".to_owned(), UniformType::Mat4),
+            ("_resolution".to_owned(), UniformType::Float2),
+            ("_ray_tracing_depth".to_owned(), UniformType::Int1),
+        ]);
+
+        result
     }
 
     fn set_uniforms(&self, material: macroquad::material::Material) {
-        /*
-        for i in &self.objects {
-            match &i.0 {
-                Object::Flat {
-                    plane,
-                    is_inside: _,
-                } => {
-                    if let Some(m) = self.matrices.get(&plane) {
-                        material.set_uniform(&format!("{}_mat_inv", plane), m.inverse());
-                        material.set_uniform(&format!("{}_mat", plane), m);
+        use Object::*;
+        use ObjectType::*;
+        for object in &self.objects {
+            match &object.0 {
+                DebugMatrix(matrix) => {
+                    if let Some(m) = self.matrices.get(&matrix.0) {
+                        material.set_uniform(&matrix.normal_name(), m);
                     }
                 }
-                Object::FlatPortal {
-                    first,
-                    second,
-                    is_inside: _,
-                } => {
-                    if let Some((m1, m2)) =
-                        self.matrices.get(&first).zip(self.matrices.get(&second))
-                    {
-                        material.set_uniform(
-                            &format!("{}_to_{}_mat_teleport", first, second),
-                            m2 * m1.inverse(),
-                        );
-                        material.set_uniform(
-                            &format!("{}_to_{}_mat_teleport", second, first),
-                            m1 * m2.inverse(),
-                        );
-                        material.set_uniform(&format!("{}_mat_inv", first), m1.inverse());
-                        material.set_uniform(&format!("{}_mat", first), m1);
-                        material.set_uniform(&format!("{}_mat_inv", second), m2.inverse());
-                        material.set_uniform(&format!("{}_mat", second), m2);
+                Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => {
+                    match kind {
+                        Simple(matrix) => {
+                            if let Some(m) = self.matrices.get(&matrix.0) {
+                                material.set_uniform(&matrix.normal_name(), m);
+                                material.set_uniform(&matrix.inverse_name(), m);
+                            } else {
+                                // todo add error processing in this case
+                            }
+                        }
+                        Portal(a, b) => {
+                            if let Some((ma, mb)) =
+                                self.matrices.get(&a.0).zip(self.matrices.get(&b.0))
+                            {
+                                material.set_uniform(&a.teleport_to_name(b), mb * ma.inverse());
+                                if a != b {
+                                    material.set_uniform(&b.teleport_to_name(a), ma * mb.inverse());
+                                }
+                                material.set_uniform(&b.inverse_name(), mb.inverse());
+                                material.set_uniform(&b.normal_name(), mb);
+                                material.set_uniform(&a.inverse_name(), ma.inverse());
+                                material.set_uniform(&a.normal_name(), ma);
+                            } else {
+                                // todo add error processing in this case
+                            }
+                        }
                     }
                 }
             }
         }
-        */
     }
 }
 
@@ -1179,7 +1310,6 @@ impl Scene {
            %%intersections%%
            %%material_processing%%
         */
-        /*
         let uniforms = {
             self.uniforms()
                 .into_iter()
@@ -1190,35 +1320,79 @@ impl Scene {
                 .join("\n")
         };
 
-        const MATERIAL_OFFSET: usize = 10;
-
         let materials = {
+            use Material::*;
             let mut result = BTreeMap::new();
             for name in self.materials.names_iter() {
-                result.insert(format!("{}_M", name), self.materials.get(&name).unwrap());
+                let code = match &self.materials.get(name).unwrap() {
+                    Simple {
+                        color,
+                        normal_coef,
+                        grid,
+                        grid_scale,
+                        grid_coef,
+                    } => {
+                        format!(
+                            "return material_simple(hit, r, color({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e});",
+                            color[0], color[1], color[2], normal_coef, grid, grid_scale, grid_coef,
+                        )
+                    }
+                    Reflect { add_to_color } => {
+                        format!(
+                            "return material_reflect(hit, r, color({:e}, {:e}, {:e}));",
+                            add_to_color[0], add_to_color[1], add_to_color[2],
+                        )
+                    }
+                    Refract {
+                        refractive_index,
+                        add_to_color,
+                    } => {
+                        format!(
+                            "return material_refract(hit, r, color({:e}, {:e}, {:e}), {:e});",
+                            add_to_color[0], add_to_color[1], add_to_color[2], refractive_index,
+                        )
+                    }
+                    Complex { code } => code.0.0.clone(),
+                };
+                result.insert(format!("{}_M", name), code);
             }
             for (pos, first, second) in
                 self.objects
                     .iter()
                     .enumerate()
                     .filter_map(|(pos, x)| match &x.0 {
-                        Object::Flat { .. } => None,
-                        Object::FlatPortal { first, second, .. } => Some((pos, first, second)),
+                        Object::DebugMatrix { .. }
+                        | Object::Flat {
+                            kind: ObjectType::Simple { .. },
+                            ..
+                        }
+                        | Object::Complex {
+                            kind: ObjectType::Simple { .. },
+                            ..
+                        } => None,
+                        Object::Flat {
+                            kind: ObjectType::Portal(first, second),
+                            ..
+                        }
+                        | Object::Complex {
+                            kind: ObjectType::Portal(first, second),
+                            ..
+                        } => Some((pos, first, second)),
                     })
             {
                 result.insert(
                     format!("teleport_{}_1_M", pos),
-                    MaterialCode(GlslCode(format!(
-                        "return teleport({}_to_{}_mat_teleport, r);",
-                        first, second
-                    ))),
+                    format!(
+                        "return material_teleport(hit, r, {});",
+                        first.teleport_to_name(second)
+                    ),
                 );
                 result.insert(
                     format!("teleport_{}_2_M", pos),
-                    MaterialCode(GlslCode(format!(
-                        "return teleport({}_to_{}_mat_teleport, r);",
-                        second, first
-                    ))),
+                    format!(
+                        "return material_teleport(hit, r, {});",
+                        second.teleport_to_name(first)
+                    ),
                 );
             }
             result
@@ -1228,33 +1402,43 @@ impl Scene {
             materials
                 .iter()
                 .enumerate()
-                .map(|(pos, (name, _))| format!("#define {} {}", name, pos + MATERIAL_OFFSET))
+                .map(|(pos, (name, _))| {
+                    format!("#define {} (USER_MATERIAL_OFFSET + {})", name, pos)
+                })
                 .collect::<Vec<_>>()
                 .join("\n")
         };
 
         let intersection_functions = {
+            use Object::*;
+            use ObjectType::*;
             let mut result = String::new();
             for (pos, i) in self.objects.iter().enumerate() {
                 match &i.0 {
-                    Object::Flat {
-                        plane: _,
-                        is_inside,
-                    } => {
-                        result += &format!("int is_inside_{}(float x, float y) {{\n", pos);
+                    DebugMatrix(_) => {}
+                    Flat { kind, is_inside } => {
+                        if matches!(kind, Portal { .. }) {
+                            result += &format!(
+                                "int is_inside_{}(vec4 pos, float x, float y, bool back, bool first) {{\n",
+                                pos
+                            );
+                        } else {
+                            result +=
+                                &format!("int is_inside_{}(vec4 pos, float x, float y) {{\n", pos);
+                        }
                         result += &is_inside.0.0;
                         result += "\n}\n";
                     }
-                    Object::FlatPortal {
-                        first: _,
-                        second: _,
-                        is_inside,
-                    } => {
-                        result += &format!(
-                            "int is_inside_{}(float x, float y, bool first, bool back) {{\n",
-                            pos
-                        );
-                        result += &is_inside.0.0;
+                    Complex { kind, intersect } => {
+                        if matches!(kind, Portal { .. }) {
+                            result += &format!(
+                                "SceneIntersection intersect_{}(Ray r, bool first) {{",
+                                pos
+                            );
+                        } else {
+                            result += &format!("SceneIntersection intersect_{}(Ray r) {{", pos);
+                        }
+                        result += &intersect.0.0;
                         result += "\n}\n";
                     }
                 }
@@ -1263,59 +1447,72 @@ impl Scene {
         };
 
         let intersections = {
+            use Object::*;
+            use ObjectType::*;
             let mut result = String::new();
             for (pos, i) in self.objects.iter().enumerate() {
                 match &i.0 {
-                    Object::Flat {
-                        plane,
-                        is_inside: _,
-                    } => {
+                    DebugMatrix(matrix) => {
                         result += &format!(
-                            "hit = plane_intersect(r, {}_mat_inv, {}_mat[2].xyz);\n",
-                            plane, plane
+                            "ihit = debug_intersect(transform({}, r));\n",
+                            matrix.normal_name()
                         );
-                        result += &format!(
-                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v); }}\n",
-                            pos
-                        );
-                        result += "i = process_plane_intersection(i, hit, inside);\n";
-                        result += "\n";
-                        result += "\n";
+                        result += "if (nearer(i, ihit)) { i = ihit; }\n";
                     }
-                    Object::FlatPortal {
-                        first,
-                        second,
-                        is_inside: _,
-                    } => {
-                        result += &format!(
-                            "hit = plane_intersect(r, {}_mat_inv, {}_mat[2].xyz);\n",
-                            first, first
-                        );
-                        result += &format!(
-                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v, true, !is_collinear(hit.n, {}_mat[2].xyz)); }}\n",
-                            pos, first
-                        );
-                        result += &format!(
-                            "i = process_portal_intersection(i, hit, inside, teleport_{}_1_M);\n",
-                            pos
-                        );
-                        result += "\n";
-
-                        result += &format!(
-                            "hit = plane_intersect(r, {}_mat_inv, {}_mat[2].xyz);\n",
-                            second, second
-                        );
-                        result += &format!(
-                            "if (hit.hit && hit.t < i.hit.t) {{ inside = is_inside_{}(hit.u, hit.v, false, !is_collinear(hit.n, -{}_mat[2].xyz)); }}\n",
-                            pos, second
-                        );
-                        result += &format!(
-                            "i = process_portal_intersection(i, hit, inside, teleport_{}_2_M);\n",
-                            pos,
-                        );
-                        result += "\n";
-                        result += "\n";
-                    }
+                    Flat { kind, is_inside: _ } => match kind {
+                        Simple(matrix) => {
+                            result += &format!(
+                                "hit = plane_intersect(r, {}, get_normal({}));\n",
+                                matrix.inverse_name(),
+                                matrix.normal_name()
+                            );
+                            result += &format!(
+                                "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v)); }}\n",
+                                pos
+                            );
+                        }
+                        Portal(a, b) => {
+                            let mut add = |matrix: &MatrixName, first| {
+                                result +=
+                                    &format!("normal = get_normal({});\n", matrix.normal_name());
+                                result += &format!(
+                                    "hit = plane_intersect(r, {}, normal);\n",
+                                    matrix.inverse_name()
+                                );
+                                result += &format!(
+                                    "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, {}is_collinear(r.d, normal), {})); }}\n",
+                                    pos,
+                                    if first { "" } else { "-" },
+                                    first
+                                );
+                            };
+                            add(a, true);
+                            add(b, false);
+                        }
+                    },
+                    Complex { kind, intersect: _ } => match kind {
+                        Simple(matrix) => {
+                            result += &format!(
+                                "ihit = intersect_{}(transform({}, r));\n",
+                                pos,
+                                matrix.inverse_name()
+                            );
+                            result += "if (nearer(i, ihit)) {{ i = ihit; }}\n";
+                        }
+                        Portal(a, b) => {
+                            let mut add = |matrix: &MatrixName, first| {
+                                result += &format!(
+                                    "ihit = intersect_{}(transform({}, r), {});\n",
+                                    pos,
+                                    matrix.inverse_name(),
+                                    first
+                                );
+                                result += &"if (nearer(i, ihit)) {{ i = ihit; }}\n";
+                            };
+                            add(a, true);
+                            add(b, false);
+                        }
+                    },
                 }
             }
             result
@@ -1325,7 +1522,7 @@ impl Scene {
             let mut result = String::new();
             for (name, code) in &materials {
                 result += &format!("}} else if (i.material == {}) {{\n", name);
-                result += &code.0.0;
+                result += &code;
                 result += "\n";
             }
             result
@@ -1338,14 +1535,12 @@ impl Scene {
         result = result.replace("%%intersections%%", &intersections);
         result = result.replace("%%material_processing%%", &material_processing);
         GlslCode(result)
-        */
-        GlslCode(Default::default())
     }
 
     pub fn get_new_material(&self) -> Result<macroquad::prelude::Material, (String, String)> {
         let code = self.generate_shader_code();
 
-        // println!("{}", code.0);
+        // println!("{}", add_line_numbers(&code.0));
 
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
