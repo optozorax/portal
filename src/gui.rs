@@ -377,27 +377,17 @@ impl StorageElem for MatrixComboBox {
                 rotate,
                 mirror,
             } => {
-                let mut result = Mat4::IDENTITY;
-
-                result = result * Mat4::from_translation(*offset);
-
-                result = result * Mat4::from_scale(Vec3::new(*scale, *scale, *scale));
-
-                result = result * Mat4::from_rotation_x(rotate.x);
-                result = result * Mat4::from_rotation_y(rotate.y);
-                result = result * Mat4::from_rotation_z(rotate.z);
-
-                if mirror.0 {
-                    result = result * Mat4::from_scale(Vec3::new(-1., 1., 1.));
-                }
-                if mirror.1 {
-                    result = result * Mat4::from_scale(Vec3::new(1., -1., 1.));
-                }
-                if mirror.2 {
-                    result = result * Mat4::from_scale(Vec3::new(1., 1., -1.));
-                }
-
-                result
+                Mat4::from_scale_rotation_translation(
+                    Vec3::new(
+                        *scale * if mirror.0 { -1. } else { 1. },
+                        *scale * if mirror.1 { -1. } else { 1. },
+                        *scale * if mirror.2 { -1. } else { 1. },
+                    ),
+                    Quat::from_rotation_x(rotate.x) *
+                      Quat::from_rotation_y(rotate.y) *
+                      Quat::from_rotation_z(rotate.z),
+                    *offset
+                )
             }
         })
     }
@@ -635,10 +625,10 @@ impl ComboBoxChoosable for Material {
         *self = match number {
             0 => Default::default(),
             1 => Reflect {
-                add_to_color: Default::default(),
+                add_to_color: [1.0, 1.0, 1.0],
             },
             2 => Refract {
-                add_to_color: Default::default(),
+                add_to_color: [1.0, 1.0, 1.0],
                 refractive_index: 1.5,
             },
             3 => Complex {
@@ -781,7 +771,7 @@ pub struct MaterialComboBox(pub Material);
 impl Eguiable for MaterialComboBox {
     fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
         let mut changed =
-            WhatChanged::from_uniform(egui_combo_box(ui, "Type:", 45., &mut self.0, *data.get()));
+            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, *data.get()));
         ui.separator();
         changed |= self.0.egui(ui, data);
         changed
@@ -1064,9 +1054,7 @@ impl Eguiable for Object {
                         ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
                         ui.add(Label::new("r, ").monospace());
                         ui.add(Label::new("bool ").text_color(COLOR_TYPE).monospace());
-                        ui.add(Label::new("first, ").monospace());
-                        ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
-                        ui.add(Label::new("material) {").monospace());
+                        ui.add(Label::new("first) {").monospace());
                     } else {
                         ui.add(
                             Label::new("SceneIntersection ")
@@ -1456,6 +1444,7 @@ impl Scene {
             for (pos, i) in self.objects.iter().enumerate() {
                 match &i.0 {
                     DebugMatrix(matrix) => {
+                        // todo add normalize of r.d
                         result += &format!(
                             "ihit = debug_intersect(transform({}, r));\n",
                             matrix.normal_name()
@@ -1479,13 +1468,13 @@ impl Scene {
                         Portal(a, b) => {
                             let mut add = |matrix: &MatrixName, first, material| {
                                 result +=
-                                    &format!("normal = {}get_normal({});\n", if first { "" } else { "-" }, matrix.normal_name());
+                                    &format!("normal = {}get_normal({});\n", if first { "-" } else { "" }, matrix.normal_name());
                                 result += &format!(
                                     "hit = plane_intersect(r, {}, normal);\n",
                                     matrix.inverse_name()
                                 );
                                 result += &format!(
-                                    "if (nearer(i, hit)) {{ i = process_portal_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(r.d.xyz, normal), {}), {}); }}\n",
+                                    "if (nearer(i, hit)) {{ i = process_portal_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(hit.n, normal), {}), {}); }}\n",
                                     pos,
                                     first,
                                     material
@@ -1498,24 +1487,23 @@ impl Scene {
                     },
                     Complex { kind, intersect: _ } => match kind {
                         Simple(matrix) => {
+                            result += &format!("transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);", matrix.inverse_name());
                             result += &format!(
-                                "ihit = intersect_{}(transform({}, r));\n",
+                                "ihit = intersect_{}(transformed_ray);\nihit.hit.t /= len;\n",
                                 pos,
-                                matrix.inverse_name()
                             );
-                            result += "if (nearer(i, ihit)) {{ i = ihit; }}\n";
+                            result += &format!("if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n", matrix.normal_name());
                             result += "\n";
                         }
                         Portal(a, b) => {
                             let mut add = |matrix: &MatrixName, first, material| {
+                                result += &format!("transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);", matrix.inverse_name());
                                 result += &format!(
-                                    "ihit = intersect_{}(transform({}, r), {}, {});\n",
+                                    "ihit = intersect_{}(transformed_ray, {});\nihit.hit.t /= len;\n",
                                     pos,
-                                    matrix.inverse_name(),
-                                    first,
-                                    material
+                                    first
                                 );
-                                result += &"if (nearer(i, ihit)) {{ i = ihit; }}\n";
+                                result += &format!("if (nearer(i, ihit) && ihit.material != NOT_INSIDE) {{ if (ihit.material == TELEPORT) {{ ihit.material = {}; }} i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n", material, matrix.normal_name());
                                 result += "\n";
                             };
                             add(a, true, format!("teleport_{}_1_M", pos));

@@ -71,7 +71,7 @@ vec3 refract(vec3 dir, vec3 normal, float refractive_index) {
     }
 }
 
-// Return ray, trat is transformed used matrix.
+// Return ray, trat is transformed used matrix. NOTE: Do not forget to normalize new r.d!!! If your `t` depends on it, memorize it somewhere.
 Ray transform(mat4 matrix, Ray r) {
     return Ray(
         matrix * r.o,
@@ -103,13 +103,15 @@ const SurfaceIntersection intersection_none = SurfaceIntersection(false, 1e10, 0
 SurfaceIntersection plane_intersect(Ray r, mat4 plane_inv, vec3 normal) {
     normal = normalize_normal(normal, r.d.xyz);
     r = transform(plane_inv, r);
+    float len = length(r.d);
+    r.d = normalize(r.d);
 
     float t = -r.o.z/r.d.z;
     if (t < 0.) {
         return intersection_none;
     } else {
         vec4 pos = r.o + r.d * t; 
-        return SurfaceIntersection(true, t, pos.x, pos.y, normal);
+        return SurfaceIntersection(true, t / len, pos.x, pos.y, normal);
     }
 }
 
@@ -186,8 +188,8 @@ MaterialProcessing material_reflect(
     SurfaceIntersection hit, Ray r,
     vec3 add_to_color
 ) {
-    r.o += r.d * _offset_after_material;
     r.d = vec4(reflect(r.d.xyz, hit.n), 0.);
+    r.o += r.d * _offset_after_material;
     return material_next(add_to_color, r);
 }
 
@@ -196,8 +198,8 @@ MaterialProcessing material_refract(
     SurfaceIntersection hit, Ray r,
     vec3 add_to_color, float refractive_index
 ) {
-    r.o += r.d * _offset_after_material;
     r.d = vec4(refract(r.d.xyz, hit.n, refractive_index), 0.);
+    r.o += r.d * _offset_after_material;
     return material_next(add_to_color, r);
 }
 
@@ -208,7 +210,9 @@ MaterialProcessing material_teleport(
 ) {
     r.o += r.d * _offset_after_material;
     // todo add add_gray_after_teleportation
-    return material_next(vec3(1.), transform(teleport_matrix, r));
+    r = transform(teleport_matrix, r);
+    r.d = normalize(r.d);
+    return material_next(vec3(1.), r);
 }
 
 // System materials
@@ -300,6 +304,8 @@ SceneIntersection scene_intersect(Ray r) {
     SurfaceIntersection hit = intersection_none;
     vec3 normal = vec3(0.);
     int inside = NOT_INSIDE;
+    float len = 1.;
+    Ray transformed_ray = ray_none;
 
 %%intersections%%
 
