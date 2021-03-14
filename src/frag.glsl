@@ -239,12 +239,6 @@ struct SceneIntersection {
 
 const SceneIntersection scene_intersection_none = SceneIntersection(0, intersection_none);
 
-// Intersect ray with debug thing, that return
-SceneIntersection debug_intersect(Ray r) {
-    // todo
-    return scene_intersection_none;
-}
-
 bool nearer(SurfaceIntersection result, SurfaceIntersection current) {
     return current.hit && (!result.hit || (result.hit && current.t < result.t));
 }
@@ -255,6 +249,82 @@ bool nearer(SceneIntersection result, SurfaceIntersection current) {
 
 bool nearer(SceneIntersection result, SceneIntersection current) {
     return nearer(result, current.hit);
+}
+
+// Get capsule normal, thanks iq: https://www.shadertoy.com/view/Xt3SzX
+vec3 cap_normal(vec3 pos, vec3 a, vec3 b, float radius) {
+    vec3  ba = b - a;
+    vec3  pa = pos - a;
+    float h = clamp(dot(pa,ba)/dot(ba,ba),0.0,1.0);
+    return (pa - h*ba)/radius;
+}
+
+// Get intersection with capsule, thanks iq: https://www.shadertoy.com/view/Xt3SzX
+SurfaceIntersection cap(Ray r, vec3 pa, vec3 pb, float radius) {
+    vec3 ro = r.o.xyz;
+    vec3 rd = r.d.xyz;
+    vec3 ba = pb - pa;
+    vec3 oa = ro - pa;
+
+    float baba = dot(ba,ba);
+    float bard = dot(ba,rd);
+    float baoa = dot(ba,oa);
+    float rdoa = dot(rd,oa);
+    float oaoa = dot(oa,oa);
+
+    float a = baba      - bard*bard;
+    float b = baba*rdoa - baoa*bard;
+    float c = baba*oaoa - baoa*baoa - radius*radius*baba;
+    float h = b*b - a*c;
+    if( h>=0.0 ) {
+        float t = (-b-sqrt(h))/a;
+        float y = baoa + t*bard;
+        // body
+        if( y>0.0 && y<baba ) {
+            vec3 pos = ro + rd * t;
+            return SurfaceIntersection(true, t, 0., 0., cap_normal(pos, pa, pb, radius));
+        }
+        // caps
+        vec3 oc = (y<=0.0) ? oa : ro - pb;
+        b = dot(rd,oc);
+        c = dot(oc,oc) - radius*radius;
+        h = b*b - c;
+        if( h>0.0 ) {
+            t = -b - sqrt(h);
+            vec3 pos = ro + rd * t;
+            return SurfaceIntersection(true, t, 0., 0., cap_normal(pos, pa, pb, radius));
+        };
+    }
+    return intersection_none;
+}
+
+// Intersect ray with debug thing
+SceneIntersection debug_intersect(Ray r) {
+    vec3 pa = vec3(0.);
+    float radius = 0.03;
+
+    SurfaceIntersection hit = intersection_none;
+    SceneIntersection i = SceneIntersection(0, hit);
+
+    hit = cap(r, pa, vec3(1., 0., 0.), radius);
+    if (nearer(i, hit)) {
+      i.material = DEBUG_RED;
+      i.hit = hit;
+    }
+
+    hit = cap(r, pa, vec3(0., 1., 0.), radius);
+    if (nearer(i, hit)) {
+      i.material = DEBUG_GREEN;
+      i.hit = hit;
+    }
+
+    hit = cap(r, pa, vec3(0., 0., 1.), radius);
+    if (nearer(i, hit)) {
+      i.material = DEBUG_BLUE;
+      i.hit = hit;
+    }
+
+    return i;
 }
 
 // ---------------------------------------------------------------------------

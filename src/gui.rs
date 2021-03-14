@@ -1284,6 +1284,7 @@ impl UniformStruct for Scene {
             match &object.0 {
                 DebugMatrix(matrix) => {
                     result.push(matrix.normal_name());
+                    result.push(matrix.inverse_name());
                 }
                 Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
                     Simple(matrix) => {
@@ -1330,6 +1331,7 @@ impl UniformStruct for Scene {
                 DebugMatrix(matrix) => {
                     if let Some(m) = self.matrices.get(&matrix.0) {
                         material.set_uniform(&matrix.normal_name(), m);
+                        material.set_uniform(&matrix.inverse_name(), m.inverse());
                     }
                 }
                 Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => {
@@ -1709,12 +1711,15 @@ impl Scene {
             for (pos, i) in self.objects.iter().enumerate() {
                 match &i.0 {
                     DebugMatrix(matrix) => {
-                        // todo add normalize of r.d
                         result.add_string(format!(
-                            "ihit = debug_intersect(transform({}, r));\n",
+                            "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);",
+                            matrix.inverse_name()
+                        ));
+                        result.add_string("ihit = debug_intersect(transformed_ray);\nihit.hit.t /= len;\n");
+                        result.add_string(format!(
+                            "if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
                             matrix.normal_name()
                         ));
-                        result.add_string("if (nearer(i, ihit)) { i = ihit; }\n\n");
                     }
                     Flat { kind, is_inside: _ } => match kind {
                         Simple(matrix) => {
@@ -1805,8 +1810,6 @@ impl Scene {
         (String, String, BTreeMap<String, Vec<(usize, String)>>),
     > {
         let code = self.generate_shader_code();
-
-        dbg!(&code.line_numbers);
 
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
