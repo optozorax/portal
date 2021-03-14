@@ -164,6 +164,10 @@ struct Window {
 
     edit_scene_opened: bool,
     camera_settings_opened: bool,
+
+    error_message: Option<(String, String)>,
+
+    data: Data,
 }
 
 impl Window {
@@ -171,6 +175,8 @@ impl Window {
         let scene = Scene::new();
         let material = scene.get_new_material().unwrap_or_else(|err| {
             println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+            dbg!(&err);
+            crate::miniquad::error!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
             std::process::exit(1)
         });
         scene.set_uniforms(material);
@@ -183,6 +189,10 @@ impl Window {
 
             edit_scene_opened: true,
             camera_settings_opened: false,
+
+            error_message: None,
+
+            data: Default::default(),
         }
     }
 
@@ -209,7 +219,7 @@ impl Window {
             .open(&mut edit_scene_opened)
             .scroll(true)
             .show(ctx, |ui| {
-                let (changed1, material) = self.scene.egui(ui, &mut self.should_recompile);
+                let (changed1, material) = self.scene.egui(ui, &mut self.data, &mut self.should_recompile);
 
                 changed = changed1;
 
@@ -218,9 +228,53 @@ impl Window {
                 }
 
                 if let Some(material) = material {
-                    self.material = material;
+                    match material {
+                        Ok(material) => {
+                            self.material = material;
+                            self.error_message = None;
+                        },
+                        Err(err) => {
+                            self.error_message = Some(err);
+                        }
+                    }
                 }
             });
+        if let Some((code, message)) = self.error_message.as_ref() {
+            egui::Window::new("Error message")
+                .scroll(true)
+                .show(ctx, |ui| {
+                    egui::CollapsingHeader::new("code")
+                        .id_source(0)
+                        .show(ui, |ui| {
+                            ui.monospace(add_line_numbers(code));
+                        });
+                    egui::CollapsingHeader::new("message")
+                        .id_source(1)
+                        .show(ui, |ui| {
+
+                            ui.monospace(message);
+                        });
+                    egui::CollapsingHeader::new("message to copy")
+                        .id_source(2)
+                        .show(ui, |ui| {
+                            let mut clone = message.clone();
+                            ui.add(egui::TextEdit::multiline(&mut clone).text_style(egui::TextStyle::Monospace));
+                        });
+                });
+        }
+        let mut not_remove_export = true;
+        if let Some(to_export) = self.data.to_export.as_ref() {
+             egui::Window::new("Export scene")
+                .open(&mut not_remove_export)
+                .scroll(true)
+                .show(ctx, |ui| {
+                    let mut clone = to_export.clone();
+                    ui.add(egui::TextEdit::multiline(&mut clone).text_style(egui::TextStyle::Monospace));
+                });
+        }
+        if !not_remove_export {
+            self.data.to_export = None;
+        }
         self.edit_scene_opened = edit_scene_opened;
         let mut camera_settings_opened = self.camera_settings_opened;
         egui::Window::new("Camera settings")

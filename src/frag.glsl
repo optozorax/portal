@@ -47,12 +47,12 @@ bool is_collinear(vec3 a, vec3 b) {
 }
 
 // Return reflected dir vector, based on normal and current dir.
-vec3 reflect(vec3 dir, vec3 normal) {
+vec3 my_reflect(vec3 dir, vec3 normal) {
      return dir - normal * dot(dir, normal) / dot(normal, normal) * 2.;
 }
 
 // Return refracted dir vector, based on normal and current dir.
-vec3 refract(vec3 dir, vec3 normal, float refractive_index) {
+vec3 my_refract(vec3 dir, vec3 normal, float refractive_index) {
     float ri = refractive_index;
     bool from_outside = dot(normal, dir) > 0.;
     if (!from_outside) {
@@ -67,7 +67,7 @@ vec3 refract(vec3 dir, vec3 normal, float refractive_index) {
     if (d > 0.) {
         return dir * ri + normal * (ri * c - sqrt(d));
     } else {
-        return reflect(dir, normal);
+        return my_reflect(dir, normal);
     }
 }
 
@@ -188,7 +188,7 @@ MaterialProcessing material_reflect(
     SurfaceIntersection hit, Ray r,
     vec3 add_to_color
 ) {
-    r.d = vec4(reflect(r.d.xyz, hit.n), 0.);
+    r.d = vec4(my_reflect(r.d.xyz, hit.n), 0.);
     r.o += r.d * _offset_after_material;
     return material_next(add_to_color, r);
 }
@@ -198,7 +198,7 @@ MaterialProcessing material_refract(
     SurfaceIntersection hit, Ray r,
     vec3 add_to_color, float refractive_index
 ) {
-    r.d = vec4(refract(r.d.xyz, hit.n, refractive_index), 0.);
+    r.d = vec4(my_refract(r.d.xyz, hit.n, refractive_index), 0.);
     r.o += r.d * _offset_after_material;
     return material_next(add_to_color, r);
 }
@@ -336,7 +336,10 @@ uniform int _ray_tracing_depth;
 
 vec3 ray_tracing(Ray r) {
     vec3 current_color = vec3(1.);
-    for (int j = 0; j < _ray_tracing_depth; j++) {
+    for (int j = 0; j < 10000; j++) {
+        if (j > _ray_tracing_depth) {
+            return current_color;
+        }
         SceneIntersection i = scene_intersect(r);
 
         // Offset ray

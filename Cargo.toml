@@ -13,8 +13,3 @@ glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
 serde_json = "1.0"
 egui = "0.10.0"
-state = { version = "0.4", features = ["tls"] }
-
-[patch.crates-io]
-# macroquad = { git = "https://github.com/not-fl3/macroquad.git", commit = "d2c1f0e" }
-macroquad = { path = "../../testing/macroquad1" }

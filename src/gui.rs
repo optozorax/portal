@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::f32::consts::PI;
-use std::sync::Arc;
 
 pub fn mymax(a: f32, b: f32) -> f32 {
     if a > b { a } else { b }
@@ -58,9 +57,16 @@ pub fn check_changed<T: PartialEq + Clone, F: FnOnce(&mut T)>(t: &mut T, f: F) -
     previous != *t
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct Data {
+    pub names: Option<Vec<String>>,
+    pub pos: Option<u64>,
+    pub to_export: Option<String>,
+}
+
 pub trait Eguiable {
     #[must_use]
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged;
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged;
 }
 
 pub fn egui_bool(ui: &mut Ui, flag: &mut bool) -> bool {
@@ -274,9 +280,9 @@ impl ComboBoxChoosable for Matrix {
 }
 
 impl Eguiable for Matrix {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use Matrix::*;
-        let names = data.get::<Arc<Vec<String>>>();
+        let names = data.names.as_ref().unwrap();
         let mut is_changed = false;
         match self {
             Mul { to, what } => {
@@ -341,7 +347,7 @@ impl Eguiable for Matrix {
 pub struct MatrixComboBox(pub Matrix);
 
 impl Eguiable for MatrixComboBox {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         let mut changed =
             WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
         ui.separator();
@@ -405,7 +411,7 @@ impl StorageElem for MatrixComboBox {
 // ----------------------------------------------------------------------------------------------------------
 
 pub trait ErrorCount {
-    fn errors(&self, data: &mut state::Container) -> usize;
+    fn errors(&self, data: &mut Data) -> usize;
 }
 
 // ----------------------------------------------------------------------------------------------------------
@@ -470,7 +476,7 @@ impl<T: StorageElem> StorageWithNames<T> {
 pub fn egui_collection(
     ui: &mut Ui,
     collection: &mut Vec<impl Eguiable + Default>,
-    data: &mut state::Container,
+    data: &mut Data,
 ) -> WhatChanged {
     let mut changed = WhatChanged::default();
     let mut to_delete = None;
@@ -485,7 +491,7 @@ pub fn egui_collection(
                     to_delete = Some(pos);
                 }
 
-                data.set(pos as u64);
+                data.pos = Some(pos as u64);
                 changed |= elem.egui(ui, data);
             });
     }
@@ -503,7 +509,7 @@ pub fn egui_collection(
 }
 
 impl<T: StorageElem> Eguiable for StorageWithNames<T> {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         let mut changed = WhatChanged::default();
         let mut to_delete = None;
         let storage = &mut self.storage;
@@ -537,7 +543,7 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
                     }
                     changed.shader |= previous != names[pos];
 
-                    data.set(pos as u64);
+                    data.pos = Some(pos as u64);
                     changed |= elem.egui(ui, data);
                 });
         }
@@ -643,7 +649,7 @@ const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);
 const COLOR_FUNCTION: Color32 = Color32::from_rgb(0x2B, 0xAB, 0x63);
 
 impl Eguiable for Material {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use Material::*;
         let mut changed = false;
         match self {
@@ -769,9 +775,9 @@ impl Eguiable for Material {
 pub struct MaterialComboBox(pub Material);
 
 impl Eguiable for MaterialComboBox {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         let mut changed =
-            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, *data.get()));
+            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, data.pos.unwrap()));
         ui.separator();
         changed |= self.0.egui(ui, data);
         changed
@@ -797,7 +803,7 @@ impl Default for MaterialCode {
 }
 
 impl Eguiable for GlslCode {
-    fn egui(&mut self, ui: &mut Ui, _: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
         WhatChanged::from_shader(
             ui.add(TextEdit::multiline(&mut self.0).text_style(TextStyle::Monospace))
                 .changed(),
@@ -806,7 +812,7 @@ impl Eguiable for GlslCode {
 }
 
 impl Eguiable for MaterialCode {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         self.0.egui(ui, data)
     }
 }
@@ -961,9 +967,9 @@ impl ComboBoxChoosable for Object {
 }
 
 impl Eguiable for ObjectType {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use ObjectType::*;
-        let names = data.get::<Arc<Vec<String>>>();
+        let names = data.names.as_ref().unwrap();
         let mut is_changed = false;
         match self {
             Simple(a) => is_changed |= egui_existing_name(ui, "Matrix:", 45., &mut a.0, names),
@@ -977,9 +983,9 @@ impl Eguiable for ObjectType {
 }
 
 impl Eguiable for Object {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use Object::*;
-        let names = data.get::<Arc<Vec<String>>>();
+        let names = data.names.as_ref().unwrap();
         let mut is_changed = WhatChanged::default();
         match self {
             DebugMatrix(a) => {
@@ -1083,7 +1089,7 @@ impl Eguiable for Object {
 pub struct ObjectComboBox(pub Object);
 
 impl Eguiable for ObjectComboBox {
-    fn egui(&mut self, ui: &mut Ui, data: &mut state::Container) -> WhatChanged {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         let mut changed = WhatChanged::from_shader(egui_combo_label(ui, "Type:", 45., &mut self.0));
         ui.separator();
         changed |= self.0.egui(ui, data);
@@ -1125,18 +1131,24 @@ impl Scene {
     pub fn egui(
         &mut self,
         ui: &mut Ui,
+        data: &mut Data,
         should_recompile: &mut bool,
-    ) -> (WhatChanged, Option<macroquad::material::Material>) {
+    ) -> (WhatChanged, Option<Result<macroquad::material::Material, (String, String)>>) {
         let mut changed = WhatChanged::default();
         let mut material = None;
 
         ui.horizontal(|ui| {
-            if ui.button("Save").clicked() {
+            if ui.button("Export").clicked() {
                 let s = serde_json::to_string(self).unwrap();
-                std::fs::write("scene.json", s).unwrap();
+                data.to_export = Some(s);
             }
-            if ui.button("Load").clicked() {
-                let s = std::fs::read_to_string("scene.json").unwrap();
+            if ui.button("Load mobius").clicked() {
+                let s = include_str!("../scene.json");
+                *self = serde_json::from_str(&s).unwrap();
+                changed.shader = true;
+            }
+            if ui.button("Load monoportal").clicked() {
+                let s = include_str!("../scene_monoportal_offset.json");
                 *self = serde_json::from_str(&s).unwrap();
                 changed.shader = true;
             }
@@ -1146,12 +1158,12 @@ impl Scene {
             {
                 match self.get_new_material() {
                     Ok(m) => {
-                        material = Some(m);
+                        material = Some(Ok(m));
                         *should_recompile = false;
                         changed.uniform = true;
                     }
                     Err(err) => {
-                        println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+                        material = Some(Err(err));
                     }
                 }
             }
@@ -1159,29 +1171,27 @@ impl Scene {
 
         // other ui
 
-        let mut data = state::Container::new();
-
         CollapsingHeader::new("Matrices")
             .default_open(false)
             .show(ui, |ui| {
-                data.set(Arc::new(self.matrices.names.clone()));
-                changed |= self.matrices.egui(ui, &mut data);
+                data.names = Some(self.matrices.names.clone());
+                changed |= self.matrices.egui(ui, data);
             });
         CollapsingHeader::new("Objects")
             .default_open(false)
             .show(ui, |ui| {
-                data.set(Arc::new(self.matrices.names.clone()));
-                changed |= egui_collection(ui, &mut self.objects, &mut data);
+                data.names = Some(self.matrices.names.clone());
+                changed |= egui_collection(ui, &mut self.objects, data);
             });
         CollapsingHeader::new("Materials")
             .default_open(false)
             .show(ui, |ui| {
-                changed |= self.materials.egui(ui, &mut data);
+                changed |= self.materials.egui(ui, data);
             });
         CollapsingHeader::new("Glsl Library")
             .default_open(false)
             .show(ui, |ui| {
-                changed |= self.library.egui(ui, &mut data);
+                changed |= self.library.egui(ui, data);
             });
 
         (changed, material)
@@ -1539,8 +1549,6 @@ impl Scene {
     pub fn get_new_material(&self) -> Result<macroquad::prelude::Material, (String, String)> {
         let code = self.generate_shader_code();
 
-        println!("{}", add_line_numbers(&code.0));
-
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
 
@@ -1563,6 +1571,135 @@ impl Scene {
                 panic!(err);
             }
         })
+    }
+}
+
+pub fn shader_error_parser(error: &str) -> Vec<(usize, &str)> {
+    fn expect_str(input: &mut &str, to_expect: &str) -> Option<()> {
+        if to_expect.chars().count() > input.chars().count() {
+            return None;
+        }
+
+        if input.chars().zip(to_expect.chars()).any(|(a, b)| a != b) {
+            return None;
+        }
+
+        *input = &input[to_expect.len()..];
+        Some(())
+    }
+
+    fn expect_int(input: &mut &str) -> Option<usize> {
+        let pos = input.char_indices().take_while(|(_, c)| c.is_digit(10)).last().map(|(i, c)| i + c.len_utf8())?;
+        let lineno: usize = input[..pos].parse().ok()?;
+        *input = &input[pos..];
+        Some(lineno)
+    }
+
+    // Try parse format `0(270) : error C0000: syntax error, unexpected '}' at token "}"`
+    // This format is noticed on native Linux
+    fn try_parse_1(mut line: &str) -> Option<(usize, &str)> {
+        expect_str(&mut line, "0(")?;
+        let lineno = expect_int(&mut line)?;
+        expect_str(&mut line, ") : error ")?;
+        Some((lineno, line))
+    }
+
+    // Try parse format `ERROR: 0:586: 'pos' : redefinition`
+    // This format is noticed on Firefox + Linux
+    fn try_parse_2(mut line: &str) -> Option<(usize, &str)> {
+        expect_str(&mut line, "ERROR: 0:")?;
+        let lineno = expect_int(&mut line)?;
+        expect_str(&mut line, ": ")?;
+        Some((lineno, line))
+    }
+
+    error.split("\n").map(|line| {
+        if let Some(r) = try_parse_1(line) {
+            r
+        } else if let Some(r) = try_parse_2(line) {
+            r
+        }  else {
+            crate::miniquad::error!("can't parse line: `{}`", line);
+            panic!()
+        }
+    }).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shader_error_parser_test() {
+        let linux1 = r#"0(270) : error C0000: syntax error, unexpected '}' at token "}"
+0(286) : error C1503: undefined variable "a"
+0(286) : error C1503: undefined variable "n"
+0(287) : error C1503: undefined variable "b"
+0(287) : error C1503: undefined variable "n"
+0(288) : error C0000: syntax error, unexpected reserved word "return" at token "return"
+0(327) : error C1503: undefined variable "two_lines_nearest_points"
+0(327) : error C1503: undefined variable "l"
+0(327) : error C1503: undefined variable "r"
+0(329) : error C1503: undefined variable "l"
+0(329) : error C1503: undefined variable "l"
+0(330) : error C1503: undefined variable "r"
+0(330) : error C1503: undefined variable "r"
+0(332) : error C1059: non constant expression in initialization
+0(334) : error C0000: syntax error, unexpected reserved word "if" at token "if"
+0(347) : error C1503: undefined variable "u"
+0(348) : error C1503: undefined variable "u"
+0(349) : error C1503: undefined variable "u"
+0(350) : error C0000: syntax error, unexpected reserved word "return" at token "return"
+0(359) : error C1503: undefined variable "u"
+0(359) : error C1038: declaration of "b" conflicts with previous declaration at 0(347)
+0(360) : error C1503: undefined variable "u"
+0(360) : error C1038: declaration of "c" conflicts with previous declaration at 0(348)
+0(361) : error C1503: undefined variable "u"
+0(361) : error C1038: declaration of "d" conflicts with previous declaration at 0(349)
+0(362) : error C0000: syntax error, unexpected reserved word "return" at token "return"
+0(373) : error C0000: syntax error, unexpected '}' at token "}"
+0(375) : error C0000: syntax error, unexpected '(', expecting "::" at token "("
+0(378) : error C1503: undefined variable "mobius_step"
+0(378) : error C1503: undefined variable "r"
+0(379) : error C0000: syntax error, unexpected reserved word "for" at token "for"
+0(433) : error C1503: undefined variable "op"
+0(433) : error C1503: undefined variable "r"
+0(433) : error C1038: declaration of "b" conflicts with previous declaration at 0(347)
+0(434) : error C1503: undefined variable "op"
+0(434) : error C1503: undefined variable "op"
+0(435) : error C0000: syntax error, unexpected reserved word "return" at token "return"
+0(550) : error C1503: undefined variable "is_inside_triangle"
+0(555) : error C1503: undefined variable "is_inside_triangle"
+0(631) : error C1503: undefined variable "process_plane_intersection"
+0(635) : error C1503: undefined variable "process_plane_intersection"
+0(639) : error C1503: undefined variable "process_plane_intersection"
+0(643) : error C1503: undefined variable "process_plane_intersection"
+0(647) : error C1503: undefined variable "process_plane_intersection"
+0(651) : error C1503: undefined variable "process_plane_intersection"
+0(655) : error C1503: undefined variable "process_plane_intersection"
+0(659) : error C1503: undefined variable "process_plane_intersection"
+0(664) : error C1503: undefined variable "process_portal_intersection"
+0(668) : error C1503: undefined variable "process_portal_intersection"
+0(673) : error C1503: undefined variable "process_portal_intersection"
+0(677) : error C1503: undefined variable "process_portal_intersection"
+0(680) : error C1503: undefined variable "a2_mat"
+0(682) : error C1503: undefined variable "process_portal_intersection"
+0(686) : error C1503: undefined variable "process_portal_intersection""#;
+        assert!(shader_error_parser(linux1).len() > 0);
+        let linux2 = r#"0(277) : error C1503: undefined variable "borer_m"
+0(292) : error C0000: syntax error, unexpected '}', expecting ',' or ';' at token "}"
+0(284) : error C1110: function "two_lines_nearest_points" has no return statement
+0(295) : error C1115: unable to find compatible overloaded function "dot(mat3, vec3)"
+0(299) : error C1102: incompatible type for parameter #1 ("a.84")"#;
+        assert!(shader_error_parser(linux2).len() > 0);
+        let web_linux = r#"ERROR: 0:565: 'pos' : redefinition
+ERROR: 0:586: 'pos' : redefinition
+ERROR: 0:606: 'pos' : redefinition
+ERROR: 0:607: '<' : comparison operator only defined for scalars
+ERROR: 0:607: '<' : wrong operand types - no operation '<' exists that takes a left-hand operand of type 'in highp 4-component vector of float' and a right operand of type 'const float' (or there is no acceptable conversion)
+ERROR: 0:613: '<' : comparison operator only defined for scalars
+ERROR: 0:613: '<' : wrong operand types - no operation '<' exists that takes a left-hand operand of type 'in highp 4-component vector of float' and a right operand of type 'const float' (or there is no acceptable conversion)"#;
+        assert!(shader_error_parser(web_linux).len() > 0);
     }
 }
 

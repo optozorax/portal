@@ -431,7 +431,6 @@ dependencies = [
  "macroquad",
  "serde",
  "serde_json",
- "state",
 ]
 
 [[package]]
@@ -549,15 +548,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "state"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3015a7d0a5fd5105c91c3710d42f9ccf0abfb287d62206484dcc67f9569a6483"
-dependencies = [
- "lazy_static",
 ]
 
 [[package]]
@@ -722,7 +712,3 @@ dependencies = [
  "libc",
  "log",
 ]
-
-[[patch.unused]]
-name = "macroquad"
-version = "0.3.0-alpha.15"
