@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::f32::consts::PI;
+use std::ops::Range;
 
 pub fn mymax(a: f32, b: f32) -> f32 {
     if a > b { a } else { b }
@@ -62,6 +63,8 @@ pub struct Data {
     pub names: Option<Vec<String>>,
     pub pos: Option<u64>,
     pub to_export: Option<String>,
+    pub errors: Option<BTreeMap<String, Vec<(usize, String)>>>,
+    pub show_error_window: bool,
 }
 
 pub trait Eguiable {
@@ -144,6 +147,21 @@ pub fn egui_existing_name(
             });
         }
     })
+}
+
+pub fn egui_errors(ui: &mut Ui, errors: &[(usize, String)]) {
+    ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+        ui.spacing_mut().item_spacing.x = 0.;
+        for (line_no, message) in errors {
+            ui.add(
+                Label::new(format!("ERR:{}: ", line_no))
+                    .text_color(COLOR_ERROR)
+                    .monospace(),
+            );
+            ui.add(Label::new(message).monospace());
+            ui.add(Label::new("\n").monospace());
+        }
+    });
 }
 
 // ----------------------------------------------------------------------------------------------------------
@@ -382,19 +400,17 @@ impl StorageElem for MatrixComboBox {
                 scale,
                 rotate,
                 mirror,
-            } => {
-                Mat4::from_scale_rotation_translation(
-                    Vec3::new(
-                        *scale * if mirror.0 { -1. } else { 1. },
-                        *scale * if mirror.1 { -1. } else { 1. },
-                        *scale * if mirror.2 { -1. } else { 1. },
-                    ),
-                    Quat::from_rotation_x(rotate.x) *
-                      Quat::from_rotation_y(rotate.y) *
-                      Quat::from_rotation_z(rotate.z),
-                    *offset
-                )
-            }
+            } => Mat4::from_scale_rotation_translation(
+                Vec3::new(
+                    *scale * if mirror.0 { -1. } else { 1. },
+                    *scale * if mirror.1 { -1. } else { 1. },
+                    *scale * if mirror.2 { -1. } else { 1. },
+                ),
+                Quat::from_rotation_x(rotate.x)
+                    * Quat::from_rotation_y(rotate.y)
+                    * Quat::from_rotation_z(rotate.z),
+                *offset,
+            ),
         })
     }
 
@@ -647,6 +663,7 @@ impl ComboBoxChoosable for Material {
 
 const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);
 const COLOR_FUNCTION: Color32 = Color32::from_rgb(0x2B, 0xAB, 0x63);
+const COLOR_ERROR: Color32 = Color32::RED;
 
 impl Eguiable for Material {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
@@ -765,6 +782,13 @@ impl Eguiable for Material {
                 });
                 changed |= code.0.egui(ui, data).shader;
                 ui.add(Label::new("}").monospace());
+                if let Some(local_errors) = data
+                    .errors
+                    .as_ref()
+                    .and_then(|map| map.get(&self.identifier(data.pos.unwrap() as usize).unwrap()))
+                {
+                    egui_errors(ui, local_errors);
+                }
             }
         }
         WhatChanged::from_shader(changed)
@@ -776,8 +800,13 @@ pub struct MaterialComboBox(pub Material);
 
 impl Eguiable for MaterialComboBox {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, data.pos.unwrap()));
+        let mut changed = WhatChanged::from_shader(egui_combo_box(
+            ui,
+            "Type:",
+            45.,
+            &mut self.0,
+            data.pos.unwrap(),
+        ));
         ui.separator();
         changed |= self.0.egui(ui, data);
         changed
@@ -1036,6 +1065,13 @@ impl Eguiable for Object {
                 }
                 is_changed |= is_inside.0.egui(ui, data);
                 ui.add(Label::new("}").monospace());
+                if let Some(local_errors) = data
+                    .errors
+                    .as_ref()
+                    .and_then(|map| map.get(&self.identifier(data.pos.unwrap() as usize).unwrap()))
+                {
+                    egui_errors(ui, local_errors);
+                }
             }
             Complex { kind, intersect } => {
                 is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
@@ -1079,6 +1115,13 @@ impl Eguiable for Object {
                 });
                 is_changed |= intersect.0.egui(ui, data);
                 ui.add(Label::new("}").monospace());
+                if let Some(local_errors) = data
+                    .errors
+                    .as_ref()
+                    .and_then(|map| map.get(&self.identifier(data.pos.unwrap() as usize).unwrap()))
+                {
+                    egui_errors(ui, local_errors);
+                }
             }
         }
         is_changed
@@ -1133,7 +1176,15 @@ impl Scene {
         ui: &mut Ui,
         data: &mut Data,
         should_recompile: &mut bool,
-    ) -> (WhatChanged, Option<Result<macroquad::material::Material, (String, String)>>) {
+    ) -> (
+        WhatChanged,
+        Option<
+            Result<
+                macroquad::material::Material,
+                (String, String, BTreeMap<String, Vec<(usize, String)>>),
+            >,
+        >,
+    ) {
         let mut changed = WhatChanged::default();
         let mut material = None;
 
@@ -1161,6 +1212,8 @@ impl Scene {
                         material = Some(Ok(m));
                         *should_recompile = false;
                         changed.uniform = true;
+                        data.errors = None;
+                        data.show_error_window = false;
                     }
                     Err(err) => {
                         material = Some(Err(err));
@@ -1192,7 +1245,21 @@ impl Scene {
             .default_open(false)
             .show(ui, |ui| {
                 changed |= self.library.egui(ui, data);
+                if let Some(local_errors) = data.errors.as_ref().and_then(|map| map.get("library"))
+                {
+                    egui_errors(ui, local_errors);
+                }
             });
+
+        if let Some(local_errors) = data.errors.as_ref().and_then(|map| map.get("")).cloned() {
+            ui.horizontal(|ui| {
+                ui.label("Other errors:");
+                if ui.button("Show full code and errors").clicked() {
+                    data.show_error_window = true;
+                }
+            });
+            egui_errors(ui, &local_errors);
+        }
 
         (changed, material)
     }
@@ -1302,30 +1369,203 @@ impl UniformStruct for Scene {
 // Code generation
 // ----------------------------------------------------------------------------------------------------------
 
+#[derive(Default, Debug, Clone, Eq, PartialEq)]
+pub struct LineNumbersByKey(pub BTreeMap<String, Range<usize>>);
+
+impl LineNumbersByKey {
+    pub fn offset(&mut self, lines: usize) {
+        self.0
+            .iter_mut()
+            .for_each(|(_, line)| *line = line.start + lines..line.end + lines);
+    }
+
+    pub fn add(&mut self, identifier: String, lines: Range<usize>) {
+        assert!(self.0.get(&identifier).is_none());
+        self.0.insert(identifier, lines);
+    }
+
+    pub fn extend(&mut self, other: LineNumbersByKey) {
+        for (k, v) in other.0 {
+            self.add(k, v);
+        }
+    }
+
+    // Returns identifier and local line position
+    pub fn get_identifier(&self, line_no: usize) -> Option<(&str, usize)> {
+        self.0
+            .iter()
+            .find(|(_, range)| range.contains(&line_no))
+            .map(|(name, range)| (name.as_ref(), line_no - range.start + 1))
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct StringStorage {
+    pub storage: String,
+    pub line_numbers: LineNumbersByKey,
+    current_line_no: usize,
+}
+
+impl Default for StringStorage {
+    fn default() -> Self {
+        Self {
+            storage: Default::default(),
+            current_line_no: 1,
+            line_numbers: Default::default(),
+        }
+    }
+}
+
+impl StringStorage {
+    pub fn add_string<T: AsRef<str>>(&mut self, s: T) {
+        self.current_line_no += s.as_ref().chars().filter(|c| *c == '\n').count();
+        self.storage += s.as_ref();
+    }
+
+    pub fn add_identifier_string<T: AsRef<str>>(&mut self, identifier: String, s: T) {
+        let start = self.current_line_no;
+        self.add_string(s);
+        let end = self.current_line_no;
+        self.line_numbers.add(identifier, start..end + 1);
+    }
+
+    pub fn add_string_storage(&mut self, mut other: StringStorage) {
+        other.line_numbers.offset(self.current_line_no - 1);
+        self.add_string(other.storage);
+        self.line_numbers.extend(other.line_numbers);
+    }
+}
+
+fn apply_template(template: &str, mut storages: BTreeMap<String, StringStorage>) -> StringStorage {
+    let mut result = StringStorage::default();
+    for (is_name, s) in template
+        .split("%%")
+        .enumerate()
+        .map(|(pos, s)| (pos % 2 == 1, s))
+    {
+        if is_name {
+            result.add_string_storage(storages.remove(s).expect(s));
+        } else {
+            result.add_string(s);
+        }
+    }
+    result
+}
+
+#[cfg(test)]
+mod tests_string_storage {
+    use super::*;
+
+    #[test]
+    fn test() {
+        let mut s1 = StringStorage::default();
+        s1.add_string("1\n2\n3\n");
+        s1.add_identifier_string("x".to_owned(), "\n4\n5\n");
+
+        assert_eq!(
+            s1,
+            StringStorage {
+                storage: "1\n2\n3\n\n4\n5\n".to_owned(),
+                current_line_no: 7,
+                line_numbers: LineNumbersByKey(vec![("x".to_owned(), 4..8)].into_iter().collect()),
+            }
+        );
+
+        let mut s2 = StringStorage::default();
+        s2.add_string("a\nb");
+        s2.add_identifier_string("y".to_owned(), "c\nd");
+
+        assert_eq!(
+            s2,
+            StringStorage {
+                storage: "a\nbc\nd".to_owned(),
+                current_line_no: 3,
+                line_numbers: LineNumbersByKey(vec![("y".to_owned(), 2..4)].into_iter().collect()),
+            }
+        );
+
+        let storages = vec![("s1".to_owned(), s1), ("s2".to_owned(), s2)]
+            .into_iter()
+            .collect::<BTreeMap<_, _>>();
+
+        let s = apply_template("abc\n%%s2%%\n\ne\nf\n%%s1%%\n9", storages);
+
+        assert_eq!(
+            s,
+            StringStorage {
+                storage: "abc\na\nbc\nd\n\ne\nf\n1\n2\n3\n\n4\n5\n\n9".to_owned(),
+                current_line_no: 15,
+                line_numbers: LineNumbersByKey(
+                    vec![("x".to_owned(), 11..15), ("y".to_owned(), 3..5)]
+                        .into_iter()
+                        .collect()
+                ),
+            }
+        );
+    }
+}
+
+pub trait Identifier {
+    fn identifier(&self, pos: usize) -> Option<String>;
+}
+
+impl Identifier for Material {
+    fn identifier(&self, pos: usize) -> Option<String> {
+        if matches!(self, Material::Complex { .. }) {
+            Some(format!("m_complex_{}", pos))
+        } else {
+            None
+        }
+    }
+}
+
+impl Identifier for Object {
+    fn identifier(&self, pos: usize) -> Option<String> {
+        use Object::*;
+        match self {
+            DebugMatrix { .. } => None,
+            Flat { .. } => Some(format!("o_flat_{}", pos)),
+            Complex { .. } => Some(format!("o_complex_{}", pos)),
+        }
+    }
+}
+
 impl Scene {
-    pub fn generate_shader_code(&self) -> GlslCode {
-        /*
-           %%uniforms%%
-           %%materials_defines%%
-           %%intersection_functions%%
-           %%intersections%%
-           %%material_processing%%
-        */
-        let uniforms = {
-            self.uniforms()
+    pub fn generate_shader_code(&self) -> StringStorage {
+        let mut storages: BTreeMap<String, StringStorage> = BTreeMap::new();
+
+        storages.insert("uniforms".to_owned(), {
+            let mut result = StringStorage::default();
+            for name in self
+                .uniforms()
                 .into_iter()
                 .map(|x| x.0)
                 .filter(|name| !name.starts_with("_"))
-                .map(|name| format!("uniform mat4 {};", name))
-                .collect::<Vec<_>>()
-                .join("\n")
-        };
+            {
+                result.add_string(format!("uniform mat4 {};\n", name))
+            }
+            result
+        });
 
-        let materials = {
+        let (material_processing, material_defines) = {
+            let mut material_processing = StringStorage::default();
+            let mut material_defines = StringStorage::default();
+            let mut counter = 0;
+
             use Material::*;
-            let mut result = BTreeMap::new();
-            for name in self.materials.names_iter() {
-                let code = match &self.materials.get(name).unwrap() {
+            for (pos, name) in self.materials.names_iter().enumerate() {
+                let name_m = format!("{}_M", name);
+
+                material_defines.add_string(format!(
+                    "#define {} (USER_MATERIAL_OFFSET + {})\n",
+                    name_m, counter
+                ));
+                counter += 1;
+
+                material_processing
+                    .add_string(format!("}} else if (i.material == {}) {{\n", name_m));
+
+                match &self.materials.get(name).unwrap() {
                     Simple {
                         color,
                         normal_coef,
@@ -1333,29 +1573,38 @@ impl Scene {
                         grid_scale,
                         grid_coef,
                     } => {
-                        format!(
-                            "return material_simple(hit, r, color({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e});",
-                            color[0], color[1], color[2], normal_coef, grid, grid_scale, grid_coef,
-                        )
+                        material_processing.add_string(
+                            format!(
+                                "return material_simple(hit, r, color({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e});\n",
+                                color[0], color[1], color[2], normal_coef, grid, grid_scale, grid_coef,
+                            )
+                        );
                     }
                     Reflect { add_to_color } => {
-                        format!(
-                            "return material_reflect(hit, r, color({:e}, {:e}, {:e}));",
+                        material_processing.add_string(format!(
+                            "return material_reflect(hit, r, color({:e}, {:e}, {:e}));\n",
                             add_to_color[0], add_to_color[1], add_to_color[2],
-                        )
+                        ));
                     }
                     Refract {
                         refractive_index,
                         add_to_color,
                     } => {
-                        format!(
-                            "return material_refract(hit, r, color({:e}, {:e}, {:e}), {:e});",
+                        material_processing.add_string(format!(
+                            "return material_refract(hit, r, color({:e}, {:e}, {:e}), {:e});\n",
                             add_to_color[0], add_to_color[1], add_to_color[2], refractive_index,
-                        )
+                        ));
                     }
-                    Complex { code } => code.0.0.clone(),
+                    x @ Complex { .. } => {
+                        let code = match x {
+                            Complex { code } => code,
+                            _ => unreachable!(),
+                        };
+                        material_processing
+                            .add_identifier_string(x.identifier(pos).unwrap(), &code.0.0);
+                        material_processing.add_string("\n");
+                    }
                 };
-                result.insert(format!("{}_M", name), code);
             }
             for (pos, first, second) in
                 self.objects
@@ -1381,115 +1630,119 @@ impl Scene {
                         } => Some((pos, first, second)),
                     })
             {
-                result.insert(
-                    format!("teleport_{}_1_M", pos),
-                    format!(
-                        "return material_teleport(hit, r, {});",
-                        first.teleport_to_name(second)
-                    ),
-                );
-                result.insert(
-                    format!("teleport_{}_2_M", pos),
-                    format!(
-                        "return material_teleport(hit, r, {});",
-                        second.teleport_to_name(first)
-                    ),
-                );
+                let name_m_1 = format!("teleport_{}_1_M", pos);
+                let name_m_2 = format!("teleport_{}_2_M", pos);
+
+                material_defines.add_string(format!(
+                    "#define {} (USER_MATERIAL_OFFSET + {})\n",
+                    name_m_1, counter
+                ));
+                counter += 1;
+                material_defines.add_string(format!(
+                    "#define {} (USER_MATERIAL_OFFSET + {})\n",
+                    name_m_2, counter
+                ));
+                counter += 1;
+
+                material_processing
+                    .add_string(format!("}} else if (i.material == {}) {{\n", name_m_1));
+                material_processing.add_string(format!(
+                    "return material_teleport(hit, r, {});",
+                    first.teleport_to_name(second)
+                ));
+
+                material_processing
+                    .add_string(format!("}} else if (i.material == {}) {{\n", name_m_2));
+                material_processing.add_string(format!(
+                    "return material_teleport(hit, r, {});",
+                    second.teleport_to_name(first)
+                ));
             }
-            result
+            (material_processing, material_defines)
         };
 
-        let materials_defines = {
-            materials
-                .iter()
-                .enumerate()
-                .map(|(pos, (name, _))| {
-                    format!("#define {} (USER_MATERIAL_OFFSET + {})", name, pos)
-                })
-                .collect::<Vec<_>>()
-                .join("\n")
-        };
+        storages.insert("material_processing".to_owned(), material_processing);
+        storages.insert("materials_defines".to_owned(), material_defines);
 
-        let intersection_functions = {
+        storages.insert("intersection_functions".to_owned(), {
             use Object::*;
             use ObjectType::*;
-            let mut result = String::new();
+            let mut result = StringStorage::default();
+
             for (pos, i) in self.objects.iter().enumerate() {
                 match &i.0 {
                     DebugMatrix(_) => {}
                     Flat { kind, is_inside } => {
                         if matches!(kind, Portal { .. }) {
-                            result += &format!(
+                            result.add_string(format!(
                                 "int is_inside_{}(vec4 pos, float x, float y, bool back, bool first) {{\n",
                                 pos
-                            );
+                            ));
                         } else {
-                            result +=
-                                &format!("int is_inside_{}(vec4 pos, float x, float y) {{\n", pos);
+                            result.add_string(format!("int is_inside_{}(vec4 pos, float x, float y) {{\n", pos));
                         }
-                        result += &is_inside.0.0;
-                        result += "\n}\n";
+                        result.add_identifier_string(i.0.identifier(pos).unwrap(), &is_inside.0.0);
+                        result.add_string("\n}\n");
                     }
                     Complex { kind, intersect } => {
                         if matches!(kind, Portal { .. }) {
-                            result += &format!(
-                                "SceneIntersection intersect_{}(Ray r, bool first) {{",
+                            result.add_string(format!(
+                                "SceneIntersection intersect_{}(Ray r, bool first) {{\n",
                                 pos
-                            );
+                            ));
                         } else {
-                            result += &format!("SceneIntersection intersect_{}(Ray r) {{", pos);
+                            result.add_string(format!("SceneIntersection intersect_{}(Ray r) {{\n", pos));
                         }
-                        result += &intersect.0.0;
-                        result += "\n}\n";
+                        result.add_identifier_string(i.0.identifier(pos).unwrap(), &intersect.0.0);
+                        result.add_string("\n}\n");
                     }
                 }
             }
             result
-        };
+        });
 
-        let intersections = {
+        storages.insert("intersections".to_owned(), {
             use Object::*;
             use ObjectType::*;
-            let mut result = String::new();
+            let mut result = StringStorage::default();
+
             for (pos, i) in self.objects.iter().enumerate() {
                 match &i.0 {
                     DebugMatrix(matrix) => {
                         // todo add normalize of r.d
-                        result += &format!(
+                        result.add_string(format!(
                             "ihit = debug_intersect(transform({}, r));\n",
                             matrix.normal_name()
-                        );
-                        result += "if (nearer(i, ihit)) { i = ihit; }\n";
-                        result += "\n";
+                        ));
+                        result.add_string("if (nearer(i, ihit)) { i = ihit; }\n\n");
                     }
                     Flat { kind, is_inside: _ } => match kind {
                         Simple(matrix) => {
-                            result += &format!(
+                            result.add_string(format!(
                                 "hit = plane_intersect(r, {}, get_normal({}));\n",
                                 matrix.inverse_name(),
                                 matrix.normal_name()
-                            );
-                            result += &format!(
-                                "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v)); }}\n",
+                            ));
+                            result.add_string(format!(
+                                "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v)); }}\n\n",
                                 pos
-                            );
-                            result += "\n";
+                            ));
                         }
                         Portal(a, b) => {
                             let mut add = |matrix: &MatrixName, first, material| {
-                                result +=
-                                    &format!("normal = {}get_normal({});\n", if first { "-" } else { "" }, matrix.normal_name());
-                                result += &format!(
+                                result.add_string(format!(
+                                    "normal = {}get_normal({});\n",
+                                    if first { "-" } else { "" },
+                                    matrix.normal_name()
+                                ));
+                                result.add_string(format!(
                                     "hit = plane_intersect(r, {}, normal);\n",
                                     matrix.inverse_name()
-                                );
-                                result += &format!(
-                                    "if (nearer(i, hit)) {{ i = process_portal_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(hit.n, normal), {}), {}); }}\n",
-                                    pos,
-                                    first,
-                                    material
-                                );
-                                result += "\n";
+                                ));
+                                result.add_string(format!(
+                                    "if (nearer(i, hit)) {{ i = process_portal_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(hit.n, normal), {}), {}); }}\n\n",
+                                    pos, first, material
+                                ));
                             };
                             add(a, true, format!("teleport_{}_1_M", pos));
                             add(b, false, format!("teleport_{}_2_M", pos));
@@ -1497,64 +1750,70 @@ impl Scene {
                     },
                     Complex { kind, intersect: _ } => match kind {
                         Simple(matrix) => {
-                            result += &format!("transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);", matrix.inverse_name());
-                            result += &format!(
+                            result.add_string(format!(
+                                "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);",
+                                matrix.inverse_name()
+                            ));
+                            result.add_string(format!(
                                 "ihit = intersect_{}(transformed_ray);\nihit.hit.t /= len;\n",
                                 pos,
-                            );
-                            result += &format!("if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n", matrix.normal_name());
-                            result += "\n";
+                            ));
+                            result.add_string(format!(
+                                "if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
+                                matrix.normal_name()
+                            ));
                         }
                         Portal(a, b) => {
                             let mut add = |matrix: &MatrixName, first, material| {
-                                result += &format!("transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);", matrix.inverse_name());
-                                result += &format!(
+                                result.add_string(format!(
+                                    "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);",
+                                    matrix.inverse_name()
+                                ));
+                                result.add_string(format!(
                                     "ihit = intersect_{}(transformed_ray, {});\nihit.hit.t /= len;\n",
-                                    pos,
-                                    first
-                                );
-                                result += &format!("if (nearer(i, ihit) && ihit.material != NOT_INSIDE) {{ if (ihit.material == TELEPORT) {{ ihit.material = {}; }} i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n", material, matrix.normal_name());
-                                result += "\n";
+                                    pos, first
+                                ));
+                                result.add_string(format!(
+                                    "if (nearer(i, ihit) && ihit.material != NOT_INSIDE) {{ if (ihit.material == TELEPORT) {{ ihit.material = {}; }} i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
+                                    material,
+                                    matrix.normal_name()
+                                ));
                             };
                             add(a, true, format!("teleport_{}_1_M", pos));
                             add(b, false, format!("teleport_{}_2_M", pos));
                         }
                     },
                 }
-                result += "\n";
+                result.add_string("\n");
             }
             result
-        };
+        });
 
-        let material_processing = {
-            let mut result = String::new();
-            for (name, code) in &materials {
-                result += &format!("}} else if (i.material == {}) {{\n", name);
-                result += &code;
-                result += "\n";
-            }
+        storages.insert("library".to_owned(), {
+            let mut result = StringStorage::default();
+            result.add_identifier_string("library".to_owned(), &self.library.0);
             result
-        };
+        });
 
-        let mut result = FRAGMENT_SHADER.to_owned();
-        result = result.replace("%%uniforms%%", &uniforms);
-        result = result.replace("%%materials_defines%%", &materials_defines);
-        result = result.replace("%%intersection_functions%%", &intersection_functions);
-        result = result.replace("%%intersections%%", &intersections);
-        result = result.replace("%%material_processing%%", &material_processing);
-        result = result.replace("%%library%%", &self.library.0);
-        GlslCode(result)
+        apply_template(FRAGMENT_SHADER, storages)
     }
 
-    pub fn get_new_material(&self) -> Result<macroquad::prelude::Material, (String, String)> {
+    pub fn get_new_material(
+        &self,
+    ) -> Result<
+        macroquad::prelude::Material,
+        (String, String, BTreeMap<String, Vec<(usize, String)>>),
+    > {
         let code = self.generate_shader_code();
+
+        dbg!(&code.line_numbers);
 
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
 
         load_material(
             VERTEX_SHADER,
-            &code.0,
+            &code.storage,
             MaterialParams {
                 uniforms: self.uniforms(),
                 ..Default::default()
@@ -1566,7 +1825,32 @@ impl Scene {
                 ..
             } = err
             {
-                (code.0, error_message)
+                let mut errors: BTreeMap<String, Vec<(usize, String)>> = BTreeMap::new();
+                for x in shader_error_parser(&error_message) {
+                    match x {
+                        Ok((line_no, message)) => match code.line_numbers.get_identifier(line_no) {
+                            Some((identifier, local_line_no)) => {
+                                errors
+                                    .entry(identifier.to_owned())
+                                    .or_insert_with(|| Default::default())
+                                    .push((local_line_no, message.to_owned()));
+                            }
+                            None => {
+                                errors
+                                    .entry("".to_owned())
+                                    .or_insert_with(|| Default::default())
+                                    .push((line_no, message.to_owned()));
+                            }
+                        },
+                        Err(message) => {
+                            errors
+                                .entry("".to_owned())
+                                .or_insert_with(|| Default::default())
+                                .push((usize::MAX, message.to_owned()));
+                        }
+                    }
+                }
+                (code.storage, error_message, errors)
             } else {
                 panic!(err);
             }
@@ -1574,7 +1858,7 @@ impl Scene {
     }
 }
 
-pub fn shader_error_parser(error: &str) -> Vec<(usize, &str)> {
+pub fn shader_error_parser(error: &str) -> Vec<Result<(usize, &str), &str>> {
     fn expect_str(input: &mut &str, to_expect: &str) -> Option<()> {
         if to_expect.chars().count() > input.chars().count() {
             return None;
@@ -1589,7 +1873,11 @@ pub fn shader_error_parser(error: &str) -> Vec<(usize, &str)> {
     }
 
     fn expect_int(input: &mut &str) -> Option<usize> {
-        let pos = input.char_indices().take_while(|(_, c)| c.is_digit(10)).last().map(|(i, c)| i + c.len_utf8())?;
+        let pos = input
+            .char_indices()
+            .take_while(|(_, c)| c.is_digit(10))
+            .last()
+            .map(|(i, c)| i + c.len_utf8())?;
         let lineno: usize = input[..pos].parse().ok()?;
         *input = &input[pos..];
         Some(lineno)
@@ -1613,16 +1901,19 @@ pub fn shader_error_parser(error: &str) -> Vec<(usize, &str)> {
         Some((lineno, line))
     }
 
-    error.split("\n").map(|line| {
-        if let Some(r) = try_parse_1(line) {
-            r
-        } else if let Some(r) = try_parse_2(line) {
-            r
-        }  else {
-            crate::miniquad::error!("can't parse line: `{}`", line);
-            panic!()
-        }
-    }).collect()
+    error
+        .split("\n")
+        .map(|line| {
+            if let Some(r) = try_parse_1(line) {
+                Ok(r)
+            } else if let Some(r) = try_parse_2(line) {
+                Ok(r)
+            } else {
+                crate::miniquad::error!("can't parse line: `{}`", line);
+                Err(line)
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -1685,13 +1976,13 @@ mod tests {
 0(680) : error C1503: undefined variable "a2_mat"
 0(682) : error C1503: undefined variable "process_portal_intersection"
 0(686) : error C1503: undefined variable "process_portal_intersection""#;
-        assert!(shader_error_parser(linux1).len() > 0);
+        assert!(shader_error_parser(linux1).iter().all(|x| x.is_ok()));
         let linux2 = r#"0(277) : error C1503: undefined variable "borer_m"
 0(292) : error C0000: syntax error, unexpected '}', expecting ',' or ';' at token "}"
 0(284) : error C1110: function "two_lines_nearest_points" has no return statement
 0(295) : error C1115: unable to find compatible overloaded function "dot(mat3, vec3)"
 0(299) : error C1102: incompatible type for parameter #1 ("a.84")"#;
-        assert!(shader_error_parser(linux2).len() > 0);
+        assert!(shader_error_parser(linux2).iter().all(|x| x.is_ok()));
         let web_linux = r#"ERROR: 0:565: 'pos' : redefinition
 ERROR: 0:586: 'pos' : redefinition
 ERROR: 0:606: 'pos' : redefinition
@@ -1699,7 +1990,7 @@ ERROR: 0:607: '<' : comparison operator only defined for scalars
 ERROR: 0:607: '<' : wrong operand types - no operation '<' exists that takes a left-hand operand of type 'in highp 4-component vector of float' and a right operand of type 'const float' (or there is no acceptable conversion)
 ERROR: 0:613: '<' : comparison operator only defined for scalars
 ERROR: 0:613: '<' : wrong operand types - no operation '<' exists that takes a left-hand operand of type 'in highp 4-component vector of float' and a right operand of type 'const float' (or there is no acceptable conversion)"#;
-        assert!(shader_error_parser(web_linux).len() > 0);
+        assert!(shader_error_parser(web_linux).iter().all(|x| x.is_ok()));
     }
 }
 

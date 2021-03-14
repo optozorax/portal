@@ -219,7 +219,9 @@ impl Window {
             .open(&mut edit_scene_opened)
             .scroll(true)
             .show(ctx, |ui| {
-                let (changed1, material) = self.scene.egui(ui, &mut self.data, &mut self.should_recompile);
+                let (changed1, material) =
+                    self.scene
+                        .egui(ui, &mut self.data, &mut self.should_recompile);
 
                 changed = changed1;
 
@@ -232,44 +234,52 @@ impl Window {
                         Ok(material) => {
                             self.material = material;
                             self.error_message = None;
-                        },
+                        }
                         Err(err) => {
-                            self.error_message = Some(err);
+                            self.error_message = Some((err.0, err.1));
+                            self.data.errors = Some(err.2);
                         }
                     }
                 }
             });
         if let Some((code, message)) = self.error_message.as_ref() {
-            egui::Window::new("Error message")
-                .scroll(true)
-                .show(ctx, |ui| {
-                    egui::CollapsingHeader::new("code")
-                        .id_source(0)
-                        .show(ui, |ui| {
-                            ui.monospace(add_line_numbers(code));
-                        });
-                    egui::CollapsingHeader::new("message")
-                        .id_source(1)
-                        .show(ui, |ui| {
-
-                            ui.monospace(message);
-                        });
-                    egui::CollapsingHeader::new("message to copy")
-                        .id_source(2)
-                        .show(ui, |ui| {
-                            let mut clone = message.clone();
-                            ui.add(egui::TextEdit::multiline(&mut clone).text_style(egui::TextStyle::Monospace));
-                        });
-                });
+            if self.data.show_error_window {
+                egui::Window::new("Error message")
+                    .scroll(true)
+                    .show(ctx, |ui| {
+                        egui::CollapsingHeader::new("code")
+                            .id_source(0)
+                            .show(ui, |ui| {
+                                ui.monospace(add_line_numbers(code));
+                            });
+                        egui::CollapsingHeader::new("message")
+                            .id_source(1)
+                            .show(ui, |ui| {
+                                ui.monospace(message);
+                            });
+                        egui::CollapsingHeader::new("message to copy")
+                            .id_source(2)
+                            .show(ui, |ui| {
+                                let mut clone = message.clone();
+                                ui.add(
+                                    egui::TextEdit::multiline(&mut clone)
+                                        .text_style(egui::TextStyle::Monospace),
+                                );
+                            });
+                    });
+            }
         }
         let mut not_remove_export = true;
         if let Some(to_export) = self.data.to_export.as_ref() {
-             egui::Window::new("Export scene")
+            egui::Window::new("Export scene")
                 .open(&mut not_remove_export)
                 .scroll(true)
                 .show(ctx, |ui| {
                     let mut clone = to_export.clone();
-                    ui.add(egui::TextEdit::multiline(&mut clone).text_style(egui::TextStyle::Monospace));
+                    ui.add(
+                        egui::TextEdit::multiline(&mut clone)
+                            .text_style(egui::TextStyle::Monospace),
+                    );
                 });
         }
         if !not_remove_export {
@@ -301,7 +311,8 @@ impl Window {
             .set_uniform("_resolution", (screen_width(), screen_height()));
         self.material.set_uniform("_camera", self.cam.get_matrix());
         self.material.set_uniform("_ray_tracing_depth", 100);
-        self.material.set_uniform("_offset_after_material", 0.001f32);
+        self.material
+            .set_uniform("_offset_after_material", 0.001f32);
     }
 
     fn draw(&self) {
