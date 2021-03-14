@@ -65,6 +65,7 @@ pub struct Data {
     pub to_export: Option<String>,
     pub errors: Option<BTreeMap<String, Vec<(usize, String)>>>,
     pub show_error_window: bool,
+    pub description_edit: bool,
 }
 
 pub trait Eguiable {
@@ -153,11 +154,19 @@ pub fn egui_errors(ui: &mut Ui, errors: &[(usize, String)]) {
     ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
         ui.spacing_mut().item_spacing.x = 0.;
         for (line_no, message) in errors {
-            ui.add(
-                Label::new(format!("ERR:{}: ", line_no))
-                    .text_color(COLOR_ERROR)
-                    .monospace(),
-            );
+            if *line_no == usize::MAX {
+                ui.add(
+                    Label::new("UNKNOWN ERR: ")
+                        .text_color(COLOR_ERROR)
+                        .monospace(),
+                );
+            } else {
+                ui.add(
+                    Label::new(format!("ERR:{}: ", line_no))
+                        .text_color(COLOR_ERROR)
+                        .monospace(),
+                );
+            }
             ui.add(Label::new(message).monospace());
             ui.add(Label::new("\n").monospace());
         }
@@ -1146,6 +1155,8 @@ impl Eguiable for ObjectComboBox {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scene {
+    description: String,
+
     matrices: StorageWithNames<MatrixComboBox>,
     objects: Vec<ObjectComboBox>,
 
@@ -1164,6 +1175,7 @@ pub fn add_line_numbers(s: &str) -> String {
 impl Scene {
     pub fn new() -> Self {
         Self {
+            description: Default::default(),
             matrices: Default::default(),
             objects: vec![Default::default()],
             materials: Default::default(),
@@ -1223,6 +1235,23 @@ impl Scene {
         });
 
         // other ui
+
+        CollapsingHeader::new("Description")
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.selectable_value(&mut data.description_edit, false, "View");
+                    ui.selectable_value(&mut data.description_edit, true, "Edit");
+                });
+                if data.description_edit {
+                    ui.add(
+                        TextEdit::multiline(&mut self.description).text_style(TextStyle::Monospace),
+                    );
+                } else {
+                    egui::experimental::easy_mark(ui, &self.description);
+                    // ui.add(TextEdit::multiline(&mut self.description).text_style(TextStyle::Monospace));
+                }
+            });
 
         CollapsingHeader::new("Matrices")
             .default_open(false)
@@ -1577,14 +1606,14 @@ impl Scene {
                     } => {
                         material_processing.add_string(
                             format!(
-                                "return material_simple(hit, r, color({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e});\n",
+                                "return material_simple(hit, r, vec3({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e});\n",
                                 color[0], color[1], color[2], normal_coef, grid, grid_scale, grid_coef,
                             )
                         );
                     }
                     Reflect { add_to_color } => {
                         material_processing.add_string(format!(
-                            "return material_reflect(hit, r, color({:e}, {:e}, {:e}));\n",
+                            "return material_reflect(hit, r, vec3({:e}, {:e}, {:e}));\n",
                             add_to_color[0], add_to_color[1], add_to_color[2],
                         ));
                     }
@@ -1593,7 +1622,7 @@ impl Scene {
                         add_to_color,
                     } => {
                         material_processing.add_string(format!(
-                            "return material_refract(hit, r, color({:e}, {:e}, {:e}), {:e});\n",
+                            "return material_refract(hit, r, vec3({:e}, {:e}, {:e}), {:e});\n",
                             add_to_color[0], add_to_color[1], add_to_color[2], refractive_index,
                         ));
                     }
