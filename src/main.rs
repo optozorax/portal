@@ -159,6 +159,9 @@ impl RotateAroundCam {
             changed |= check_changed(&mut self.use_panini_projection, |is_use| {
                 ui.add(egui::Checkbox::new(is_use, ""));
             });
+            if !self.use_panini_projection {
+                self.view_angle = macroquad::math::clamp(self.view_angle, 0.0, deg2rad(140.0));
+            }
         });
         ui.horizontal(|ui| {
             let is_use = self.use_panini_projection;

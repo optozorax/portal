@@ -23,7 +23,7 @@ pub fn rad2deg(rad: f32) -> f32 {
 // Ugly data for UI. I decided to use such an ugly approach to store data for ui for fast development.
 // ----------------------------------------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Data {
     pub pos: usize,
     pub names: Vec<String>,
@@ -33,6 +33,7 @@ pub struct Data {
     pub show_error_window: bool,
     pub description_en_edit: bool,
     pub description_ru_edit: bool,
+    pub formulas_cache: FormulasCache,
 }
 
 impl Data {
@@ -305,7 +306,11 @@ macro_rules! get_try {
 pub trait StorageElem: Sized + Default + Eguiable + ErrorsCount {
     type GetType;
 
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, f: F) -> GetEnum<Self::GetType>;
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        f: F,
+        data: &Data,
+    ) -> GetEnum<Self::GetType>;
 
     fn defaults() -> (Vec<String>, Vec<Self>);
 }
@@ -325,9 +330,9 @@ impl<T: StorageElem> Default for StorageWithNames<T> {
 }
 
 impl<T: StorageElem> StorageWithNames<T> {
-    pub fn get(&self, name: &str) -> GetEnum<T::GetType> {
+    pub fn get(&self, name: &str, data: &Data) -> GetEnum<T::GetType> {
         let mut visited = vec![];
-        self.get_inner(name, &mut visited)
+        self.get_inner(name, &mut visited, data)
     }
 
     pub fn add(&mut self, name: String, t: T) {
@@ -348,7 +353,12 @@ impl<T: StorageElem> StorageWithNames<T> {
         self.names.iter().zip(self.storage.iter())
     }
 
-    fn get_inner<'a>(&'a self, name: &'a str, visited: &mut Vec<String>) -> GetEnum<T::GetType> {
+    fn get_inner<'a>(
+        &'a self,
+        name: &'a str,
+        visited: &mut Vec<String>,
+        data: &Data,
+    ) -> GetEnum<T::GetType> {
         if visited.iter().any(|x| *x == name) {
             return GetEnum::Recursion;
         }
@@ -359,9 +369,29 @@ impl<T: StorageElem> StorageWithNames<T> {
         } else {
             return GetEnum::NotFound;
         };
-        let result = get_try!(self.storage[pos].get(|name| self.get_inner(name, visited)));
+        let result =
+            get_try!(self.storage[pos].get(|name| self.get_inner(name, visited, data), data));
         visited.pop().unwrap();
         GetEnum::Ok(result)
+    }
+
+    pub fn rich_egui(&mut self, ui: &mut Ui, data: &mut Data, name: &str) -> WhatChanged {
+        use std::borrow::Cow;
+
+        let errors_count = self.errors_count(0, data);
+        let header = if errors_count > 0 {
+            Cow::Owned(format!("{} ({} err)", name, errors_count))
+        } else {
+            Cow::Borrowed(name)
+        };
+        let mut changed = WhatChanged::default();
+        CollapsingHeader::new(header)
+            .id_source(name)
+            .default_open(false)
+            .show(ui, |ui| {
+                changed |= self.egui(ui, data);
+            });
+        changed
     }
 }
 
@@ -634,7 +664,11 @@ impl ErrorsCount for MatrixComboBox {
 impl StorageElem for MatrixComboBox {
     type GetType = Mat4;
 
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, mut f: F) -> GetEnum<Self::GetType> {
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        mut f: F,
+        _: &Data,
+    ) -> GetEnum<Self::GetType> {
         use Matrix::*;
         GetEnum::Ok(match &self.0 {
             Mul { to, what } => {
@@ -818,7 +852,11 @@ impl ErrorsCount for MaterialComboBox {
 impl StorageElem for MaterialComboBox {
     type GetType = Material;
 
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, _: F) -> GetEnum<Self::GetType> {
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        _: F,
+        _: &Data,
+    ) -> GetEnum<Self::GetType> {
         GetEnum::Ok(self.0.clone())
     }
 
@@ -1033,7 +1071,11 @@ impl ErrorsCount for LibraryCode {
 impl StorageElem for LibraryCode {
     type GetType = LibraryCode;
 
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, _: F) -> GetEnum<Self::GetType> {
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        _: F,
+        _: &Data,
+    ) -> GetEnum<Self::GetType> {
         GetEnum::Ok(self.clone())
     }
 
@@ -1446,7 +1488,11 @@ impl ErrorsCount for ObjectComboBox {
 impl StorageElem for ObjectComboBox {
     type GetType = Object;
 
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, _: F) -> GetEnum<Self::GetType> {
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        _: F,
+        _: &Data,
+    ) -> GetEnum<Self::GetType> {
         GetEnum::Ok(self.0.clone())
     }
 
@@ -1463,6 +1509,8 @@ impl StorageElem for ObjectComboBox {
 pub struct Scene {
     description_en: String,
     description_ru: String,
+
+    uniforms: StorageWithNames<Parametrization>,
 
     pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
@@ -1518,6 +1566,7 @@ impl Scene {
         Self {
             description_en: Default::default(),
             description_ru: Default::default(),
+            uniforms: Default::default(),
             matrices: Default::default(),
             objects: Default::default(),
             materials: Default::default(),
@@ -1625,51 +1674,28 @@ impl Scene {
                     });
             });
 
-        let errors_count = self.matrices.errors_count(0, data);
-        CollapsingHeader::new(if errors_count > 0 {
-            format!("Matrices ({} err)", errors_count)
-        } else {
-            "Matrices".to_owned()
-        })
-        .id_source("Matrices")
-        .default_open(false)
-        .show(ui, |ui| {
-            data.names = self.matrices.names.clone();
-            changed |= self.matrices.egui(ui, data);
+        changed |= self.uniforms.rich_egui(ui, data, "Uniforms");
+
+        ui.collapsing("Calculated uniforms", |ui| {
+            for name in self.uniforms.names_iter() {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 0.;
+                    ui.label(format!("{} = ", name));
+                    match self.uniforms.get(name, data) {
+                        GetEnum::Ok(x) => ui.label(x.to_string()),
+                        GetEnum::NotFound => ui.label("NotFound"),
+                        GetEnum::Recursion => ui.label("Recursion"),
+                    }
+                });
+            }
         });
-        let errors_count = self.objects.errors_count(0, data);
-        CollapsingHeader::new(if errors_count > 0 {
-            format!("Objects ({} err)", errors_count)
-        } else {
-            "Objects".to_owned()
-        })
-        .id_source("Objects")
-        .default_open(false)
-        .show(ui, |ui| {
-            changed |= self.objects.egui(ui, data);
-        });
-        let errors_count = self.materials.errors_count(0, data);
-        CollapsingHeader::new(if errors_count > 0 {
-            format!("Materials ({} err)", errors_count)
-        } else {
-            "Materials".to_owned()
-        })
-        .id_source("Materials")
-        .default_open(false)
-        .show(ui, |ui| {
-            changed |= self.materials.egui(ui, data);
-        });
-        let errors_count = self.library.errors_count(0, data);
-        CollapsingHeader::new(if errors_count > 0 {
-            format!("Glsl Library ({} err)", errors_count)
-        } else {
-            "Glsl Library".to_owned()
-        })
-        .id_source("Glsl Library")
-        .default_open(false)
-        .show(ui, |ui| {
-            changed |= self.library.egui(ui, data);
-        });
+
+        data.names = self.matrices.names.clone();
+
+        changed |= self.matrices.rich_egui(ui, data, "Matrices");
+        changed |= self.objects.rich_egui(ui, data, "Objects");
+        changed |= self.materials.rich_egui(ui, data, "Materials");
+        changed |= self.library.rich_egui(ui, data, "Glsl Library");
 
         if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
             ui.horizontal(|ui| {
@@ -1764,7 +1790,7 @@ impl UniformStruct for Scene {
         data.matrix_recursion_error.clear();
         macro_rules! local_try {
             ($a:expr, $c:ident, $b: expr) => {
-                match self.matrices.get(&$a.0) {
+                match self.matrices.get(&$a.0, data) {
                     GetEnum::Ok($c) => {
                         *data
                             .matrix_recursion_error
@@ -2460,42 +2486,188 @@ void main() {
 }
 ";
 
+// ----------------------------------------------------------------------------------------------------------
+// Processing formulase and parametrized uniforms
+// ----------------------------------------------------------------------------------------------------------
+
+pub struct UniformName(pub String);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Formula {
+    s: String,
+}
+
+pub struct TVec3<T> {
+    pub x: T,
+    pub y: T,
+    pub z: T,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Parametrization {
+    value: f32,
+    formula: Formula,
+}
+
+pub enum ParametrizeOrNot {
+    Yes(UniformName),
+    No(f32),
+}
 
 /*
-
-struct UniformName(String);
-
-enum Uniform {
-    FixedFloat(UniformName, f32), // this is setted once and for all
-    FreeFloat(UniformName, f32), // this could be changed in stage, but has some value when it is not in animation
-
-    FixedInt(UniformName, i32),
-    FreeInt(UniformName, i32),
-
-    FixedBool(UniformName, bool),
-    FreeBool(UniformName, bool),
-}
-
-enum ParametrizationFloat {
-    Fixed(f32),
-    Configurable(UniformName), // must be f32
-}
-
-struct TVec3<T> {
-    x: T,
-    y: T,
-    z: T,
-}
-
 enum Matrix {
     ...
     Parametrized {
-        offset: TVec3<ParametrizationFloat>,
-        rotate: TVec3<ParametrizationFloat>,
-        mirror: ParametrizationVec<bool>,
-        scale: Parametrization<f32>,
+        offset: TVec3<ParametrizeOrNot>,
+        rotate: TVec3<ParametrizeOrNot>,
+        mirror: TVec3<ParametrizeOrNot>,
+        scale: ParametrizeOrNot,
+    }
+}
+*/
+
+impl Default for Parametrization {
+    fn default() -> Self {
+        Self {
+            value: 0.0,
+            formula: Formula { s: "0".to_owned() },
+        }
     }
 }
 
+impl Eguiable for Parametrization {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+        let mut changed = false;
+        let mut edit = EditResult::default();
+        ui.horizontal(|ui| {
+            changed |= egui_f32(ui, &mut self.value);
+            ui.label("+");
+            edit = data.formulas_cache.with_edit(&mut self.formula.s, |text| {
+                ui.add(TextEdit::singleline(text).text_style(TextStyle::Monospace));
+            });
+            changed |= edit.changed;
+        });
+        if edit.has_errors {
+            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                ui.add(Label::new("Error with this formula").text_color(Color32::RED));
+            });
+        }
+        WhatChanged::from_uniform(changed)
+    }
+}
 
- */
+impl ErrorsCount for Parametrization {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        data.formulas_cache.has_errors(&self.formula.s) as usize
+    }
+}
+
+pub struct FormulasCache {
+    parser: fasteval::Parser,
+    slab: fasteval::Slab,
+    cache: BTreeMap<String, Option<fasteval::Instruction>>,
+}
+
+impl Default for FormulasCache {
+    fn default() -> Self {
+        let mut result = FormulasCache {
+            parser: fasteval::Parser::new(),
+            slab: fasteval::Slab::new(),
+            cache: Default::default(),
+        };
+        result.compile("0");
+        result
+    }
+}
+
+use std::fmt::{self, Debug, Formatter};
+
+impl Debug for FormulasCache {
+    fn fmt(&self, _: &mut Formatter<'_>) -> fmt::Result {
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+pub struct EditResult {
+    changed: bool,
+    has_errors: bool,
+}
+
+impl FormulasCache {
+    pub fn has_errors(&self, text: &str) -> bool {
+        self.cache.get(text).map(|x| x.is_none()).unwrap_or(false)
+    }
+
+    pub fn compile(&mut self, text: &str) -> bool {
+        use fasteval::*;
+
+        let compiled = || -> Option<_> {
+            Some(
+                self.parser
+                    .parse(text, &mut self.slab.ps)
+                    .ok()?
+                    .from(&self.slab.ps)
+                    .compile(&self.slab.ps, &mut self.slab.cs),
+            )
+        }();
+
+        let is_compiled = compiled.is_some();
+
+        self.cache.insert(text.to_owned(), compiled);
+
+        is_compiled
+    }
+
+    pub fn with_edit(&mut self, text: &mut String, f: impl FnOnce(&mut String)) -> EditResult {
+        let previous = text.clone();
+        f(text);
+        if previous == *text && self.cache.get(text).is_some() {
+            EditResult {
+                changed: false,
+                has_errors: self.cache.get(text).unwrap().is_none(),
+            }
+        } else {
+            self.cache.remove(&previous);
+            EditResult {
+                changed: true,
+                has_errors: !self.compile(text),
+            }
+        }
+    }
+
+    pub fn get<'a, 'b>(&'a self, text: &'b str) -> Option<&'a fasteval::Instruction> {
+        self.cache.get(text).and_then(|x| x.as_ref())
+    }
+}
+
+impl StorageElem for Parametrization {
+    type GetType = f32;
+
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        mut f: F,
+        data: &Data,
+    ) -> GetEnum<Self::GetType> {
+        let mut cb = |name: &str, _| -> Option<f64> {
+            match f(name) {
+                GetEnum::Ok(x) => Some(x.into()),
+                _ => None,
+            }
+        };
+
+        use fasteval::*;
+
+        match data.formulas_cache.get(&self.formula.s) {
+            Some(x) => match x.eval(&data.formulas_cache.slab, &mut cb) {
+                Ok(x) => GetEnum::Ok(self.value + x as f32),
+                Err(_) => GetEnum::NotFound,
+            },
+            None => GetEnum::NotFound,
+        }
+    }
+
+    fn defaults() -> (Vec<String>, Vec<Self>) {
+        (vec!["a".to_owned()], vec![Default::default()])
+    }
+}

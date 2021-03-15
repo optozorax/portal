@@ -13,3 +13,4 @@ glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
 serde_json = "1.0"
 egui = "0.10.0"
+fasteval = "0.2.4"
