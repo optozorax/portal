@@ -215,33 +215,41 @@ impl Window {
             });
         });
         let mut edit_scene_opened = self.edit_scene_opened;
-        egui::Window::new("Edit scene")
-            .open(&mut edit_scene_opened)
-            .scroll(true)
-            .show(ctx, |ui| {
-                let (changed1, material) =
-                    self.scene
-                        .egui(ui, &mut self.data, &mut self.should_recompile);
 
-                changed = changed1;
+        self.data.names = self.scene.matrices.names_iter().cloned().collect();
+        let errors_count = self.scene.errors_count(0, &mut self.data);
+        egui::Window::new(if errors_count > 0 {
+            format!("Edit scene ({} err)", errors_count)
+        } else {
+            "Edit scene".to_owned()
+        })
+        .id(egui::Id::new("Edit scene"))
+        .open(&mut edit_scene_opened)
+        .scroll(true)
+        .show(ctx, |ui| {
+            let (changed1, material) =
+                self.scene
+                    .egui(ui, &mut self.data, &mut self.should_recompile);
 
-                if changed.shader {
-                    self.should_recompile = true;
-                }
+            changed = changed1;
 
-                if let Some(material) = material {
-                    match material {
-                        Ok(material) => {
-                            self.material = material;
-                            self.error_message = None;
-                        }
-                        Err(err) => {
-                            self.error_message = Some((err.0, err.1));
-                            self.data.errors = Some(err.2);
-                        }
+            if changed.shader {
+                self.should_recompile = true;
+            }
+
+            if let Some(material) = material {
+                match material {
+                    Ok(material) => {
+                        self.material = material;
+                        self.error_message = None;
+                    }
+                    Err(err) => {
+                        self.error_message = Some((err.0, err.1));
+                        self.data.errors = Some(err.2);
                     }
                 }
-            });
+            }
+        });
         if let Some((code, message)) = self.error_message.as_ref() {
             if self.data.show_error_window {
                 egui::Window::new("Error message")

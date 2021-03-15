@@ -25,20 +25,23 @@ pub fn rad2deg(rad: f32) -> f32 {
 
 #[derive(Debug, Clone, Default)]
 pub struct Data {
-    pub names: Option<Vec<String>>,
-    pub pos: Option<u64>,
+    pub pos: usize,
+    pub names: Vec<String>,
     pub to_export: Option<String>,
-    pub errors: Option<BTreeMap<String, Vec<(usize, String)>>>,
+    pub errors: Option<BTreeMap<ErrId, Vec<(usize, String)>>>,
     pub show_error_window: bool,
     pub description_en_edit: bool,
     pub description_ru_edit: bool,
 }
 
 impl Data {
-    pub fn get_errors<'a, T: Identifier>(&'a self, t: &T) -> Option<&'a [(usize, String)]> {
+    pub fn get_errors<'a, T: ErrorId>(
+        &'a self,
+        t: &T,
+        pos: usize,
+    ) -> Option<&'a [(usize, String)]> {
         let errors = self.errors.as_ref()?;
-        let pos = self.pos? as usize;
-        let identifier = t.identifier(pos)?;
+        let identifier = t.identifier(pos);
         let result = errors.get(&identifier)?;
         Some(&result[..])
     }
@@ -150,6 +153,7 @@ pub fn egui_existing_name(
     size: f32,
     current: &mut String,
     names: &[String],
+    add_to_errors_count: &mut usize,
 ) -> bool {
     check_changed(current, |current| {
         ui.horizontal(|ui| {
@@ -157,6 +161,7 @@ pub fn egui_existing_name(
             ui.text_edit_singleline(current);
         });
         if !names.contains(current) {
+            *add_to_errors_count += 1;
             ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
                 ui.add(Label::new("Error: ").text_color(Color32::RED));
                 ui.label(format!("name '{}' not found", current));
@@ -244,7 +249,7 @@ pub fn egui_combo_box<T: ComboBoxChoosable>(
     label: &str,
     size: f32,
     t: &mut T,
-    id: u64,
+    id: usize,
 ) -> bool {
     let mut is_changed = false;
 
@@ -339,21 +344,24 @@ impl ComboBoxChoosable for Matrix {
 impl Eguiable for Matrix {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use Matrix::*;
-        let names = data.names.as_ref().unwrap();
+        let names = &data.names;
         let mut is_changed = false;
+        let mut errors_count = 0;
         match self {
             Mul { to, what } => {
-                is_changed |= egui_existing_name(ui, "Mul to:", 45., to, names);
-                is_changed |= egui_existing_name(ui, "What:", 45., what, names);
+                is_changed |= egui_existing_name(ui, "Mul to:", 45., to, names, &mut errors_count);
+                is_changed |= egui_existing_name(ui, "What:", 45., what, names, &mut errors_count);
             }
             Teleport {
                 first_portal,
                 second_portal,
                 what,
             } => {
-                is_changed |= egui_existing_name(ui, "From:", 45., first_portal, names);
-                is_changed |= egui_existing_name(ui, "To:", 45., second_portal, names);
-                is_changed |= egui_existing_name(ui, "What:", 45., what, names);
+                is_changed |=
+                    egui_existing_name(ui, "From:", 45., first_portal, names, &mut errors_count);
+                is_changed |=
+                    egui_existing_name(ui, "To:", 45., second_portal, names, &mut errors_count);
+                is_changed |= egui_existing_name(ui, "What:", 45., what, names, &mut errors_count);
             }
             Simple {
                 offset,
@@ -413,6 +421,12 @@ impl Eguiable for MatrixComboBox {
     }
 }
 
+impl ErrorsCount for MatrixComboBox {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
+        self.0.errors_count(pos, data)
+    }
+}
+
 impl StorageElem for MatrixComboBox {
     type GetType = Mat4;
 
@@ -461,19 +475,86 @@ impl StorageElem for MatrixComboBox {
     }
 }
 
+impl ErrorsCount for Matrix {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        use Matrix::*;
+        let names = &data.names;
+        let mut errors_count = 0;
+        match self {
+            Mul { to, what } => {
+                if !names.contains(to) {
+                    errors_count += 1;
+                }
+                if !names.contains(what) {
+                    errors_count += 1;
+                }
+            }
+            Teleport {
+                first_portal,
+                second_portal,
+                what,
+            } => {
+                if !names.contains(first_portal) {
+                    errors_count += 1;
+                }
+                if !names.contains(second_portal) {
+                    errors_count += 1;
+                }
+                if !names.contains(what) {
+                    errors_count += 1;
+                }
+            }
+            Simple { .. } => {}
+        }
+        errors_count
+    }
+}
+
 // ----------------------------------------------------------------------------------------------------------
 // Errors handling
 // ----------------------------------------------------------------------------------------------------------
 
-pub trait ErrorCount {
-    fn errors(&self, data: &mut Data) -> usize;
+pub trait ErrorsCount {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize;
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+pub struct ErrId(pub usize);
+
+// Used to find errors source
+pub trait ErrorId {
+    fn identifier(&self, pos: usize) -> ErrId;
+}
+
+impl ErrorId for Material {
+    fn identifier(&self, pos: usize) -> ErrId {
+        ErrId(1000 + pos)
+    }
+}
+
+impl ErrorId for Object {
+    fn identifier(&self, pos: usize) -> ErrId {
+        ErrId(2000 + pos)
+    }
+}
+
+impl ErrorId for LibraryCode {
+    fn identifier(&self, pos: usize) -> ErrId {
+        ErrId(3000 + pos)
+    }
+}
+
+impl ErrorId for Matrix {
+    fn identifier(&self, pos: usize) -> ErrId {
+        ErrId(4000 + pos)
+    }
 }
 
 // ----------------------------------------------------------------------------------------------------------
 // Gui named storage
 // ----------------------------------------------------------------------------------------------------------
 
-pub trait StorageElem: Sized + Default + Eguiable {
+pub trait StorageElem: Sized + Default + Eguiable + ErrorsCount {
     type GetType;
 
     fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, f: F) -> Option<Self::GetType>;
@@ -542,57 +623,64 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
         let names = &mut self.names;
         let len = storage.len();
         for (pos, elem) in storage.iter_mut().enumerate() {
-            CollapsingHeader::new(&names[pos])
-                .id_source(pos)
-                .show(ui, |ui| {
-                    let previous = names[pos].clone();
-                    ui.horizontal(|ui| {
-                        egui_label(ui, "Name:", 45.);
-                        ui.put(
-                            Rect::from_min_size(
-                                ui.min_rect().min + egui::vec2(49., 0.),
-                                egui::vec2(ui.available_width() - 120., 0.),
-                            ),
-                            TextEdit::singleline(&mut names[pos]),
-                        );
-                        if ui
-                            .add(
-                                Button::new("⏶")
-                                    .text_color(ui.visuals().hyperlink_color)
-                                    .enabled(pos != 0),
-                            )
-                            .clicked()
-                        {
-                            to_move_up = Some(pos);
-                        }
-                        if ui
-                            .add(
-                                Button::new("⏷")
-                                    .text_color(ui.visuals().hyperlink_color)
-                                    .enabled(pos + 1 != len),
-                            )
-                            .clicked()
-                        {
-                            to_move_down = Some(pos);
-                        }
-                        if ui
-                            .add(Button::new("Delete").text_color(Color32::RED))
-                            .clicked()
-                        {
-                            to_delete = Some(pos);
-                        }
-                    });
-                    if names[..pos].contains(&names[pos]) {
-                        ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
-                            ui.add(Label::new("Error: ").text_color(Color32::RED));
-                            ui.label(format!("name '{}' already used", names[pos]));
-                        });
-                    }
-                    changed.shader |= previous != names[pos];
+            data.pos = pos;
 
-                    data.pos = Some(pos as u64);
-                    changed |= elem.egui(ui, data);
+            let errors_count =
+                elem.errors_count(pos, data) + names[..pos].contains(&names[pos]) as usize;
+            CollapsingHeader::new(if errors_count > 0 {
+                format!("{} ({} err)", names[pos], errors_count)
+            } else {
+                names[pos].to_owned()
+            })
+            .id_source(pos)
+            .show(ui, |ui| {
+                let previous = names[pos].clone();
+                ui.horizontal(|ui| {
+                    egui_label(ui, "Name:", 45.);
+                    ui.put(
+                        Rect::from_min_size(
+                            ui.min_rect().min + egui::vec2(49., 0.),
+                            egui::vec2(ui.available_width() - 120., 0.),
+                        ),
+                        TextEdit::singleline(&mut names[pos]),
+                    );
+                    if ui
+                        .add(
+                            Button::new("⏶")
+                                .text_color(ui.visuals().hyperlink_color)
+                                .enabled(pos != 0),
+                        )
+                        .clicked()
+                    {
+                        to_move_up = Some(pos);
+                    }
+                    if ui
+                        .add(
+                            Button::new("⏷")
+                                .text_color(ui.visuals().hyperlink_color)
+                                .enabled(pos + 1 != len),
+                        )
+                        .clicked()
+                    {
+                        to_move_down = Some(pos);
+                    }
+                    if ui
+                        .add(Button::new("Delete").text_color(Color32::RED))
+                        .clicked()
+                    {
+                        to_delete = Some(pos);
+                    }
                 });
+                if names[..pos].contains(&names[pos]) {
+                    ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                        ui.add(Label::new("Error: ").text_color(Color32::RED));
+                        ui.label(format!("name '{}' already used", names[pos]));
+                    });
+                }
+                changed.shader |= previous != names[pos];
+
+                changed |= elem.egui(ui, data);
+            });
         }
         if let Some(pos) = to_delete {
             changed.shader = true;
@@ -611,6 +699,19 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
             self.add(format!("_{}", self.names.len()), Default::default());
         }
         changed
+    }
+}
+
+impl<T: StorageElem> ErrorsCount for StorageWithNames<T> {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        self.storage
+            .iter()
+            .enumerate()
+            .map(|(pos, x)| {
+                data.pos = pos;
+                x.errors_count(pos, data) + self.names[..pos].contains(&self.names[pos]) as usize
+            })
+            .sum()
     }
 }
 
@@ -648,6 +749,22 @@ impl Default for Material {
             grid_scale: 4.0,
             grid_coef: 0.3,
         }
+    }
+}
+
+impl ErrorsCount for Material {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
+        if let Some(local_errors) = data.get_errors(self, pos) {
+            local_errors.len()
+        } else {
+            0
+        }
+    }
+}
+
+impl ErrorsCount for MaterialComboBox {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
+        self.0.errors_count(pos, data)
     }
 }
 
@@ -706,7 +823,7 @@ impl Eguiable for Material {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use Material::*;
         let mut changed = false;
-        let has_errors = data.get_errors(&*self).is_some();
+        let has_errors = data.get_errors(&*self, data.pos).is_some();
         match self {
             Simple {
                 color,
@@ -824,7 +941,7 @@ impl Eguiable for Material {
                 });
                 ui.add(Label::new("}").monospace());
 
-                if let Some(local_errors) = data.get_errors(self) {
+                if let Some(local_errors) = data.get_errors(self, data.pos) {
                     egui_errors(ui, local_errors);
                 }
             }
@@ -838,13 +955,8 @@ pub struct MaterialComboBox(pub Material);
 
 impl Eguiable for MaterialComboBox {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed = WhatChanged::from_shader(egui_combo_box(
-            ui,
-            "Type:",
-            45.,
-            &mut self.0,
-            data.pos.unwrap(),
-        ));
+        let mut changed =
+            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, data.pos));
         ui.separator();
         changed |= self.0.egui(ui, data);
         changed
@@ -861,8 +973,18 @@ pub struct MaterialCode(pub GlslCode);
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GlslCode(pub String);
 
-impl StorageElem for GlslCode {
-    type GetType = GlslCode;
+impl ErrorsCount for LibraryCode {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
+        if let Some(local_errors) = data.get_errors(self, pos) {
+            local_errors.len()
+        } else {
+            0
+        }
+    }
+}
+
+impl StorageElem for LibraryCode {
+    type GetType = LibraryCode;
 
     fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, _: F) -> Option<Self::GetType> {
         Some(self.clone())
@@ -881,15 +1003,27 @@ impl Default for MaterialCode {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct LibraryCode(GlslCode);
+
 impl Eguiable for GlslCode {
+    fn egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
+        WhatChanged::from_shader(
+            ui.add(TextEdit::multiline(&mut self.0).text_style(TextStyle::Monospace))
+                .changed(),
+        )
+    }
+}
+
+impl Eguiable for LibraryCode {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        egui_with_red_field(ui, data.get_errors(self).is_some(), |ui| {
+        egui_with_red_field(ui, data.get_errors(self, data.pos).is_some(), |ui| {
             changed = WhatChanged::from_shader(
-                ui.add(TextEdit::multiline(&mut self.0).text_style(TextStyle::Monospace))
+                ui.add(TextEdit::multiline(&mut self.0.0).text_style(TextStyle::Monospace))
                     .changed(),
             );
-            if let Some(local_errors) = data.get_errors(self) {
+            if let Some(local_errors) = data.get_errors(self, data.pos) {
                 egui_errors(ui, local_errors);
             }
         });
@@ -1055,13 +1189,19 @@ impl ComboBoxChoosable for Object {
 impl Eguiable for ObjectType {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use ObjectType::*;
-        let names = data.names.as_ref().unwrap();
+        let names = &data.names;
         let mut is_changed = false;
+        let mut errors_count = 0;
         match self {
-            Simple(a) => is_changed |= egui_existing_name(ui, "Matrix:", 45., &mut a.0, names),
+            Simple(a) => {
+                is_changed |=
+                    egui_existing_name(ui, "Matrix:", 45., &mut a.0, names, &mut errors_count)
+            }
             Portal(a, b) => {
-                is_changed |= egui_existing_name(ui, "First:", 45., &mut a.0, names);
-                is_changed |= egui_existing_name(ui, "Second:", 45., &mut b.0, names);
+                is_changed |=
+                    egui_existing_name(ui, "First:", 45., &mut a.0, names, &mut errors_count);
+                is_changed |=
+                    egui_existing_name(ui, "Second:", 45., &mut b.0, names, &mut errors_count);
             }
         }
         WhatChanged::from_shader(is_changed)
@@ -1071,12 +1211,14 @@ impl Eguiable for ObjectType {
 impl Eguiable for Object {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use Object::*;
-        let names = data.names.as_ref().unwrap();
+        let names = &data.names;
         let mut is_changed = WhatChanged::default();
-        let has_errors = data.get_errors(self).is_some();
+        let has_errors = data.get_errors(self, data.pos).is_some();
+        let mut errors_count = 0;
         match self {
             DebugMatrix(a) => {
-                is_changed.shader |= egui_existing_name(ui, "Matrix:", 45., &mut a.0, names);
+                is_changed.shader |=
+                    egui_existing_name(ui, "Matrix:", 45., &mut a.0, names, &mut errors_count);
             }
             Flat { kind, is_inside } => {
                 is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
@@ -1125,7 +1267,7 @@ impl Eguiable for Object {
                     is_changed |= is_inside.0.egui(ui, data);
                 });
                 ui.add(Label::new("}").monospace());
-                if let Some(local_errors) = data.get_errors(self) {
+                if let Some(local_errors) = data.get_errors(self, data.pos) {
                     egui_errors(ui, local_errors);
                 }
             }
@@ -1173,7 +1315,7 @@ impl Eguiable for Object {
                     is_changed |= intersect.0.egui(ui, data);
                 });
                 ui.add(Label::new("}").monospace());
-                if let Some(local_errors) = data.get_errors(self) {
+                if let Some(local_errors) = data.get_errors(self, data.pos) {
                     egui_errors(ui, local_errors);
                 }
             }
@@ -1191,6 +1333,66 @@ impl Eguiable for ObjectComboBox {
         ui.separator();
         changed |= self.0.egui(ui, data);
         changed
+    }
+}
+
+impl ErrorsCount for ObjectType {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        let mut result = 0;
+
+        use ObjectType::*;
+        let names = &data.names;
+        match self {
+            Simple(a) => {
+                if !names.contains(&a.0) {
+                    result += 1;
+                }
+            }
+            Portal(a, b) => {
+                if !names.contains(&a.0) {
+                    result += 1;
+                }
+                if !names.contains(&b.0) {
+                    result += 1;
+                }
+            }
+        }
+
+        result
+    }
+}
+
+impl ErrorsCount for Object {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
+        let mut result = if let Some(local_errors) = data.get_errors(self, pos) {
+            local_errors.len()
+        } else {
+            0
+        };
+
+        use Object::*;
+        let names = &data.names;
+        match self {
+            DebugMatrix(a) => {
+                if !names.contains(&a.0) {
+                    result += 1;
+                }
+            }
+            Flat { kind, is_inside: _ } => {
+                result += kind.errors_count(pos, data);
+            }
+            Complex { kind, intersect: _ } => {
+                result += kind.errors_count(pos, data);
+            }
+        }
+
+        result
+    }
+}
+
+impl ErrorsCount for ObjectComboBox {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
+        self.0.errors_count(pos, data)
     }
 }
 
@@ -1215,11 +1417,11 @@ pub struct Scene {
     description_en: String,
     description_ru: String,
 
-    matrices: StorageWithNames<MatrixComboBox>,
+    pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
 
     materials: StorageWithNames<MaterialComboBox>,
-    library: StorageWithNames<GlslCode>,
+    library: StorageWithNames<LibraryCode>,
 }
 
 /*
@@ -1286,7 +1488,7 @@ impl Scene {
         Option<
             Result<
                 macroquad::material::Material,
-                (String, String, BTreeMap<String, Vec<(usize, String)>>),
+                (String, String, BTreeMap<ErrId, Vec<(usize, String)>>),
             >,
         >,
     ) {
@@ -1370,30 +1572,58 @@ impl Scene {
                     });
             });
 
-        CollapsingHeader::new("Matrices")
-            .default_open(false)
-            .show(ui, |ui| {
-                data.names = Some(self.matrices.names.clone());
-                changed |= self.matrices.egui(ui, data);
-            });
-        CollapsingHeader::new("Objects")
-            .default_open(false)
-            .show(ui, |ui| {
-                data.names = Some(self.matrices.names.clone());
-                changed |= self.objects.egui(ui, data);
-            });
-        CollapsingHeader::new("Materials")
-            .default_open(false)
-            .show(ui, |ui| {
-                changed |= self.materials.egui(ui, data);
-            });
-        CollapsingHeader::new("Glsl Library")
-            .default_open(false)
-            .show(ui, |ui| {
-                changed |= self.library.egui(ui, data);
-            });
+        let errors_count = self.matrices.errors_count(0, data);
+        CollapsingHeader::new(if errors_count > 0 {
+            format!("Matrices ({} err)", errors_count)
+        } else {
+            "Matrices".to_owned()
+        })
+        .id_source("Matrices")
+        .default_open(false)
+        .show(ui, |ui| {
+            data.names = self.matrices.names.clone();
+            changed |= self.matrices.egui(ui, data);
+        });
+        let errors_count = self.objects.errors_count(0, data);
+        CollapsingHeader::new(if errors_count > 0 {
+            format!("Objects ({} err)", errors_count)
+        } else {
+            "Objects".to_owned()
+        })
+        .id_source("Objects")
+        .default_open(false)
+        .show(ui, |ui| {
+            changed |= self.objects.egui(ui, data);
+        });
+        let errors_count = self.materials.errors_count(0, data);
+        CollapsingHeader::new(if errors_count > 0 {
+            format!("Materials ({} err)", errors_count)
+        } else {
+            "Materials".to_owned()
+        })
+        .id_source("Materials")
+        .default_open(false)
+        .show(ui, |ui| {
+            changed |= self.materials.egui(ui, data);
+        });
+        let errors_count = self.library.errors_count(0, data);
+        CollapsingHeader::new(if errors_count > 0 {
+            format!("Glsl Library ({} err)", errors_count)
+        } else {
+            "Glsl Library".to_owned()
+        })
+        .id_source("Glsl Library")
+        .default_open(false)
+        .show(ui, |ui| {
+            changed |= self.library.egui(ui, data);
+        });
 
-        if let Some(local_errors) = data.errors.as_ref().and_then(|map| map.get("")).cloned() {
+        if let Some(local_errors) = data
+            .errors
+            .as_ref()
+            .and_then(|map| map.get(&ErrId::default()))
+            .cloned()
+        {
             ui.horizontal(|ui| {
                 ui.label("Other errors:");
                 if ui.button("Show full code and errors").clicked() {
@@ -1404,6 +1634,25 @@ impl Scene {
         }
 
         (changed, material)
+    }
+}
+
+impl ErrorsCount for Scene {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        self.matrices.errors_count(0, data)
+            + self.objects.errors_count(0, data)
+            + self.materials.errors_count(0, data)
+            + self.library.errors_count(0, data)
+            + if let Some(local_errors) = data
+                .errors
+                .as_ref()
+                .and_then(|map| map.get(&ErrId::default()))
+                .cloned()
+            {
+                local_errors.len()
+            } else {
+                0
+            }
     }
 }
 
@@ -1514,7 +1763,7 @@ impl UniformStruct for Scene {
 // ----------------------------------------------------------------------------------------------------------
 
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
-pub struct LineNumbersByKey(pub BTreeMap<String, Range<usize>>);
+pub struct LineNumbersByKey(pub BTreeMap<ErrId, Range<usize>>);
 
 impl LineNumbersByKey {
     pub fn offset(&mut self, lines: usize) {
@@ -1523,7 +1772,7 @@ impl LineNumbersByKey {
             .for_each(|(_, line)| *line = line.start + lines..line.end + lines);
     }
 
-    pub fn add(&mut self, identifier: String, lines: Range<usize>) {
+    pub fn add(&mut self, identifier: ErrId, lines: Range<usize>) {
         assert!(self.0.get(&identifier).is_none());
         self.0.insert(identifier, lines);
     }
@@ -1535,11 +1784,11 @@ impl LineNumbersByKey {
     }
 
     // Returns identifier and local line position
-    pub fn get_identifier(&self, line_no: usize) -> Option<(&str, usize)> {
+    pub fn get_identifier(&self, line_no: usize) -> Option<(ErrId, usize)> {
         self.0
             .iter()
             .find(|(_, range)| range.contains(&line_no))
-            .map(|(name, range)| (name.as_ref(), line_no - range.start + 1))
+            .map(|(id, range)| (*id, line_no - range.start + 1))
     }
 }
 
@@ -1566,7 +1815,7 @@ impl StringStorage {
         self.storage += s.as_ref();
     }
 
-    pub fn add_identifier_string<T: AsRef<str>>(&mut self, identifier: String, s: T) {
+    pub fn add_identifier_string<T: AsRef<str>>(&mut self, identifier: ErrId, s: T) {
         let start = self.current_line_no;
         self.add_string(s);
         let end = self.current_line_no;
@@ -1604,27 +1853,27 @@ mod tests_string_storage {
     fn test() {
         let mut s1 = StringStorage::default();
         s1.add_string("1\n2\n3\n");
-        s1.add_identifier_string("x".to_owned(), "\n4\n5\n");
+        s1.add_identifier_string(ErrId(1), "\n4\n5\n");
 
         assert_eq!(
             s1,
             StringStorage {
                 storage: "1\n2\n3\n\n4\n5\n".to_owned(),
                 current_line_no: 7,
-                line_numbers: LineNumbersByKey(vec![("x".to_owned(), 4..8)].into_iter().collect()),
+                line_numbers: LineNumbersByKey(vec![(ErrId(1), 4..8)].into_iter().collect()),
             }
         );
 
         let mut s2 = StringStorage::default();
         s2.add_string("a\nb");
-        s2.add_identifier_string("y".to_owned(), "c\nd");
+        s2.add_identifier_string(ErrId(2), "c\nd");
 
         assert_eq!(
             s2,
             StringStorage {
                 storage: "a\nbc\nd".to_owned(),
                 current_line_no: 3,
-                line_numbers: LineNumbersByKey(vec![("y".to_owned(), 2..4)].into_iter().collect()),
+                line_numbers: LineNumbersByKey(vec![(ErrId(2), 2..4)].into_iter().collect()),
             }
         );
 
@@ -1632,7 +1881,7 @@ mod tests_string_storage {
             .into_iter()
             .collect::<BTreeMap<_, _>>();
 
-        let s = apply_template("abc\n%%s2%%\n\ne\nf\n%%s1%%\n9", storages);
+        let s = apply_template("abc\n//%s2//%\n\ne\nf\n//%s1//%\n9", storages);
 
         assert_eq!(
             s,
@@ -1640,43 +1889,12 @@ mod tests_string_storage {
                 storage: "abc\na\nbc\nd\n\ne\nf\n1\n2\n3\n\n4\n5\n\n9".to_owned(),
                 current_line_no: 15,
                 line_numbers: LineNumbersByKey(
-                    vec![("x".to_owned(), 11..15), ("y".to_owned(), 3..5)]
+                    vec![(ErrId(1), 11..15), (ErrId(2), 3..5)]
                         .into_iter()
                         .collect()
                 ),
             }
         );
-    }
-}
-
-pub trait Identifier {
-    fn identifier(&self, pos: usize) -> Option<String>;
-}
-
-impl Identifier for Material {
-    fn identifier(&self, pos: usize) -> Option<String> {
-        if matches!(self, Material::Complex { .. }) {
-            Some(format!("m_complex_{}", pos))
-        } else {
-            None
-        }
-    }
-}
-
-impl Identifier for Object {
-    fn identifier(&self, pos: usize) -> Option<String> {
-        use Object::*;
-        match self {
-            DebugMatrix { .. } => None,
-            Flat { .. } => Some(format!("o_flat_{}", pos)),
-            Complex { .. } => Some(format!("o_complex_{}", pos)),
-        }
-    }
-}
-
-impl Identifier for GlslCode {
-    fn identifier(&self, pos: usize) -> Option<String> {
-        Some(format!("lib_{}", pos))
     }
 }
 
@@ -1750,8 +1968,7 @@ impl Scene {
                             Complex { code } => code,
                             _ => unreachable!(),
                         };
-                        material_processing
-                            .add_identifier_string(x.identifier(pos).unwrap(), &code.0.0);
+                        material_processing.add_identifier_string(x.identifier(pos), &code.0.0);
                         material_processing.add_string("\n");
                     }
                 };
@@ -1831,7 +2048,7 @@ impl Scene {
                         } else {
                             result.add_string(format!("int is_inside_{}(vec4 pos, float x, float y) {{\n", pos));
                         }
-                        result.add_identifier_string(i.0.identifier(pos).unwrap(), &is_inside.0.0);
+                        result.add_identifier_string(i.0.identifier(pos), &is_inside.0.0);
                         result.add_string("\n}\n");
                     }
                     Complex { kind, intersect } => {
@@ -1843,7 +2060,7 @@ impl Scene {
                         } else {
                             result.add_string(format!("SceneIntersection intersect_{}(Ray r) {{\n", pos));
                         }
-                        result.add_identifier_string(i.0.identifier(pos).unwrap(), &intersect.0.0);
+                        result.add_identifier_string(i.0.identifier(pos), &intersect.0.0);
                         result.add_string("\n}\n");
                     }
                 }
@@ -1945,7 +2162,7 @@ impl Scene {
         storages.insert("library".to_owned(), {
             let mut result = StringStorage::default();
             for (pos, (_, i)) in self.library.iter().enumerate() {
-                result.add_identifier_string(i.identifier(pos).unwrap(), &i.0);
+                result.add_identifier_string(i.identifier(pos), &i.0.0);
             }
             result
         });
@@ -1955,10 +2172,8 @@ impl Scene {
 
     pub fn get_new_material(
         &self,
-    ) -> Result<
-        macroquad::prelude::Material,
-        (String, String, BTreeMap<String, Vec<(usize, String)>>),
-    > {
+    ) -> Result<macroquad::prelude::Material, (String, String, BTreeMap<ErrId, Vec<(usize, String)>>)>
+    {
         let code = self.generate_shader_code();
 
         use macroquad::prelude::load_material;
@@ -1978,26 +2193,26 @@ impl Scene {
                 ..
             } = err
             {
-                let mut errors: BTreeMap<String, Vec<(usize, String)>> = BTreeMap::new();
+                let mut errors: BTreeMap<ErrId, Vec<(usize, String)>> = BTreeMap::new();
                 for x in shader_error_parser(&error_message) {
                     match x {
                         Ok((line_no, message)) => match code.line_numbers.get_identifier(line_no) {
                             Some((identifier, local_line_no)) => {
                                 errors
-                                    .entry(identifier.to_owned())
+                                    .entry(identifier)
                                     .or_insert_with(|| Default::default())
                                     .push((local_line_no, message.to_owned()));
                             }
                             None => {
                                 errors
-                                    .entry("".to_owned())
+                                    .entry(ErrId::default())
                                     .or_insert_with(|| Default::default())
                                     .push((line_no, message.to_owned()));
                             }
                         },
                         Err(message) => {
                             errors
-                                .entry("".to_owned())
+                                .entry(ErrId::default())
                                 .or_insert_with(|| Default::default())
                                 .push((usize::MAX, message.to_owned()));
                         }
@@ -2045,9 +2260,16 @@ pub fn shader_error_parser(error: &str) -> Vec<Result<(usize, &str), &str>> {
         Some((lineno, line))
     }
 
+    fn try_parse_2(mut line: &str) -> Option<(usize, &str)> {
+        expect_str(&mut line, "0(")?;
+        let lineno = expect_int(&mut line)?;
+        expect_str(&mut line, ") : warning ")?;
+        Some((lineno, line))
+    }
+
     // Try parse format `ERROR: 0:586: 'pos' : redefinition`
     // This format is noticed on Firefox + Linux
-    fn try_parse_2(mut line: &str) -> Option<(usize, &str)> {
+    fn try_parse_3(mut line: &str) -> Option<(usize, &str)> {
         expect_str(&mut line, "ERROR: 0:")?;
         let lineno = expect_int(&mut line)?;
         expect_str(&mut line, ": ")?;
@@ -2060,6 +2282,8 @@ pub fn shader_error_parser(error: &str) -> Vec<Result<(usize, &str), &str>> {
             if let Some(r) = try_parse_1(line) {
                 Ok(r)
             } else if let Some(r) = try_parse_2(line) {
+                Ok(r)
+            } else if let Some(r) = try_parse_3(line) {
                 Ok(r)
             } else {
                 crate::miniquad::error!("can't parse line: `{}`", line);
