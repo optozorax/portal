@@ -293,7 +293,7 @@ impl Window {
                 changed |= self.cam.egui(ui);
             });
         self.camera_settings_opened = camera_settings_opened;
-        let mouse_over_canvas = !ctx.is_using_pointer();
+        let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
 
         if changed.uniform {
             self.scene.set_uniforms(self.material);

@@ -328,12 +328,6 @@ SceneIntersection debug_intersect(Ray r) {
 }
 
 // ---------------------------------------------------------------------------
-// User library --------------------------------------------------------------
-// ---------------------------------------------------------------------------
-
-%%library%%
-
-// ---------------------------------------------------------------------------
 // Code for current scene ----------------------------------------------------
 // ---------------------------------------------------------------------------
 
@@ -362,11 +356,17 @@ SceneIntersection process_portal_intersection(SceneIntersection i, SurfaceInters
     return i;
 }
 
-%%uniforms%%
+// ---------------------------------------------------------------------------
+// User library --------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
-%%materials_defines%%
+//%library//%
 
-%%intersection_functions%%
+//%uniforms//%
+
+//%materials_defines//%
+
+//%intersection_functions//%
 
 SceneIntersection scene_intersect(Ray r) {
     SceneIntersection i = SceneIntersection(0, intersection_none);
@@ -377,7 +377,7 @@ SceneIntersection scene_intersect(Ray r) {
     float len = 1.;
     Ray transformed_ray = ray_none;
 
-%%intersections%%
+//%intersections//%
 
     return i;
 }
@@ -391,7 +391,9 @@ MaterialProcessing material_process(Ray r, SceneIntersection i) {
         return material_simple(hit, r, color(0.2, 0.9, 0.2), 0.5, false, 1., 0.);
     } else if (i.material == DEBUG_BLUE) {
         return material_simple(hit, r, color(0.2, 0.2, 0.9), 0.5, false, 1., 0.);
-%%material_processing%%
+
+//%material_processing//%
+
     }
 
     // If there is no material with this number.
