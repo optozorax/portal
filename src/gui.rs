@@ -209,6 +209,13 @@ pub fn egui_with_red_field(ui: &mut Ui, has_errors: bool, f: impl FnOnce(&mut Ui
     }
 }
 
+pub fn egui_with_enabled_by(ui: &mut Ui, by: bool, f: impl FnOnce(&mut Ui)) {
+    let previous = ui.enabled();
+    ui.set_enabled(by);
+    f(ui);
+    ui.set_enabled(previous);
+}
+
 // ----------------------------------------------------------------------------------------------------------
 // Combo box things
 // ----------------------------------------------------------------------------------------------------------
@@ -1745,6 +1752,9 @@ impl UniformStruct for Scene {
             ("_resolution".to_owned(), UniformType::Float2),
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
             ("_offset_after_material".to_owned(), UniformType::Float1),
+            ("_view_angle".to_owned(), UniformType::Float1),
+            ("_use_panini_projection".to_owned(), UniformType::Int1),
+            ("_panini_param".to_owned(), UniformType::Float1),
         ]);
 
         result

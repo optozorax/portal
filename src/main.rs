@@ -7,6 +7,7 @@ mod gui;
 use crate::gui::*;
 
 struct RotateAroundCam {
+    look_at: Vec3,
     alpha: f32,
     beta: f32,
     r: f32,
@@ -15,6 +16,8 @@ struct RotateAroundCam {
     mouse_sensitivity: f32,
     scale_factor: f32,
     view_angle: f32,
+    use_panini_projection: bool,
+    panini_param: f32,
 }
 
 impl RotateAroundCam {
@@ -23,6 +26,7 @@ impl RotateAroundCam {
 
     fn new() -> Self {
         Self {
+            look_at: Vec3::new(0., 0., 0.),
             alpha: 0.,
             beta: 5. * PI / 7.,
             r: 3.5,
@@ -30,7 +34,10 @@ impl RotateAroundCam {
 
             mouse_sensitivity: 1.4,
             scale_factor: 1.1,
-            view_angle: deg2rad(80.),
+            view_angle: deg2rad(90.),
+
+            use_panini_projection: false,
+            panini_param: 1.0,
         }
     }
 
@@ -73,14 +80,12 @@ impl RotateAroundCam {
             -self.beta.sin() * self.alpha.cos(),
             self.beta.cos(),
             -self.beta.sin() * self.alpha.sin(),
-        ) * self.r;
-        let look_at = Vec3::new(0., 0., 0.);
+        ) * self.r
+            + self.look_at;
 
-        let h = (self.view_angle / 2.).tan();
-
-        let k = (look_at - pos).normalize();
-        let i = k.cross(Vec3::new(0., 1., 0.)).normalize() * h;
-        let j = k.cross(i).normalize() * h;
+        let k = (self.look_at - pos).normalize();
+        let i = k.cross(Vec3::new(0., 1., 0.)).normalize();
+        let j = k.cross(i).normalize();
 
         Mat4::from_cols(
             Vec4::new(i.x, i.y, i.z, 0.),
@@ -94,6 +99,19 @@ impl RotateAroundCam {
 impl RotateAroundCam {
     fn egui(&mut self, ui: &mut Ui) -> WhatChanged {
         let mut changed = false;
+        ui.horizontal(|ui| {
+            ui.label("Look at: ");
+            ui.label("X");
+            changed |= egui_f32(ui, &mut self.look_at.x);
+            ui.separator();
+            ui.label("Y");
+            changed |= egui_f32(ui, &mut self.look_at.y);
+            ui.separator();
+            ui.label("Z");
+            changed |= egui_f32(ui, &mut self.look_at.z);
+            ui.separator();
+        });
+        ui.separator();
         ui.horizontal(|ui| {
             ui.label("α");
             changed |= check_changed(&mut self.alpha, |alpha| {
@@ -134,22 +152,48 @@ impl RotateAroundCam {
             });
         });
 
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.label("Panini projection:");
+            changed |= check_changed(&mut self.use_panini_projection, |is_use| {
+                ui.add(egui::Checkbox::new(is_use, ""));
+            });
+        });
+        ui.horizontal(|ui| {
+            let is_use = self.use_panini_projection;
+            ui.label("Panini parameter:");
+            changed |= check_changed(&mut self.panini_param, |param| {
+                egui_with_enabled_by(ui, is_use, |ui| {
+                    ui.add(egui::Slider::f32(param, 0.0..=1.0));
+                });
+            });
+        });
+
+        let is_use = self.use_panini_projection;
+        changed |= check_changed(&mut self.view_angle, |m| {
+            let mut current = rad2deg(*m);
+            ui.add(
+                egui::Slider::f32(
+                    &mut current,
+                    if is_use { 20.0..=250.0 } else { 20.0..=140.0 },
+                )
+                .text("View angle")
+                .suffix("°")
+                .clamp_to_range(true),
+            );
+            *m = deg2rad(current);
+        });
+
         // TODO add inverse by X axis and inverse by Y axis
+
+        ui.separator();
 
         changed |= check_changed(&mut self.mouse_sensitivity, |m| {
             ui.add(egui::Slider::f32(m, 0.0..=3.0).text("Mouse sensivity"));
         });
         changed |= check_changed(&mut self.scale_factor, |m| {
             ui.add(egui::Slider::f32(m, 1.0..=2.0).text("Wheel R multiplier"));
-        });
-        changed |= check_changed(&mut self.view_angle, |m| {
-            let mut current = rad2deg(*m);
-            ui.add(
-                egui::Slider::f32(&mut current, 20.0..=130.)
-                    .text("View angle")
-                    .suffix("°"),
-            );
-            *m = deg2rad(current);
         });
 
         WhatChanged::from_uniform(changed)
@@ -364,6 +408,14 @@ impl Window {
         self.material
             .set_uniform("_resolution", (screen_width(), screen_height()));
         self.material.set_uniform("_camera", self.cam.get_matrix());
+        self.material
+            .set_uniform("_view_angle", self.cam.view_angle);
+        self.material
+            .set_uniform("_panini_param", self.cam.panini_param);
+        self.material.set_uniform(
+            "_use_panini_projection",
+            self.cam.use_panini_projection as i32,
+        );
         self.material
             .set_uniform("_ray_tracing_depth", self.render_depth);
         self.material
