@@ -240,7 +240,7 @@ struct SceneIntersection {
 const SceneIntersection scene_intersection_none = SceneIntersection(0, intersection_none);
 
 bool nearer(SurfaceIntersection result, SurfaceIntersection current) {
-    return current.hit && (!result.hit || (result.hit && current.t < result.t));
+    return current.hit && (current.t > 0.) && (!result.hit || (result.hit && current.t < result.t));
 }
 
 bool nearer(SceneIntersection result, SurfaceIntersection current) {

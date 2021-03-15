@@ -28,7 +28,8 @@ pub struct Data {
     pub pos: usize,
     pub names: Vec<String>,
     pub to_export: Option<String>,
-    pub errors: Option<BTreeMap<ErrId, Vec<(usize, String)>>>,
+    pub errors: BTreeMap<ErrId, Vec<(usize, String)>>,
+    pub matrix_recursion_error: BTreeMap<MatrixName, bool>,
     pub show_error_window: bool,
     pub description_en_edit: bool,
     pub description_ru_edit: bool,
@@ -40,7 +41,7 @@ impl Data {
         t: &T,
         pos: usize,
     ) -> Option<&'a [(usize, String)]> {
-        let errors = self.errors.as_ref()?;
+        let errors = &self.errors;
         let identifier = t.identifier(pos);
         let result = errors.get(&identifier)?;
         Some(&result[..])
@@ -275,6 +276,191 @@ pub fn egui_combo_box<T: ComboBoxChoosable>(
 }
 
 // ----------------------------------------------------------------------------------------------------------
+// Gui named storage
+// ----------------------------------------------------------------------------------------------------------
+
+#[derive(Debug, Clone)]
+pub enum GetEnum<T> {
+    Ok(T),
+    NotFound,
+    Recursion,
+}
+
+macro_rules! get_try {
+    ($x:expr) => {
+        match $x {
+            GetEnum::Ok(t) => t,
+            other => return other,
+        }
+    };
+}
+
+pub trait StorageElem: Sized + Default + Eguiable + ErrorsCount {
+    type GetType;
+
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, f: F) -> GetEnum<Self::GetType>;
+
+    fn defaults() -> (Vec<String>, Vec<Self>);
+}
+
+// Checks if this name is used, sends name to
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageWithNames<T: StorageElem> {
+    names: Vec<String>,
+    storage: Vec<T>,
+}
+
+impl<T: StorageElem> Default for StorageWithNames<T> {
+    fn default() -> Self {
+        let (names, storage) = T::defaults();
+        StorageWithNames { names, storage }
+    }
+}
+
+impl<T: StorageElem> StorageWithNames<T> {
+    pub fn get(&self, name: &str) -> GetEnum<T::GetType> {
+        let mut visited = vec![];
+        self.get_inner(name, &mut visited)
+    }
+
+    pub fn add(&mut self, name: String, t: T) {
+        self.names.push(name);
+        self.storage.push(t);
+    }
+
+    pub fn remove(&mut self, pos: usize) {
+        self.names.remove(pos);
+        self.storage.remove(pos);
+    }
+
+    pub fn names_iter(&self) -> std::slice::Iter<String> {
+        self.names.iter()
+    }
+
+    pub fn iter(&self) -> std::iter::Zip<std::slice::Iter<String>, std::slice::Iter<T>> {
+        self.names.iter().zip(self.storage.iter())
+    }
+
+    fn get_inner<'a>(&'a self, name: &'a str, visited: &mut Vec<String>) -> GetEnum<T::GetType> {
+        if visited.iter().any(|x| *x == name) {
+            return GetEnum::Recursion;
+        }
+
+        visited.push(name.to_owned());
+        let pos = if let Some(pos) = self.names.iter().position(|x| x == name) {
+            pos
+        } else {
+            return GetEnum::NotFound;
+        };
+        let result = get_try!(self.storage[pos].get(|name| self.get_inner(name, visited)));
+        visited.pop().unwrap();
+        GetEnum::Ok(result)
+    }
+}
+
+impl<T: StorageElem> Eguiable for StorageWithNames<T> {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        let mut to_delete = None;
+        let mut to_move_up = None;
+        let mut to_move_down = None;
+        let storage = &mut self.storage;
+        let names = &mut self.names;
+        let len = storage.len();
+        for (pos, elem) in storage.iter_mut().enumerate() {
+            data.pos = pos;
+
+            let errors_count =
+                elem.errors_count(pos, data) + names[..pos].contains(&names[pos]) as usize;
+            CollapsingHeader::new(if errors_count > 0 {
+                format!("{} ({} err)", names[pos], errors_count)
+            } else {
+                names[pos].to_owned()
+            })
+            .id_source(pos)
+            .show(ui, |ui| {
+                let previous = names[pos].clone();
+                ui.horizontal(|ui| {
+                    egui_label(ui, "Name:", 45.);
+                    ui.put(
+                        Rect::from_min_size(
+                            ui.min_rect().min + egui::vec2(49., 0.),
+                            egui::vec2(ui.available_width() - 120., 0.),
+                        ),
+                        TextEdit::singleline(&mut names[pos]),
+                    );
+                    if ui
+                        .add(
+                            Button::new("⏶")
+                                .text_color(ui.visuals().hyperlink_color)
+                                .enabled(pos != 0),
+                        )
+                        .clicked()
+                    {
+                        to_move_up = Some(pos);
+                    }
+                    if ui
+                        .add(
+                            Button::new("⏷")
+                                .text_color(ui.visuals().hyperlink_color)
+                                .enabled(pos + 1 != len),
+                        )
+                        .clicked()
+                    {
+                        to_move_down = Some(pos);
+                    }
+                    if ui
+                        .add(Button::new("Delete").text_color(Color32::RED))
+                        .clicked()
+                    {
+                        to_delete = Some(pos);
+                    }
+                });
+                if names[..pos].contains(&names[pos]) {
+                    ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                        ui.add(Label::new("Error: ").text_color(Color32::RED));
+                        ui.label(format!("name '{}' already used", names[pos]));
+                    });
+                }
+                changed.shader |= previous != names[pos];
+
+                changed |= elem.egui(ui, data);
+            });
+        }
+        if let Some(pos) = to_delete {
+            changed.shader = true;
+            self.remove(pos);
+        } else if let Some(pos) = to_move_up {
+            self.storage.swap(pos, pos - 1);
+            self.names.swap(pos, pos - 1);
+        } else if let Some(pos) = to_move_down {
+            self.storage.swap(pos, pos + 1);
+            self.names.swap(pos, pos + 1);
+        }
+        if ui
+            .add(Button::new("Add").text_color(Color32::GREEN))
+            .clicked()
+        {
+            self.add(format!("_{}", self.names.len()), Default::default());
+        }
+        changed
+    }
+}
+
+impl<T: StorageElem> ErrorsCount for StorageWithNames<T> {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        self.storage
+            .iter()
+            .enumerate()
+            .map(|(pos, x)| {
+                data.pos = pos;
+                x.errors_count(pos, data) + self.names[..pos].contains(&self.names[pos]) as usize
+            })
+            .sum()
+    }
+}
+
+// ----------------------------------------------------------------------------------------------------------
 // Matrix
 // ----------------------------------------------------------------------------------------------------------
 
@@ -404,6 +590,17 @@ impl Eguiable for Matrix {
                     });
             }
         }
+        if data
+            .matrix_recursion_error
+            .get(&MatrixName(names[data.pos].clone()))
+            .copied()
+            .unwrap_or(false)
+        {
+            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                ui.add(Label::new("Error: ").text_color(Color32::RED));
+                ui.label("this matrix has recursion");
+            });
+        }
         WhatChanged::from_uniform(is_changed)
     }
 }
@@ -430,12 +627,12 @@ impl ErrorsCount for MatrixComboBox {
 impl StorageElem for MatrixComboBox {
     type GetType = Mat4;
 
-    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, mut f: F) -> Option<Self::GetType> {
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, mut f: F) -> GetEnum<Self::GetType> {
         use Matrix::*;
-        Some(match &self.0 {
+        GetEnum::Ok(match &self.0 {
             Mul { to, what } => {
-                let to = f(&to)?;
-                let what = f(&what)?;
+                let to = get_try!(f(&to));
+                let what = get_try!(f(&what));
                 what * to
             }
             Teleport {
@@ -443,9 +640,9 @@ impl StorageElem for MatrixComboBox {
                 second_portal,
                 what,
             } => {
-                let first_portal = f(&first_portal)?;
-                let second_portal = f(&second_portal)?;
-                let what = f(&what)?;
+                let first_portal = get_try!(f(&first_portal));
+                let second_portal = get_try!(f(&second_portal));
+                let what = get_try!(f(&what));
                 second_portal * first_portal.inverse() * what
             }
             Simple {
@@ -506,6 +703,14 @@ impl ErrorsCount for Matrix {
             }
             Simple { .. } => {}
         }
+        if data
+            .matrix_recursion_error
+            .get(&MatrixName(names[data.pos].clone()))
+            .copied()
+            .unwrap_or(false)
+        {
+            errors_count += 1;
+        }
         errors_count
     }
 }
@@ -547,171 +752,6 @@ impl ErrorId for LibraryCode {
 impl ErrorId for Matrix {
     fn identifier(&self, pos: usize) -> ErrId {
         ErrId(4000 + pos)
-    }
-}
-
-// ----------------------------------------------------------------------------------------------------------
-// Gui named storage
-// ----------------------------------------------------------------------------------------------------------
-
-pub trait StorageElem: Sized + Default + Eguiable + ErrorsCount {
-    type GetType;
-
-    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, f: F) -> Option<Self::GetType>;
-
-    fn defaults() -> (Vec<String>, Vec<Self>);
-}
-
-// Checks if this name is used, sends name to
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StorageWithNames<T: StorageElem> {
-    names: Vec<String>,
-    storage: Vec<T>,
-}
-
-impl<T: StorageElem> Default for StorageWithNames<T> {
-    fn default() -> Self {
-        let (names, storage) = T::defaults();
-        StorageWithNames { names, storage }
-    }
-}
-
-impl<T: StorageElem> StorageWithNames<T> {
-    pub fn get(&self, name: &str) -> Option<T::GetType> {
-        let mut visited = vec![];
-        self.get_inner(name, &mut visited)
-    }
-
-    pub fn add(&mut self, name: String, t: T) {
-        self.names.push(name);
-        self.storage.push(t);
-    }
-
-    pub fn remove(&mut self, pos: usize) {
-        self.names.remove(pos);
-        self.storage.remove(pos);
-    }
-
-    pub fn names_iter(&self) -> std::slice::Iter<String> {
-        self.names.iter()
-    }
-
-    pub fn iter(&self) -> std::iter::Zip<std::slice::Iter<String>, std::slice::Iter<T>> {
-        self.names.iter().zip(self.storage.iter())
-    }
-
-    fn get_inner<'a>(&'a self, name: &'a str, visited: &mut Vec<String>) -> Option<T::GetType> {
-        if visited.iter().any(|x| *x == name) {
-            return None;
-        }
-
-        visited.push(name.to_owned());
-        let pos = self.names.iter().position(|x| x == name)?;
-        let result = self.storage[pos].get(|name| self.get_inner(name, visited))?;
-        visited.pop().unwrap();
-        Some(result)
-    }
-}
-
-impl<T: StorageElem> Eguiable for StorageWithNames<T> {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed = WhatChanged::default();
-        let mut to_delete = None;
-        let mut to_move_up = None;
-        let mut to_move_down = None;
-        let storage = &mut self.storage;
-        let names = &mut self.names;
-        let len = storage.len();
-        for (pos, elem) in storage.iter_mut().enumerate() {
-            data.pos = pos;
-
-            let errors_count =
-                elem.errors_count(pos, data) + names[..pos].contains(&names[pos]) as usize;
-            CollapsingHeader::new(if errors_count > 0 {
-                format!("{} ({} err)", names[pos], errors_count)
-            } else {
-                names[pos].to_owned()
-            })
-            .id_source(pos)
-            .show(ui, |ui| {
-                let previous = names[pos].clone();
-                ui.horizontal(|ui| {
-                    egui_label(ui, "Name:", 45.);
-                    ui.put(
-                        Rect::from_min_size(
-                            ui.min_rect().min + egui::vec2(49., 0.),
-                            egui::vec2(ui.available_width() - 120., 0.),
-                        ),
-                        TextEdit::singleline(&mut names[pos]),
-                    );
-                    if ui
-                        .add(
-                            Button::new("⏶")
-                                .text_color(ui.visuals().hyperlink_color)
-                                .enabled(pos != 0),
-                        )
-                        .clicked()
-                    {
-                        to_move_up = Some(pos);
-                    }
-                    if ui
-                        .add(
-                            Button::new("⏷")
-                                .text_color(ui.visuals().hyperlink_color)
-                                .enabled(pos + 1 != len),
-                        )
-                        .clicked()
-                    {
-                        to_move_down = Some(pos);
-                    }
-                    if ui
-                        .add(Button::new("Delete").text_color(Color32::RED))
-                        .clicked()
-                    {
-                        to_delete = Some(pos);
-                    }
-                });
-                if names[..pos].contains(&names[pos]) {
-                    ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
-                        ui.add(Label::new("Error: ").text_color(Color32::RED));
-                        ui.label(format!("name '{}' already used", names[pos]));
-                    });
-                }
-                changed.shader |= previous != names[pos];
-
-                changed |= elem.egui(ui, data);
-            });
-        }
-        if let Some(pos) = to_delete {
-            changed.shader = true;
-            self.remove(pos);
-        } else if let Some(pos) = to_move_up {
-            self.storage.swap(pos, pos - 1);
-            self.names.swap(pos, pos - 1);
-        } else if let Some(pos) = to_move_down {
-            self.storage.swap(pos, pos + 1);
-            self.names.swap(pos, pos + 1);
-        }
-        if ui
-            .add(Button::new("Add").text_color(Color32::GREEN))
-            .clicked()
-        {
-            self.add(format!("_{}", self.names.len()), Default::default());
-        }
-        changed
-    }
-}
-
-impl<T: StorageElem> ErrorsCount for StorageWithNames<T> {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
-        self.storage
-            .iter()
-            .enumerate()
-            .map(|(pos, x)| {
-                data.pos = pos;
-                x.errors_count(pos, data) + self.names[..pos].contains(&self.names[pos]) as usize
-            })
-            .sum()
     }
 }
 
@@ -771,8 +811,8 @@ impl ErrorsCount for MaterialComboBox {
 impl StorageElem for MaterialComboBox {
     type GetType = Material;
 
-    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, _: F) -> Option<Self::GetType> {
-        Some(self.0.clone())
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, _: F) -> GetEnum<Self::GetType> {
+        GetEnum::Ok(self.0.clone())
     }
 
     fn defaults() -> (Vec<String>, Vec<Self>) {
@@ -986,8 +1026,8 @@ impl ErrorsCount for LibraryCode {
 impl StorageElem for LibraryCode {
     type GetType = LibraryCode;
 
-    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, _: F) -> Option<Self::GetType> {
-        Some(self.clone())
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, _: F) -> GetEnum<Self::GetType> {
+        GetEnum::Ok(self.clone())
     }
 
     fn defaults() -> (Vec<String>, Vec<Self>) {
@@ -1082,7 +1122,7 @@ return SceneIntersection(black_M, SurfaceIntersection(true, t, u, v, n));"#
 // Scene object
 // ----------------------------------------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Ord, PartialOrd)]
 pub struct MatrixName(String);
 
 impl MatrixName {
@@ -1399,8 +1439,8 @@ impl ErrorsCount for ObjectComboBox {
 impl StorageElem for ObjectComboBox {
     type GetType = Object;
 
-    fn get<F: FnMut(&str) -> Option<Self::GetType>>(&self, _: F) -> Option<Self::GetType> {
-        Some(self.0.clone())
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(&self, _: F) -> GetEnum<Self::GetType> {
+        GetEnum::Ok(self.0.clone())
     }
 
     fn defaults() -> (Vec<String>, Vec<Self>) {
@@ -1506,6 +1546,9 @@ impl Scene {
                 // *self = old.into();
                 *self = serde_json::from_str(&s).unwrap();
                 changed.shader = true;
+                data.errors = Default::default();
+                data.show_error_window = false;
+                data.names = self.matrices.names.clone();
             }
             if ui.button("Load monoportal").clicked() {
                 let s = include_str!("../scene_monoportal_offset.json");
@@ -1513,6 +1556,9 @@ impl Scene {
                 // *self = old.into();
                 *self = serde_json::from_str(&s).unwrap();
                 changed.shader = true;
+                data.errors = Default::default();
+                data.show_error_window = false;
+                data.names = self.matrices.names.clone();
             }
             if ui
                 .add(Button::new("Recompile").enabled(*should_recompile))
@@ -1523,7 +1569,7 @@ impl Scene {
                         material = Some(Ok(m));
                         *should_recompile = false;
                         changed.uniform = true;
-                        data.errors = None;
+                        data.errors = Default::default();
                         data.show_error_window = false;
                     }
                     Err(err) => {
@@ -1618,12 +1664,7 @@ impl Scene {
             changed |= self.library.egui(ui, data);
         });
 
-        if let Some(local_errors) = data
-            .errors
-            .as_ref()
-            .and_then(|map| map.get(&ErrId::default()))
-            .cloned()
-        {
+        if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
             ui.horizontal(|ui| {
                 ui.label("Other errors:");
                 if ui.button("Show full code and errors").clicked() {
@@ -1643,12 +1684,7 @@ impl ErrorsCount for Scene {
             + self.objects.errors_count(0, data)
             + self.materials.errors_count(0, data)
             + self.library.errors_count(0, data)
-            + if let Some(local_errors) = data
-                .errors
-                .as_ref()
-                .and_then(|map| map.get(&ErrId::default()))
-                .cloned()
-            {
+            + if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
                 local_errors.len()
             } else {
                 0
@@ -1662,7 +1698,7 @@ impl ErrorsCount for Scene {
 
 pub trait UniformStruct {
     fn uniforms(&self) -> Vec<(String, UniformType)>;
-    fn set_uniforms(&self, material: macroquad::material::Material);
+    fn set_uniforms(&self, material: macroquad::material::Material, data: &mut Data);
 }
 
 impl UniformStruct for Scene {
@@ -1714,31 +1750,48 @@ impl UniformStruct for Scene {
         result
     }
 
-    fn set_uniforms(&self, material: macroquad::material::Material) {
+    fn set_uniforms(&self, material: macroquad::material::Material, data: &mut Data) {
+        data.matrix_recursion_error.clear();
+        macro_rules! local_try {
+            ($a:expr, $c:ident, $b: expr) => {
+                match self.matrices.get(&$a.0) {
+                    GetEnum::Ok($c) => {
+                        *data
+                            .matrix_recursion_error
+                            .entry($a.clone())
+                            .or_insert(false) = false;
+                        $b
+                    }
+                    GetEnum::Recursion => {
+                        *data
+                            .matrix_recursion_error
+                            .entry($a.clone())
+                            .or_insert(false) = true;
+                    }
+                    _ => {}
+                }
+            };
+        }
         use Object::*;
         use ObjectType::*;
         for (_, object) in self.objects.iter() {
             match &object.0 {
                 DebugMatrix(matrix) => {
-                    if let Some(m) = self.matrices.get(&matrix.0) {
+                    local_try!(matrix, m, {
                         material.set_uniform(&matrix.normal_name(), m);
                         material.set_uniform(&matrix.inverse_name(), m.inverse());
-                    }
+                    })
                 }
-                Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => {
-                    match kind {
-                        Simple(matrix) => {
-                            if let Some(m) = self.matrices.get(&matrix.0) {
-                                material.set_uniform(&matrix.normal_name(), m);
-                                material.set_uniform(&matrix.inverse_name(), m.inverse());
-                            } else {
-                                // todo add error processing in this case
-                            }
-                        }
-                        Portal(a, b) => {
-                            if let Some((ma, mb)) =
-                                self.matrices.get(&a.0).zip(self.matrices.get(&b.0))
-                            {
+                Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
+                    Simple(matrix) => {
+                        local_try!(matrix, m, {
+                            material.set_uniform(&matrix.normal_name(), m);
+                            material.set_uniform(&matrix.inverse_name(), m.inverse());
+                        })
+                    }
+                    Portal(a, b) => {
+                        local_try!(a, ma, {
+                            local_try!(b, mb, {
                                 material.set_uniform(&a.normal_name(), ma);
                                 material.set_uniform(&a.inverse_name(), ma.inverse());
                                 material.set_uniform(&b.normal_name(), mb);
@@ -1747,12 +1800,10 @@ impl UniformStruct for Scene {
                                 if a != b {
                                     material.set_uniform(&b.teleport_to_name(a), ma * mb.inverse());
                                 }
-                            } else {
-                                // todo add error processing in this case
-                            }
-                        }
+                            })
+                        })
                     }
-                }
+                },
             }
         }
     }
@@ -2413,12 +2464,6 @@ enum Uniform {
 
     FixedBool(UniformName, bool),
     FreeBool(UniformName, bool),
-}
-
-enum ParametrizationBool {
-    Fixed(bool),
-    Configurable(UniformName), // must be bool
-    Progress(UniformName), // must be f32 in range 0..1
 }
 
 enum ParametrizationFloat {

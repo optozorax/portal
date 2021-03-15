@@ -164,10 +164,14 @@ struct Window {
 
     edit_scene_opened: bool,
     camera_settings_opened: bool,
+    render_options_opened: bool,
 
     error_message: Option<(String, String)>,
 
     data: Data,
+
+    offset_after_material: f32,
+    render_depth: i32,
 }
 
 impl Window {
@@ -179,7 +183,8 @@ impl Window {
             crate::miniquad::error!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
             std::process::exit(1)
         });
-        scene.set_uniforms(material);
+        let mut data = Default::default();
+        scene.set_uniforms(material, &mut data);
         Window {
             should_recompile: false,
             scene,
@@ -189,10 +194,14 @@ impl Window {
 
             edit_scene_opened: true,
             camera_settings_opened: false,
+            render_options_opened: false,
 
             error_message: None,
 
-            data: Default::default(),
+            data,
+
+            offset_after_material: 0.0005,
+            render_depth: 100,
         }
     }
 
@@ -211,7 +220,9 @@ impl Window {
                 if ui.button("Camera settings").clicked() {
                     self.camera_settings_opened = true;
                 }
-                ui.button("Rendering options").clicked();
+                if ui.button("Rendering options").clicked() {
+                    self.render_options_opened = true;
+                }
             });
         });
         let mut edit_scene_opened = self.edit_scene_opened;
@@ -245,7 +256,7 @@ impl Window {
                     }
                     Err(err) => {
                         self.error_message = Some((err.0, err.1));
-                        self.data.errors = Some(err.2);
+                        self.data.errors = err.2;
                     }
                 }
             }
@@ -277,34 +288,69 @@ impl Window {
                     });
             }
         }
-        let mut not_remove_export = true;
-        if let Some(to_export) = self.data.to_export.as_ref() {
-            egui::Window::new("Export scene")
-                .open(&mut not_remove_export)
-                .scroll(true)
+
+        {
+            let mut not_remove_export = true;
+            if let Some(to_export) = self.data.to_export.as_ref() {
+                egui::Window::new("Export scene")
+                    .open(&mut not_remove_export)
+                    .scroll(true)
+                    .show(ctx, |ui| {
+                        let mut clone = to_export.clone();
+                        ui.add(
+                            egui::TextEdit::multiline(&mut clone)
+                                .text_style(egui::TextStyle::Monospace),
+                        );
+                    });
+            }
+            if !not_remove_export {
+                self.data.to_export = None;
+            }
+            self.edit_scene_opened = edit_scene_opened;
+        }
+
+        {
+            let mut camera_settings_opened = self.camera_settings_opened;
+            egui::Window::new("Camera settings")
+                .open(&mut camera_settings_opened)
                 .show(ctx, |ui| {
-                    let mut clone = to_export.clone();
-                    ui.add(
-                        egui::TextEdit::multiline(&mut clone)
-                            .text_style(egui::TextStyle::Monospace),
-                    );
+                    changed |= self.cam.egui(ui);
                 });
+            self.camera_settings_opened = camera_settings_opened;
         }
-        if !not_remove_export {
-            self.data.to_export = None;
+
+        {
+            let mut render_options_opened = self.render_options_opened;
+            egui::Window::new("Render options")
+                .open(&mut render_options_opened)
+                .show(ctx, |ui| {
+                    ui.label("Offset after material:");
+                    changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
+                        const MIN: f32 = 0.0000001;
+                        const MAX: f32 = 0.1;
+                        ui.add(
+                            egui::Slider::f32(offset, MIN..=MAX)
+                                .logarithmic(true)
+                                .clamp_to_range(true)
+                                .largest_finite(MAX.into())
+                                .smallest_positive(MIN.into()),
+                        );
+                    });
+                    ui.label("(Ofsetting after ray being teleported, reflected, refracted)");
+                    ui.separator();
+                    ui.label("Render depth:");
+                    changed.uniform |= check_changed(&mut self.render_depth, |depth| {
+                        ui.add(egui::Slider::i32(depth, 0..=100).clamp_to_range(true));
+                    });
+                    ui.label("(Max count of ray bounce after portal, reflect, refract)");
+                });
+            self.render_options_opened = render_options_opened;
         }
-        self.edit_scene_opened = edit_scene_opened;
-        let mut camera_settings_opened = self.camera_settings_opened;
-        egui::Window::new("Camera settings")
-            .open(&mut camera_settings_opened)
-            .show(ctx, |ui| {
-                changed |= self.cam.egui(ui);
-            });
-        self.camera_settings_opened = camera_settings_opened;
+
         let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
 
         if changed.uniform {
-            self.scene.set_uniforms(self.material);
+            self.scene.set_uniforms(self.material, &mut self.data);
             self.set_uniforms();
             is_something_changed = true;
         }
@@ -318,9 +364,10 @@ impl Window {
         self.material
             .set_uniform("_resolution", (screen_width(), screen_height()));
         self.material.set_uniform("_camera", self.cam.get_matrix());
-        self.material.set_uniform("_ray_tracing_depth", 100);
         self.material
-            .set_uniform("_offset_after_material", 0.001f32);
+            .set_uniform("_ray_tracing_depth", self.render_depth);
+        self.material
+            .set_uniform("_offset_after_material", self.offset_after_material);
     }
 
     fn draw(&self) {
