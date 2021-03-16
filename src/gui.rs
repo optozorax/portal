@@ -33,7 +33,9 @@ pub struct Data {
     pub show_error_window: bool,
     pub description_en_edit: bool,
     pub description_ru_edit: bool,
+
     pub formulas_cache: FormulasCache,
+    pub formulas_names: Vec<String>,
 }
 
 impl Data {
@@ -119,6 +121,17 @@ pub fn egui_f32(ui: &mut Ui, value: &mut f32) -> bool {
         ui.add(
             DragValue::f32(value)
                 .speed(0.01)
+                .min_decimals(0)
+                .max_decimals(2),
+        );
+    })
+}
+
+pub fn egui_0_1(ui: &mut Ui, value: &mut f32) -> bool {
+    check_changed(value, |value| {
+        ui.add(
+            Slider::f32(value, 0.0..=1.0)
+                .clamp_to_range(true)
                 .min_decimals(0)
                 .max_decimals(2),
         );
@@ -326,7 +339,8 @@ pub trait StorageElem: Sized + Default + Eguiable + ErrorsCount {
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
         f: F,
-        data: &Data,
+        uniforms: &StorageWithNames<AnyUniformComboBox>,
+        formulas_cache: &FormulasCache,
     ) -> GetEnum<Self::GetType>;
 
     fn defaults() -> (Vec<String>, Vec<Self>);
@@ -347,9 +361,14 @@ impl<T: StorageElem> Default for StorageWithNames<T> {
 }
 
 impl<T: StorageElem> StorageWithNames<T> {
-    pub fn get(&self, name: &str, data: &Data) -> GetEnum<T::GetType> {
+    pub fn get(
+        &self,
+        name: &str,
+        uniforms: &StorageWithNames<AnyUniformComboBox>,
+        formulas_cache: &FormulasCache,
+    ) -> GetEnum<T::GetType> {
         let mut visited = vec![];
-        self.get_inner(name, &mut visited, data)
+        self.get_inner(name, &mut visited, uniforms, formulas_cache)
     }
 
     pub fn add(&mut self, name: String, t: T) {
@@ -374,7 +393,8 @@ impl<T: StorageElem> StorageWithNames<T> {
         &'a self,
         name: &'a str,
         visited: &mut Vec<String>,
-        data: &Data,
+        uniforms: &StorageWithNames<AnyUniformComboBox>,
+        formulas_cache: &FormulasCache,
     ) -> GetEnum<T::GetType> {
         if visited.iter().any(|x| *x == name) {
             return GetEnum::Recursion;
@@ -386,8 +406,11 @@ impl<T: StorageElem> StorageWithNames<T> {
         } else {
             return GetEnum::NotFound;
         };
-        let result =
-            get_try!(self.storage[pos].get(|name| self.get_inner(name, visited, data), data));
+        let result = get_try!(self.storage[pos].get(
+            |name| self.get_inner(name, visited, uniforms, formulas_cache),
+            uniforms,
+            formulas_cache
+        ));
         visited.pop().unwrap();
         GetEnum::Ok(result)
     }
@@ -609,11 +632,11 @@ impl ComboBoxChoosable for Matrix {
 impl Eguiable for Matrix {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use Matrix::*;
-        let names = &data.names;
         let mut is_changed = false;
         let mut errors_count = 0;
         match self {
             Mul { to, what } => {
+                let names = &data.names;
                 is_changed |= egui_existing_name(ui, "Mul to:", 45., to, names, &mut errors_count);
                 is_changed |= egui_existing_name(ui, "What:", 45., what, names, &mut errors_count);
             }
@@ -622,6 +645,7 @@ impl Eguiable for Matrix {
                 second_portal,
                 what,
             } => {
+                let names = &data.names;
                 is_changed |=
                     egui_existing_name(ui, "From:", 45., first_portal, names, &mut errors_count);
                 is_changed |=
@@ -670,16 +694,31 @@ impl Eguiable for Matrix {
             }
             Parametrized {
                 offset,
-                scale,
                 rotate,
                 mirror,
+                scale,
             } => {
-                todo!()
+                ui.label("Offset: ");
+                is_changed |= offset.x.egui(ui, data, "X", 0.0, |ui, x| egui_f32(ui, x));
+                is_changed |= offset.y.egui(ui, data, "Y", 0.0, |ui, x| egui_f32(ui, x));
+                is_changed |= offset.z.egui(ui, data, "Z", 0.0, |ui, x| egui_f32(ui, x));
+                ui.separator();
+                ui.label("Rotate: ");
+                is_changed |= rotate.x.egui(ui, data, "X", 0.0, |ui, x| egui_angle(ui, x));
+                is_changed |= rotate.y.egui(ui, data, "Y", 0.0, |ui, x| egui_angle(ui, x));
+                is_changed |= rotate.z.egui(ui, data, "Z", 0.0, |ui, x| egui_angle(ui, x));
+                ui.separator();
+                ui.label("Mirror: ");
+                is_changed |= mirror.x.egui(ui, data, "X", 0.0, |ui, x| egui_0_1(ui, x));
+                is_changed |= mirror.y.egui(ui, data, "Y", 0.0, |ui, x| egui_0_1(ui, x));
+                is_changed |= mirror.z.egui(ui, data, "Z", 0.0, |ui, x| egui_0_1(ui, x));
+                ui.separator();
+                is_changed |= scale.egui(ui, data, "Scale:", 1.0, |ui, x| egui_f32_positive(ui, x));
             }
         }
         if data
             .matrix_recursion_error
-            .get(&MatrixName(names[data.pos].clone()))
+            .get(&MatrixName(data.names[data.pos].clone()))
             .copied()
             .unwrap_or(false)
         {
@@ -717,7 +756,8 @@ impl StorageElem for MatrixComboBox {
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
         mut f: F,
-        data: &Data,
+        uniforms: &StorageWithNames<AnyUniformComboBox>,
+        formulas_cache: &FormulasCache,
     ) -> GetEnum<Self::GetType> {
         use Matrix::*;
         GetEnum::Ok(match &self.0 {
@@ -758,7 +798,22 @@ impl StorageElem for MatrixComboBox {
                 rotate,
                 mirror,
             } => {
-                todo!()
+                let scale = scale.get(uniforms, formulas_cache) as f32;
+                Mat4::from_scale_rotation_translation(
+                    Vec3::new(
+                        scale * (1. - 2.0 * mirror.x.get(uniforms, formulas_cache) as f32),
+                        scale * (1. - 2.0 * mirror.y.get(uniforms, formulas_cache) as f32),
+                        scale * (1. - 2.0 * mirror.z.get(uniforms, formulas_cache) as f32),
+                    ),
+                    Quat::from_rotation_x(rotate.x.get(uniforms, formulas_cache) as f32)
+                        * Quat::from_rotation_y(rotate.y.get(uniforms, formulas_cache) as f32)
+                        * Quat::from_rotation_z(rotate.z.get(uniforms, formulas_cache) as f32),
+                    Vec3::new(
+                        offset.x.get(uniforms, formulas_cache) as f32,
+                        offset.y.get(uniforms, formulas_cache) as f32,
+                        offset.z.get(uniforms, formulas_cache) as f32,
+                    ),
+                )
             }
         })
     }
@@ -772,12 +827,12 @@ impl StorageElem for MatrixComboBox {
 }
 
 impl ErrorsCount for Matrix {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
         use Matrix::*;
-        let names = &data.names;
         let mut errors_count = 0;
         match self {
             Mul { to, what } => {
+                let names = &data.names;
                 if !names.contains(to) {
                     errors_count += 1;
                 }
@@ -790,6 +845,7 @@ impl ErrorsCount for Matrix {
                 second_portal,
                 what,
             } => {
+                let names = &data.names;
                 if !names.contains(first_portal) {
                     errors_count += 1;
                 }
@@ -807,12 +863,22 @@ impl ErrorsCount for Matrix {
                 rotate,
                 mirror,
             } => {
-                todo!()
+                // todo
+                errors_count += offset.x.errors_count(pos, data)
+                    + offset.y.errors_count(pos, data)
+                    + offset.z.errors_count(pos, data);
+                errors_count += rotate.x.errors_count(pos, data)
+                    + rotate.y.errors_count(pos, data)
+                    + rotate.z.errors_count(pos, data);
+                errors_count += mirror.x.errors_count(pos, data)
+                    + mirror.y.errors_count(pos, data)
+                    + mirror.z.errors_count(pos, data);
+                errors_count += scale.errors_count(pos, data);
             }
         }
         if data
             .matrix_recursion_error
-            .get(&MatrixName(names[data.pos].clone()))
+            .get(&MatrixName(data.names[data.pos].clone()))
             .copied()
             .unwrap_or(false)
         {
@@ -921,7 +987,8 @@ impl StorageElem for MaterialComboBox {
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
         _: F,
-        _: &Data,
+        _: &StorageWithNames<AnyUniformComboBox>,
+        _: &FormulasCache,
     ) -> GetEnum<Self::GetType> {
         GetEnum::Ok(self.0.clone())
     }
@@ -1140,7 +1207,8 @@ impl StorageElem for LibraryCode {
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
         _: F,
-        _: &Data,
+        _: &StorageWithNames<AnyUniformComboBox>,
+        _: &FormulasCache,
     ) -> GetEnum<Self::GetType> {
         GetEnum::Ok(self.clone())
     }
@@ -1557,7 +1625,8 @@ impl StorageElem for ObjectComboBox {
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
         _: F,
-        _: &Data,
+        _: &StorageWithNames<AnyUniformComboBox>,
+        _: &FormulasCache,
     ) -> GetEnum<Self::GetType> {
         GetEnum::Ok(self.0.clone())
     }
@@ -1576,7 +1645,7 @@ pub struct Scene {
     description_en: String,
     description_ru: String,
 
-    uniforms: StorageWithNames<AnyUniformComboBox>,
+    pub uniforms: StorageWithNames<AnyUniformComboBox>,
 
     pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
@@ -1748,7 +1817,10 @@ impl Scene {
                     ui.spacing_mut().item_spacing.x = 0.;
                     ui.label(format!("{} = ", name));
                     use AnyUniformResult::*;
-                    match self.uniforms.get(name, data) {
+                    match self
+                        .uniforms
+                        .get(name, &self.uniforms, &data.formulas_cache)
+                    {
                         GetEnum::Ok(x) => match x {
                             Bool(b) => ui.label(b.to_string()),
                             Int(b) => ui.label(b.to_string()),
@@ -1762,6 +1834,7 @@ impl Scene {
         });
 
         data.names = self.matrices.names.clone();
+        data.formulas_names = self.uniforms.names.clone();
 
         changed |= self.matrices.rich_egui(ui, data, "Matrices");
         changed |= self.objects.rich_egui(ui, data, "Objects");
@@ -1802,11 +1875,11 @@ impl ErrorsCount for Scene {
 
 pub trait UniformStruct {
     fn uniforms(&self) -> Vec<(String, UniformType)>;
-    fn set_uniforms(&self, material: macroquad::material::Material, data: &mut Data);
+    fn set_uniforms(&self, material: macroquad::material::Material);
 }
 
-impl UniformStruct for Scene {
-    fn uniforms(&self) -> Vec<(String, UniformType)> {
+impl Scene {
+    pub fn uniforms(&self) -> Vec<(String, UniformType)> {
         use Object::*;
         use ObjectType::*;
 
@@ -1857,11 +1930,16 @@ impl UniformStruct for Scene {
         result
     }
 
-    fn set_uniforms(&self, material: macroquad::material::Material, data: &mut Data) {
+    pub fn set_uniforms(
+        &self,
+        material: macroquad::material::Material,
+        data: &mut Data,
+        uniforms: &StorageWithNames<AnyUniformComboBox>,
+    ) {
         data.matrix_recursion_error.clear();
         macro_rules! local_try {
             ($a:expr, $c:ident, $b: expr) => {
-                match self.matrices.get(&$a.0, data) {
+                match self.matrices.get(&$a.0, uniforms, &data.formulas_cache) {
                     GetEnum::Ok($c) => {
                         *data
                             .matrix_recursion_error
@@ -2565,6 +2643,9 @@ void main() {
 pub struct Formula(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FormulaName(pub String);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AnyUniform {
     Bool(bool),
     Int(i32),
@@ -2579,6 +2660,22 @@ pub enum AnyUniformResult {
     Float(f64),
 }
 
+impl From<AnyUniformResult> for f64 {
+    fn from(u: AnyUniformResult) -> f64 {
+        match u {
+            AnyUniformResult::Bool(b) => {
+                if b {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+            AnyUniformResult::Int(i) => i as f64,
+            AnyUniformResult::Float(f) => f.into(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TVec3<T> {
     pub x: T,
@@ -2588,15 +2685,75 @@ pub struct TVec3<T> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParametrizeOrNot {
-    Yes(Formula),
-    No(f64),
+    Yes(FormulaName),
+    No(f32),
+}
+
+impl ErrorsCount for ParametrizeOrNot {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        match self {
+            ParametrizeOrNot::Yes(name) => data.formulas_names.contains(&name.0) as usize,
+            ParametrizeOrNot::No { .. } => 0,
+        }
+    }
 }
 
 impl ParametrizeOrNot {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        data: &mut Data,
+        label: &str,
+        default: f32,
+        f: impl FnOnce(&mut Ui, &mut f32) -> bool,
+    ) -> bool {
+        use ParametrizeOrNot::*;
+        let mut not_found = false;
         let mut changed = false;
-        todo!();
-        WhatChanged::from_uniform(changed)
+        ui.horizontal(|ui| {
+            ui.label(label);
+            let mut current = matches!(self, Yes { .. });
+            changed |= egui_bool(ui, &mut current);
+            if changed {
+                *self = if current {
+                    Yes(FormulaName("a".to_owned()))
+                } else {
+                    No(default)
+                };
+            }
+            changed |= match self {
+                Yes(current) => {
+                    not_found = !data.formulas_names.contains(&current.0);
+                    check_changed(&mut current.0, |text| drop(ui.text_edit_singleline(text)))
+                }
+                No(float) => f(ui, float),
+            };
+        });
+        if not_found {
+            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                ui.add(Label::new("Error:").text_color(Color32::RED));
+                ui.label("uniform with this name is not found");
+            });
+        }
+        changed
+    }
+
+    pub fn get(
+        &self,
+        uniforms: &StorageWithNames<AnyUniformComboBox>,
+        formulas_cache: &FormulasCache,
+    ) -> f64 {
+        use ParametrizeOrNot::*;
+        match self {
+            Yes(f) => match uniforms.get(&f.0, uniforms, formulas_cache) {
+                GetEnum::Ok(x) => x.into(),
+                _ => {
+                    eprintln!("can't find uniform {}", f.0);
+                    0.0
+                }
+            },
+            No(f) => (*f).into(),
+        }
     }
 }
 
@@ -2778,7 +2935,8 @@ impl StorageElem for AnyUniformComboBox {
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
         mut f: F,
-        data: &Data,
+        _: &StorageWithNames<AnyUniformComboBox>,
+        formulas_cache: &FormulasCache,
     ) -> GetEnum<Self::GetType> {
         let mut cb = |name: &str, args: Vec<f64>| -> Option<f64> {
             Some(match name {
@@ -2816,17 +2974,7 @@ impl StorageElem for AnyUniformComboBox {
 
                 // Free variables
                 _ => match f(name) {
-                    GetEnum::Ok(x) => match x {
-                        AnyUniformResult::Bool(b) => {
-                            if b {
-                                1.0
-                            } else {
-                                0.0
-                            }
-                        }
-                        AnyUniformResult::Int(i) => i as f64,
-                        AnyUniformResult::Float(f) => f.into(),
-                    },
+                    GetEnum::Ok(x) => x.into(),
                     _ => None?,
                 },
             })
@@ -2838,8 +2986,8 @@ impl StorageElem for AnyUniformComboBox {
             AnyUniform::Bool(b) => GetEnum::Ok(AnyUniformResult::Bool(*b)),
             AnyUniform::Int(i) => GetEnum::Ok(AnyUniformResult::Int(*i)),
             AnyUniform::Float(f) => GetEnum::Ok(AnyUniformResult::Float(*f)),
-            AnyUniform::Formula(f) => match data.formulas_cache.get(&f.0) {
-                Some(x) => match x.eval(&data.formulas_cache.slab, &mut cb) {
+            AnyUniform::Formula(f) => match formulas_cache.get(&f.0) {
+                Some(x) => match x.eval(&formulas_cache.slab, &mut cb) {
                     Ok(x) => GetEnum::Ok(AnyUniformResult::Float(x)),
                     Err(_) => GetEnum::NotFound,
                 },

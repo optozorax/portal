@@ -231,7 +231,7 @@ impl Window {
             std::process::exit(1)
         });
         let mut data = Default::default();
-        scene.set_uniforms(material, &mut data);
+        scene.set_uniforms(material, &mut data, &scene.uniforms);
         Window {
             should_recompile: false,
             scene,
@@ -397,7 +397,8 @@ impl Window {
         let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
 
         if changed.uniform {
-            self.scene.set_uniforms(self.material, &mut self.data);
+            self.scene
+                .set_uniforms(self.material, &mut self.data, &self.scene.uniforms);
             self.set_uniforms();
             is_something_changed = true;
         }
