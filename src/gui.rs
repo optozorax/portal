@@ -125,6 +125,23 @@ pub fn egui_f32(ui: &mut Ui, value: &mut f32) -> bool {
     })
 }
 
+pub fn egui_f64(ui: &mut Ui, value: &mut f64) -> bool {
+    check_changed(value, |value| {
+        ui.add(
+            DragValue::f64(value)
+                .speed(0.01)
+                .min_decimals(0)
+                .max_decimals(2),
+        );
+    })
+}
+
+pub fn egui_i32(ui: &mut Ui, value: &mut i32) -> bool {
+    check_changed(value, |value| {
+        ui.add(DragValue::i32(value).speed(0.1));
+    })
+}
+
 pub fn egui_f32_positive(ui: &mut Ui, value: &mut f32) -> bool {
     check_changed(value, |value| {
         ui.add(
@@ -520,6 +537,12 @@ pub enum Matrix {
         rotate: Vec3,
         mirror: (bool, bool, bool),
     },
+    Parametrized {
+        offset: TVec3<ParametrizeOrNot>,
+        rotate: TVec3<ParametrizeOrNot>,
+        mirror: TVec3<ParametrizeOrNot>,
+        scale: ParametrizeOrNot,
+    },
 }
 
 impl Default for Matrix {
@@ -535,7 +558,7 @@ impl Default for Matrix {
 
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
-        &["Simple", "Mul", "Teleport"]
+        &["Simple", "Mul", "Teleport", "Param."]
     }
     fn get_number(&self) -> usize {
         use Matrix::*;
@@ -543,6 +566,7 @@ impl ComboBoxChoosable for Matrix {
             Simple { .. } => 0,
             Mul { .. } => 1,
             Teleport { .. } => 2,
+            Parametrized { .. } => 3,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -559,6 +583,24 @@ impl ComboBoxChoosable for Matrix {
                 what: "id".to_owned(),
             },
             0 => Self::default(),
+            3 => Parametrized {
+                offset: TVec3 {
+                    x: ParametrizeOrNot::No(0.),
+                    y: ParametrizeOrNot::No(0.),
+                    z: ParametrizeOrNot::No(0.),
+                },
+                rotate: TVec3 {
+                    x: ParametrizeOrNot::No(0.),
+                    y: ParametrizeOrNot::No(0.),
+                    z: ParametrizeOrNot::No(0.),
+                },
+                mirror: TVec3 {
+                    x: ParametrizeOrNot::No(0.),
+                    y: ParametrizeOrNot::No(0.),
+                    z: ParametrizeOrNot::No(0.),
+                },
+                scale: ParametrizeOrNot::No(1.),
+            },
             _ => unreachable!(),
         };
     }
@@ -626,6 +668,14 @@ impl Eguiable for Matrix {
                         ui.end_row();
                     });
             }
+            Parametrized {
+                offset,
+                scale,
+                rotate,
+                mirror,
+            } => {
+                todo!()
+            }
         }
         if data
             .matrix_recursion_error
@@ -667,7 +717,7 @@ impl StorageElem for MatrixComboBox {
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
         mut f: F,
-        _: &Data,
+        data: &Data,
     ) -> GetEnum<Self::GetType> {
         use Matrix::*;
         GetEnum::Ok(match &self.0 {
@@ -702,6 +752,14 @@ impl StorageElem for MatrixComboBox {
                     * Quat::from_rotation_z(rotate.z),
                 *offset,
             ),
+            Parametrized {
+                offset,
+                scale,
+                rotate,
+                mirror,
+            } => {
+                todo!()
+            }
         })
     }
 
@@ -743,6 +801,14 @@ impl ErrorsCount for Matrix {
                 }
             }
             Simple { .. } => {}
+            Parametrized {
+                offset,
+                scale,
+                rotate,
+                mirror,
+            } => {
+                todo!()
+            }
         }
         if data
             .matrix_recursion_error
@@ -1510,7 +1576,7 @@ pub struct Scene {
     description_en: String,
     description_ru: String,
 
-    uniforms: StorageWithNames<Parametrization>,
+    uniforms: StorageWithNames<AnyUniformComboBox>,
 
     pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
@@ -1681,8 +1747,13 @@ impl Scene {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
                     ui.label(format!("{} = ", name));
+                    use AnyUniformResult::*;
                     match self.uniforms.get(name, data) {
-                        GetEnum::Ok(x) => ui.label(x.to_string()),
+                        GetEnum::Ok(x) => match x {
+                            Bool(b) => ui.label(b.to_string()),
+                            Int(b) => ui.label(b.to_string()),
+                            Float(b) => ui.label(b.to_string()),
+                        },
                         GetEnum::NotFound => ui.label("NotFound"),
                         GetEnum::Recursion => ui.label("Recursion"),
                     }
@@ -2490,13 +2561,25 @@ void main() {
 // Processing formulase and parametrized uniforms
 // ----------------------------------------------------------------------------------------------------------
 
-pub struct UniformName(pub String);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Formula(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Formula {
-    s: String,
+pub enum AnyUniform {
+    Bool(bool),
+    Int(i32),
+    Float(f64),
+    Formula(Formula),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AnyUniformResult {
+    Bool(bool),
+    Int(i32),
+    Float(f64),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TVec3<T> {
     pub x: T,
     pub y: T,
@@ -2504,61 +2587,36 @@ pub struct TVec3<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Parametrization {
-    value: f32,
-    formula: Formula,
-}
-
 pub enum ParametrizeOrNot {
-    Yes(UniformName),
-    No(f32),
+    Yes(Formula),
+    No(f64),
 }
 
-/*
-enum Matrix {
-    ...
-    Parametrized {
-        offset: TVec3<ParametrizeOrNot>,
-        rotate: TVec3<ParametrizeOrNot>,
-        mirror: TVec3<ParametrizeOrNot>,
-        scale: ParametrizeOrNot,
-    }
-}
-*/
-
-impl Default for Parametrization {
-    fn default() -> Self {
-        Self {
-            value: 0.0,
-            formula: Formula { s: "0".to_owned() },
-        }
-    }
-}
-
-impl Eguiable for Parametrization {
+impl ParametrizeOrNot {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         let mut changed = false;
-        let mut edit = EditResult::default();
-        ui.horizontal(|ui| {
-            changed |= egui_f32(ui, &mut self.value);
-            ui.label("+");
-            edit = data.formulas_cache.with_edit(&mut self.formula.s, |text| {
-                ui.add(TextEdit::singleline(text).text_style(TextStyle::Monospace));
-            });
-            changed |= edit.changed;
+        todo!();
+        WhatChanged::from_uniform(changed)
+    }
+}
+
+impl Default for Formula {
+    fn default() -> Self {
+        Formula("sin(pi())".to_owned())
+    }
+}
+
+impl Eguiable for Formula {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+        let edit = data.formulas_cache.with_edit(&mut self.0, |text| {
+            ui.add(TextEdit::singleline(text).text_style(TextStyle::Monospace));
         });
         if edit.has_errors {
             ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
                 ui.add(Label::new("Error with this formula").text_color(Color32::RED));
             });
         }
-        WhatChanged::from_uniform(changed)
-    }
-}
-
-impl ErrorsCount for Parametrization {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
-        data.formulas_cache.has_errors(&self.formula.s) as usize
+        WhatChanged::from_uniform(edit.changed)
     }
 }
 
@@ -2641,29 +2699,152 @@ impl FormulasCache {
     }
 }
 
-impl StorageElem for Parametrization {
-    type GetType = f32;
+impl ComboBoxChoosable for AnyUniform {
+    fn variants() -> &'static [&'static str] {
+        &["bool", "int", "float", "formula"]
+    }
+    fn get_number(&self) -> usize {
+        use AnyUniform::*;
+        match self {
+            Bool { .. } => 0,
+            Int { .. } => 1,
+            Float { .. } => 2,
+            Formula { .. } => 3,
+        }
+    }
+    fn set_number(&mut self, number: usize) {
+        use AnyUniform::*;
+        *self = match number {
+            0 => Bool(false),
+            1 => Int(0),
+            2 => Float(0.0),
+            3 => Formula(Default::default()),
+            _ => unreachable!(),
+        };
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AnyUniformComboBox(pub AnyUniform);
+
+impl Default for AnyUniform {
+    fn default() -> Self {
+        AnyUniform::Formula(Default::default())
+    }
+}
+
+impl ErrorsCount for AnyUniform {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        match self {
+            AnyUniform::Formula(text) => data.formulas_cache.has_errors(&text.0) as usize,
+            _ => 0,
+        }
+    }
+}
+
+impl ErrorsCount for AnyUniformComboBox {
+    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
+        self.0.errors_count(pos, data)
+    }
+}
+
+impl Eguiable for AnyUniform {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+        use AnyUniform::*;
+        let mut result = WhatChanged::default();
+        ui.centered_and_justified(|ui| match self {
+            Bool(x) => result.uniform |= egui_bool(ui, x),
+            Int(x) => result.uniform |= egui_i32(ui, x),
+            Float(x) => result.uniform |= egui_f64(ui, x),
+            Formula(x) => result |= x.egui(ui, data),
+        });
+        result
+    }
+}
+
+impl Eguiable for AnyUniformComboBox {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+        let mut changed =
+            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
+        ui.separator();
+        changed |= self.0.egui(ui, data);
+        changed
+    }
+}
+
+impl StorageElem for AnyUniformComboBox {
+    type GetType = AnyUniformResult;
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
         mut f: F,
         data: &Data,
     ) -> GetEnum<Self::GetType> {
-        let mut cb = |name: &str, _| -> Option<f64> {
-            match f(name) {
-                GetEnum::Ok(x) => Some(x.into()),
-                _ => None,
-            }
+        let mut cb = |name: &str, args: Vec<f64>| -> Option<f64> {
+            Some(match name {
+                // Custom functions
+                "if" => {
+                    if *args.get(0)? == 1.0 {
+                        *args.get(1)?
+                    } else {
+                        *args.get(2)?
+                    }
+                }
+                "and" => {
+                    if *args.get(0)? == 1.0 && *args.get(1)? == 1.0 {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                }
+                "or" => {
+                    if *args.get(0)? == 1.0 || *args.get(1)? == 1.0 {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                }
+                "not" => {
+                    if *args.get(0)? == 1.0 {
+                        0.0
+                    } else {
+                        1.0
+                    }
+                }
+                "deg2rad" => args.get(0)? / 180. * std::f64::consts::PI,
+                "rad2deg" => args.get(0)? * 180. / std::f64::consts::PI,
+
+                // Free variables
+                _ => match f(name) {
+                    GetEnum::Ok(x) => match x {
+                        AnyUniformResult::Bool(b) => {
+                            if b {
+                                1.0
+                            } else {
+                                0.0
+                            }
+                        }
+                        AnyUniformResult::Int(i) => i as f64,
+                        AnyUniformResult::Float(f) => f.into(),
+                    },
+                    _ => None?,
+                },
+            })
         };
 
         use fasteval::*;
 
-        match data.formulas_cache.get(&self.formula.s) {
-            Some(x) => match x.eval(&data.formulas_cache.slab, &mut cb) {
-                Ok(x) => GetEnum::Ok(self.value + x as f32),
-                Err(_) => GetEnum::NotFound,
+        match &self.0 {
+            AnyUniform::Bool(b) => GetEnum::Ok(AnyUniformResult::Bool(*b)),
+            AnyUniform::Int(i) => GetEnum::Ok(AnyUniformResult::Int(*i)),
+            AnyUniform::Float(f) => GetEnum::Ok(AnyUniformResult::Float(*f)),
+            AnyUniform::Formula(f) => match data.formulas_cache.get(&f.0) {
+                Some(x) => match x.eval(&data.formulas_cache.slab, &mut cb) {
+                    Ok(x) => GetEnum::Ok(AnyUniformResult::Float(x)),
+                    Err(_) => GetEnum::NotFound,
+                },
+                None => GetEnum::NotFound,
             },
-            None => GetEnum::NotFound,
         }
     }
 
