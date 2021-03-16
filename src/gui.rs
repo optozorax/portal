@@ -1856,22 +1856,6 @@ impl Scene {
                 let s = serde_json::to_string(self).unwrap();
                 data.to_export = Some(s);
             }
-            if ui.button("Load mobius").clicked() {
-                let s = include_str!("../scene.json");
-                // let old: OldScene = serde_json::from_str(&s).unwrap();
-                // *self = old.into();
-                *self = serde_json::from_str(&s).unwrap();
-                self.init(data);
-                changed.shader = true;
-            }
-            if ui.button("Load monoportal").clicked() {
-                let s = include_str!("../scene_monoportal_offset.json");
-                // let old: OldScene = serde_json::from_str(&s).unwrap();
-                // *self = old.into();
-                *self = serde_json::from_str(&s).unwrap();
-                self.init(data);
-                changed.shader = true;
-            }
             if ui
                 .add(Button::new("Recompile").enabled(*should_recompile))
                 .clicked()

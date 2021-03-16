@@ -27,8 +27,8 @@ impl RotateAroundCam {
     fn new() -> Self {
         Self {
             look_at: Vec3::new(0., 0., 0.),
-            alpha: 0.,
-            beta: 5. * PI / 7.,
+            alpha: deg2rad(270.),
+            beta: deg2rad(117.),
             r: 3.5,
             previous_mouse: Vec2::default(),
 
@@ -219,12 +219,24 @@ struct Window {
 
     offset_after_material: f32,
     render_depth: i32,
+
+    available_scenes: Vec<(String, String)>,
 }
 
 impl Window {
     async fn new() -> Self {
+        let available_scenes: Vec<(String, String)> = vec![
+            ("Monoportal", include_str!("../scenes/monoportal_offset.json")),
+            ("Misc", include_str!("../scenes/misc.json")),
+        ].into_iter().map(|(a, b)| (a.to_owned(), b.to_owned())).collect();
+
+        let default_scene = 0;
+
         let mut data = Default::default();
-        let scene = Scene::new(&mut data);
+
+        let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].1).unwrap();
+        scene.init(&mut data);
+
         let material = scene.get_new_material().unwrap_or_else(|err| {
             println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
             dbg!(&err);
@@ -249,6 +261,8 @@ impl Window {
 
             offset_after_material: 0.0005,
             render_depth: 100,
+
+            available_scenes,
         }
     }
 
@@ -260,6 +274,19 @@ impl Window {
         egui::TopPanel::top("my top").show(ctx, |ui| {
             use egui::menu;
             menu::bar(ui, |ui| {
+                menu::menu(ui, "Load", |ui| {
+                    for (name, text) in &self.available_scenes {
+                        if ui.button(name).clicked() {
+                            let s = text;
+                            // let old: OldScene = serde_json::from_str(&s).unwrap();
+                            // *self = old.into();
+                            self.scene = serde_json::from_str(&s).unwrap();
+                            self.scene.init(&mut self.data);
+                            self.material = self.scene.get_new_material().unwrap();
+                            changed.uniform = true;
+                        }    
+                    }
+                });
                 ui.button("Control scene").clicked();
                 if ui.button("Edit scene").clicked() {
                     self.edit_scene_opened = true;
@@ -290,7 +317,7 @@ impl Window {
                 self.scene
                     .egui(ui, &mut self.data, &mut self.should_recompile);
 
-            changed = changed1;
+            changed |= changed1;
 
             if changed.shader {
                 self.should_recompile = true;
