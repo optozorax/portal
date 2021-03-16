@@ -100,16 +100,54 @@ pub fn egui_bool(ui: &mut Ui, flag: &mut bool) -> bool {
 }
 
 pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
-    let mut current = rad2deg(*angle) as i32;
+    let mut current = rad2deg(*angle);
     let previous = current;
     ui.add(
-        DragValue::i32(&mut current)
-            .speed(1)
-            .suffix("°")
-            .clamp_range(0.0..=360.0),
+        DragValue::from_get_set(|v| {
+            if let Some(v) = v {
+                if v > 360. {
+                    current = 360. - (v as f32 % 360.);
+                } else if v < 0. {
+                    current = 360. + (v as f32 % 360.);
+                } else {
+                    current = v as f32;
+                }
+            }
+            current.into()
+        })
+        .speed(1)
+        .suffix("°"),
     );
     if previous != current {
-        *angle = deg2rad(current as f32);
+        *angle = deg2rad(current);
+        true
+    } else {
+        false
+    }
+}
+
+pub fn egui_angle_f64(ui: &mut Ui, angle: &mut f64) -> bool {
+    use std::f64::consts::PI;
+    let mut current = *angle / PI * 180.;
+    let previous = current;
+    ui.add(
+        DragValue::from_get_set(|v| {
+            if let Some(v) = v {
+                if v > 360. {
+                    current = 360. - (v % 360.);
+                } else if v < 0. {
+                    current = 360. + (v % 360.);
+                } else {
+                    current = v;
+                }
+            }
+            current.into()
+        })
+        .speed(1)
+        .suffix("°"),
+    );
+    if previous != current {
+        *angle = *angle * PI / 180.;
         true
     } else {
         false
@@ -348,7 +386,7 @@ pub trait StorageElem: Sized + Default + Eguiable + ErrorsCount {
 
 // Checks if this name is used, sends name to
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StorageWithNames<T: StorageElem> {
+pub struct StorageWithNames<T> {
     names: Vec<String>,
     storage: Vec<T>,
 }
@@ -1707,9 +1745,19 @@ pub struct Scene {
 
 /*
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum OldAnyUniform {
+    Bool(bool),
+    Int(i32),
+    Float(f64),
+    Formula(Formula),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OldScene {
     description_en: String,
     description_ru: String,
+
+    pub uniforms: StorageWithNames<OldAnyUniform>,
 
     pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
@@ -1724,7 +1772,22 @@ impl From<OldScene> for Scene {
             description_en: old.description_en,
             description_ru: old.description_ru,
 
-            uniforms: Default::default(),
+            uniforms: StorageWithNames {
+                names: old.uniforms.names,
+                storage: old
+                    .uniforms
+                    .storage
+                    .into_iter()
+                    .map(|x| {
+                        AnyUniformComboBox(match x {
+                            OldAnyUniform::Bool(b) => AnyUniform::Bool(b),
+                            OldAnyUniform::Int(b) => AnyUniform::int(b),
+                            OldAnyUniform::Float(b) => AnyUniform::float(b),
+                            OldAnyUniform::Formula(b) => AnyUniform::Formula(b),
+                        })
+                    })
+                    .collect(),
+            },
 
             matrices: old.matrices,
             objects: old.objects,
@@ -1978,8 +2041,9 @@ impl Scene {
             let name = format!("{}_u", name);
             match uniform.0 {
                 AnyUniform::Bool(_) => result.push((name, UniformType::Int1)),
-                AnyUniform::Int(_) => result.push((name, UniformType::Int1)),
-                AnyUniform::Float(_) => result.push((name, UniformType::Float1)),
+                AnyUniform::Int { .. } => result.push((name, UniformType::Int1)),
+                AnyUniform::Float { .. } => result.push((name, UniformType::Float1)),
+                AnyUniform::Angle { .. } => result.push((name, UniformType::Float1)),
                 AnyUniform::Formula(_) => result.push((name, UniformType::Float1)),
             }
         }
@@ -2744,9 +2808,36 @@ pub struct FormulaName(pub String);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AnyUniform {
     Bool(bool),
-    Int(i32),
-    Float(f64),
+    Int {
+        min: Option<i32>,
+        max: Option<i32>,
+        value: i32,
+    },
+    Float {
+        min: Option<f64>,
+        max: Option<f64>,
+        value: f64,
+    },
+    Angle(f64),
     Formula(Formula),
+}
+
+impl AnyUniform {
+    pub fn int(int: i32) -> AnyUniform {
+        AnyUniform::Int {
+            min: None,
+            max: None,
+            value: int,
+        }
+    }
+
+    pub fn float(float: f64) -> AnyUniform {
+        AnyUniform::Float {
+            min: None,
+            max: None,
+            value: float,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2962,7 +3053,7 @@ impl FormulasCache {
 
 impl ComboBoxChoosable for AnyUniform {
     fn variants() -> &'static [&'static str] {
-        &["bool", "int", "float", "formula"]
+        &["bool", "int", "float", "angle", "formula"]
     }
     fn get_number(&self) -> usize {
         use AnyUniform::*;
@@ -2970,7 +3061,8 @@ impl ComboBoxChoosable for AnyUniform {
             Bool { .. } => 0,
             Int { .. } => 1,
             Float { .. } => 2,
-            Formula { .. } => 3,
+            Angle { .. } => 3,
+            Formula { .. } => 4,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -2979,26 +3071,39 @@ impl ComboBoxChoosable for AnyUniform {
         *self = match number {
             0 => Bool(match self {
                 Bool(b) => *b,
-                Int(i) => i >= &mut 1,
-                Float(f) => f >= &mut 1.0,
+                Int { value, .. } => value >= &mut 1,
+                Float { value, .. } => value >= &mut 1.0,
+                Angle(a) => a >= &mut 1.0,
                 Formula { .. } => false,
             }),
-            1 => Int(match self {
-                Bool(b) => *b as i32,
-                Int(i) => *i,
-                Float(f) => *f as i32,
-                Formula { .. } => 0,
-            }),
-            2 => Float(match self {
-                Bool(b) => (*b as i32) as f64,
-                Int(i) => *i as f64,
-                Float(f) => *f,
+            1 => match self {
+                Bool(b) => AnyUniform::int(*b as i32),
+                Int { .. } => self.clone(),
+                Float { value, .. } => AnyUniform::int(*value as i32),
+                Angle(a) => AnyUniform::int(rad2deg(*a as f32) as i32),
+                Formula { .. } => AnyUniform::int(0),
+            },
+            2 => match self {
+                Bool(b) => AnyUniform::float(*b as i32 as f64),
+                Int { value, .. } => AnyUniform::float(*value as f64),
+                Angle(a) => AnyUniform::float(*a),
+                Float { .. } => self.clone(),
+                Formula { .. } => AnyUniform::float(0.0),
+            },
+            3 => Angle(match self {
+                Bool(b) => (*b as i32 as f64) * std::f64::consts::PI,
+                Int { value, .. } => {
+                    macroquad::math::clamp(deg2rad(*value as f32), 0., std::f32::consts::TAU) as f64
+                }
+                Angle(a) => *a,
+                Float { value, .. } => macroquad::math::clamp(*value, 0., std::f64::consts::TAU),
                 Formula { .. } => 0.0,
             }),
-            3 => Formula(match self {
+            4 => Formula(match self {
                 Bool(b) => F((*b as i32).to_string()),
-                Int(i) => F(i.to_string()),
-                Float(f) => F(f.to_string()),
+                Int { value, .. } => F(value.to_string()),
+                Angle(a) => F(a.to_string()),
+                Float { value, .. } => F(value.to_string()),
                 Formula(f) => f.clone(),
             }),
             _ => unreachable!(),
@@ -3034,12 +3139,213 @@ impl Eguiable for AnyUniform {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         use AnyUniform::*;
         let mut result = WhatChanged::default();
-        ui.centered_and_justified(|ui| match self {
-            Bool(x) => result.uniform |= egui_bool(ui, x),
-            Int(x) => result.uniform |= egui_i32(ui, x),
-            Float(x) => result.uniform |= egui_f64(ui, x),
-            Formula(x) => result |= x.egui(ui, data),
-        });
+        match self {
+            Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
+            Int { min, max, value } => {
+                ui.horizontal(|ui| {
+                    let mut current = min.is_some();
+                    if let Some(min) = min {
+                        ui.checkbox(&mut current, "min");
+                        result.uniform |= check_changed(min, |min| {
+                            ui.add(
+                                DragValue::from_get_set(|v| {
+                                    if let Some(v) = v {
+                                        if v as i32 > *value {
+                                            *min = *value;
+                                        } else {
+                                            *min = v as i32;
+                                        }
+                                    }
+                                    *min as f64
+                                })
+                                .speed(1),
+                            );
+                        });
+                    } else {
+                        ui.checkbox(&mut current, "min");
+                        ui.label("-inf");
+                    }
+                    if current && min.is_none() {
+                        result.uniform = true;
+                        let min_i = -100;
+                        *min = Some(if *value < min_i { *value } else { min_i });
+                    }
+                    if !current && min.is_some() {
+                        result.uniform = true;
+                        *min = None;
+                    }
+                    ui.separator();
+                    let mut current = max.is_some();
+                    if let Some(max) = max {
+                        ui.checkbox(&mut current, "max");
+                        result.uniform |= check_changed(max, |max| {
+                            ui.add(
+                                DragValue::from_get_set(|v| {
+                                    if let Some(v) = v {
+                                        if (v as i32) < *value {
+                                            *max = *value;
+                                        } else {
+                                            *max = v as i32;
+                                        }
+                                    }
+                                    *max as f64
+                                })
+                                .speed(1),
+                            );
+                        });
+                    } else {
+                        ui.checkbox(&mut current, "max");
+                        ui.label("+inf");
+                    }
+                    if current && max.is_none() {
+                        result.uniform = true;
+                        let max_i = 100;
+                        *max = Some(if *value > max_i { *value } else { max_i });
+                    }
+                    if !current && max.is_some() {
+                        result.uniform = true;
+                        *max = None;
+                    }
+                    ui.separator();
+                    ui.centered_and_justified(|ui| {
+                        if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
+                            result.uniform |= check_changed(value, |value| {
+                                ui.add(Slider::i32(value, *min..=*max).clamp_to_range(true));
+                            })
+                        } else {
+                            result.uniform |= check_changed(value, |value| {
+                                ui.add(
+                                    DragValue::from_get_set(|v| {
+                                        if let Some(v) = v {
+                                            *value = v as i32;
+                                            if let Some(min) = min {
+                                                if value < min {
+                                                    *value = *min;
+                                                }
+                                            }
+                                            if let Some(max) = max {
+                                                if value > max {
+                                                    *value = *max;
+                                                }
+                                            }
+                                        }
+                                        (*value).into()
+                                    })
+                                    .speed(1),
+                                );
+                            });
+                        }
+                    });
+                });
+            }
+            Angle(a) => {
+                drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
+            }
+            Float { min, max, value } => {
+                ui.horizontal(|ui| {
+                    let mut current = min.is_some();
+                    if let Some(min) = min {
+                        ui.checkbox(&mut current, "min");
+                        result.uniform |= check_changed(min, |min| {
+                            ui.add(
+                                DragValue::from_get_set(|v| {
+                                    if let Some(v) = v {
+                                        if v > *value {
+                                            *min = *value;
+                                        } else {
+                                            *min = v;
+                                        }
+                                    }
+                                    *min as f64
+                                })
+                                .speed(0.01)
+                                .min_decimals(0)
+                                .max_decimals(2),
+                            );
+                        });
+                    } else {
+                        ui.checkbox(&mut current, "min");
+                        ui.label("-inf");
+                    }
+                    if current && min.is_none() {
+                        result.uniform = true;
+                        let min_i = -10.0;
+                        *min = Some(if *value < min_i { *value } else { min_i });
+                    }
+                    if !current && min.is_some() {
+                        result.uniform = true;
+                        *min = None;
+                    }
+                    ui.separator();
+                    let mut current = max.is_some();
+                    if let Some(max) = max {
+                        ui.checkbox(&mut current, "max");
+                        result.uniform |= check_changed(max, |max| {
+                            ui.add(
+                                DragValue::from_get_set(|v| {
+                                    if let Some(v) = v {
+                                        if v < *value {
+                                            *max = *value;
+                                        } else {
+                                            *max = v;
+                                        }
+                                    }
+                                    *max
+                                })
+                                .speed(0.01)
+                                .min_decimals(0)
+                                .max_decimals(2),
+                            );
+                        });
+                    } else {
+                        ui.checkbox(&mut current, "max");
+                        ui.label("+inf");
+                    }
+                    if current && max.is_none() {
+                        result.uniform = true;
+                        let max_i = 10.0;
+                        *max = Some(if *value > max_i { *value } else { max_i });
+                    }
+                    if !current && max.is_some() {
+                        result.uniform = true;
+                        *max = None;
+                    }
+                    ui.separator();
+                    ui.centered_and_justified(|ui| {
+                        if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
+                            result.uniform |= check_changed(value, |value| {
+                                ui.add(Slider::f64(value, *min..=*max).clamp_to_range(true));
+                            });
+                        } else {
+                            result.uniform |= check_changed(value, |value| {
+                                ui.add(
+                                    DragValue::from_get_set(|v| {
+                                        if let Some(v) = v {
+                                            *value = v;
+                                            if let Some(min) = min {
+                                                if value < min {
+                                                    *value = *min;
+                                                }
+                                            }
+                                            if let Some(max) = max {
+                                                if value > max {
+                                                    *value = *max;
+                                                }
+                                            }
+                                        }
+                                        (*value).into()
+                                    })
+                                    .speed(0.01)
+                                    .min_decimals(0)
+                                    .max_decimals(2),
+                                );
+                            });
+                        }
+                    });
+                });
+            }
+            Formula(x) => drop(ui.centered_and_justified(|ui| result |= x.egui(ui, data))),
+        }
         result
     }
 }
@@ -3109,8 +3415,9 @@ impl StorageElem for AnyUniformComboBox {
 
         match &self.0 {
             AnyUniform::Bool(b) => GetEnum::Ok(AnyUniformResult::Bool(*b)),
-            AnyUniform::Int(i) => GetEnum::Ok(AnyUniformResult::Int(*i)),
-            AnyUniform::Float(f) => GetEnum::Ok(AnyUniformResult::Float(*f)),
+            AnyUniform::Int { value, .. } => GetEnum::Ok(AnyUniformResult::Int(*value)),
+            AnyUniform::Angle(a) => GetEnum::Ok(AnyUniformResult::Float(*a)),
+            AnyUniform::Float { value, .. } => GetEnum::Ok(AnyUniformResult::Float(*value)),
             AnyUniform::Formula(f) => match formulas_cache.get(&f.0) {
                 Some(x) => match x.eval(&formulas_cache.slab, &mut cb) {
                     Ok(x) => GetEnum::Ok(AnyUniformResult::Float(x)),
