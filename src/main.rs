@@ -223,14 +223,14 @@ struct Window {
 
 impl Window {
     async fn new() -> Self {
-        let scene = Scene::new();
+        let mut data = Default::default();
+        let scene = Scene::new(&mut data);
         let material = scene.get_new_material().unwrap_or_else(|err| {
             println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
             dbg!(&err);
             crate::miniquad::error!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
             std::process::exit(1)
         });
-        let mut data = Default::default();
         scene.set_uniforms(material, &mut data, &scene.uniforms);
         Window {
             should_recompile: false,
@@ -275,6 +275,7 @@ impl Window {
         let mut edit_scene_opened = self.edit_scene_opened;
 
         self.data.names = self.scene.matrices.names_iter().cloned().collect();
+        self.data.formulas_names = self.scene.uniforms.names_iter().cloned().collect();
         let errors_count = self.scene.errors_count(0, &mut self.data);
         egui::Window::new(if errors_count > 0 {
             format!("Edit scene ({} err)", errors_count)

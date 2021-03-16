@@ -595,6 +595,33 @@ impl ComboBoxChoosable for Matrix {
     fn set_number(&mut self, number: usize) {
         use Matrix::*;
         *self = match number {
+            0 => match self {
+                Simple { .. } => self.clone(),
+                Parametrized {
+                    offset,
+                    rotate,
+                    mirror,
+                    scale,
+                } => Simple {
+                    offset: Vec3::new(
+                        offset.x.freeget().unwrap_or(0.0),
+                        offset.y.freeget().unwrap_or(0.0),
+                        offset.z.freeget().unwrap_or(0.0),
+                    ),
+                    rotate: Vec3::new(
+                        rotate.x.freeget().unwrap_or(0.0),
+                        rotate.y.freeget().unwrap_or(0.0),
+                        rotate.z.freeget().unwrap_or(0.0),
+                    ),
+                    mirror: (
+                        mirror.x.freeget().unwrap_or(0.0) == 1.0,
+                        mirror.y.freeget().unwrap_or(0.0) == 1.0,
+                        mirror.z.freeget().unwrap_or(0.0) == 1.0,
+                    ),
+                    scale: scale.freeget().unwrap_or(1.0),
+                },
+                _ => Self::default(),
+            },
             1 => Mul {
                 to: "id".to_owned(),
                 what: "id".to_owned(),
@@ -605,24 +632,49 @@ impl ComboBoxChoosable for Matrix {
 
                 what: "id".to_owned(),
             },
-            0 => Self::default(),
-            3 => Parametrized {
-                offset: TVec3 {
-                    x: ParametrizeOrNot::No(0.),
-                    y: ParametrizeOrNot::No(0.),
-                    z: ParametrizeOrNot::No(0.),
+            3 => match self {
+                Parametrized { .. } => self.clone(),
+                Simple {
+                    offset,
+                    rotate,
+                    mirror,
+                    scale,
+                } => Parametrized {
+                    offset: TVec3 {
+                        x: ParametrizeOrNot::No(offset.x),
+                        y: ParametrizeOrNot::No(offset.y),
+                        z: ParametrizeOrNot::No(offset.z),
+                    },
+                    rotate: TVec3 {
+                        x: ParametrizeOrNot::No(rotate.x),
+                        y: ParametrizeOrNot::No(rotate.y),
+                        z: ParametrizeOrNot::No(rotate.z),
+                    },
+                    mirror: TVec3 {
+                        x: ParametrizeOrNot::No(mirror.0 as i32 as f32),
+                        y: ParametrizeOrNot::No(mirror.1 as i32 as f32),
+                        z: ParametrizeOrNot::No(mirror.2 as i32 as f32),
+                    },
+                    scale: ParametrizeOrNot::No(*scale),
                 },
-                rotate: TVec3 {
-                    x: ParametrizeOrNot::No(0.),
-                    y: ParametrizeOrNot::No(0.),
-                    z: ParametrizeOrNot::No(0.),
+                _ => Parametrized {
+                    offset: TVec3 {
+                        x: ParametrizeOrNot::No(0.),
+                        y: ParametrizeOrNot::No(0.),
+                        z: ParametrizeOrNot::No(0.),
+                    },
+                    rotate: TVec3 {
+                        x: ParametrizeOrNot::No(0.),
+                        y: ParametrizeOrNot::No(0.),
+                        z: ParametrizeOrNot::No(0.),
+                    },
+                    mirror: TVec3 {
+                        x: ParametrizeOrNot::No(0.),
+                        y: ParametrizeOrNot::No(0.),
+                        z: ParametrizeOrNot::No(0.),
+                    },
+                    scale: ParametrizeOrNot::No(1.),
                 },
-                mirror: TVec3 {
-                    x: ParametrizeOrNot::No(0.),
-                    y: ParametrizeOrNot::No(0.),
-                    z: ParametrizeOrNot::No(0.),
-                },
-                scale: ParametrizeOrNot::No(1.),
             },
             _ => unreachable!(),
         };
@@ -863,7 +915,6 @@ impl ErrorsCount for Matrix {
                 rotate,
                 mirror,
             } => {
-                // todo
                 errors_count += offset.x.errors_count(pos, data)
                     + offset.y.errors_count(pos, data)
                     + offset.z.errors_count(pos, data);
@@ -1657,32 +1708,29 @@ pub struct Scene {
 /*
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OldScene {
-    description: String,
+    description_en: String,
+    description_ru: String,
 
-    matrices: StorageWithNames<MatrixComboBox>,
-    objects: Vec<ObjectComboBox>,
+    pub matrices: StorageWithNames<MatrixComboBox>,
+    objects: StorageWithNames<ObjectComboBox>,
 
     materials: StorageWithNames<MaterialComboBox>,
-    library: GlslCode,
+    library: StorageWithNames<LibraryCode>,
 }
 
 impl From<OldScene> for Scene {
     fn from(old: OldScene) -> Scene {
         Scene {
-            description_en: old.description,
-            description_ru: Default::default(),
+            description_en: old.description_en,
+            description_ru: old.description_ru,
+
+            uniforms: Default::default(),
 
             matrices: old.matrices,
-            objects: StorageWithNames {
-                names: (0..old.objects.len()).map(|x| x.to_string()).collect::<Vec<_>>(),
-                storage: old.objects,
-            },
+            objects: old.objects,
 
             materials: old.materials,
-            library: StorageWithNames {
-                names: vec!["my library".to_owned()],
-                storage: vec![old.library],
-            },
+            library: old.library,
         }
     }
 }
@@ -1697,8 +1745,8 @@ pub fn add_line_numbers(s: &str) -> String {
 }
 
 impl Scene {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(data: &mut Data) -> Self {
+        let mut result = Self {
             description_en: Default::default(),
             description_ru: Default::default(),
             uniforms: Default::default(),
@@ -1706,7 +1754,21 @@ impl Scene {
             objects: Default::default(),
             materials: Default::default(),
             library: Default::default(),
+        };
+        result.init(data);
+        result
+    }
+
+    pub fn init(&mut self, data: &mut Data) {
+        for (_, object) in self.uniforms.iter() {
+            if let AnyUniform::Formula(f) = &object.0 {
+                data.formulas_cache.compile(&f.0);
+            }
         }
+        data.errors = Default::default();
+        data.show_error_window = false;
+        data.names = self.matrices.names.clone();
+        data.formulas_names = self.uniforms.names.clone();
     }
 
     pub fn egui(
@@ -1736,20 +1798,16 @@ impl Scene {
                 // let old: OldScene = serde_json::from_str(&s).unwrap();
                 // *self = old.into();
                 *self = serde_json::from_str(&s).unwrap();
+                self.init(data);
                 changed.shader = true;
-                data.errors = Default::default();
-                data.show_error_window = false;
-                data.names = self.matrices.names.clone();
             }
             if ui.button("Load monoportal").clicked() {
                 let s = include_str!("../scene_monoportal_offset.json");
                 // let old: OldScene = serde_json::from_str(&s).unwrap();
                 // *self = old.into();
                 *self = serde_json::from_str(&s).unwrap();
+                self.init(data);
                 changed.shader = true;
-                data.errors = Default::default();
-                data.show_error_window = false;
-                data.names = self.matrices.names.clone();
             }
             if ui
                 .add(Button::new("Recompile").enabled(*should_recompile))
@@ -1916,6 +1974,16 @@ impl Scene {
             .map(|name| (name, UniformType::Mat4))
             .collect::<Vec<_>>();
 
+        for (name, uniform) in self.uniforms.iter() {
+            let name = format!("{}_u", name);
+            match uniform.0 {
+                AnyUniform::Bool(_) => result.push((name, UniformType::Int1)),
+                AnyUniform::Int(_) => result.push((name, UniformType::Int1)),
+                AnyUniform::Float(_) => result.push((name, UniformType::Float1)),
+                AnyUniform::Formula(_) => result.push((name, UniformType::Float1)),
+            }
+        }
+
         // TODO move this out from scene, and set all this parameters outside of scene
         result.extend(vec![
             ("_camera".to_owned(), UniformType::Mat4),
@@ -1989,6 +2057,20 @@ impl Scene {
                         })
                     }
                 },
+            }
+        }
+
+        for name in self.uniforms.names_iter() {
+            let name_u = format!("{}_u", name);
+            match self.uniforms.get(&name, uniforms, &data.formulas_cache) {
+                GetEnum::Ok(result) => match result {
+                    AnyUniformResult::Bool(b) => material.set_uniform(&name_u, b as i32),
+                    AnyUniformResult::Int(i) => material.set_uniform(&name_u, i),
+                    AnyUniformResult::Float(f) => material.set_uniform(&name_u, f as f32),
+                },
+                _ => {
+                    println!("Error getting `{}` uniform", name);
+                }
             }
         }
     }
@@ -2140,13 +2222,27 @@ impl Scene {
 
         storages.insert("uniforms".to_owned(), {
             let mut result = StringStorage::default();
-            for name in self
+            for (name, kind) in self
                 .uniforms()
                 .into_iter()
-                .map(|x| x.0)
-                .filter(|name| !name.starts_with("_"))
+                .filter(|(name, _)| !name.starts_with("_"))
             {
-                result.add_string(format!("uniform mat4 {};\n", name))
+                result.add_string(format!(
+                    "uniform {} {};\n",
+                    match kind {
+                        UniformType::Mat4 => "mat4",
+                        UniformType::Float1 => "float",
+                        UniformType::Int1 => "int",
+
+                        UniformType::Float2 => unreachable!(),
+                        UniformType::Float3 => unreachable!(),
+                        UniformType::Float4 => unreachable!(),
+                        UniformType::Int2 => unreachable!(),
+                        UniformType::Int3 => unreachable!(),
+                        UniformType::Int4 => unreachable!(),
+                    },
+                    name
+                ))
             }
             result
         });
@@ -2692,7 +2788,7 @@ pub enum ParametrizeOrNot {
 impl ErrorsCount for ParametrizeOrNot {
     fn errors_count(&self, _: usize, data: &mut Data) -> usize {
         match self {
-            ParametrizeOrNot::Yes(name) => data.formulas_names.contains(&name.0) as usize,
+            ParametrizeOrNot::Yes(name) => !data.formulas_names.contains(&name.0) as usize,
             ParametrizeOrNot::No { .. } => 0,
         }
     }
@@ -2753,6 +2849,14 @@ impl ParametrizeOrNot {
                 }
             },
             No(f) => (*f).into(),
+        }
+    }
+
+    pub fn freeget(&self) -> Option<f32> {
+        use ParametrizeOrNot::*;
+        match self {
+            Yes(_) => None,
+            No(f) => Some(*f),
         }
     }
 }
@@ -2870,12 +2974,33 @@ impl ComboBoxChoosable for AnyUniform {
         }
     }
     fn set_number(&mut self, number: usize) {
+        use crate::gui::Formula as F;
         use AnyUniform::*;
         *self = match number {
-            0 => Bool(false),
-            1 => Int(0),
-            2 => Float(0.0),
-            3 => Formula(Default::default()),
+            0 => Bool(match self {
+                Bool(b) => *b,
+                Int(i) => i >= &mut 1,
+                Float(f) => f >= &mut 1.0,
+                Formula { .. } => false,
+            }),
+            1 => Int(match self {
+                Bool(b) => *b as i32,
+                Int(i) => *i,
+                Float(f) => *f as i32,
+                Formula { .. } => 0,
+            }),
+            2 => Float(match self {
+                Bool(b) => (*b as i32) as f64,
+                Int(i) => *i as f64,
+                Float(f) => *f,
+                Formula { .. } => 0.0,
+            }),
+            3 => Formula(match self {
+                Bool(b) => F((*b as i32).to_string()),
+                Int(i) => F(i.to_string()),
+                Float(f) => F(f.to_string()),
+                Formula(f) => f.clone(),
+            }),
             _ => unreachable!(),
         };
     }
