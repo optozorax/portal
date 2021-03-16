@@ -1,6 +1,7 @@
 use egui::{DragValue, Ui};
 use egui_macroquad::Egui;
 use macroquad::prelude::*;
+use miniquad_parameters::PROGRAM_PARAMETERS;
 use std::f32::consts::PI;
 
 mod gui;
@@ -18,6 +19,9 @@ struct RotateAroundCam {
     view_angle: f32,
     use_panini_projection: bool,
     panini_param: f32,
+
+    inverse_x: bool,
+    inverse_y: bool,
 }
 
 impl RotateAroundCam {
@@ -38,6 +42,9 @@ impl RotateAroundCam {
 
             use_panini_projection: false,
             panini_param: 1.0,
+
+            inverse_x: false,
+            inverse_y: false,
         }
     }
 
@@ -48,10 +55,13 @@ impl RotateAroundCam {
 
         if is_mouse_button_down(MouseButton::Left) && mouse_over_canvas {
             let size = mymax(screen_width(), screen_height());
-            let dalpha =
+            let mut dalpha =
                 (mouse_pos.x - self.previous_mouse.x) * self.mouse_sensitivity * size / 800.;
-            let dbeta =
-                (mouse_pos.y - self.previous_mouse.y) * self.mouse_sensitivity * size / 800.;
+            let mut dbeta =
+                -(mouse_pos.y - self.previous_mouse.y) * self.mouse_sensitivity * size / 800.;
+
+            if self.inverse_x { dalpha *= -1.0; }
+            if self.inverse_y { dbeta *= -1.0; }
 
             self.alpha += dalpha;
             self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
@@ -77,9 +87,9 @@ impl RotateAroundCam {
 
     fn get_matrix(&self) -> Mat4 {
         let pos = Vec3::new(
-            -self.beta.sin() * self.alpha.cos(),
+            self.beta.sin() * self.alpha.cos(),
             self.beta.cos(),
-            -self.beta.sin() * self.alpha.sin(),
+            self.beta.sin() * self.alpha.sin(),
         ) * self.r
             + self.look_at;
 
@@ -188,8 +198,6 @@ impl RotateAroundCam {
             *m = deg2rad(current);
         });
 
-        // TODO add inverse by X axis and inverse by Y axis
-
         ui.separator();
 
         changed |= check_changed(&mut self.mouse_sensitivity, |m| {
@@ -197,6 +205,18 @@ impl RotateAroundCam {
         });
         changed |= check_changed(&mut self.scale_factor, |m| {
             ui.add(egui::Slider::f32(m, 1.0..=2.0).text("Wheel R multiplier"));
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            changed |= check_changed(&mut self.inverse_x, |m| {
+                ui.checkbox(m, "Invert X-axis");
+            });
+            ui.separator();
+            changed |= check_changed(&mut self.inverse_y, |m| {
+                ui.checkbox(m, "Invert Y-axis");
+            });
         });
 
         WhatChanged::from_uniform(changed)
@@ -212,6 +232,7 @@ struct Window {
     edit_scene_opened: bool,
     camera_settings_opened: bool,
     render_options_opened: bool,
+    about_opened: bool,
 
     error_message: Option<(String, String)>,
 
@@ -220,21 +241,44 @@ struct Window {
     offset_after_material: f32,
     render_depth: i32,
 
-    available_scenes: Vec<(String, String)>,
+    available_scenes: Vec<(String, String, String)>,
 }
 
 impl Window {
     async fn new() -> Self {
-        let available_scenes: Vec<(String, String)> = vec![
-            ("Monoportal", include_str!("../scenes/monoportal_offset.json")),
-            ("Misc", include_str!("../scenes/misc.json")),
-        ].into_iter().map(|(a, b)| (a.to_owned(), b.to_owned())).collect();
+        let available_scenes: Vec<(String, String, String)> = vec![
+            (
+                "Monoportal",
+                "monoportal_offset",
+                include_str!("../scenes/monoportal_offset.json"),
+            ),
+            ("Misc", "misc", include_str!("../scenes/misc.json")),
+        ]
+        .into_iter()
+        .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
+        .collect();
 
-        let default_scene = 0;
+        let start1 = "--scene=";
+        let start2 = "-s=";
+
+        let default_scene = PROGRAM_PARAMETERS
+            .iter()
+            .find(|s| s.starts_with(start1) || s.starts_with(start2))
+            .and_then(|s| {
+                let mut s = &s[..];
+                if s.starts_with(start1) {
+                    s = &s[start1.len()..];
+                } else if s.starts_with(start2) {
+                    s = &s[start2.len()..];
+                }
+
+                available_scenes.iter().position(|(_, path, _)| path == s)
+            })
+            .unwrap_or(0);
 
         let mut data = Default::default();
 
-        let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].1).unwrap();
+        let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].2).unwrap();
         scene.init(&mut data);
 
         let material = scene.get_new_material().unwrap_or_else(|err| {
@@ -254,6 +298,7 @@ impl Window {
             edit_scene_opened: true,
             camera_settings_opened: false,
             render_options_opened: false,
+            about_opened: false,
 
             error_message: None,
 
@@ -274,8 +319,8 @@ impl Window {
         egui::TopPanel::top("my top").show(ctx, |ui| {
             use egui::menu;
             menu::bar(ui, |ui| {
-                menu::menu(ui, "Load", |ui| {
-                    for (name, text) in &self.available_scenes {
+                menu::menu(ui, "🗋 Load", |ui| {
+                    for (name, _, text) in &self.available_scenes {
                         if ui.button(name).clicked() {
                             let s = text;
                             // let old: OldScene = serde_json::from_str(&s).unwrap();
@@ -284,18 +329,21 @@ impl Window {
                             self.scene.init(&mut self.data);
                             self.material = self.scene.get_new_material().unwrap();
                             changed.uniform = true;
-                        }    
+                        }
                     }
                 });
-                ui.button("Control scene").clicked();
-                if ui.button("Edit scene").clicked() {
+                ui.button("☑ Control scene").clicked();
+                if ui.button("✏ Edit scene").clicked() {
                     self.edit_scene_opened = true;
                 }
-                if ui.button("Camera settings").clicked() {
+                if ui.button("📸 Camera settings").clicked() {
                     self.camera_settings_opened = true;
                 }
-                if ui.button("Rendering options").clicked() {
+                if ui.button("⛭ Rendering options").clicked() {
                     self.render_options_opened = true;
+                }
+                if ui.button("❓ About").clicked() {
+                    self.about_opened = true;
                 }
             });
         });
@@ -340,6 +388,7 @@ impl Window {
             if self.data.show_error_window {
                 egui::Window::new("Error message")
                     .scroll(true)
+                    .default_width(700.)
                     .show(ctx, |ui| {
                         egui::CollapsingHeader::new("code")
                             .id_source(0)
@@ -365,6 +414,37 @@ impl Window {
         }
 
         {
+            let mut not_close = true;
+            if let Some(code) = &self.data.show_compiled_code {
+                egui::Window::new("Generated GLSL code")
+                    .scroll(true)
+                    .open(&mut not_close)
+                    .default_width(700.)
+                    .show(ctx, |ui| {
+                        egui::experimental::easy_mark(ui, r#"# What is this
+
+This code is generated automatically based on:
+- Uniforms
+- Matrices
+- Objects
+- Material
+- Library
+First, predefined library is included, then uniforms, then user library, then intersection functions. So, you can use uniforms and predefined library in any your code.
+
+---
+
+# Code
+
+"#);
+                        ui.monospace(code);
+                    });
+            }
+            if !not_close {
+                self.data.show_compiled_code = None;
+            }
+        }
+
+        {
             let mut not_remove_export = true;
             if let Some(to_export) = self.data.to_export.as_ref() {
                 egui::Window::new("Export scene")
@@ -382,6 +462,18 @@ impl Window {
                 self.data.to_export = None;
             }
             self.edit_scene_opened = edit_scene_opened;
+        }
+
+        {
+            egui::Window::new("GLSL library")
+                .open(&mut self.data.show_glsl_library)
+                .scroll(true)
+                .default_width(600.)
+                .show(ctx, |ui| {
+                    egui::experimental::easy_mark(ui, "# What is this\n\nThis is predefined library GLSL code, it included before user code, so you can use functions and etc. from this.\n\n---\n\n# Code\n\n");
+                    ui.separator();
+                    ui.monospace(gui::LIBRARY);
+                });
         }
 
         {
@@ -420,6 +512,16 @@ impl Window {
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
                 });
             self.render_options_opened = render_options_opened;
+        }
+
+        {
+            let mut about_opened = self.about_opened;
+            egui::Window::new("Portal Explorer")
+                .open(&mut about_opened)
+                .show(ctx, |ui| {
+                    egui::experimental::easy_mark(ui, include_str!("description.easymarkup"));
+                });
+            self.about_opened = about_opened;
         }
 
         let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
@@ -465,7 +567,7 @@ impl Window {
 
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Portal visualization".to_owned(),
+        window_title: "Portal Explorer".to_owned(),
         high_dpi: true,
         ..Default::default()
     }

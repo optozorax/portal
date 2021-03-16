@@ -322,6 +322,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "miniquad-parameters"
+version = "0.1.1"
+source = "git+https://github.com/optozorax/miniquad-parameters#7cb56f6d560d72c10a611721fc8d3bb1c0c40cc8"
+dependencies = [
+ "lazy_static",
+ "sapp-jsutils",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -436,6 +445,7 @@ dependencies = [
  "fasteval",
  "glam 0.13.0",
  "macroquad",
+ "miniquad-parameters",
  "serde",
  "serde_json",
 ]
@@ -507,6 +517,12 @@ version = "0.1.2"
 dependencies = [
  "cc",
 ]
+
+[[package]]
+name = "sapp-jsutils"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95b6538a351f8e2066fb98c07e24ac616896d2ffb49b4843cceb3839e7dc0d65"
 
 [[package]]
 name = "sapp-linux"

@@ -31,6 +31,8 @@ pub struct Data {
     pub errors: BTreeMap<ErrId, Vec<(usize, String)>>,
     pub matrix_recursion_error: BTreeMap<MatrixName, bool>,
     pub show_error_window: bool,
+    pub show_glsl_library: bool,
+    pub show_compiled_code: Option<String>,
     pub description_en_edit: bool,
     pub description_ru_edit: bool,
 
@@ -173,23 +175,6 @@ pub fn egui_0_1(ui: &mut Ui, value: &mut f32) -> bool {
                 .min_decimals(0)
                 .max_decimals(2),
         );
-    })
-}
-
-pub fn egui_f64(ui: &mut Ui, value: &mut f64) -> bool {
-    check_changed(value, |value| {
-        ui.add(
-            DragValue::f64(value)
-                .speed(0.01)
-                .min_decimals(0)
-                .max_decimals(2),
-        );
-    })
-}
-
-pub fn egui_i32(ui: &mut Ui, value: &mut i32) -> bool {
-    check_changed(value, |value| {
-        ui.add(DragValue::i32(value).speed(0.1));
     })
 }
 
@@ -1875,6 +1860,8 @@ impl Scene {
             }
         });
 
+        ui.separator();
+
         // other ui
 
         CollapsingHeader::new("Description")
@@ -1944,9 +1931,21 @@ impl Scene {
         changed |= self.matrices.rich_egui(ui, data, "Matrices");
         changed |= self.objects.rich_egui(ui, data, "Objects");
         changed |= self.materials.rich_egui(ui, data, "Materials");
-        changed |= self.library.rich_egui(ui, data, "Glsl Library");
+        changed |= self.library.rich_egui(ui, data, "User GLSL code");
 
-        if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            if ui.button("View GLSL library").clicked() {
+                data.show_glsl_library = true;
+            }
+            if ui.button("View generated GLSL code").clicked() {
+                data.show_compiled_code = Some(self.generate_shader_code().storage);
+            }
+        });
+
+         if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
+            ui.separator();
             ui.horizontal(|ui| {
                 ui.label("Other errors:");
                 if ui.button("Show full code and errors").clicked() {
@@ -2032,7 +2031,6 @@ impl Scene {
             }
         }
 
-        // TODO move this out from scene, and set all this parameters outside of scene
         result.extend(vec![
             ("_camera".to_owned(), UniformType::Mat4),
             ("_resolution".to_owned(), UniformType::Float2),
@@ -2547,6 +2545,12 @@ impl Scene {
             result
         });
 
+        storages.insert("predefined_library".to_owned(), {
+           let mut result = StringStorage::default();
+            result.add_string(LIBRARY);
+            result 
+        });
+
         apply_template(FRAGMENT_SHADER, storages)
     }
 
@@ -2755,6 +2759,8 @@ ERROR: 0:613: '<' : wrong operand types - no operation '<' exists that takes a l
 
 const FRAGMENT_SHADER: &'static str = include_str!("frag.glsl");
 
+pub const LIBRARY: &'static str = include_str!("library.glsl");
+
 const VERTEX_SHADER: &'static str = "#version 100
 attribute vec3 position;
 attribute vec2 texcoord;
@@ -2772,7 +2778,6 @@ void main() {
     vec4 res = Projection * Model * vec4(position, 1);
 
     uv_screen = (position.xy - _resolution/2.) / min(_resolution.x, _resolution.y) * 2.;
-    uv_screen.y *= -1.;
     uv = texcoord;
 
     gl_Position = res;
