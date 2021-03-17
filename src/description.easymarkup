@@ -1,0 +1,36 @@
+# Description
+
+*Portal Explorer* — is free web program to explore all kinds of portals. Portal Explorer uses ray-tarcing in shaders to draw content. Also, it contains visual real-time scene editor. You can make your scenes and explore portals together!
+
+---
+
+*Version:* 0.1.0
+*Author:* Ilya Sheprut (Илья Шепрут)
+*Source:* <https://github.com/optozorax/portal>
+*License:* MIT or Apache 2.0
+
+---
+
+# Author
+
+[Telegram channel](https://t.me/optozorax_dev) — main place where I wrote about my projects.
+[Twitter](https://twitter.com/optozorax) — also write here sometimes.
+[GitHub](https://github.com/optozorax)
+[YouTube](https://www.youtube.com/channel/UCIsVwdLhYrrs3K8MOXEZdhQ)
+[Blog](https://optozorax.github.io)
+
+---
+
+# Written using
+
+Programming language: [Rust](https://www.rust-lang.org)
+Engine: [macroquad](https://github.com/not-fl3/macroquad)
+GUI: [egui](https://github.com/emilk/egui)
+Formulas: [fasteval](https://github.com/likebike/fasteval)
+
+---
+
+# Links to used code
+
+Capsule rendering: [@shadertoy](https://www.shadertoy.com/view/Xt3SzX)
+Panini projection: [@shadertoy](https://www.shadertoy.com/view/Wt3fzB)
