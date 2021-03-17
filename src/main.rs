@@ -274,12 +274,13 @@ impl Window {
                 "monoportal",
                 include_str!("../scenes/monoportal.json"),
             ),
-            (
-                "Monoportal offset",
-                "monoportal_offset",
-                include_str!("../scenes/monoportal_offset.json"),
-            ),
-            ("Misc", "misc", include_str!("../scenes/misc.json")),
+            // (
+            //     "Monoportal offset",
+            //     "monoportal_offset",
+            //     include_str!("../scenes/monoportal_offset.json"),
+            // ),
+            ("Mobius portal", "mobius", include_str!("../scenes/mobius.json")),
+            // ("Misc", "misc", include_str!("../scenes/misc.json")),
         ]
         .into_iter()
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
@@ -337,7 +338,7 @@ impl Window {
 
             data,
 
-            offset_after_material: 0.0005,
+            offset_after_material: 0.005,
             render_depth: 100,
 
             available_scenes,
