@@ -279,7 +279,10 @@ impl Window {
         let mut data = Default::default();
 
         let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].2).unwrap();
+        // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2).unwrap().into();
         scene.init(&mut data);
+
+        data.reload_textures = true;
 
         let material = scene.get_new_material().unwrap_or_else(|err| {
             println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
@@ -624,6 +627,25 @@ async fn main() {
         egui.ui(|ctx| {
             ui_changed_image = window.process_mouse_and_keys(ctx);
         });
+
+        if window.data.reload_textures{
+            window.data.reload_textures = false;
+            window.data.texture_errors.clear();
+            for (name, path) in window.scene.textures.iter() {
+                match macroquad::file::load_file(&path.0).await {
+                    Ok(bytes) => {
+                        let context = unsafe { get_internal_gl().quad_context };
+
+                        let texture = Texture2D::from_file_with_format(context, &bytes[..], None);
+
+                        window.material.set_texture(&TextureName::name(name), texture);
+                    },
+                    Err(file) => {
+                        window.data.texture_errors.insert(name.to_string(), file);
+                    }
+                }
+            }
+        }
 
         next_frame().await;
     }

@@ -38,6 +38,9 @@ pub struct Data {
 
     pub formulas_cache: FormulasCache,
     pub formulas_names: Vec<String>,
+
+    pub reload_textures: bool,
+    pub texture_errors: BTreeMap<String, macroquad::file::FileError>,
 }
 
 impl Data {
@@ -542,6 +545,7 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
             .clicked()
         {
             self.add(format!("_{}", self.names.len()), Default::default());
+            changed.shader = true;
         }
         changed
     }
@@ -1295,7 +1299,7 @@ impl StorageElem for LibraryCode {
 impl Default for MaterialCode {
     fn default() -> Self {
         MaterialCode(GlslCode(
-            "return plane_process_material(hit, r, color(0.2, 0.6, 0.6));".to_owned(),
+            "return material_simple(hit, r, vec3(9.21e-2, 7.28e-1, 6.81e-2), 5e-1, true, 4e0, 3e-1);".to_owned(),
         ))
     }
 }
@@ -1711,6 +1715,63 @@ impl StorageElem for ObjectComboBox {
 }
 
 // ----------------------------------------------------------------------------------------------------------
+// Texture
+// ----------------------------------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextureName(pub String);
+
+impl TextureName {
+    pub fn name(s: &str) -> String {
+        format!("{}_tex", s)
+    }
+}
+
+impl Default for TextureName {
+    fn default() -> Self {
+        Self("scenes/monoportal.png".into())
+    }
+}
+
+impl ErrorsCount for TextureName {
+    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+        data.texture_errors.get(&self.0).is_some() as usize
+    }
+}
+
+impl Eguiable for TextureName {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+        let result = WhatChanged::from_shader(check_changed(&mut self.0, |text| drop(ui.text_edit_singleline(text))));
+
+        if let Some(err) = data.texture_errors.get(&self.0) {
+             ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                ui.add(Label::new("Error:").text_color(Color32::RED));
+                ui.label(format!("error while loading file: {:?}", err));
+            });
+        } 
+
+        result
+    }
+}
+
+impl StorageElem for TextureName {
+    type GetType = TextureName;
+
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        _: F,
+        _: &StorageWithNames<AnyUniformComboBox>,
+        _: &FormulasCache,
+    ) -> GetEnum<Self::GetType> {
+        GetEnum::Ok(self.clone())
+    }
+
+    fn defaults() -> (Vec<String>, Vec<Self>) {
+        (vec!["texture".to_owned()], vec![Default::default()])
+    }
+}
+
+// ----------------------------------------------------------------------------------------------------------
 // Scene
 // ----------------------------------------------------------------------------------------------------------
 
@@ -1724,25 +1785,19 @@ pub struct Scene {
     pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
 
+    pub textures: StorageWithNames<TextureName>,
+
     materials: StorageWithNames<MaterialComboBox>,
     library: StorageWithNames<LibraryCode>,
 }
 
-/*
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum OldAnyUniform {
-    Bool(bool),
-    Int(i32),
-    Float(f64),
-    Formula(Formula),
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OldScene {
     description_en: String,
     description_ru: String,
 
-    pub uniforms: StorageWithNames<OldAnyUniform>,
+    pub uniforms: StorageWithNames<AnyUniformComboBox>,
 
     pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
@@ -1757,32 +1812,18 @@ impl From<OldScene> for Scene {
             description_en: old.description_en,
             description_ru: old.description_ru,
 
-            uniforms: StorageWithNames {
-                names: old.uniforms.names,
-                storage: old
-                    .uniforms
-                    .storage
-                    .into_iter()
-                    .map(|x| {
-                        AnyUniformComboBox(match x {
-                            OldAnyUniform::Bool(b) => AnyUniform::Bool(b),
-                            OldAnyUniform::Int(b) => AnyUniform::int(b),
-                            OldAnyUniform::Float(b) => AnyUniform::float(b),
-                            OldAnyUniform::Formula(b) => AnyUniform::Formula(b),
-                        })
-                    })
-                    .collect(),
-            },
+            uniforms: old.uniforms,
 
             matrices: old.matrices,
             objects: old.objects,
+
+            textures: Default::default(),
 
             materials: old.materials,
             library: old.library,
         }
     }
 }
-*/
 
 pub fn add_line_numbers(s: &str) -> String {
     s.split("\n")
@@ -1801,6 +1842,7 @@ impl Scene {
             matrices: Default::default(),
             objects: Default::default(),
             materials: Default::default(),
+            textures: Default::default(),
             library: Default::default(),
         };
         result.init(data);
@@ -1847,6 +1889,7 @@ impl Scene {
             {
                 match self.get_new_material() {
                     Ok(m) => {
+                        data.reload_textures = true;
                         material = Some(Ok(m));
                         *should_recompile = false;
                         changed.uniform = true;
@@ -1931,6 +1974,7 @@ impl Scene {
         changed |= self.matrices.rich_egui(ui, data, "Matrices");
         changed |= self.objects.rich_egui(ui, data, "Objects");
         changed |= self.materials.rich_egui(ui, data, "Materials");
+        changed |= self.textures.rich_egui(ui, data, "Textures");
         changed |= self.library.rich_egui(ui, data, "User GLSL code");
 
         ui.separator();
@@ -1983,6 +2027,10 @@ pub trait UniformStruct {
 }
 
 impl Scene {
+    pub fn textures(&self) -> Vec<String> {
+        self.textures.names_iter().cloned().map(|x| TextureName::name(&x)).collect()
+    }
+
     pub fn uniforms(&self) -> Vec<(String, UniformType)> {
         use Object::*;
         use ObjectType::*;
@@ -2293,6 +2341,14 @@ impl Scene {
             result
         });
 
+        storages.insert("textures".to_owned(), {
+            let mut result = StringStorage::default();
+            for name in self.textures.names_iter() {
+                result.add_string(format!("uniform sampler2D {};\n", TextureName::name(name)));
+            }
+            result
+        });
+
         let (material_processing, material_defines) = {
             let mut material_processing = StringStorage::default();
             let mut material_defines = StringStorage::default();
@@ -2568,6 +2624,7 @@ impl Scene {
             &code.storage,
             MaterialParams {
                 uniforms: self.uniforms(),
+                textures: self.textures(),
                 ..Default::default()
             },
         )
@@ -3420,4 +3477,22 @@ impl StorageElem for AnyUniformComboBox {
     fn defaults() -> (Vec<String>, Vec<Self>) {
         (vec!["a".to_owned()], vec![Default::default()])
     }
+}
+
+// ----------------------------------------------------------------------------------------------------------
+// Animation stages
+// ----------------------------------------------------------------------------------------------------------
+
+enum AnimationUniform {
+    ProvidedToUser,
+    Remains,
+    Changed(AnyUniform),
+}
+
+struct AnimationStage {
+    uniforms: Vec<AnimationUniform>,
+}
+
+struct GlobalUserUniforms {
+    uniforms: Vec<bool>,
 }

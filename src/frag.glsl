@@ -6,6 +6,8 @@
 
 //%uniforms//%
 
+//%textures//%
+
 //%materials_defines//%
 
 //%library//%
