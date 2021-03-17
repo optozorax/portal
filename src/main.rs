@@ -31,8 +31,8 @@ impl RotateAroundCam {
     fn new() -> Self {
         Self {
             look_at: Vec3::new(0., 0., 0.),
-            alpha: deg2rad(270.),
-            beta: deg2rad(117.),
+            alpha: deg2rad(81.),
+            beta: deg2rad(64.),
             r: 3.5,
             previous_mouse: Vec2::default(),
 
@@ -60,8 +60,12 @@ impl RotateAroundCam {
             let mut dbeta =
                 -(mouse_pos.y - self.previous_mouse.y) * self.mouse_sensitivity * size / 800.;
 
-            if self.inverse_x { dalpha *= -1.0; }
-            if self.inverse_y { dbeta *= -1.0; }
+            if self.inverse_x {
+                dalpha *= -1.0;
+            }
+            if self.inverse_y {
+                dbeta *= -1.0;
+            }
 
             self.alpha += dalpha;
             self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
@@ -229,6 +233,7 @@ struct Window {
     material: macroquad::material::Material,
     should_recompile: bool,
 
+    control_scene_opened: bool,
     edit_scene_opened: bool,
     camera_settings_opened: bool,
     render_options_opened: bool,
@@ -279,7 +284,7 @@ impl Window {
         let mut data = Default::default();
 
         let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].2).unwrap();
-        // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2).unwrap().into();
+        // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2) .unwrap() .into();
         scene.init(&mut data);
 
         data.reload_textures = true;
@@ -291,14 +296,15 @@ impl Window {
             std::process::exit(1)
         });
         scene.set_uniforms(material, &mut data, &scene.uniforms);
-        Window {
+        let mut result = Window {
             should_recompile: false,
             scene,
             cam: RotateAroundCam::new(),
 
             material,
 
-            edit_scene_opened: true,
+            control_scene_opened: true,
+            edit_scene_opened: false,
             camera_settings_opened: false,
             render_options_opened: false,
             about_opened: false,
@@ -311,6 +317,29 @@ impl Window {
             render_depth: 100,
 
             available_scenes,
+        };
+        result.reload_textures().await;
+        result
+    }
+
+    async fn reload_textures(&mut self) {
+        if self.data.reload_textures {
+            self.data.reload_textures = false;
+            self.data.texture_errors.clear();
+            for (name, path) in self.scene.textures.iter() {
+                match macroquad::file::load_file(&path.0).await {
+                    Ok(bytes) => {
+                        let context = unsafe { get_internal_gl().quad_context };
+
+                        let texture = Texture2D::from_file_with_format(context, &bytes[..], None);
+
+                        self.material.set_texture(&TextureName::name(name), texture);
+                    }
+                    Err(file) => {
+                        self.data.texture_errors.insert(name.to_string(), file);
+                    }
+                }
+            }
         }
     }
 
@@ -335,7 +364,9 @@ impl Window {
                         }
                     }
                 });
-                ui.button("☑ Control scene").clicked();
+                if ui.button("☑ Control scene").clicked() {
+                    self.control_scene_opened = true;
+                };
                 if ui.button("✏ Edit scene").clicked() {
                     self.edit_scene_opened = true;
                 }
@@ -465,6 +496,16 @@ First, predefined library is included, then uniforms, then user library, then in
                 self.data.to_export = None;
             }
             self.edit_scene_opened = edit_scene_opened;
+        }
+
+        {
+            let mut control_scene_opened = self.control_scene_opened;
+            egui::Window::new("Control scene")
+                .open(&mut control_scene_opened)
+                .show(ctx, |ui| {
+                    changed |= self.scene.control_egui(ui, &mut self.data);
+                });
+            self.control_scene_opened = control_scene_opened;
         }
 
         {
@@ -628,24 +669,7 @@ async fn main() {
             ui_changed_image = window.process_mouse_and_keys(ctx);
         });
 
-        if window.data.reload_textures{
-            window.data.reload_textures = false;
-            window.data.texture_errors.clear();
-            for (name, path) in window.scene.textures.iter() {
-                match macroquad::file::load_file(&path.0).await {
-                    Ok(bytes) => {
-                        let context = unsafe { get_internal_gl().quad_context };
-
-                        let texture = Texture2D::from_file_with_format(context, &bytes[..], None);
-
-                        window.material.set_texture(&TextureName::name(name), texture);
-                    },
-                    Err(file) => {
-                        window.data.texture_errors.insert(name.to_string(), file);
-                    }
-                }
-            }
-        }
+        window.reload_textures().await;
 
         next_frame().await;
     }

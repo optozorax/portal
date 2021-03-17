@@ -41,6 +41,9 @@ pub struct Data {
 
     pub reload_textures: bool,
     pub texture_errors: BTreeMap<String, macroquad::file::FileError>,
+
+    pub global_uniforms: GlobalUserUniforms,
+    pub uniforms_value: Vec<AnyUniformComboBox>,
 }
 
 impl Data {
@@ -61,6 +64,7 @@ impl Data {
 // ----------------------------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Default)]
+#[must_use]
 pub struct WhatChanged {
     pub uniform: bool,
     pub shader: bool,
@@ -1741,14 +1745,16 @@ impl ErrorsCount for TextureName {
 
 impl Eguiable for TextureName {
     fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let result = WhatChanged::from_shader(check_changed(&mut self.0, |text| drop(ui.text_edit_singleline(text))));
+        let result = WhatChanged::from_shader(check_changed(&mut self.0, |text| {
+            drop(ui.text_edit_singleline(text))
+        }));
 
         if let Some(err) = data.texture_errors.get(&self.0) {
-             ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
                 ui.add(Label::new("Error:").text_color(Color32::RED));
                 ui.label(format!("error while loading file: {:?}", err));
             });
-        } 
+        }
 
         result
     }
@@ -1789,8 +1795,12 @@ pub struct Scene {
 
     materials: StorageWithNames<MaterialComboBox>,
     library: StorageWithNames<LibraryCode>,
-}
 
+    user_uniforms: GlobalUserUniforms,
+    animation_stages: StorageWithNames<AnimationStage>,
+
+    current_stage: usize,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OldScene {
@@ -1801,6 +1811,8 @@ pub struct OldScene {
 
     pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
+
+    pub textures: StorageWithNames<TextureName>,
 
     materials: StorageWithNames<MaterialComboBox>,
     library: StorageWithNames<LibraryCode>,
@@ -1817,10 +1829,15 @@ impl From<OldScene> for Scene {
             matrices: old.matrices,
             objects: old.objects,
 
-            textures: Default::default(),
+            textures: old.textures,
 
             materials: old.materials,
             library: old.library,
+
+            user_uniforms: GlobalUserUniforms { uniforms: vec![] },
+            animation_stages: Default::default(),
+
+            current_stage: 0,
         }
     }
 }
@@ -1834,21 +1851,6 @@ pub fn add_line_numbers(s: &str) -> String {
 }
 
 impl Scene {
-    pub fn new(data: &mut Data) -> Self {
-        let mut result = Self {
-            description_en: Default::default(),
-            description_ru: Default::default(),
-            uniforms: Default::default(),
-            matrices: Default::default(),
-            objects: Default::default(),
-            materials: Default::default(),
-            textures: Default::default(),
-            library: Default::default(),
-        };
-        result.init(data);
-        result
-    }
-
     pub fn init(&mut self, data: &mut Data) {
         for (_, object) in self.uniforms.iter() {
             if let AnyUniform::Formula(f) = &object.0 {
@@ -1859,6 +1861,9 @@ impl Scene {
         data.show_error_window = false;
         data.names = self.matrices.names.clone();
         data.formulas_names = self.uniforms.names.clone();
+        self.user_uniforms
+            .uniforms
+            .resize(self.uniforms.storage.len(), false);
     }
 
     pub fn egui(
@@ -1946,6 +1951,12 @@ impl Scene {
 
         changed |= self.uniforms.rich_egui(ui, data, "Uniforms");
 
+        if changed.uniform {
+            self.user_uniforms
+                .uniforms
+                .resize(self.uniforms.storage.len(), false);
+        }
+
         ui.collapsing("Calculated uniforms", |ui| {
             for name in self.uniforms.names_iter() {
                 ui.horizontal(|ui| {
@@ -1977,6 +1988,16 @@ impl Scene {
         changed |= self.textures.rich_egui(ui, data, "Textures");
         changed |= self.library.rich_egui(ui, data, "User GLSL code");
 
+        data.formulas_names = self.uniforms.names.clone();
+        ui.collapsing("Global user uniforms", |ui| {
+            changed |= self.user_uniforms.egui(ui, data);
+        });
+        data.global_uniforms = self.user_uniforms.clone();
+        data.uniforms_value = self.uniforms.storage.clone();
+        changed |= self
+            .animation_stages
+            .rich_egui(ui, data, "Animation stages");
+
         ui.separator();
 
         ui.horizontal(|ui| {
@@ -1988,7 +2009,7 @@ impl Scene {
             }
         });
 
-         if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
+        if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
             ui.separator();
             ui.horizontal(|ui| {
                 ui.label("Other errors:");
@@ -2028,7 +2049,11 @@ pub trait UniformStruct {
 
 impl Scene {
     pub fn textures(&self) -> Vec<String> {
-        self.textures.names_iter().cloned().map(|x| TextureName::name(&x)).collect()
+        self.textures
+            .names_iter()
+            .cloned()
+            .map(|x| TextureName::name(&x))
+            .collect()
     }
 
     pub fn uniforms(&self) -> Vec<(String, UniformType)> {
@@ -2602,9 +2627,9 @@ impl Scene {
         });
 
         storages.insert("predefined_library".to_owned(), {
-           let mut result = StringStorage::default();
+            let mut result = StringStorage::default();
             result.add_string(LIBRARY);
-            result 
+            result
         });
 
         apply_template(FRAGMENT_SHADER, storages)
@@ -2845,13 +2870,13 @@ void main() {
 // Processing formulase and parametrized uniforms
 // ----------------------------------------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Formula(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FormulaName(pub String);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AnyUniform {
     Bool(bool),
     Int {
@@ -3157,7 +3182,7 @@ impl ComboBoxChoosable for AnyUniform {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct AnyUniformComboBox(pub AnyUniform);
 
 impl Default for AnyUniform {
@@ -3483,16 +3508,256 @@ impl StorageElem for AnyUniformComboBox {
 // Animation stages
 // ----------------------------------------------------------------------------------------------------------
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 enum AnimationUniform {
     ProvidedToUser,
     Remains,
     Changed(AnyUniform),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct AnimationStage {
     uniforms: Vec<AnimationUniform>,
 }
 
-struct GlobalUserUniforms {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GlobalUserUniforms {
     uniforms: Vec<bool>,
+}
+
+impl Default for GlobalUserUniforms {
+    fn default() -> Self {
+        Self { uniforms: vec![] }
+    }
+}
+
+impl Default for AnimationStage {
+    fn default() -> Self {
+        Self { uniforms: vec![] }
+    }
+}
+
+impl ErrorsCount for AnimationStage {
+    fn errors_count(&self, _: usize, _: &mut Data) -> usize {
+        0
+    }
+}
+
+impl ComboBoxChoosable for AnimationUniform {
+    fn variants() -> &'static [&'static str] {
+        &["To user", "Remains", "Changed"]
+    }
+    fn get_number(&self) -> usize {
+        use AnimationUniform::*;
+        match self {
+            ProvidedToUser => 0,
+            Remains => 1,
+            Changed { .. } => 2,
+        }
+    }
+    fn set_number(&mut self, number: usize) {
+        use AnimationUniform::*;
+        *self = match number {
+            0 => ProvidedToUser,
+            1 => Remains,
+            2 => Changed(AnyUniform::Bool(false)),
+            _ => unreachable!(),
+        };
+    }
+}
+
+impl Eguiable for AnimationStage {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        let glob_pos = data.pos;
+        self.uniforms
+            .resize(data.formulas_names.len(), AnimationUniform::Remains);
+        for (pos, (((anim, global), name), uniform)) in self
+            .uniforms
+            .iter_mut()
+            .zip(data.global_uniforms.uniforms.iter())
+            .zip(data.formulas_names.iter())
+            .zip(data.uniforms_value.iter())
+            .enumerate()
+        {
+            if *global {
+                ui.horizontal(|ui| {
+                    egui_label(ui, name, 60.);
+                    ui.label("Global uniform");
+                });
+            } else {
+                ui.horizontal(|ui| {
+                    changed.uniform |= egui_combo_box(ui, name, 60., anim, glob_pos + pos);
+                    if let AnimationUniform::Changed(x) = anim {
+                        if x.get_number() != uniform.0.get_number() {
+                            *x = uniform.0.clone();
+                            changed.uniform = true;
+                        }
+                        changed |= x.simple_egui(ui);
+                    }
+                });
+            }
+        }
+        changed
+    }
+}
+
+impl Eguiable for GlobalUserUniforms {
+    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+        let mut changed = false;
+        self.uniforms.resize(data.formulas_names.len(), false);
+        for (enabled, name) in self.uniforms.iter_mut().zip(data.formulas_names.iter()) {
+            changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
+        }
+        WhatChanged::from_uniform(changed)
+    }
+}
+
+impl StorageElem for AnimationStage {
+    type GetType = Self;
+
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        _: F,
+        _: &StorageWithNames<AnyUniformComboBox>,
+        _: &FormulasCache,
+    ) -> GetEnum<Self::GetType> {
+        GetEnum::Ok(self.clone())
+    }
+
+    fn defaults() -> (Vec<String>, Vec<Self>) {
+        (vec!["First stage".to_owned()], vec![Default::default()])
+    }
+}
+
+impl AnyUniform {
+    pub fn simple_egui(&mut self, ui: &mut Ui) -> WhatChanged {
+        use AnyUniform::*;
+        let mut result = WhatChanged::default();
+        match self {
+            Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
+            Int { min, max, value } => {
+                ui.centered_and_justified(|ui| {
+                    if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
+                        result.uniform |= check_changed(value, |value| {
+                            ui.add(Slider::i32(value, *min..=*max).clamp_to_range(true));
+                        })
+                    } else {
+                        result.uniform |= check_changed(value, |value| {
+                            ui.add(
+                                DragValue::from_get_set(|v| {
+                                    if let Some(v) = v {
+                                        *value = v as i32;
+                                        if let Some(min) = min {
+                                            if value < min {
+                                                *value = *min;
+                                            }
+                                        }
+                                        if let Some(max) = max {
+                                            if value > max {
+                                                *value = *max;
+                                            }
+                                        }
+                                    }
+                                    (*value).into()
+                                })
+                                .speed(1),
+                            );
+                        });
+                    }
+                });
+            }
+            Angle(a) => {
+                drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
+            }
+            Float { min, max, value } => {
+                ui.centered_and_justified(|ui| {
+                    if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
+                        result.uniform |= check_changed(value, |value| {
+                            ui.add(Slider::f64(value, *min..=*max).clamp_to_range(true));
+                        });
+                    } else {
+                        result.uniform |= check_changed(value, |value| {
+                            ui.add(
+                                DragValue::from_get_set(|v| {
+                                    if let Some(v) = v {
+                                        *value = v;
+                                        if let Some(min) = min {
+                                            if value < min {
+                                                *value = *min;
+                                            }
+                                        }
+                                        if let Some(max) = max {
+                                            if value > max {
+                                                *value = *max;
+                                            }
+                                        }
+                                    }
+                                    (*value).into()
+                                })
+                                .speed(0.01)
+                                .min_decimals(0)
+                                .max_decimals(2),
+                            );
+                        });
+                    }
+                });
+            }
+            Formula(_) => {
+                drop(ui.label("Internal error, formulas are not allowed to be accessed by user."))
+            }
+        }
+        result
+    }
+}
+
+impl Scene {
+    pub fn control_egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
+        let mut result = WhatChanged::default();
+        if self.user_uniforms.uniforms.iter().any(|x| *x) {
+            for ((uniform, name), _) in self
+                .uniforms
+                .storage
+                .iter_mut()
+                .zip(self.uniforms.names.iter())
+                .zip(self.user_uniforms.uniforms.iter())
+                .filter(|(_, x)| **x)
+            {
+                ui.horizontal(|ui| {
+                    ui.label(name);
+                    result |= uniform.0.simple_egui(ui);
+                });
+            }
+            ui.separator();
+        }
+        let mut current_stage = self.current_stage;
+        result.uniform |= check_changed(&mut current_stage, |stage| {
+            for (pos, name) in self.animation_stages.names.iter().enumerate() {
+                ui.radio_value(stage, pos, name);
+            }
+        });
+        self.current_stage = current_stage;
+        ui.separator();
+        let uniforms = &mut self.uniforms;
+        for (pos, uniform) in self.animation_stages.storage[self.current_stage]
+            .uniforms
+            .iter()
+            .enumerate()
+        {
+            use AnimationUniform::*;
+            match uniform {
+                ProvidedToUser => drop(ui.horizontal(|ui| {
+                    ui.label(&uniforms.names[pos]);
+                    result |= uniforms.storage[pos].0.simple_egui(ui)
+                })),
+                Remains => {}
+                Changed(x) => {
+                    result.uniform |= check_changed(&mut uniforms.storage[pos], |u| {
+                        *u = AnyUniformComboBox(x.clone());
+                    });
+                }
+            }
+        }
+        result
+    }
 }
