@@ -108,6 +108,20 @@ impl RotateAroundCam {
             Vec4::new(pos.x, pos.y, pos.z, 1.),
         )
     }
+
+    fn set_cam(&mut self, s: &CamSettings) {
+        self.look_at = Vec3::new(s.look_at.x, s.look_at.y, s.look_at.z);
+        self.alpha = s.alpha;
+        self.beta = s.beta;
+        self.r = s.r;
+    }
+
+    fn get_cam(&mut self, cam_settings: &mut CamSettings) {
+        cam_settings.look_at = ::glam::Vec3::new(self.look_at.x, self.look_at.y, self.look_at.z);
+        cam_settings.alpha = self.alpha;
+        cam_settings.beta = self.beta;
+        cam_settings.r = self.r;
+    }
 }
 
 impl RotateAroundCam {
@@ -238,6 +252,8 @@ struct Window {
     camera_settings_opened: bool,
     render_options_opened: bool,
     about_opened: bool,
+    import_window: Option<String>,
+    import_window_errors: Option<String>,
 
     error_message: Option<(String, String)>,
 
@@ -252,8 +268,14 @@ struct Window {
 impl Window {
     async fn new() -> Self {
         let available_scenes: Vec<(String, String, String)> = vec![
+            ("Empty", "empty", include_str!("../scenes/empty.json")),
             (
                 "Monoportal",
+                "monoportal",
+                include_str!("../scenes/monoportal.json"),
+            ),
+            (
+                "Monoportal offset",
                 "monoportal_offset",
                 include_str!("../scenes/monoportal_offset.json"),
             ),
@@ -308,6 +330,8 @@ impl Window {
             camera_settings_opened: false,
             render_options_opened: false,
             about_opened: false,
+            import_window: None,
+            import_window_errors: None,
 
             error_message: None,
 
@@ -318,6 +342,7 @@ impl Window {
 
             available_scenes,
         };
+        result.cam.set_cam(&result.scene.cam);
         result.reload_textures().await;
         result
     }
@@ -359,8 +384,17 @@ impl Window {
                             // *self = old.into();
                             self.scene = serde_json::from_str(&s).unwrap();
                             self.scene.init(&mut self.data);
+                            self.material.delete();
                             self.material = self.scene.get_new_material().unwrap();
                             changed.uniform = true;
+                            self.data.reload_textures = true;
+                            self.cam.set_cam(&self.scene.cam);
+                        }
+                    }
+                    ui.separator();
+                    if ui.button("Import...").clicked() {
+                        if self.import_window.is_none() {
+                            self.import_window = Some("".to_owned());
                         }
                     }
                 });
@@ -408,6 +442,7 @@ impl Window {
             if let Some(material) = material {
                 match material {
                     Ok(material) => {
+                        self.material.delete();
                         self.material = material;
                         self.error_message = None;
                     }
@@ -499,10 +534,73 @@ First, predefined library is included, then uniforms, then user library, then in
         }
 
         {
+            let mut opened = self.import_window.is_some();
+            let mut import_window = self.import_window.clone();
+            if let Some(content) = &mut import_window {
+                egui::Window::new("Import scene")
+                    .open(&mut opened)
+                    .scroll(true)
+                    .show(ctx, |ui| {
+                        ui.add(
+                            egui::TextEdit::multiline(content)
+                                .text_style(egui::TextStyle::Monospace),
+                        );
+                        if ui.button("Recompile").clicked() {
+                            match serde_json::from_str::<Scene>(content) {
+                                Ok(scene) => {
+                                    self.scene = scene;
+                                    self.scene.init(&mut self.data);
+                                    self.cam.set_cam(&self.scene.cam);
+                                    changed.uniform = true;
+                                    self.data.reload_textures = true;
+                                    match self.scene.get_new_material() {
+                                        Ok(material) => {
+                                            self.material.delete();
+                                            self.material = material;
+                                        },
+                                        Err(_) => {
+                                            self.should_recompile = true;
+                                            self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
+                                        }
+                                    }
+                                },
+                                Err(err) => {
+                                    self.import_window_errors = Some(err.to_string());
+                                }
+                            }
+                        }
+
+                        if let Some(err) = &self.import_window_errors {
+                            ui.horizontal_wrapped_for_text(egui::TextStyle::Body, |ui| {
+                                ui.add(egui::Label::new("Error: ").text_color(egui::Color32::RED));
+                                ui.label(err);
+                            });
+                        }
+                    });
+                self.import_window = import_window;
+            }
+            if !opened {
+                self.import_window = None;
+            }
+        }
+
+        {
             let mut control_scene_opened = self.control_scene_opened;
             egui::Window::new("Control scene")
                 .open(&mut control_scene_opened)
+                .scroll(true)
                 .show(ctx, |ui| {
+                    ui.collapsing("Description", |ui| {
+                        ui.horizontal(|ui| {
+                            ui.selectable_value(&mut self.data.read_ru, false, "Eng");
+                            ui.selectable_value(&mut self.data.read_ru, true, "Rus");
+                        });
+                        if self.data.read_ru {
+                            egui::experimental::easy_mark(ui, &self.scene.description_ru);
+                        } else {
+                            egui::experimental::easy_mark(ui, &self.scene.description_en);
+                        }
+                    });
                     changed |= self.scene.control_egui(ui, &mut self.data);
                 });
             self.control_scene_opened = control_scene_opened;
@@ -582,7 +680,8 @@ First, predefined library is included, then uniforms, then user library, then in
         return is_something_changed;
     }
 
-    fn set_uniforms(&self) {
+    fn set_uniforms(&mut self) {
+        self.cam.get_cam(&mut self.scene.cam);
         self.material
             .set_uniform("_resolution", (screen_width(), screen_height()));
         self.material.set_uniform("_camera", self.cam.get_matrix());
@@ -600,7 +699,7 @@ First, predefined library is included, then uniforms, then user library, then in
             .set_uniform("_offset_after_material", self.offset_after_material);
     }
 
-    fn draw(&self) {
+    fn draw(&mut self) {
         self.set_uniforms();
 
         gl_use_material(self.material);

@@ -44,6 +44,8 @@ pub struct Data {
 
     pub global_uniforms: GlobalUserUniforms,
     pub uniforms_value: Vec<AnyUniformComboBox>,
+
+    pub read_ru: bool,
 }
 
 impl Data {
@@ -1782,9 +1784,19 @@ impl StorageElem for TextureName {
 // ----------------------------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CamSettings {
+    pub look_at: Vec3,
+    pub alpha: f32,
+    pub beta: f32,
+    pub r: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scene {
-    description_en: String,
-    description_ru: String,
+    pub description_en: String,
+    pub description_ru: String,
+
+    pub cam: CamSettings,
 
     pub uniforms: StorageWithNames<AnyUniformComboBox>,
 
@@ -1804,8 +1816,8 @@ pub struct Scene {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OldScene {
-    description_en: String,
-    description_ru: String,
+    pub description_en: String,
+    pub description_ru: String,
 
     pub uniforms: StorageWithNames<AnyUniformComboBox>,
 
@@ -1816,6 +1828,11 @@ pub struct OldScene {
 
     materials: StorageWithNames<MaterialComboBox>,
     library: StorageWithNames<LibraryCode>,
+
+    user_uniforms: GlobalUserUniforms,
+    animation_stages: StorageWithNames<AnimationStage>,
+
+    current_stage: usize,
 }
 
 impl From<OldScene> for Scene {
@@ -1823,6 +1840,13 @@ impl From<OldScene> for Scene {
         Scene {
             description_en: old.description_en,
             description_ru: old.description_ru,
+
+            cam: CamSettings {
+                look_at: Vec3::default(),
+                alpha: 0.,
+                beta: 0.,
+                r: 3.5,
+            },
 
             uniforms: old.uniforms,
 
@@ -1834,10 +1858,10 @@ impl From<OldScene> for Scene {
             materials: old.materials,
             library: old.library,
 
-            user_uniforms: GlobalUserUniforms { uniforms: vec![] },
-            animation_stages: Default::default(),
+            user_uniforms: old.user_uniforms,
+            animation_stages: old.animation_stages,
 
-            current_stage: 0,
+            current_stage: old.current_stage,
         }
     }
 }
@@ -1864,6 +1888,7 @@ impl Scene {
         self.user_uniforms
             .uniforms
             .resize(self.uniforms.storage.len(), false);
+        drop(self.init_stage(self.current_stage));
     }
 
     pub fn egui(
@@ -1931,7 +1956,7 @@ impl Scene {
                             egui::experimental::easy_mark(ui, &self.description_en);
                         }
                     });
-                CollapsingHeader::new("Яussiaи")
+                CollapsingHeader::new("Russian")
                     .default_open(false)
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
@@ -2654,40 +2679,43 @@ impl Scene {
             },
         )
         .map_err(|err| {
-            if let macroquad::prelude::miniquad::graphics::ShaderError::CompilationError {
-                error_message,
-                ..
-            } = err
-            {
-                let mut errors: BTreeMap<ErrId, Vec<(usize, String)>> = BTreeMap::new();
-                for x in shader_error_parser(&error_message) {
-                    match x {
-                        Ok((line_no, message)) => match code.line_numbers.get_identifier(line_no) {
-                            Some((identifier, local_line_no)) => {
-                                errors
-                                    .entry(identifier)
-                                    .or_insert_with(|| Default::default())
-                                    .push((local_line_no, message.to_owned()));
-                            }
-                            None => {
-                                errors
-                                    .entry(ErrId::default())
-                                    .or_insert_with(|| Default::default())
-                                    .push((line_no, message.to_owned()));
-                            }
-                        },
-                        Err(message) => {
+            let error_message = match err {
+                macroquad::prelude::miniquad::graphics::ShaderError::CompilationError {
+                    error_message,
+                    ..
+                } => error_message,
+                macroquad::prelude::miniquad::graphics::ShaderError::LinkError(msg) => msg,
+                other => {
+                    println!("unknown material compilation error: {:?}", other);
+                    Default::default()
+                }
+            };
+            let mut errors: BTreeMap<ErrId, Vec<(usize, String)>> = BTreeMap::new();
+            for x in shader_error_parser(&error_message) {
+                match x {
+                    Ok((line_no, message)) => match code.line_numbers.get_identifier(line_no) {
+                        Some((identifier, local_line_no)) => {
+                            errors
+                                .entry(identifier)
+                                .or_insert_with(|| Default::default())
+                                .push((local_line_no, message.to_owned()));
+                        }
+                        None => {
                             errors
                                 .entry(ErrId::default())
                                 .or_insert_with(|| Default::default())
-                                .push((usize::MAX, message.to_owned()));
+                                .push((line_no, message.to_owned()));
                         }
+                    },
+                    Err(message) => {
+                        errors
+                            .entry(ErrId::default())
+                            .or_insert_with(|| Default::default())
+                            .push((usize::MAX, message.to_owned()));
                     }
                 }
-                (code.storage, error_message, errors)
-            } else {
-                panic!(err);
             }
+            (code.storage, error_message, errors)
         })
     }
 }
@@ -3513,6 +3541,7 @@ enum AnimationUniform {
     ProvidedToUser,
     Remains,
     Changed(AnyUniform),
+    ChangedAndToUser(AnyUniform),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3545,7 +3574,7 @@ impl ErrorsCount for AnimationStage {
 
 impl ComboBoxChoosable for AnimationUniform {
     fn variants() -> &'static [&'static str] {
-        &["To user", "Remains", "Changed"]
+        &["To user", "Remains", "Changed", "Changed + To user"]
     }
     fn get_number(&self) -> usize {
         use AnimationUniform::*;
@@ -3553,6 +3582,7 @@ impl ComboBoxChoosable for AnimationUniform {
             ProvidedToUser => 0,
             Remains => 1,
             Changed { .. } => 2,
+            ChangedAndToUser { .. } => 3,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -3561,6 +3591,7 @@ impl ComboBoxChoosable for AnimationUniform {
             0 => ProvidedToUser,
             1 => Remains,
             2 => Changed(AnyUniform::Bool(false)),
+            3 => ChangedAndToUser(AnyUniform::Bool(false)),
             _ => unreachable!(),
         };
     }
@@ -3588,12 +3619,15 @@ impl Eguiable for AnimationStage {
             } else {
                 ui.horizontal(|ui| {
                     changed.uniform |= egui_combo_box(ui, name, 60., anim, glob_pos + pos);
-                    if let AnimationUniform::Changed(x) = anim {
-                        if x.get_number() != uniform.0.get_number() {
-                            *x = uniform.0.clone();
-                            changed.uniform = true;
+                    match anim {
+                        AnimationUniform::Changed(x) | AnimationUniform::ChangedAndToUser(x) => {
+                            if x.get_number() != uniform.0.get_number() {
+                                *x = uniform.0.clone();
+                                changed.uniform = true;
+                            }
+                            changed |= x.simple_egui(ui);
                         }
-                        changed |= x.simple_egui(ui);
+                        _ => {}
                     }
                 });
             }
@@ -3712,6 +3746,29 @@ impl AnyUniform {
 }
 
 impl Scene {
+    fn init_stage(&mut self, stage: usize) -> WhatChanged {
+        let mut result = WhatChanged::default();
+        if self.animation_stages.storage.len() > 0 {
+            for (pos, uniform) in self.animation_stages.storage[stage]
+                .uniforms
+                .iter()
+                .enumerate()
+            {
+                use AnimationUniform::*;
+                match uniform {
+                    Changed(x) | ChangedAndToUser(x) => {
+                        result.uniform |=
+                            check_changed(&mut self.uniforms.storage[pos], |u| {
+                                *u = AnyUniformComboBox(x.clone());
+                            });
+                    }
+                    ProvidedToUser | Remains => {}
+                }
+            }
+        }
+        result
+    }
+
     pub fn control_egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
         let mut result = WhatChanged::default();
         if self.user_uniforms.uniforms.iter().any(|x| *x) {
@@ -3730,31 +3787,37 @@ impl Scene {
             }
             ui.separator();
         }
-        let mut current_stage = self.current_stage;
-        result.uniform |= check_changed(&mut current_stage, |stage| {
-            for (pos, name) in self.animation_stages.names.iter().enumerate() {
-                ui.radio_value(stage, pos, name);
+
+        if !self.animation_stages.storage.is_empty() {
+            let mut current_stage = self.current_stage;
+            result.uniform |= check_changed(&mut current_stage, |stage| {
+                let previous = *stage;
+                for (pos, name) in self.animation_stages.names.clone().iter().enumerate() {
+                    ui.radio_value(stage, pos, name);
+                    if *stage != previous && *stage == pos {
+                        result |= self.init_stage(*stage);
+                    }
+                }
+            });
+            self.current_stage = current_stage;
+            if self.current_stage >= self.animation_stages.storage.len() {
+                self.current_stage = self.animation_stages.storage.len() - 1;
             }
-        });
-        self.current_stage = current_stage;
-        ui.separator();
-        let uniforms = &mut self.uniforms;
-        for (pos, uniform) in self.animation_stages.storage[self.current_stage]
-            .uniforms
-            .iter()
-            .enumerate()
-        {
-            use AnimationUniform::*;
-            match uniform {
-                ProvidedToUser => drop(ui.horizontal(|ui| {
-                    ui.label(&uniforms.names[pos]);
-                    result |= uniforms.storage[pos].0.simple_egui(ui)
-                })),
-                Remains => {}
-                Changed(x) => {
-                    result.uniform |= check_changed(&mut uniforms.storage[pos], |u| {
-                        *u = AnyUniformComboBox(x.clone());
-                    });
+            ui.separator();
+            let uniforms = &mut self.uniforms;
+            for (pos, uniform) in self.animation_stages.storage[self.current_stage]
+                .uniforms
+                .iter()
+                .enumerate()
+            {
+                use AnimationUniform::*;
+                match uniform {
+                    ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
+                        ui.label(&uniforms.names[pos]);
+                        result |= uniforms.storage[pos].0.simple_egui(ui)
+                    })),
+                    Remains => {}
+                    Changed(_) => {}
                 }
             }
         }

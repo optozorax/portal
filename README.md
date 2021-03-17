@@ -1,5 +1,12 @@
-# Portals visulization
+# Portal explorer
 
-Online demo: https://optozorax.github.io/portal/?scene=monoportal
+[Readme on Russian](RUSSIAN.md)
 
-![](img/monoportal.png)
+TODO: write readme
+
+
+# Scenes
+
+* [Mobius portal](https://optozorax.github.io/portal/?scene=mobius)
+* [Monoportal](https://optozorax.github.io/portal/?scene=monoportal)
+* [Empty](https://optozorax.github.io/portal/)
