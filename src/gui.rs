@@ -152,13 +152,13 @@ pub fn egui_angle_f64(ui: &mut Ui, angle: &mut f64) -> bool {
                     current = v;
                 }
             }
-            current.into()
+            current
         })
         .speed(1)
         .suffix("°"),
     );
     if previous != current {
-        *angle = *angle * PI / 180.;
+        *angle = current * PI / 180.;
         true
     } else {
         false
