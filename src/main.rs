@@ -1,10 +1,12 @@
-use egui::{DragValue, Ui};
-use egui_macroquad::Egui;
-use macroquad::prelude::*;
 use miniquad_parameters::PROGRAM_PARAMETERS;
 use std::f32::consts::PI;
 
-use portal::gui::{self, *};
+use egui_macroquad::Egui;
+
+use macroquad::prelude::*;
+use portal::gui::{common::*, scene::*, texture::*};
+
+use egui::{DragValue, Ui};
 
 struct RotateAroundCam {
     look_at: Vec3,
@@ -622,7 +624,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 .show(ctx, |ui| {
                     egui::experimental::easy_mark(ui, "# What is this\n\nThis is predefined library GLSL code, it included before user code, so you can use functions and etc. from this.\n\n---\n\n# Code\n\n");
                     ui.separator();
-                    ui.monospace(gui::LIBRARY);
+                    ui.monospace(LIBRARY);
                 });
         }
 
