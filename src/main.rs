@@ -4,8 +4,7 @@ use macroquad::prelude::*;
 use miniquad_parameters::PROGRAM_PARAMETERS;
 use std::f32::consts::PI;
 
-mod gui;
-use crate::gui::*;
+use portal::gui::{self, *};
 
 struct RotateAroundCam {
     look_at: Vec3,
@@ -269,17 +268,27 @@ impl Window {
     async fn new() -> Self {
         let available_scenes: Vec<(String, String, String)> = vec![
             ("Empty", "empty", include_str!("../scenes/empty.json")),
+            ("Room", "room", include_str!("../scenes/room.json")),
             (
                 "Monoportal",
                 "monoportal",
                 include_str!("../scenes/monoportal.json"),
             ),
-            // (
-            //     "Monoportal offset",
-            //     "monoportal_offset",
-            //     include_str!("../scenes/monoportal_offset.json"),
-            // ),
-            ("Mobius portal", "mobius", include_str!("../scenes/mobius.json")),
+            (
+                "Monoportal offset",
+                "monoportal_offset",
+                include_str!("../scenes/monoportal_offset.json"),
+            ),
+            (
+                "Mobius portal",
+                "mobius",
+                include_str!("../scenes/mobius.json"),
+            ),
+            (
+                "Mobius monoportal",
+                "mobius_monoportal",
+                include_str!("../scenes/mobius_monoportal.json"),
+            ),
             // ("Misc", "misc", include_str!("../scenes/misc.json")),
         ]
         .into_iter()
@@ -351,7 +360,7 @@ impl Window {
     async fn reload_textures(&mut self) {
         if self.data.reload_textures {
             self.data.reload_textures = false;
-            self.data.texture_errors.clear();
+            self.data.texture_errors.0.clear();
             for (name, path) in self.scene.textures.iter() {
                 match macroquad::file::load_file(&path.0).await {
                     Ok(bytes) => {
@@ -362,7 +371,7 @@ impl Window {
                         self.material.set_texture(&TextureName::name(name), texture);
                     }
                     Err(file) => {
-                        self.data.texture_errors.insert(name.to_string(), file);
+                        self.data.texture_errors.0.insert(name.to_string(), file);
                     }
                 }
             }
@@ -418,8 +427,6 @@ impl Window {
         });
         let mut edit_scene_opened = self.edit_scene_opened;
 
-        self.data.names = self.scene.matrices.names_iter().cloned().collect();
-        self.data.formulas_names = self.scene.uniforms.names_iter().cloned().collect();
         let errors_count = self.scene.errors_count(0, &mut self.data);
         egui::Window::new(if errors_count > 0 {
             format!("Edit scene ({} err)", errors_count)
@@ -719,6 +726,8 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    // color_backtrace::install();
+
     let mut window = Window::new().await;
 
     let mut texture = load_texture_from_image(&get_screen_data());

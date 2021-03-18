@@ -15,3 +15,4 @@ serde_json = "1.0"
 egui = "0.10.0"
 fasteval = "0.2.4"
 miniquad-parameters = { git = "https://github.com/optozorax/miniquad-parameters" }
+# color-backtrace = "0.5.0"

@@ -7,6 +7,8 @@ use std::collections::BTreeSet;
 use std::f32::consts::PI;
 use std::ops::Range;
 
+use crate::megatuple;
+
 pub fn mymax(a: f32, b: f32) -> f32 {
     if a > b { a } else { b }
 }
@@ -24,12 +26,29 @@ pub fn rad2deg(rad: f32) -> f32 {
 // ----------------------------------------------------------------------------------------------------------
 
 #[derive(Debug, Default)]
+pub struct MatrixRecursionError(BTreeMap<MatrixName, bool>);
+
+#[derive(Debug, Default)]
+pub struct ShaderErrors(BTreeMap<ErrId, Vec<(usize, String)>>);
+
+#[derive(Debug, Default)]
+pub struct TextureErrors(pub BTreeMap<String, macroquad::file::FileError>);
+
+impl ShaderErrors {
+    pub fn get_errors<'a, T: ErrorId>(
+        &'a self,
+        t: &T,
+        pos: usize,
+    ) -> Option<&'a [(usize, String)]> {
+        self.0.get(&t.identifier(pos)).map(|x| &x[..])
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct Data {
-    pub pos: usize,
-    pub names: Vec<String>,
     pub to_export: Option<String>,
-    pub errors: BTreeMap<ErrId, Vec<(usize, String)>>,
-    pub matrix_recursion_error: BTreeMap<MatrixName, bool>,
+    pub errors: ShaderErrors,
+    pub matrix_recursion_error: MatrixRecursionError,
     pub show_error_window: bool,
     pub show_glsl_library: bool,
     pub show_compiled_code: Option<String>,
@@ -37,28 +56,11 @@ pub struct Data {
     pub description_ru_edit: bool,
 
     pub formulas_cache: FormulasCache,
-    pub formulas_names: Vec<String>,
 
     pub reload_textures: bool,
-    pub texture_errors: BTreeMap<String, macroquad::file::FileError>,
-
-    pub global_uniforms: GlobalUserUniforms,
-    pub uniforms_value: Vec<AnyUniformComboBox>,
+    pub texture_errors: TextureErrors,
 
     pub read_ru: bool,
-}
-
-impl Data {
-    pub fn get_errors<'a, T: ErrorId>(
-        &'a self,
-        t: &T,
-        pos: usize,
-    ) -> Option<&'a [(usize, String)]> {
-        let errors = &self.errors;
-        let identifier = t.identifier(pos);
-        let result = errors.get(&identifier)?;
-        Some(&result[..])
-    }
 }
 
 // ----------------------------------------------------------------------------------------------------------
@@ -99,11 +101,6 @@ pub fn check_changed<T: PartialEq + Clone, F: FnOnce(&mut T)>(t: &mut T, f: F) -
     let previous = t.clone();
     f(t);
     previous != *t
-}
-
-pub trait Eguiable {
-    #[must_use]
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged;
 }
 
 pub fn egui_bool(ui: &mut Ui, flag: &mut bool) -> bool {
@@ -365,8 +362,9 @@ macro_rules! get_try {
     };
 }
 
-pub trait StorageElem: Sized + Default + Eguiable + ErrorsCount {
+pub trait StorageElem: Sized + Default {
     type GetType;
+    type Input;
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
@@ -376,6 +374,16 @@ pub trait StorageElem: Sized + Default + Eguiable + ErrorsCount {
     ) -> GetEnum<Self::GetType>;
 
     fn defaults() -> (Vec<String>, Vec<Self>);
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        pos: usize,
+        input: &mut Self::Input,
+        names: &[String],
+    ) -> WhatChanged;
+
+    fn errors_count(&self, pos: usize, input: &Self::Input, names: &[String]) -> usize;
 }
 
 // Checks if this name is used, sends name to
@@ -447,10 +455,10 @@ impl<T: StorageElem> StorageWithNames<T> {
         GetEnum::Ok(result)
     }
 
-    pub fn rich_egui(&mut self, ui: &mut Ui, data: &mut Data, name: &str) -> WhatChanged {
+    pub fn rich_egui(&mut self, ui: &mut Ui, input: &mut T::Input, name: &str) -> WhatChanged {
         use std::borrow::Cow;
 
-        let errors_count = self.errors_count(0, data);
+        let errors_count = self.errors_count(0, input);
         let header = if errors_count > 0 {
             Cow::Owned(format!("{} ({} err)", name, errors_count))
         } else {
@@ -461,14 +469,14 @@ impl<T: StorageElem> StorageWithNames<T> {
             .id_source(name)
             .default_open(false)
             .show(ui, |ui| {
-                changed |= self.egui(ui, data);
+                changed |= self.egui(ui, input);
             });
         changed
     }
 }
 
-impl<T: StorageElem> Eguiable for StorageWithNames<T> {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+impl<T: StorageElem> StorageWithNames<T> {
+    fn egui(&mut self, ui: &mut Ui, input: &mut T::Input) -> WhatChanged {
         let mut changed = WhatChanged::default();
         let mut to_delete = None;
         let mut to_move_up = None;
@@ -477,10 +485,8 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
         let names = &mut self.names;
         let len = storage.len();
         for (pos, elem) in storage.iter_mut().enumerate() {
-            data.pos = pos;
-
             let errors_count =
-                elem.errors_count(pos, data) + names[..pos].contains(&names[pos]) as usize;
+                elem.errors_count(pos, input, names) + names[..pos].contains(&names[pos]) as usize;
             CollapsingHeader::new(if errors_count > 0 {
                 format!("{} ({} err)", names[pos], errors_count)
             } else {
@@ -533,7 +539,7 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
                 }
                 changed.shader |= previous != names[pos];
 
-                changed |= elem.egui(ui, data);
+                changed |= elem.egui(ui, pos, input, names);
             });
         }
         if let Some(pos) = to_delete {
@@ -557,14 +563,14 @@ impl<T: StorageElem> Eguiable for StorageWithNames<T> {
     }
 }
 
-impl<T: StorageElem> ErrorsCount for StorageWithNames<T> {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+impl<T: StorageElem> StorageWithNames<T> {
+    fn errors_count(&self, _: usize, data: &mut T::Input) -> usize {
         self.storage
             .iter()
             .enumerate()
             .map(|(pos, x)| {
-                data.pos = pos;
-                x.errors_count(pos, data) + self.names[..pos].contains(&self.names[pos]) as usize
+                x.errors_count(pos, data, &self.names)
+                    + self.names[..pos].contains(&self.names[pos]) as usize
             })
             .sum()
     }
@@ -714,14 +720,20 @@ impl ComboBoxChoosable for Matrix {
     }
 }
 
-impl Eguiable for Matrix {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+impl Matrix {
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        pos: usize,
+        input: &mut megatuple!(Vec<String>, MatrixRecursionError),
+        names: &[String],
+    ) -> WhatChanged {
         use Matrix::*;
+        let megapattern!(formulas_names, matrix_recursion_error) = input;
         let mut is_changed = false;
         let mut errors_count = 0;
         match self {
             Mul { to, what } => {
-                let names = &data.names;
                 is_changed |= egui_existing_name(ui, "Mul to:", 45., to, names, &mut errors_count);
                 is_changed |= egui_existing_name(ui, "What:", 45., what, names, &mut errors_count);
             }
@@ -730,7 +742,6 @@ impl Eguiable for Matrix {
                 second_portal,
                 what,
             } => {
-                let names = &data.names;
                 is_changed |=
                     egui_existing_name(ui, "From:", 45., first_portal, names, &mut errors_count);
                 is_changed |=
@@ -784,26 +795,46 @@ impl Eguiable for Matrix {
                 scale,
             } => {
                 ui.label("Offset: ");
-                is_changed |= offset.x.egui(ui, data, "X", 0.0, |ui, x| egui_f32(ui, x));
-                is_changed |= offset.y.egui(ui, data, "Y", 0.0, |ui, x| egui_f32(ui, x));
-                is_changed |= offset.z.egui(ui, data, "Z", 0.0, |ui, x| egui_f32(ui, x));
+                is_changed |= offset
+                    .x
+                    .egui(ui, formulas_names, "X", 0.0, |ui, x| egui_f32(ui, x));
+                is_changed |= offset
+                    .y
+                    .egui(ui, formulas_names, "Y", 0.0, |ui, x| egui_f32(ui, x));
+                is_changed |= offset
+                    .z
+                    .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_f32(ui, x));
                 ui.separator();
                 ui.label("Rotate: ");
-                is_changed |= rotate.x.egui(ui, data, "X", 0.0, |ui, x| egui_angle(ui, x));
-                is_changed |= rotate.y.egui(ui, data, "Y", 0.0, |ui, x| egui_angle(ui, x));
-                is_changed |= rotate.z.egui(ui, data, "Z", 0.0, |ui, x| egui_angle(ui, x));
+                is_changed |= rotate
+                    .x
+                    .egui(ui, formulas_names, "X", 0.0, |ui, x| egui_angle(ui, x));
+                is_changed |= rotate
+                    .y
+                    .egui(ui, formulas_names, "Y", 0.0, |ui, x| egui_angle(ui, x));
+                is_changed |= rotate
+                    .z
+                    .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_angle(ui, x));
                 ui.separator();
                 ui.label("Mirror: ");
-                is_changed |= mirror.x.egui(ui, data, "X", 0.0, |ui, x| egui_0_1(ui, x));
-                is_changed |= mirror.y.egui(ui, data, "Y", 0.0, |ui, x| egui_0_1(ui, x));
-                is_changed |= mirror.z.egui(ui, data, "Z", 0.0, |ui, x| egui_0_1(ui, x));
+                is_changed |= mirror
+                    .x
+                    .egui(ui, formulas_names, "X", 0.0, |ui, x| egui_0_1(ui, x));
+                is_changed |= mirror
+                    .y
+                    .egui(ui, formulas_names, "Y", 0.0, |ui, x| egui_0_1(ui, x));
+                is_changed |= mirror
+                    .z
+                    .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_0_1(ui, x));
                 ui.separator();
-                is_changed |= scale.egui(ui, data, "Scale:", 1.0, |ui, x| egui_f32_positive(ui, x));
+                is_changed |= scale.egui(ui, formulas_names, "Scale:", 1.0, |ui, x| {
+                    egui_f32_positive(ui, x)
+                });
             }
         }
-        if data
-            .matrix_recursion_error
-            .get(&MatrixName(data.names[data.pos].clone()))
+        if matrix_recursion_error
+            .0
+            .get(&MatrixName(names[pos].clone()))
             .copied()
             .unwrap_or(false)
         {
@@ -819,24 +850,9 @@ impl Eguiable for Matrix {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MatrixComboBox(pub Matrix);
 
-impl Eguiable for MatrixComboBox {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
-        ui.separator();
-        changed |= self.0.egui(ui, data);
-        changed
-    }
-}
-
-impl ErrorsCount for MatrixComboBox {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
-        self.0.errors_count(pos, data)
-    }
-}
-
 impl StorageElem for MatrixComboBox {
     type GetType = Mat4;
+    type Input = megatuple!(Vec<String>, MatrixRecursionError);
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
@@ -909,15 +925,38 @@ impl StorageElem for MatrixComboBox {
             vec![MatrixComboBox::default(), MatrixComboBox::default()],
         )
     }
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        pos: usize,
+        input: &mut Self::Input,
+        names: &[String],
+    ) -> WhatChanged {
+        let mut changed =
+            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
+        ui.separator();
+        changed |= self.0.egui(ui, pos, input, names);
+        changed
+    }
+
+    fn errors_count(&self, pos: usize, input: &Self::Input, names: &[String]) -> usize {
+        self.0.errors_count(pos, input, names)
+    }
 }
 
-impl ErrorsCount for Matrix {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
+impl Matrix {
+    fn errors_count(
+        &self,
+        pos: usize,
+        input: &megatuple!(Vec<String>, MatrixRecursionError),
+        names: &[String],
+    ) -> usize {
         use Matrix::*;
         let mut errors_count = 0;
+        let megapattern!(formulas_names, matrix_recursion_error) = input;
         match self {
             Mul { to, what } => {
-                let names = &data.names;
                 if !names.contains(to) {
                     errors_count += 1;
                 }
@@ -930,7 +969,6 @@ impl ErrorsCount for Matrix {
                 second_portal,
                 what,
             } => {
-                let names = &data.names;
                 if !names.contains(first_portal) {
                     errors_count += 1;
                 }
@@ -948,21 +986,21 @@ impl ErrorsCount for Matrix {
                 rotate,
                 mirror,
             } => {
-                errors_count += offset.x.errors_count(pos, data)
-                    + offset.y.errors_count(pos, data)
-                    + offset.z.errors_count(pos, data);
-                errors_count += rotate.x.errors_count(pos, data)
-                    + rotate.y.errors_count(pos, data)
-                    + rotate.z.errors_count(pos, data);
-                errors_count += mirror.x.errors_count(pos, data)
-                    + mirror.y.errors_count(pos, data)
-                    + mirror.z.errors_count(pos, data);
-                errors_count += scale.errors_count(pos, data);
+                errors_count += offset.x.errors_count(formulas_names)
+                    + offset.y.errors_count(formulas_names)
+                    + offset.z.errors_count(formulas_names);
+                errors_count += rotate.x.errors_count(formulas_names)
+                    + rotate.y.errors_count(formulas_names)
+                    + rotate.z.errors_count(formulas_names);
+                errors_count += mirror.x.errors_count(formulas_names)
+                    + mirror.y.errors_count(formulas_names)
+                    + mirror.z.errors_count(formulas_names);
+                errors_count += scale.errors_count(formulas_names);
             }
         }
-        if data
-            .matrix_recursion_error
-            .get(&MatrixName(data.names[data.pos].clone()))
+        if matrix_recursion_error
+            .0
+            .get(&MatrixName(names[pos].clone()))
             .copied()
             .unwrap_or(false)
         {
@@ -975,10 +1013,6 @@ impl ErrorsCount for Matrix {
 // ----------------------------------------------------------------------------------------------------------
 // Errors handling
 // ----------------------------------------------------------------------------------------------------------
-
-pub trait ErrorsCount {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize;
-}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct ErrId(pub usize);
@@ -1049,9 +1083,9 @@ impl Default for Material {
     }
 }
 
-impl ErrorsCount for Material {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
-        if let Some(local_errors) = data.get_errors(self, pos) {
+impl Material {
+    fn errors_count(&self, pos: usize, errors: &ShaderErrors) -> usize {
+        if let Some(local_errors) = errors.get_errors(self, pos) {
             local_errors.len()
         } else {
             0
@@ -1059,14 +1093,9 @@ impl ErrorsCount for Material {
     }
 }
 
-impl ErrorsCount for MaterialComboBox {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
-        self.0.errors_count(pos, data)
-    }
-}
-
 impl StorageElem for MaterialComboBox {
     type GetType = Material;
+    type Input = ShaderErrors;
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
@@ -1082,6 +1111,24 @@ impl StorageElem for MaterialComboBox {
             vec!["black".to_owned()],
             vec![MaterialComboBox(Material::default())],
         )
+    }
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        pos: usize,
+        input: &mut Self::Input,
+        _: &[String],
+    ) -> WhatChanged {
+        let mut changed =
+            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, pos));
+        ui.separator();
+        changed |= self.0.egui(ui, pos, input);
+        changed
+    }
+
+    fn errors_count(&self, pos: usize, input: &Self::Input, _: &[String]) -> usize {
+        self.0.errors_count(pos, &input)
     }
 }
 
@@ -1121,11 +1168,11 @@ const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);
 const COLOR_FUNCTION: Color32 = Color32::from_rgb(0x2B, 0xAB, 0x63);
 const COLOR_ERROR: Color32 = Color32::RED;
 
-impl Eguiable for Material {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+impl Material {
+    fn egui(&mut self, ui: &mut Ui, pos: usize, errors: &mut ShaderErrors) -> WhatChanged {
         use Material::*;
         let mut changed = false;
-        let has_errors = data.get_errors(&*self, data.pos).is_some();
+        let has_errors = errors.get_errors(&*self, pos).is_some();
         match self {
             Simple {
                 color,
@@ -1239,11 +1286,11 @@ impl Eguiable for Material {
                 });
 
                 egui_with_red_field(ui, has_errors, |ui| {
-                    changed |= code.0.egui(ui, data).shader;
+                    changed |= code.0.egui(ui).shader;
                 });
                 ui.add(Label::new("}").monospace());
 
-                if let Some(local_errors) = data.get_errors(self, data.pos) {
+                if let Some(local_errors) = errors.get_errors(self, pos) {
                     egui_errors(ui, local_errors);
                 }
             }
@@ -1255,16 +1302,6 @@ impl Eguiable for Material {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MaterialComboBox(pub Material);
 
-impl Eguiable for MaterialComboBox {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, data.pos));
-        ui.separator();
-        changed |= self.0.egui(ui, data);
-        changed
-    }
-}
-
 // ----------------------------------------------------------------------------------------------------------
 // Glsl code in objects and materials
 // ----------------------------------------------------------------------------------------------------------
@@ -1275,18 +1312,9 @@ pub struct MaterialCode(pub GlslCode);
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GlslCode(pub String);
 
-impl ErrorsCount for LibraryCode {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
-        if let Some(local_errors) = data.get_errors(self, pos) {
-            local_errors.len()
-        } else {
-            0
-        }
-    }
-}
-
 impl StorageElem for LibraryCode {
     type GetType = LibraryCode;
+    type Input = ShaderErrors;
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
@@ -1299,6 +1327,34 @@ impl StorageElem for LibraryCode {
 
     fn defaults() -> (Vec<String>, Vec<Self>) {
         (vec!["my functions".to_owned()], vec![Default::default()])
+    }
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        pos: usize,
+        input: &mut Self::Input,
+        _: &[String],
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        egui_with_red_field(ui, input.get_errors(self, pos).is_some(), |ui| {
+            changed = WhatChanged::from_shader(
+                ui.add(TextEdit::multiline(&mut self.0.0).text_style(TextStyle::Monospace))
+                    .changed(),
+            );
+            if let Some(local_errors) = input.get_errors(self, pos) {
+                egui_errors(ui, local_errors);
+            }
+        });
+        changed
+    }
+
+    fn errors_count(&self, pos: usize, input: &Self::Input, _: &[String]) -> usize {
+        if let Some(local_errors) = input.get_errors(self, pos) {
+            local_errors.len()
+        } else {
+            0
+        }
     }
 }
 
@@ -1313,34 +1369,12 @@ impl Default for MaterialCode {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct LibraryCode(GlslCode);
 
-impl Eguiable for GlslCode {
-    fn egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
+impl GlslCode {
+    fn egui(&mut self, ui: &mut Ui) -> WhatChanged {
         WhatChanged::from_shader(
             ui.add(TextEdit::multiline(&mut self.0).text_style(TextStyle::Monospace))
                 .changed(),
         )
-    }
-}
-
-impl Eguiable for LibraryCode {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed = WhatChanged::default();
-        egui_with_red_field(ui, data.get_errors(self, data.pos).is_some(), |ui| {
-            changed = WhatChanged::from_shader(
-                ui.add(TextEdit::multiline(&mut self.0.0).text_style(TextStyle::Monospace))
-                    .changed(),
-            );
-            if let Some(local_errors) = data.get_errors(self, data.pos) {
-                egui_errors(ui, local_errors);
-            }
-        });
-        changed
-    }
-}
-
-impl Eguiable for MaterialCode {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        self.0.egui(ui, data)
     }
 }
 
@@ -1493,10 +1527,9 @@ impl ComboBoxChoosable for Object {
     }
 }
 
-impl Eguiable for ObjectType {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+impl ObjectType {
+    fn egui(&mut self, ui: &mut Ui, names: &mut Vec<String>) -> WhatChanged {
         use ObjectType::*;
-        let names = &data.names;
         let mut is_changed = false;
         let mut errors_count = 0;
         match self {
@@ -1515,12 +1548,17 @@ impl Eguiable for ObjectType {
     }
 }
 
-impl Eguiable for Object {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+impl Object {
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        pos: usize,
+        input: &mut megatuple!(Vec<String>, ShaderErrors),
+    ) -> WhatChanged {
         use Object::*;
-        let names = &data.names;
+        let megapattern!(names, errors) = input;
         let mut is_changed = WhatChanged::default();
-        let has_errors = data.get_errors(self, data.pos).is_some();
+        let has_errors = errors.get_errors(self, pos).is_some();
         let mut errors_count = 0;
         match self {
             DebugMatrix(a) => {
@@ -1529,7 +1567,7 @@ impl Eguiable for Object {
             }
             Flat { kind, is_inside } => {
                 is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
-                is_changed |= kind.egui(ui, data);
+                is_changed |= kind.egui(ui, names);
                 ui.separator();
                 if matches!(kind, ObjectType::Portal { .. }) {
                     ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
@@ -1571,16 +1609,16 @@ impl Eguiable for Object {
                     });
                 }
                 egui_with_red_field(ui, has_errors, |ui| {
-                    is_changed |= is_inside.0.egui(ui, data);
+                    is_changed |= is_inside.0.egui(ui);
                 });
                 ui.add(Label::new("}").monospace());
-                if let Some(local_errors) = data.get_errors(self, data.pos) {
+                if let Some(local_errors) = errors.get_errors(self, pos) {
                     egui_errors(ui, local_errors);
                 }
             }
             Complex { kind, intersect } => {
                 is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
-                is_changed |= kind.egui(ui, data);
+                is_changed |= kind.egui(ui, names);
                 ui.separator();
 
                 ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
@@ -1619,10 +1657,10 @@ impl Eguiable for Object {
                     }
                 });
                 egui_with_red_field(ui, has_errors, |ui| {
-                    is_changed |= intersect.0.egui(ui, data);
+                    is_changed |= intersect.0.egui(ui);
                 });
                 ui.add(Label::new("}").monospace());
-                if let Some(local_errors) = data.get_errors(self, data.pos) {
+                if let Some(local_errors) = errors.get_errors(self, pos) {
                     egui_errors(ui, local_errors);
                 }
             }
@@ -1634,21 +1672,11 @@ impl Eguiable for Object {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ObjectComboBox(pub Object);
 
-impl Eguiable for ObjectComboBox {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed = WhatChanged::from_shader(egui_combo_label(ui, "Type:", 45., &mut self.0));
-        ui.separator();
-        changed |= self.0.egui(ui, data);
-        changed
-    }
-}
-
-impl ErrorsCount for ObjectType {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+impl ObjectType {
+    fn errors_count(&self, names: &[String]) -> usize {
         let mut result = 0;
 
         use ObjectType::*;
-        let names = &data.names;
         match self {
             Simple(a) => {
                 if !names.contains(&a.0) {
@@ -1669,16 +1697,19 @@ impl ErrorsCount for ObjectType {
     }
 }
 
-impl ErrorsCount for Object {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
-        let mut result = if let Some(local_errors) = data.get_errors(self, pos) {
+impl Object {
+    fn errors_count(
+        &self,
+        pos: usize,
+        megapattern!(names, errors): &megatuple!(Vec<String>, ShaderErrors),
+    ) -> usize {
+        let mut result = if let Some(local_errors) = errors.get_errors(self, pos) {
             local_errors.len()
         } else {
             0
         };
 
         use Object::*;
-        let names = &data.names;
         match self {
             DebugMatrix(a) => {
                 if !names.contains(&a.0) {
@@ -1686,10 +1717,10 @@ impl ErrorsCount for Object {
                 }
             }
             Flat { kind, is_inside: _ } => {
-                result += kind.errors_count(pos, data);
+                result += kind.errors_count(names);
             }
             Complex { kind, intersect: _ } => {
-                result += kind.errors_count(pos, data);
+                result += kind.errors_count(names);
             }
         }
 
@@ -1697,14 +1728,9 @@ impl ErrorsCount for Object {
     }
 }
 
-impl ErrorsCount for ObjectComboBox {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
-        self.0.errors_count(pos, data)
-    }
-}
-
 impl StorageElem for ObjectComboBox {
     type GetType = Object;
+    type Input = megatuple!(Vec<String>, ShaderErrors);
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
@@ -1718,6 +1744,23 @@ impl StorageElem for ObjectComboBox {
     fn defaults() -> (Vec<String>, Vec<Self>) {
         (vec!["my object".to_owned()], vec![Default::default()])
     }
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        pos: usize,
+        input: &mut Self::Input,
+        _: &[String],
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::from_shader(egui_combo_label(ui, "Type:", 45., &mut self.0));
+        ui.separator();
+        changed |= self.0.egui(ui, pos, input);
+        changed
+    }
+
+    fn errors_count(&self, pos: usize, data: &Self::Input, _: &[String]) -> usize {
+        self.0.errors_count(pos, data)
+    }
 }
 
 // ----------------------------------------------------------------------------------------------------------
@@ -1726,7 +1769,6 @@ impl StorageElem for ObjectComboBox {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextureName(pub String);
-
 impl TextureName {
     pub fn name(s: &str) -> String {
         format!("{}_tex", s)
@@ -1739,31 +1781,11 @@ impl Default for TextureName {
     }
 }
 
-impl ErrorsCount for TextureName {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
-        data.texture_errors.get(&self.0).is_some() as usize
-    }
-}
-
-impl Eguiable for TextureName {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let result = WhatChanged::from_shader(check_changed(&mut self.0, |text| {
-            drop(ui.text_edit_singleline(text))
-        }));
-
-        if let Some(err) = data.texture_errors.get(&self.0) {
-            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
-                ui.add(Label::new("Error:").text_color(Color32::RED));
-                ui.label(format!("error while loading file: {:?}", err));
-            });
-        }
-
-        result
-    }
-}
+impl TextureName {}
 
 impl StorageElem for TextureName {
     type GetType = TextureName;
+    type Input = TextureErrors;
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
@@ -1772,6 +1794,31 @@ impl StorageElem for TextureName {
         _: &FormulasCache,
     ) -> GetEnum<Self::GetType> {
         GetEnum::Ok(self.clone())
+    }
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        _: usize,
+        texture_errors: &mut Self::Input,
+        _: &[String],
+    ) -> WhatChanged {
+        let result = WhatChanged::from_shader(check_changed(&mut self.0, |text| {
+            drop(ui.text_edit_singleline(text))
+        }));
+
+        if let Some(err) = texture_errors.0.get(&self.0) {
+            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+                ui.add(Label::new("Error:").text_color(Color32::RED));
+                ui.label(format!("error while loading file: {:?}", err));
+            });
+        }
+
+        result
+    }
+
+    fn errors_count(&self, _: usize, texture_errors: &Self::Input, _: &[String]) -> usize {
+        texture_errors.0.get(&self.0).is_some() as usize
     }
 
     fn defaults() -> (Vec<String>, Vec<Self>) {
@@ -1883,8 +1930,6 @@ impl Scene {
         }
         data.errors = Default::default();
         data.show_error_window = false;
-        data.names = self.matrices.names.clone();
-        data.formulas_names = self.uniforms.names.clone();
         self.user_uniforms
             .uniforms
             .resize(self.uniforms.storage.len(), false);
@@ -1898,12 +1943,7 @@ impl Scene {
         should_recompile: &mut bool,
     ) -> (
         WhatChanged,
-        Option<
-            Result<
-                macroquad::material::Material,
-                (String, String, BTreeMap<ErrId, Vec<(usize, String)>>),
-            >,
-        >,
+        Option<Result<macroquad::material::Material, (String, String, ShaderErrors)>>,
     ) {
         let mut changed = WhatChanged::default();
         let mut material = None;
@@ -1974,7 +2014,9 @@ impl Scene {
                     });
             });
 
-        changed |= self.uniforms.rich_egui(ui, data, "Uniforms");
+        changed |= self
+            .uniforms
+            .rich_egui(ui, &mut data.formulas_cache, "Uniforms");
 
         if changed.uniform {
             self.user_uniforms
@@ -2004,24 +2046,30 @@ impl Scene {
             }
         });
 
-        data.names = self.matrices.names.clone();
-        data.formulas_names = self.uniforms.names.clone();
+        with_swapped!(x => (self.uniforms.names, data.matrix_recursion_error);
+            changed |= self.matrices.rich_egui(ui, &mut x, "Matrices"));
 
-        changed |= self.matrices.rich_egui(ui, data, "Matrices");
-        changed |= self.objects.rich_egui(ui, data, "Objects");
-        changed |= self.materials.rich_egui(ui, data, "Materials");
-        changed |= self.textures.rich_egui(ui, data, "Textures");
-        changed |= self.library.rich_egui(ui, data, "User GLSL code");
+        with_swapped!(x => (self.matrices.names, data.errors);
+            changed |= self.objects.rich_egui(ui, &mut x, "Objects"));
 
-        data.formulas_names = self.uniforms.names.clone();
-        ui.collapsing("Global user uniforms", |ui| {
-            changed |= self.user_uniforms.egui(ui, data);
-        });
-        data.global_uniforms = self.user_uniforms.clone();
-        data.uniforms_value = self.uniforms.storage.clone();
+        changed |= self.materials.rich_egui(ui, &mut data.errors, "Materials");
+
         changed |= self
-            .animation_stages
-            .rich_egui(ui, data, "Animation stages");
+            .textures
+            .rich_egui(ui, &mut data.texture_errors, "Textures");
+
+        changed |= self
+            .library
+            .rich_egui(ui, &mut data.errors, "User GLSL code");
+
+        ui.collapsing("Global user uniforms", |ui| {
+            changed |= self.user_uniforms.egui(ui, &mut self.uniforms.names);
+        });
+
+        with_swapped!(x => (self.uniforms.names, self.user_uniforms, self.uniforms.storage);
+            changed |= self
+                .animation_stages
+                .rich_egui(ui, &mut x, "Animation stages"));
 
         ui.separator();
 
@@ -2034,7 +2082,7 @@ impl Scene {
             }
         });
 
-        if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
+        if let Some(local_errors) = data.errors.0.get(&ErrId::default()).cloned() {
             ui.separator();
             ui.horizontal(|ui| {
                 ui.label("Other errors:");
@@ -2049,13 +2097,15 @@ impl Scene {
     }
 }
 
-impl ErrorsCount for Scene {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
-        self.matrices.errors_count(0, data)
-            + self.objects.errors_count(0, data)
-            + self.materials.errors_count(0, data)
-            + self.library.errors_count(0, data)
-            + if let Some(local_errors) = data.errors.get(&ErrId::default()).cloned() {
+impl Scene {
+    pub fn errors_count(&mut self, _: usize, data: &mut Data) -> usize {
+        with_swapped!(x => (self.uniforms.names, data.matrix_recursion_error);
+            self.matrices.errors_count(0, &mut x))
+            + with_swapped!(x => (self.matrices.names, data.errors);
+                self.objects.errors_count(0, &mut x))
+            + self.materials.errors_count(0, &mut data.errors)
+            + self.library.errors_count(0, &mut data.errors)
+            + if let Some(local_errors) = data.errors.0.get(&ErrId::default()).cloned() {
                 local_errors.len()
             } else {
                 0
@@ -2148,13 +2198,14 @@ impl Scene {
         data: &mut Data,
         uniforms: &StorageWithNames<AnyUniformComboBox>,
     ) {
-        data.matrix_recursion_error.clear();
+        data.matrix_recursion_error.0.clear();
         macro_rules! local_try {
             ($a:expr, $c:ident, $b: expr) => {
                 match self.matrices.get(&$a.0, uniforms, &data.formulas_cache) {
                     GetEnum::Ok($c) => {
                         *data
                             .matrix_recursion_error
+                            .0
                             .entry($a.clone())
                             .or_insert(false) = false;
                         $b
@@ -2162,6 +2213,7 @@ impl Scene {
                     GetEnum::Recursion => {
                         *data
                             .matrix_recursion_error
+                            .0
                             .entry($a.clone())
                             .or_insert(false) = true;
                     }
@@ -2662,8 +2714,7 @@ impl Scene {
 
     pub fn get_new_material(
         &self,
-    ) -> Result<macroquad::prelude::Material, (String, String, BTreeMap<ErrId, Vec<(usize, String)>>)>
-    {
+    ) -> Result<macroquad::prelude::Material, (String, String, ShaderErrors)> {
         let code = self.generate_shader_code();
 
         use macroquad::prelude::load_material;
@@ -2715,7 +2766,7 @@ impl Scene {
                     }
                 }
             }
-            (code.storage, error_message, errors)
+            (code.storage, error_message, ShaderErrors(errors))
         })
     }
 }
@@ -2780,7 +2831,7 @@ pub fn shader_error_parser(error: &str) -> Vec<Result<(usize, &str), &str>> {
             } else if let Some(r) = try_parse_3(line) {
                 Ok(r)
             } else {
-                crate::miniquad::error!("can't parse line: `{}`", line);
+                macroquad::prelude::miniquad::error!("can't parse line: `{}`", line);
                 Err(line)
             }
         })
@@ -2975,10 +3026,10 @@ pub enum ParametrizeOrNot {
     No(f32),
 }
 
-impl ErrorsCount for ParametrizeOrNot {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
+impl ParametrizeOrNot {
+    fn errors_count(&self, formulas_names: &[String]) -> usize {
         match self {
-            ParametrizeOrNot::Yes(name) => !data.formulas_names.contains(&name.0) as usize,
+            ParametrizeOrNot::Yes(name) => !formulas_names.contains(&name.0) as usize,
             ParametrizeOrNot::No { .. } => 0,
         }
     }
@@ -2988,7 +3039,7 @@ impl ParametrizeOrNot {
     fn egui(
         &mut self,
         ui: &mut Ui,
-        data: &mut Data,
+        formulas_names: &[String],
         label: &str,
         default: f32,
         f: impl FnOnce(&mut Ui, &mut f32) -> bool,
@@ -3009,7 +3060,7 @@ impl ParametrizeOrNot {
             }
             changed |= match self {
                 Yes(current) => {
-                    not_found = !data.formulas_names.contains(&current.0);
+                    not_found = !formulas_names.contains(&current.0);
                     check_changed(&mut current.0, |text| drop(ui.text_edit_singleline(text)))
                 }
                 No(float) => f(ui, float),
@@ -3057,9 +3108,9 @@ impl Default for Formula {
     }
 }
 
-impl Eguiable for Formula {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let edit = data.formulas_cache.with_edit(&mut self.0, |text| {
+impl Formula {
+    fn egui(&mut self, ui: &mut Ui, formulas_cache: &mut FormulasCache) -> WhatChanged {
+        let edit = formulas_cache.with_edit(&mut self.0, |text| {
             ui.add(TextEdit::singleline(text).text_style(TextStyle::Monospace));
         });
         if edit.has_errors {
@@ -3219,23 +3270,8 @@ impl Default for AnyUniform {
     }
 }
 
-impl ErrorsCount for AnyUniform {
-    fn errors_count(&self, _: usize, data: &mut Data) -> usize {
-        match self {
-            AnyUniform::Formula(text) => data.formulas_cache.has_errors(&text.0) as usize,
-            _ => 0,
-        }
-    }
-}
-
-impl ErrorsCount for AnyUniformComboBox {
-    fn errors_count(&self, pos: usize, data: &mut Data) -> usize {
-        self.0.errors_count(pos, data)
-    }
-}
-
-impl Eguiable for AnyUniform {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+impl AnyUniform {
+    fn egui(&mut self, ui: &mut Ui, formulas_cache: &mut FormulasCache) -> WhatChanged {
         use AnyUniform::*;
         let mut result = WhatChanged::default();
         match self {
@@ -3443,24 +3479,17 @@ impl Eguiable for AnyUniform {
                     });
                 });
             }
-            Formula(x) => drop(ui.centered_and_justified(|ui| result |= x.egui(ui, data))),
+            Formula(x) => {
+                drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
+            }
         }
         result
     }
 }
 
-impl Eguiable for AnyUniformComboBox {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
-        ui.separator();
-        changed |= self.0.egui(ui, data);
-        changed
-    }
-}
-
 impl StorageElem for AnyUniformComboBox {
     type GetType = AnyUniformResult;
+    type Input = FormulasCache;
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
@@ -3527,6 +3556,21 @@ impl StorageElem for AnyUniformComboBox {
         }
     }
 
+    fn egui(&mut self, ui: &mut Ui, _: usize, data: &mut Self::Input, _: &[String]) -> WhatChanged {
+        let mut changed =
+            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
+        ui.separator();
+        changed |= self.0.egui(ui, data);
+        changed
+    }
+
+    fn errors_count(&self, _: usize, formulas_cache: &Self::Input, _: &[String]) -> usize {
+        match &self.0 {
+            AnyUniform::Formula(text) => formulas_cache.has_errors(&text.0) as usize,
+            _ => 0,
+        }
+    }
+
     fn defaults() -> (Vec<String>, Vec<Self>) {
         (vec!["a".to_owned()], vec![Default::default()])
     }
@@ -3566,12 +3610,6 @@ impl Default for AnimationStage {
     }
 }
 
-impl ErrorsCount for AnimationStage {
-    fn errors_count(&self, _: usize, _: &mut Data) -> usize {
-        0
-    }
-}
-
 impl ComboBoxChoosable for AnimationUniform {
     fn variants() -> &'static [&'static str] {
         &["To user", "Remains", "Changed", "Changed + To user"]
@@ -3597,18 +3635,46 @@ impl ComboBoxChoosable for AnimationUniform {
     }
 }
 
-impl Eguiable for AnimationStage {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
+impl GlobalUserUniforms {
+    fn egui(&mut self, ui: &mut Ui, formulas_names: &mut Vec<String>) -> WhatChanged {
+        let mut changed = false;
+        self.uniforms.resize(formulas_names.len(), false);
+        for (enabled, name) in self.uniforms.iter_mut().zip(formulas_names.iter()) {
+            changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
+        }
+        WhatChanged::from_uniform(changed)
+    }
+}
+
+impl StorageElem for AnimationStage {
+    type GetType = Self;
+    type Input = megatuple!(Vec<String>, GlobalUserUniforms, Vec<AnyUniformComboBox>);
+
+    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+        &self,
+        _: F,
+        _: &StorageWithNames<AnyUniformComboBox>,
+        _: &FormulasCache,
+    ) -> GetEnum<Self::GetType> {
+        GetEnum::Ok(self.clone())
+    }
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        glob_pos: usize,
+        megapattern!(formulas_names, global_uniforms, uniforms_value): &mut Self::Input,
+        _: &[String],
+    ) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        let glob_pos = data.pos;
         self.uniforms
-            .resize(data.formulas_names.len(), AnimationUniform::Remains);
+            .resize(formulas_names.len(), AnimationUniform::Remains);
         for (pos, (((anim, global), name), uniform)) in self
             .uniforms
             .iter_mut()
-            .zip(data.global_uniforms.uniforms.iter())
-            .zip(data.formulas_names.iter())
-            .zip(data.uniforms_value.iter())
+            .zip(global_uniforms.uniforms.iter())
+            .zip(formulas_names.iter())
+            .zip(uniforms_value.iter())
             .enumerate()
         {
             if *global {
@@ -3634,29 +3700,9 @@ impl Eguiable for AnimationStage {
         }
         changed
     }
-}
 
-impl Eguiable for GlobalUserUniforms {
-    fn egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
-        let mut changed = false;
-        self.uniforms.resize(data.formulas_names.len(), false);
-        for (enabled, name) in self.uniforms.iter_mut().zip(data.formulas_names.iter()) {
-            changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
-        }
-        WhatChanged::from_uniform(changed)
-    }
-}
-
-impl StorageElem for AnimationStage {
-    type GetType = Self;
-
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
-        &self,
-        _: F,
-        _: &StorageWithNames<AnyUniformComboBox>,
-        _: &FormulasCache,
-    ) -> GetEnum<Self::GetType> {
-        GetEnum::Ok(self.clone())
+    fn errors_count(&self, _: usize, _: &Self::Input, _: &[String]) -> usize {
+        0
     }
 
     fn defaults() -> (Vec<String>, Vec<Self>) {
@@ -3757,10 +3803,9 @@ impl Scene {
                 use AnimationUniform::*;
                 match uniform {
                     Changed(x) | ChangedAndToUser(x) => {
-                        result.uniform |=
-                            check_changed(&mut self.uniforms.storage[pos], |u| {
-                                *u = AnyUniformComboBox(x.clone());
-                            });
+                        result.uniform |= check_changed(&mut self.uniforms.storage[pos], |u| {
+                            *u = AnyUniformComboBox(x.clone());
+                        });
                     }
                     ProvidedToUser | Remains => {}
                 }
