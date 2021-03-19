@@ -135,10 +135,6 @@ impl StorageElem for AnimationStage {
     fn errors_count(&self, _: usize, _: &Self::Input, _: &[String]) -> usize {
         0
     }
-
-    fn defaults() -> (Vec<String>, Vec<Self>) {
-        (vec!["First stage".to_owned()], vec![Default::default()])
-    }
 }
 
 impl AnyUniform {

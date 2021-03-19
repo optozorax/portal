@@ -328,10 +328,6 @@ impl StorageElem for ObjectComboBox {
         GetEnum::Ok(self.0.clone())
     }
 
-    fn defaults() -> (Vec<String>, Vec<Self>) {
-        (vec!["my object".to_owned()], vec![Default::default()])
-    }
-
     fn egui(
         &mut self,
         ui: &mut Ui,

@@ -66,13 +66,6 @@ impl StorageElem for MaterialComboBox {
         GetEnum::Ok(self.0.clone())
     }
 
-    fn defaults() -> (Vec<String>, Vec<Self>) {
-        (
-            vec!["black".to_owned()],
-            vec![MaterialComboBox(Material::default())],
-        )
-    }
-
     fn egui(
         &mut self,
         ui: &mut Ui,

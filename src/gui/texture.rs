@@ -59,8 +59,4 @@ impl StorageElem for TextureName {
     fn errors_count(&self, _: usize, texture_errors: &Self::Input, _: &[String]) -> usize {
         texture_errors.0.get(&self.0).is_some() as usize
     }
-
-    fn defaults() -> (Vec<String>, Vec<Self>) {
-        (vec!["texture".to_owned()], vec![Default::default()])
-    }
 }

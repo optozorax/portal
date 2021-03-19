@@ -25,10 +25,6 @@ impl StorageElem for LibraryCode {
         GetEnum::Ok(self.clone())
     }
 
-    fn defaults() -> (Vec<String>, Vec<Self>) {
-        (vec!["my functions".to_owned()], vec![Default::default()])
-    }
-
     fn egui(
         &mut self,
         ui: &mut Ui,

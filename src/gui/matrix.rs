@@ -351,13 +351,6 @@ impl StorageElem for MatrixComboBox {
         })
     }
 
-    fn defaults() -> (Vec<String>, Vec<Self>) {
-        (
-            vec!["id".to_owned(), "a".to_owned()],
-            vec![MatrixComboBox::default(), MatrixComboBox::default()],
-        )
-    }
-
     fn egui(
         &mut self,
         ui: &mut Ui,

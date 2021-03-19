@@ -33,8 +33,6 @@ pub trait StorageElem: Sized + Default {
         formulas_cache: &FormulasCache,
     ) -> GetEnum<Self::GetType>;
 
-    fn defaults() -> (Vec<String>, Vec<Self>);
-
     fn egui(
         &mut self,
         ui: &mut Ui,
@@ -51,13 +49,6 @@ pub trait StorageElem: Sized + Default {
 pub struct StorageWithNames<T> {
     pub names: Vec<String>,
     pub storage: Vec<T>,
-}
-
-impl<T: StorageElem> Default for StorageWithNames<T> {
-    fn default() -> Self {
-        let (names, storage) = T::defaults();
-        StorageWithNames { names, storage }
-    }
 }
 
 impl<T: StorageElem> StorageWithNames<T> {

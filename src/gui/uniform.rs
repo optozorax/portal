@@ -628,8 +628,4 @@ impl StorageElem for AnyUniformComboBox {
             _ => 0,
         }
     }
-
-    fn defaults() -> (Vec<String>, Vec<Self>) {
-        (vec!["a".to_owned()], vec![Default::default()])
-    }
 }
