@@ -21,6 +21,9 @@ params_register_js_plugin = function (importObject) {
     importObject.env.miniquad_parameters_get_value = function (i) {
         return js_object(ctx.entries[i][1])
     }
+    importObject.env.open_url_in_new_tab = function (url) {
+        window.open(get_js_object(url));
+    }
 }
 
 miniquad_add_plugin({
