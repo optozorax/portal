@@ -111,6 +111,9 @@ impl Scene {
         self.user_uniforms
             .uniforms
             .resize(self.uniforms.storage.len(), false);
+        self.user_uniforms
+            .matrices
+            .resize(self.matrices.storage.len(), false);
         drop(self.init_stage(self.current_stage));
     }
 
@@ -200,6 +203,9 @@ impl Scene {
             self.user_uniforms
                 .uniforms
                 .resize(self.uniforms.storage.len(), false);
+             self.user_uniforms
+                .matrices
+                .resize(self.matrices.storage.len(), false);
         }
 
         ui.collapsing("Calculated uniforms", |ui| {
@@ -819,8 +825,25 @@ impl Scene {
                 use Animation::*;
                 match uniform {
                     Changed(x) | ChangedAndToUser(x) => {
-                        result.uniform |= check_changed(&mut self.uniforms.storage[pos], |u| {
-                            *u = AnyUniformComboBox(x.clone());
+                        result.uniform |= check_changed(&mut self.uniforms.storage[pos].0, |u| {
+                            *u = x.clone();
+                        });
+                    }
+                    ProvidedToUser | Remains => {}
+                }
+            }
+        }
+        if self.animation_stages.storage.len() > 0 {
+            for (pos, matrix) in self.animation_stages.storage[stage]
+                .matrices
+                .iter()
+                .enumerate()
+            {
+                use Animation::*;
+                match matrix {
+                    Changed(x) | ChangedAndToUser(x) => {
+                        result.uniform |= check_changed(&mut self.matrices.storage[pos].0, |u| {
+                            *u = x.clone();
                         });
                     }
                     ProvidedToUser | Remains => {}
@@ -858,10 +881,9 @@ impl Scene {
                 .zip(self.user_uniforms.matrices.iter())
                 .filter(|(_, x)| **x)
             {
-                ui.horizontal(|ui| {
-                    ui.label(name);
-                    result |= matrix.0.simple_egui(ui);
-                });
+                ui.separator();
+                ui.label(name);
+                result |= matrix.0.simple_egui(ui);
             }
             ui.separator();
         }
@@ -898,6 +920,7 @@ impl Scene {
                     Changed(_) => {}
                 }
             }
+            ui.separator();
             let matrices = &mut self.matrices;
             for (pos, matrix) in self.animation_stages.storage[self.current_stage]
                 .matrices
@@ -906,10 +929,11 @@ impl Scene {
             {
                 use Animation::*;
                 match matrix {
-                    ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
+                    ProvidedToUser | ChangedAndToUser(_) => {
+                        ui.separator();
                         ui.label(&matrices.names[pos]);
                         result |= matrices.storage[pos].0.simple_egui(ui)
-                    })),
+                    },
                     Remains => {}
                     Changed(_) => {}
                 }

@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::megatuple;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Matrix {
     Mul {
         to: String,

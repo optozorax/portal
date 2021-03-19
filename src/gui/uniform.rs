@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Formula(pub String);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FormulaName(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -71,14 +71,14 @@ impl From<AnyUniformResult> for f64 {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TVec3<T> {
     pub x: T,
     pub y: T,
     pub z: T,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ParametrizeOrNot {
     Yes(FormulaName),
     No(f32),
@@ -169,7 +169,7 @@ impl Default for Formula {
 impl Formula {
     pub fn egui(&mut self, ui: &mut Ui, formulas_cache: &mut FormulasCache) -> WhatChanged {
         let edit = formulas_cache.with_edit(&mut self.0, |text| {
-            ui.add(TextEdit::singleline(text).text_style(TextStyle::Monospace));
+            ui.add(TextEdit::multiline(text).text_style(TextStyle::Monospace).desired_rows(1));
         });
         if edit.has_errors {
             ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
@@ -588,6 +588,7 @@ impl StorageElem for AnyUniformComboBox {
                 }
                 "deg2rad" => args.get(0)? / 180. * std::f64::consts::PI,
                 "rad2deg" => args.get(0)? * 180. / std::f64::consts::PI,
+                "switch" => *args.get(*args.get(0)? as usize)?,
 
                 // Free variables
                 _ => match f(name) {

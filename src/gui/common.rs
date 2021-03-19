@@ -114,7 +114,7 @@ pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
         DragValue::from_get_set(|v| {
             if let Some(v) = v {
                 if v > 360. {
-                    current = 360. - (v as f32 % 360.);
+                    current = v as f32 % 360.;
                 } else if v < 0. {
                     current = 360. + (v as f32 % 360.);
                 } else {
@@ -142,7 +142,7 @@ pub fn egui_angle_f64(ui: &mut Ui, angle: &mut f64) -> bool {
         DragValue::from_get_set(|v| {
             if let Some(v) = v {
                 if v > 360. {
-                    current = 360. - (v % 360.);
+                    current = v % 360.;
                 } else if v < 0. {
                     current = 360. + (v % 360.);
                 } else {
