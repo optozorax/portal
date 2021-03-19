@@ -45,7 +45,7 @@ pub trait StorageElem: Sized + Default {
 }
 
 // Checks if this name is used, sends name to
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StorageWithNames<T> {
     pub names: Vec<String>,
     pub storage: Vec<T>,

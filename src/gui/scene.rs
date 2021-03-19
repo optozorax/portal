@@ -57,6 +57,8 @@ pub struct OldScene {
 
     pub uniforms: StorageWithNames<AnyUniformComboBox>,
 
+    pub cam: CamSettings,
+
     pub matrices: StorageWithNames<MatrixComboBox>,
     objects: StorageWithNames<ObjectComboBox>,
 
@@ -77,12 +79,7 @@ impl From<OldScene> for Scene {
             description_en: old.description_en,
             description_ru: old.description_ru,
 
-            cam: CamSettings {
-                look_at: Vec3::default(),
-                alpha: 0.,
-                beta: 0.,
-                r: 3.5,
-            },
+            cam: old.cam,
 
             uniforms: old.uniforms,
 
@@ -244,10 +241,12 @@ impl Scene {
             .rich_egui(ui, &mut data.errors, "User GLSL code");
 
         ui.collapsing("Global user uniforms", |ui| {
-            changed |= self.user_uniforms.egui(ui, &mut self.uniforms.names);
+            changed |=
+                self.user_uniforms
+                    .egui(ui, &mut self.matrices.names, &mut self.uniforms.names);
         });
 
-        with_swapped!(x => (self.uniforms.names, self.user_uniforms, self.uniforms.storage);
+        with_swapped!(x => (self.matrices, self.uniforms, self.user_uniforms);
             changed |= self
                 .animation_stages
                 .rich_egui(ui, &mut x, "Animation stages"));
@@ -817,7 +816,7 @@ impl Scene {
                 .iter()
                 .enumerate()
             {
-                use AnimationUniform::*;
+                use Animation::*;
                 match uniform {
                     Changed(x) | ChangedAndToUser(x) => {
                         result.uniform |= check_changed(&mut self.uniforms.storage[pos], |u| {
@@ -850,6 +849,23 @@ impl Scene {
             ui.separator();
         }
 
+        if self.user_uniforms.matrices.iter().any(|x| *x) {
+            for ((matrix, name), _) in self
+                .matrices
+                .storage
+                .iter_mut()
+                .zip(self.matrices.names.iter())
+                .zip(self.user_uniforms.matrices.iter())
+                .filter(|(_, x)| **x)
+            {
+                ui.horizontal(|ui| {
+                    ui.label(name);
+                    result |= matrix.0.simple_egui(ui);
+                });
+            }
+            ui.separator();
+        }
+
         if !self.animation_stages.storage.is_empty() {
             let mut current_stage = self.current_stage;
             result.uniform |= check_changed(&mut current_stage, |stage| {
@@ -872,11 +888,27 @@ impl Scene {
                 .iter()
                 .enumerate()
             {
-                use AnimationUniform::*;
+                use Animation::*;
                 match uniform {
                     ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
                         ui.label(&uniforms.names[pos]);
                         result |= uniforms.storage[pos].0.simple_egui(ui)
+                    })),
+                    Remains => {}
+                    Changed(_) => {}
+                }
+            }
+            let matrices = &mut self.matrices;
+            for (pos, matrix) in self.animation_stages.storage[self.current_stage]
+                .matrices
+                .iter()
+                .enumerate()
+            {
+                use Animation::*;
+                match matrix {
+                    ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
+                        ui.label(&matrices.names[pos]);
+                        result |= matrices.storage[pos].0.simple_egui(ui)
                     })),
                     Remains => {}
                     Changed(_) => {}

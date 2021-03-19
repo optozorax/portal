@@ -291,7 +291,7 @@ impl Window {
                 "mobius_monoportal",
                 include_str!("../scenes/mobius_monoportal.json"),
             ),
-            // ("Misc", "misc", include_str!("../scenes/misc.json")),
+            ("Misc", "misc", include_str!("../scenes/misc.json")),
         ]
         .into_iter()
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))

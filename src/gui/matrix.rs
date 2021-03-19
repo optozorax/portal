@@ -153,6 +153,58 @@ impl ComboBoxChoosable for Matrix {
 }
 
 impl Matrix {
+    pub fn simple_egui(&mut self, ui: &mut Ui) -> WhatChanged {
+        let mut is_changed = false;
+        match self {
+            Matrix::Simple {
+                offset,
+                scale,
+                rotate,
+                mirror,
+            } => {
+                Grid::new("matrix")
+                    .striped(true)
+                    .min_col_width(45.)
+                    .max_col_width(45.)
+                    .show(ui, |ui| {
+                        ui.label("");
+                        ui.centered_and_justified(|ui| ui.label("X"));
+                        ui.centered_and_justified(|ui| ui.label("Y"));
+                        ui.centered_and_justified(|ui| ui.label("Z"));
+                        ui.end_row();
+
+                        ui.label("Offset: ");
+                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.x));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.y));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.z));
+                        ui.end_row();
+
+                        ui.label("Rotate: ");
+                        ui.centered_and_justified(|ui| is_changed |= egui_angle(ui, &mut rotate.x));
+                        ui.centered_and_justified(|ui| is_changed |= egui_angle(ui, &mut rotate.y));
+                        ui.centered_and_justified(|ui| is_changed |= egui_angle(ui, &mut rotate.z));
+                        ui.end_row();
+
+                        ui.label("Mirror: ");
+                        ui.centered_and_justified(|ui| is_changed |= egui_bool(ui, &mut mirror.0));
+                        ui.centered_and_justified(|ui| is_changed |= egui_bool(ui, &mut mirror.1));
+                        ui.centered_and_justified(|ui| is_changed |= egui_bool(ui, &mut mirror.2));
+                        ui.end_row();
+
+                        ui.label("Scale: ");
+                        is_changed |= egui_f32_positive(ui, scale);
+                        ui.end_row();
+                    });
+            }
+            _ => drop(ui.label(
+                "Internal error, other types of matrices are not allowed to be accessed by user.",
+            )),
+        }
+        WhatChanged::from_uniform(is_changed)
+    }
+}
+
+impl Matrix {
     pub fn egui(
         &mut self,
         ui: &mut Ui,

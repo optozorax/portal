@@ -1,5 +1,7 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
+use crate::gui::matrix::Matrix;
+use crate::gui::matrix::MatrixComboBox;
 use crate::gui::storage::*;
 use crate::gui::uniform::*;
 use egui::*;
@@ -10,42 +12,32 @@ use serde::{Deserialize, Serialize};
 use crate::megatuple;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AnimationUniform {
+pub enum Animation<T> {
     ProvidedToUser,
     Remains,
-    Changed(AnyUniform),
-    ChangedAndToUser(AnyUniform),
+    Changed(T),
+    ChangedAndToUser(T),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AnimationStage {
-    pub uniforms: Vec<AnimationUniform>,
+    pub uniforms: Vec<Animation<AnyUniform>>,
+    pub matrices: Vec<Animation<Matrix>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GlobalUserUniforms {
     pub uniforms: Vec<bool>,
+    pub matrices: Vec<bool>,
 }
 
-impl Default for GlobalUserUniforms {
-    fn default() -> Self {
-        Self { uniforms: vec![] }
-    }
-}
-
-impl Default for AnimationStage {
-    fn default() -> Self {
-        Self { uniforms: vec![] }
-    }
-}
-
-impl ComboBoxChoosable for AnimationUniform {
+impl<T: Default> ComboBoxChoosable for Animation<T> {
     fn variants() -> &'static [&'static str] {
         &["To user", "Remains", "Changed", "Changed + To user"]
     }
 
     fn get_number(&self) -> usize {
-        use AnimationUniform::*;
+        use Animation::*;
         match self {
             ProvidedToUser => 0,
             Remains => 1,
@@ -55,22 +47,32 @@ impl ComboBoxChoosable for AnimationUniform {
     }
 
     fn set_number(&mut self, number: usize) {
-        use AnimationUniform::*;
+        use Animation::*;
         *self = match number {
             0 => ProvidedToUser,
             1 => Remains,
-            2 => Changed(AnyUniform::Bool(false)),
-            3 => ChangedAndToUser(AnyUniform::Bool(false)),
+            2 => Changed(Default::default()),
+            3 => ChangedAndToUser(Default::default()),
             _ => unreachable!(),
         };
     }
 }
 
 impl GlobalUserUniforms {
-    pub fn egui(&mut self, ui: &mut Ui, formulas_names: &mut Vec<String>) -> WhatChanged {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        matrices_names: &mut Vec<String>,
+        formulas_names: &mut Vec<String>,
+    ) -> WhatChanged {
         let mut changed = false;
         self.uniforms.resize(formulas_names.len(), false);
         for (enabled, name) in self.uniforms.iter_mut().zip(formulas_names.iter()) {
+            changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
+        }
+        ui.separator();
+        self.matrices.resize(matrices_names.len(), false);
+        for (enabled, name) in self.matrices.iter_mut().zip(matrices_names.iter()) {
             changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
         }
         WhatChanged::from_uniform(changed)
@@ -79,7 +81,11 @@ impl GlobalUserUniforms {
 
 impl StorageElem for AnimationStage {
     type GetType = Self;
-    type Input = megatuple!(Vec<String>, GlobalUserUniforms, Vec<AnyUniformComboBox>);
+    type Input = megatuple!(
+        StorageWithNames<MatrixComboBox>,
+        StorageWithNames<AnyUniformComboBox>,
+        GlobalUserUniforms
+    );
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
@@ -93,19 +99,19 @@ impl StorageElem for AnimationStage {
     fn egui(
         &mut self,
         ui: &mut Ui,
-        glob_pos: usize,
-        megapattern!(formulas_names, global_uniforms, uniforms_value): &mut Self::Input,
+        mut glob_pos: usize,
+        megapattern!(matrices, uniforms, global_uniforms): &mut Self::Input,
         _: &[String],
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         self.uniforms
-            .resize(formulas_names.len(), AnimationUniform::Remains);
+            .resize(uniforms.names.len(), Animation::Remains);
         for (pos, (((anim, global), name), uniform)) in self
             .uniforms
             .iter_mut()
             .zip(global_uniforms.uniforms.iter())
-            .zip(formulas_names.iter())
-            .zip(uniforms_value.iter())
+            .zip(uniforms.names.iter())
+            .zip(uniforms.storage.iter())
             .enumerate()
         {
             if *global {
@@ -117,9 +123,43 @@ impl StorageElem for AnimationStage {
                 ui.horizontal(|ui| {
                     changed.uniform |= egui_combo_box(ui, name, 60., anim, glob_pos + pos);
                     match anim {
-                        AnimationUniform::Changed(x) | AnimationUniform::ChangedAndToUser(x) => {
+                        Animation::Changed(x) | Animation::ChangedAndToUser(x) => {
                             if x.get_number() != uniform.0.get_number() {
                                 *x = uniform.0.clone();
+                                changed.uniform = true;
+                            }
+                            changed |= x.simple_egui(ui);
+                        }
+                        _ => {}
+                    }
+                });
+            }
+        }
+
+        ui.separator();
+        glob_pos += self.uniforms.len() * 2;
+        self.matrices
+            .resize(matrices.names.len(), Animation::Remains);
+        for (pos, (((anim, global), name), matrix)) in self
+            .matrices
+            .iter_mut()
+            .zip(global_uniforms.matrices.iter())
+            .zip(matrices.names.iter())
+            .zip(matrices.storage.iter())
+            .enumerate()
+        {
+            if *global {
+                ui.horizontal(|ui| {
+                    egui_label(ui, name, 60.);
+                    ui.label("Global uniform");
+                });
+            } else {
+                ui.horizontal(|ui| {
+                    changed.uniform |= egui_combo_box(ui, name, 60., anim, glob_pos + pos);
+                    match anim {
+                        Animation::Changed(x) | Animation::ChangedAndToUser(x) => {
+                            if x.get_number() != matrix.0.get_number() {
+                                *x = matrix.0.clone();
                                 changed.uniform = true;
                             }
                             changed |= x.simple_egui(ui);
