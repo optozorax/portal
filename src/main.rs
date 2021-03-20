@@ -206,13 +206,10 @@ impl RotateAroundCam {
         changed |= check_changed(&mut self.view_angle, |m| {
             let mut current = rad2deg(*m);
             ui.add(
-                egui::Slider::f32(
-                    &mut current,
-                    if is_use { 20.0..=250.0 } else { 20.0..=140.0 },
-                )
-                .text("View angle")
-                .suffix("°")
-                .clamp_to_range(true),
+                egui::Slider::f32(&mut current, if is_use { 2.0..=250.0 } else { 2.0..=140.0 })
+                    .text("View angle")
+                    .suffix("°")
+                    .clamp_to_range(true),
             );
             *m = deg2rad(current);
         });
@@ -292,6 +289,11 @@ impl Window {
                 include_str!("../scenes/mobius_monoportal.json"),
             ),
             // ("Misc", "misc", include_str!("../scenes/misc.json")),
+            (
+                "Triple portal",
+                "triple_portal",
+                include_str!("../scenes/triple_portal.json"),
+            ),
         ]
         .into_iter()
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
@@ -355,6 +357,7 @@ impl Window {
             available_scenes,
         };
         result.cam.set_cam(&result.scene.cam);
+        result.offset_after_material = result.scene.cam.offset_after_material;
         result.reload_textures().await;
         result
     }
@@ -401,6 +404,7 @@ impl Window {
                             changed.uniform = true;
                             self.data.reload_textures = true;
                             self.cam.set_cam(&self.scene.cam);
+                            self.offset_after_material = self.scene.cam.offset_after_material;
                         }
                     }
                     ui.separator();
@@ -494,7 +498,9 @@ impl Window {
 
         {
             let mut not_close = true;
-            if let Some(code) = &self.data.show_compiled_code {
+            let show_compiled_code = &mut self.data.show_compiled_code;
+            let generated_code_show_text = &mut self.data.generated_code_show_text;
+            if let Some(code) = show_compiled_code {
                 egui::Window::new("Generated GLSL code")
                     .scroll(true)
                     .open(&mut not_close)
@@ -515,7 +521,18 @@ First, predefined library is included, then uniforms, then user library, then in
 # Code
 
 "#);
-                        ui.monospace(code);
+                        ui.horizontal(|ui| {
+                            ui.selectable_value(generated_code_show_text, false, "View");
+                            ui.selectable_value(generated_code_show_text, true, "To copy");
+                        });
+                        if *generated_code_show_text {
+                            ui.add(
+                                egui::TextEdit::multiline(code)
+                                    .text_style(egui::TextStyle::Monospace),
+                            );
+                        } else {
+                            ui.monospace(&*code);
+                        }
                     });
             }
             if !not_close {
@@ -561,6 +578,7 @@ First, predefined library is included, then uniforms, then user library, then in
                                     self.scene = scene;
                                     self.scene.init(&mut self.data);
                                     self.cam.set_cam(&self.scene.cam);
+                                    self.offset_after_material = self.scene.cam.offset_after_material;
                                     changed.uniform = true;
                                     self.data.reload_textures = true;
                                     match self.scene.get_new_material() {
@@ -659,7 +677,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.separator();
                     ui.label("Render depth:");
                     changed.uniform |= check_changed(&mut self.render_depth, |depth| {
-                        ui.add(egui::Slider::i32(depth, 0..=100).clamp_to_range(true));
+                        ui.add(egui::Slider::i32(depth, 0..=10000).clamp_to_range(true));
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
                 });
@@ -692,6 +710,7 @@ First, predefined library is included, then uniforms, then user library, then in
 
     fn set_uniforms(&mut self) {
         self.cam.get_cam(&mut self.scene.cam);
+        self.scene.cam.offset_after_material = self.offset_after_material;
         self.material
             .set_uniform("_resolution", (screen_width(), screen_height()));
         self.material.set_uniform("_camera", self.cam.get_matrix());

@@ -169,7 +169,11 @@ impl Default for Formula {
 impl Formula {
     pub fn egui(&mut self, ui: &mut Ui, formulas_cache: &mut FormulasCache) -> WhatChanged {
         let edit = formulas_cache.with_edit(&mut self.0, |text| {
-            ui.add(TextEdit::multiline(text).text_style(TextStyle::Monospace).desired_rows(1));
+            ui.add(
+                TextEdit::multiline(text)
+                    .text_style(TextStyle::Monospace)
+                    .desired_rows(1),
+            );
         });
         if edit.has_errors {
             ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {

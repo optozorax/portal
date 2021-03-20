@@ -57,6 +57,8 @@ pub struct Data {
     pub texture_errors: TextureErrors,
 
     pub read_ru: bool,
+
+    pub generated_code_show_text: bool,
 }
 
 pub fn add_line_numbers(s: &str) -> String {

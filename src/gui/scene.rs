@@ -25,6 +25,7 @@ pub struct CamSettings {
     pub alpha: f32,
     pub beta: f32,
     pub r: f32,
+    pub offset_after_material: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,7 +204,7 @@ impl Scene {
             self.user_uniforms
                 .uniforms
                 .resize(self.uniforms.storage.len(), false);
-             self.user_uniforms
+            self.user_uniforms
                 .matrices
                 .resize(self.matrices.storage.len(), false);
         }
@@ -933,7 +934,7 @@ impl Scene {
                         ui.separator();
                         ui.label(&matrices.names[pos]);
                         result |= matrices.storage[pos].0.simple_egui(ui)
-                    },
+                    }
                     Remains => {}
                     Changed(_) => {}
                 }
