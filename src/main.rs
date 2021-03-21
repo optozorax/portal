@@ -83,6 +83,9 @@ impl RotateAroundCam {
                 self.r *= self.scale_factor;
                 is_something_changed = true;
             }
+            if self.r > 100. {
+                self.r = 100.;
+            }
         }
 
         self.previous_mouse = mouse_pos;
@@ -268,6 +271,7 @@ impl Window {
         let available_scenes: Vec<(String, String, String)> = vec![
             ("Empty", "empty", include_str!("../scenes/empty.json")),
             ("Room", "room", include_str!("../scenes/room.json")),
+            ("Portal in portal", "portal_in_portal", include_str!("../scenes/portal_in_portal.json")),
             (
                 "Monoportal",
                 "monoportal",
@@ -414,7 +418,7 @@ impl Window {
                         }
                     }
                 });
-                if ui.button("☑ Control scene").clicked() {
+                if ui.button("↔ Control scene").clicked() {
                     self.control_scene_opened = true;
                 };
                 if ui.button("✏ Edit scene").clicked() {

@@ -1,6 +1,6 @@
 [package]
 name = "portal"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["ilya sheprut <optozorax@gmail.com>"]
 edition = "2018"
 
