@@ -298,6 +298,11 @@ impl Window {
                 "triple_portal",
                 include_str!("../scenes/triple_portal.json"),
             ),
+            (
+                "Hopf Link portal",
+                "hopf_link",
+                include_str!("../scenes/hopf_link.json"),
+            ),
         ]
         .into_iter()
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
