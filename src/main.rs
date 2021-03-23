@@ -1,7 +1,4 @@
-use miniquad_parameters::PROGRAM_PARAMETERS;
 use std::f32::consts::PI;
-
-use egui_macroquad::Egui;
 
 use macroquad::prelude::*;
 use portal::gui::{common::*, scene::*, texture::*};
@@ -308,21 +305,15 @@ impl Window {
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
         .collect();
 
-        let start1 = "--scene=";
-        let start2 = "-s=";
-
-        let default_scene = PROGRAM_PARAMETERS
+        let default_scene = quad_url::get_program_parameters()
             .iter()
-            .find(|s| s.starts_with(start1) || s.starts_with(start2))
-            .and_then(|s| {
-                let mut s = &s[..];
-                if s.starts_with(start1) {
-                    s = &s[start1.len()..];
-                } else if s.starts_with(start2) {
-                    s = &s[start2.len()..];
-                }
-
-                available_scenes.iter().position(|(_, path, _)| path == s)
+            .filter_map(|x| {
+                let x = quad_url::easy_parse(x)?;
+                Some((x.0, x.1?))
+            })
+            .find(|(name, _)| *name == "scene")
+            .and_then(|(_, value)| {
+                available_scenes.iter().position(|(_, path, _)| value == path)
             })
             .unwrap_or(0);
 
@@ -401,7 +392,7 @@ impl Window {
             use egui::menu;
             menu::bar(ui, |ui| {
                 menu::menu(ui, "🗋 Load", |ui| {
-                    for (name, _, text) in &self.available_scenes {
+                    for (name, path, text) in &self.available_scenes {
                         if ui.button(name).clicked() {
                             let s = text;
                             // let old: OldScene = serde_json::from_str(&s).unwrap();
@@ -414,6 +405,7 @@ impl Window {
                             self.data.reload_textures = true;
                             self.cam.set_cam(&self.scene.cam);
                             self.offset_after_material = self.scene.cam.offset_after_material;
+                            quad_url::set_program_parameter("scene", path);
                         }
                     }
                     ui.separator();
@@ -765,8 +757,6 @@ async fn main() {
     let mut h = screen_height();
     let mut image_size_changed = true;
 
-    let mut egui = Egui::new();
-
     let mut ui_changed_image = true;
 
     loop {
@@ -804,9 +794,10 @@ async fn main() {
             );
         }
 
-        egui.ui(|ctx| {
+        egui_macroquad::ui(|ctx| {
             ui_changed_image = window.process_mouse_and_keys(ctx);
         });
+        egui_macroquad::draw();
 
         window.reload_textures().await;
 
