@@ -268,7 +268,11 @@ impl Window {
         let available_scenes: Vec<(String, String, String)> = vec![
             ("Empty", "empty", include_str!("../scenes/empty.json")),
             ("Room", "room", include_str!("../scenes/room.json")),
-            ("Portal in portal", "portal_in_portal", include_str!("../scenes/portal_in_portal.json")),
+            (
+                "Portal in portal",
+                "portal_in_portal",
+                include_str!("../scenes/portal_in_portal.json"),
+            ),
             (
                 "Monoportal",
                 "monoportal",
@@ -300,16 +304,26 @@ impl Window {
                 "hopf_link",
                 include_str!("../scenes/hopf_link.json"),
             ),
-            (
-                "Trefoil knot portal, order 2",
-                "trefoil_knot",
-                include_str!("../scenes/trefoil_knot.json"),
-            ),
-            (
-                "Trefoil knot portal, order 3",
-                "trefoil_knot_3",
-                include_str!("../scenes/trefoil_knot_3.json"),
-            ),
+            // (
+            //     "Trefoil knot portal, order 1",
+            //     "trefoil_knot",
+            //     include_str!("../scenes/trefoil_knot_monoportal.json"),
+            // ),
+            // (
+            //     "Trefoil knot self-hiding portal, order 1",
+            //     "trefoil_knot",
+            //     include_str!("../scenes/trefoil_knot_monoportal_self_hiding.json"),
+            // ),
+            // (
+            //     "Trefoil knot portal, order 2",
+            //     "trefoil_knot",
+            //     include_str!("../scenes/trefoil_knot.json"),
+            // ),
+            // (
+            //     "Trefoil knot portal, order 3",
+            //     "trefoil_knot_3",
+            //     include_str!("../scenes/trefoil_knot_3.json"),
+            // ),
         ]
         .into_iter()
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
@@ -323,7 +337,9 @@ impl Window {
             })
             .find(|(name, _)| *name == "scene")
             .and_then(|(_, value)| {
-                available_scenes.iter().position(|(_, path, _)| value == path)
+                available_scenes
+                    .iter()
+                    .position(|(_, path, _)| value == path)
             })
             .unwrap_or(0);
 
