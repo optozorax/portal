@@ -300,6 +300,16 @@ impl Window {
                 "hopf_link",
                 include_str!("../scenes/hopf_link.json"),
             ),
+            (
+                "Trefoil knot portal, order 2",
+                "trefoil_knot",
+                include_str!("../scenes/trefoil_knot.json"),
+            ),
+            (
+                "Trefoil knot portal, order 3",
+                "trefoil_knot_3",
+                include_str!("../scenes/trefoil_knot_3.json"),
+            ),
         ]
         .into_iter()
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
