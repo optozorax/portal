@@ -10,7 +10,7 @@ In Portal Explorer you can view how interesting portals are constructed, and vis
 * [Mobius portal](https://optozorax.github.io/portal/?scene=mobius)
 * [Mobius monoportal](https://optozorax.github.io/portal/?scene=mobius_monoportal)
 * [Triple portal](https://optozorax.github.io/portal/?scene=triple_portal)
-* [Portal in portal](https://optozorax.github.io/portal/?scene=triple_portal)
+* [Portal in portal](https://optozorax.github.io/portal/?scene=portal_in_portal)
 * [Hopl Link portal](https://optozorax.github.io/portal/?scene=hopf_link)
 
 # Screenshots
