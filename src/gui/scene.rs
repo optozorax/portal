@@ -118,6 +118,7 @@ impl Scene {
         drop(self.init_stage(self.current_stage));
     }
 
+    #[allow(clippy::type_complexity)] // TODO: reduce type complexity
     pub fn egui(
         &mut self,
         ui: &mut Ui,
@@ -287,11 +288,11 @@ impl Scene {
 impl Scene {
     pub fn errors_count(&mut self, _: usize, data: &mut Data) -> usize {
         with_swapped!(x => (self.uniforms.names, data.matrix_recursion_error);
-            self.matrices.errors_count(0, &mut x))
+            self.matrices.errors_count(0, &x))
             + with_swapped!(x => (self.matrices.names, data.errors);
-                self.objects.errors_count(0, &mut x))
-            + self.materials.errors_count(0, &mut data.errors)
-            + self.library.errors_count(0, &mut data.errors)
+                self.objects.errors_count(0, &x))
+            + self.materials.errors_count(0, &data.errors)
+            + self.library.errors_count(0, &data.errors)
             + if let Some(local_errors) = data.errors.0.get(&ErrId::default()).cloned() {
                 local_errors.len()
             } else {
@@ -464,7 +465,7 @@ impl Scene {
             for (name, kind) in self
                 .uniforms()
                 .into_iter()
-                .filter(|(name, _)| !name.starts_with("_"))
+                .filter(|(name, _)| !name.starts_with('_'))
             {
                 result.add_string(format!(
                     "uniform {} {};\n",
@@ -791,20 +792,20 @@ impl Scene {
                         Some((identifier, local_line_no)) => {
                             errors
                                 .entry(identifier)
-                                .or_insert_with(|| Default::default())
+                                .or_insert_with(Default::default)
                                 .push((local_line_no, message.to_owned()));
                         }
                         None => {
                             errors
                                 .entry(ErrId::default())
-                                .or_insert_with(|| Default::default())
+                                .or_insert_with(Default::default)
                                 .push((line_no, message.to_owned()));
                         }
                     },
                     Err(message) => {
                         errors
                             .entry(ErrId::default())
-                            .or_insert_with(|| Default::default())
+                            .or_insert_with(Default::default)
                             .push((usize::MAX, message.to_owned()));
                     }
                 }
@@ -817,7 +818,7 @@ impl Scene {
 impl Scene {
     fn init_stage(&mut self, stage: usize) -> WhatChanged {
         let mut result = WhatChanged::default();
-        if self.animation_stages.storage.len() > 0 {
+        if !self.animation_stages.storage.is_empty() {
             for (pos, uniform) in self.animation_stages.storage[stage]
                 .uniforms
                 .iter()
@@ -834,7 +835,7 @@ impl Scene {
                 }
             }
         }
-        if self.animation_stages.storage.len() > 0 {
+        if !self.animation_stages.storage.is_empty() {
             for (pos, matrix) in self.animation_stages.storage[stage]
                 .matrices
                 .iter()
@@ -944,11 +945,11 @@ impl Scene {
     }
 }
 
-const FRAGMENT_SHADER: &'static str = include_str!("../frag.glsl");
+const FRAGMENT_SHADER: &str = include_str!("../frag.glsl");
 
-pub const LIBRARY: &'static str = include_str!("../library.glsl");
+pub const LIBRARY: &str = include_str!("../library.glsl");
 
-const VERTEX_SHADER: &'static str = "#version 100
+const VERTEX_SHADER: &str = "#version 100
 attribute vec3 position;
 attribute vec2 texcoord;
 

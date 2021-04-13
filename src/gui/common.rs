@@ -62,7 +62,7 @@ pub struct Data {
 }
 
 pub fn add_line_numbers(s: &str) -> String {
-    s.split("\n")
+    s.split('\n')
         .enumerate()
         .map(|(line, text)| format!("{}|{}", line + 1, text))
         .collect::<Vec<_>>()
@@ -128,7 +128,7 @@ pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
         .speed(1)
         .suffix("°"),
     );
-    if previous != current {
+    if (previous - current).abs() > 1e-6 {
         *angle = deg2rad(current);
         true
     } else {
@@ -156,7 +156,7 @@ pub fn egui_angle_f64(ui: &mut Ui, angle: &mut f64) -> bool {
         .speed(1)
         .suffix("°"),
     );
-    if previous != current {
+    if (previous - current).abs() > 1e-6 {
         *angle = current * PI / 180.;
         true
     } else {
@@ -167,7 +167,7 @@ pub fn egui_angle_f64(ui: &mut Ui, angle: &mut f64) -> bool {
 pub fn egui_f32(ui: &mut Ui, value: &mut f32) -> bool {
     check_changed(value, |value| {
         ui.add(
-            DragValue::f32(value)
+            DragValue::new(value)
                 .speed(0.01)
                 .min_decimals(0)
                 .max_decimals(2),
@@ -178,7 +178,7 @@ pub fn egui_f32(ui: &mut Ui, value: &mut f32) -> bool {
 pub fn egui_0_1(ui: &mut Ui, value: &mut f32) -> bool {
     check_changed(value, |value| {
         ui.add(
-            Slider::f32(value, 0.0..=1.0)
+            Slider::new(value, 0.0..=1.0)
                 .clamp_to_range(true)
                 .min_decimals(0)
                 .max_decimals(2),
@@ -189,7 +189,7 @@ pub fn egui_0_1(ui: &mut Ui, value: &mut f32) -> bool {
 pub fn egui_f32_positive(ui: &mut Ui, value: &mut f32) -> bool {
     check_changed(value, |value| {
         ui.add(
-            DragValue::f32(value)
+            DragValue::new(value)
                 .speed(0.01)
                 .prefix("×")
                 .clamp_range(0.0..=1000.0)
@@ -225,7 +225,8 @@ pub fn egui_existing_name(
         });
         if !names.contains(current) {
             *add_to_errors_count += 1;
-            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.;
                 ui.add(Label::new("Error: ").text_color(Color32::RED));
                 ui.label(format!("name '{}' not found", current));
             });
@@ -234,7 +235,7 @@ pub fn egui_existing_name(
 }
 
 pub fn egui_errors(ui: &mut Ui, errors: &[(usize, String)]) {
-    ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing.x = 0.;
         for (line_no, message) in errors {
             if *line_no == usize::MAX {

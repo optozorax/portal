@@ -66,7 +66,7 @@ impl From<AnyUniformResult> for f64 {
                 }
             }
             AnyUniformResult::Int(i) => i as f64,
-            AnyUniformResult::Float(f) => f.into(),
+            AnyUniformResult::Float(f) => f,
         }
     }
 }
@@ -125,8 +125,9 @@ impl ParametrizeOrNot {
             };
         });
         if not_found {
-            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
-                ui.add(Label::new("Error:").text_color(Color32::RED));
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.;
+                ui.add(Label::new("Error: ").text_color(Color32::RED));
                 ui.label("uniform with this name is not found");
             });
         }
@@ -176,7 +177,8 @@ impl Formula {
             );
         });
         if edit.has_errors {
-            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.;
                 ui.add(Label::new("Error with this formula").text_color(Color32::RED));
             });
         }
@@ -407,7 +409,7 @@ impl AnyUniform {
                     ui.centered_and_justified(|ui| {
                         if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
                             result.uniform |= check_changed(value, |value| {
-                                ui.add(Slider::i32(value, *min..=*max).clamp_to_range(true));
+                                ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
                             })
                         } else {
                             result.uniform |= check_changed(value, |value| {
@@ -511,7 +513,7 @@ impl AnyUniform {
                     ui.centered_and_justified(|ui| {
                         if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
                             result.uniform |= check_changed(value, |value| {
-                                ui.add(Slider::f64(value, *min..=*max).clamp_to_range(true));
+                                ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
                             });
                         } else {
                             result.uniform |= check_changed(value, |value| {
@@ -530,7 +532,7 @@ impl AnyUniform {
                                                 }
                                             }
                                         }
-                                        (*value).into()
+                                        *value
                                     })
                                     .speed(0.01)
                                     .min_decimals(0)
@@ -563,28 +565,28 @@ impl StorageElem for AnyUniformComboBox {
             Some(match name {
                 // Custom functions
                 "if" => {
-                    if *args.get(0)? == 1.0 {
+                    if (*args.get(0)? - 1.0).abs() < 1e-6 {
                         *args.get(1)?
                     } else {
                         *args.get(2)?
                     }
                 }
                 "and" => {
-                    if *args.get(0)? == 1.0 && *args.get(1)? == 1.0 {
+                    if (*args.get(0)? - 1.0).abs() < 1e-6 && (*args.get(1)? - 1.0).abs() < 1e-6 {
                         1.0
                     } else {
                         0.0
                     }
                 }
                 "or" => {
-                    if *args.get(0)? == 1.0 || *args.get(1)? == 1.0 {
+                    if (*args.get(0)? - 1.0).abs() < 1e-6 || (*args.get(1)? - 1.0).abs() < 1e-6 {
                         1.0
                     } else {
                         0.0
                     }
                 }
                 "not" => {
-                    if *args.get(0)? == 1.0 {
+                    if (*args.get(0)? - 1.0).abs() < 1e-6 {
                         0.0
                     } else {
                         1.0

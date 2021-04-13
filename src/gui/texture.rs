@@ -47,7 +47,8 @@ impl StorageElem for TextureName {
         }));
 
         if let Some(err) = texture_errors.0.get(&self.0) {
-            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.;
                 ui.add(Label::new("Error:").text_color(Color32::RED));
                 ui.label(format!("error while loading file: {:?}", err));
             });

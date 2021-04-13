@@ -99,20 +99,19 @@ impl StorageElem for AnimationStage {
     fn egui(
         &mut self,
         ui: &mut Ui,
-        mut glob_pos: usize,
+        _: usize,
         megapattern!(matrices, uniforms, global_uniforms): &mut Self::Input,
         _: &[String],
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         self.uniforms
             .resize(uniforms.names.len(), Animation::Remains);
-        for (pos, (((anim, global), name), uniform)) in self
+        for (((anim, global), name), uniform) in self
             .uniforms
             .iter_mut()
             .zip(global_uniforms.uniforms.iter())
             .zip(uniforms.names.iter())
             .zip(uniforms.storage.iter())
-            .enumerate()
         {
             if *global {
                 ui.horizontal(|ui| {
@@ -121,7 +120,7 @@ impl StorageElem for AnimationStage {
                 });
             } else {
                 ui.horizontal(|ui| {
-                    changed.uniform |= egui_combo_box(ui, name, 60., anim, glob_pos + pos);
+                    changed.uniform |= egui_combo_box(ui, name, 60., anim);
                     match anim {
                         Animation::Changed(x) | Animation::ChangedAndToUser(x) => {
                             if x.get_number() != uniform.0.get_number() {
@@ -137,16 +136,14 @@ impl StorageElem for AnimationStage {
         }
 
         ui.separator();
-        glob_pos += self.uniforms.len() * 2;
         self.matrices
             .resize(matrices.names.len(), Animation::Remains);
-        for (pos, (((anim, global), name), matrix)) in self
+        for (((anim, global), name), matrix) in self
             .matrices
             .iter_mut()
             .zip(global_uniforms.matrices.iter())
             .zip(matrices.names.iter())
             .zip(matrices.storage.iter())
-            .enumerate()
         {
             if *global {
                 ui.horizontal(|ui| {
@@ -155,7 +152,7 @@ impl StorageElem for AnimationStage {
                 });
             } else {
                 ui.horizontal(|ui| {
-                    changed.uniform |= egui_combo_box(ui, name, 60., anim, glob_pos + pos);
+                    changed.uniform |= egui_combo_box(ui, name, 60., anim);
                     match anim {
                         Animation::Changed(x) | Animation::ChangedAndToUser(x) => {
                             if x.get_number() != matrix.0.get_number() {
@@ -187,7 +184,7 @@ impl AnyUniform {
                 ui.centered_and_justified(|ui| {
                     if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
                         result.uniform |= check_changed(value, |value| {
-                            ui.add(Slider::i32(value, *min..=*max).clamp_to_range(true));
+                            ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
                         })
                     } else {
                         result.uniform |= check_changed(value, |value| {
@@ -221,7 +218,7 @@ impl AnyUniform {
                 ui.centered_and_justified(|ui| {
                     if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
                         result.uniform |= check_changed(value, |value| {
-                            ui.add(Slider::f64(value, *min..=*max).clamp_to_range(true));
+                            ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
                         });
                     } else {
                         result.uniform |= check_changed(value, |value| {
@@ -240,7 +237,7 @@ impl AnyUniform {
                                             }
                                         }
                                     }
-                                    (*value).into()
+                                    *value
                                 })
                                 .speed(0.01)
                                 .min_decimals(0)

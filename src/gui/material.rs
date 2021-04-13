@@ -74,7 +74,7 @@ impl StorageElem for MaterialComboBox {
         _: &[String],
     ) -> WhatChanged {
         let mut changed =
-            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0, pos));
+            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0));
         ui.separator();
         changed |= self.0.egui(ui, pos, input);
         changed
@@ -138,7 +138,7 @@ impl Material {
                     changed |= check_changed(normal_coef, |normal_coef| {
                         drop(
                             ui.add(
-                                DragValue::f32(normal_coef)
+                                DragValue::new(normal_coef)
                                     .speed(0.01)
                                     .clamp_range(0.0..=1.0)
                                     .min_decimals(0)
@@ -156,7 +156,7 @@ impl Material {
                     changed |= check_changed(grid_scale, |grid_scale| {
                         drop(
                             ui.add(
-                                DragValue::f32(grid_scale)
+                                DragValue::new(grid_scale)
                                     .speed(0.01)
                                     .clamp_range(0.0..=1000.0)
                                     .min_decimals(0)
@@ -169,7 +169,7 @@ impl Material {
                     changed |= check_changed(grid_coef, |grid_coef| {
                         drop(
                             ui.add(
-                                DragValue::f32(grid_coef)
+                                DragValue::new(grid_coef)
                                     .speed(0.01)
                                     .clamp_range(0.0..=1.0)
                                     .min_decimals(0)
@@ -200,7 +200,7 @@ impl Material {
                     changed |= check_changed(refractive_index, |r| {
                         drop(
                             ui.add(
-                                DragValue::f32(r)
+                                DragValue::new(r)
                                     .speed(0.01)
                                     .clamp_range(0.0..=10.0)
                                     .min_decimals(0)
@@ -211,7 +211,7 @@ impl Material {
                 });
             }
             Complex { code } => {
-                ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
                     ui.add(
                         Label::new("MaterialProcessing ")

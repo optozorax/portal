@@ -49,7 +49,7 @@ pub fn shader_error_parser(error: &str) -> Vec<Result<(usize, &str), &str>> {
     }
 
     error
-        .split("\n")
+        .split('\n')
         .map(|line| {
             if let Some(r) = try_parse_1(line) {
                 Ok(r)

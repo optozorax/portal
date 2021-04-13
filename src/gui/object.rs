@@ -157,7 +157,7 @@ impl Object {
                 is_changed |= kind.egui(ui, names);
                 ui.separator();
                 if matches!(kind, ObjectType::Portal { .. }) {
-                    ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+                    ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.;
                         ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
                         ui.add(
@@ -178,7 +178,7 @@ impl Object {
                         ui.add(Label::new("first) {").monospace());
                     });
                 } else {
-                    ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+                    ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.;
                         ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
                         ui.add(
@@ -208,7 +208,7 @@ impl Object {
                 is_changed |= kind.egui(ui, names);
                 ui.separator();
 
-                ui.horizontal_wrapped_for_text(TextStyle::Monospace, |ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
 
                     if matches!(kind, ObjectType::Portal { .. }) {

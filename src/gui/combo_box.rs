@@ -40,21 +40,21 @@ pub fn egui_combo_box<T: ComboBoxChoosable>(
     label: &str,
     size: f32,
     t: &mut T,
-    id: usize,
 ) -> bool {
     let mut is_changed = false;
 
     let mut current_type = t.get_number();
     let previous_type = current_type;
 
-    let id = ui.make_persistent_id(id);
     ui.horizontal(|ui| {
         egui_label(ui, label, size);
-        egui::combo_box(ui, id, T::variants()[current_type], |ui| {
-            for (pos, name) in T::variants().iter().enumerate() {
-                ui.selectable_value(&mut current_type, pos, *name);
-            }
-        });
+        egui::ComboBox::from_label("")
+            .selected_text(T::variants()[current_type])
+            .show_ui(ui, |ui| {
+                for (pos, name) in T::variants().iter().enumerate() {
+                    ui.selectable_value(&mut current_type, pos, *name);
+                }
+            });
     });
 
     if current_type != previous_type {

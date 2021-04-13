@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::megatuple;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum Matrix {
     Mul {
         to: String,
@@ -85,9 +86,9 @@ impl ComboBoxChoosable for Matrix {
                         rotate.z.freeget().unwrap_or(0.0),
                     ),
                     mirror: (
-                        mirror.x.freeget().unwrap_or(0.0) == 1.0,
-                        mirror.y.freeget().unwrap_or(0.0) == 1.0,
-                        mirror.z.freeget().unwrap_or(0.0) == 1.0,
+                        (mirror.x.freeget().unwrap_or(0.0) - 1.0).abs() < 1e-6,
+                        (mirror.y.freeget().unwrap_or(0.0) - 1.0).abs() < 1e-6,
+                        (mirror.z.freeget().unwrap_or(0.0) - 1.0).abs() < 1e-6,
                     ),
                     scale: scale.freeget().unwrap_or(1.0),
                 },
@@ -322,7 +323,8 @@ impl Matrix {
             .copied()
             .unwrap_or(false)
         {
-            ui.horizontal_wrapped_for_text(TextStyle::Body, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.;
                 ui.add(Label::new("Error: ").text_color(Color32::RED));
                 ui.label("this matrix has recursion");
             });
