@@ -526,7 +526,7 @@ impl Scene {
                             Complex { code } => code,
                             _ => unreachable!(),
                         };
-                        material_processing.add_identifier_string(x.identifier(pos), &code.0.0);
+                        material_processing.add_identifier_string(x.identifier(pos), &code.0 .0);
                         material_processing.add_string("\n");
                     }
                 };
@@ -720,7 +720,7 @@ impl Scene {
         storages.insert("library".to_owned(), {
             let mut result = StringStorage::default();
             for (pos, (_, i)) in self.library.iter().enumerate() {
-                result.add_identifier_string(i.identifier(pos), &i.0.0);
+                result.add_identifier_string(i.identifier(pos), &i.0 .0);
             }
             result
         });

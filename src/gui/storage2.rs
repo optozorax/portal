@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 enum StorageInner<T> {
     Named(T, String),
     Inline(T),
+    // TODO: store strings here in other way
 }
 
 impl<T: Default> Default for StorageInner<T> {
@@ -111,6 +112,15 @@ impl<T: StorageElem2> Storage2<T> {
             .remove(|id, input| self.remove_as_field(id, input), input);
     }
 
+    pub fn push_default(&mut self) {
+        let id = self.ids.get_unique();
+        self.storage_order.push(id);
+        self.storage.insert(
+            id,
+            StorageInner::Named(Default::default(), format!("_{}", id)),
+        );
+    }
+
     /// Removes field like it is was field of someone, then recursively removes inside content if it's inline.
     pub fn remove_as_field(&mut self, id: T::IdWrapper, input: &mut T::Input) {
         let id = id.un_wrap();
@@ -142,7 +152,7 @@ impl<T: StorageElem2> Storage2<T> {
     pub fn egui(&mut self, ui: &mut Ui, input: &mut T::Input, name: &str) -> WhatChanged {
         use std::borrow::Cow;
 
-        let data_id = ui.make_persistent_id(name);
+        let data_id = ui.make_persistent_id(name).with("inner");
 
         let errors_count = self.errors_count_all(input);
         let header = if errors_count > 0 {
@@ -261,12 +271,7 @@ impl<T: StorageElem2> Storage2<T> {
             .add(Button::new("Add").text_color(Color32::GREEN))
             .clicked()
         {
-            let id = self.ids.get_unique();
-            self.storage_order.push(id);
-            self.storage.insert(
-                id,
-                StorageInner::Named(Default::default(), format!("_{}", id)),
-            );
+            self.push_default();
             changed.shader = true;
         }
 
@@ -275,6 +280,8 @@ impl<T: StorageElem2> Storage2<T> {
 
     pub fn inline(
         &mut self,
+        label: &str,
+        label_size: f32,
         id: &mut Option<T::IdWrapper>,
         ui: &mut Ui,
         input: &mut T::Input,
@@ -299,31 +306,82 @@ impl<T: StorageElem2> Storage2<T> {
             false
         };
 
-        if ui
-            .add(egui::SelectableLabel::new(inline, "📌"))
-            .on_hover_text(
-                "Toggle inline anonymous element instead\nof referencing to name of the other.",
-            )
-            .clicked()
-        {
-            if inline {
-                if let Some(id) = id {
-                    self.remove(*id, input);
-                    ui.memory().id_data.remove(&data_id);
+        ui.horizontal(|ui| {
+            egui_label(ui, label, label_size);
+
+            ui.with_layout(Layout::right_to_left(), |ui| {
+                if ui
+                    .add(egui::SelectableLabel::new(inline, "📌"))
+                    .on_hover_text(
+                        "Toggle inline anonymous element instead\nof referencing to name of the other.",
+                    )
+                    .clicked()
+                {
+                    if inline {
+                        if let Some(id) = id {
+                            self.remove(*id, input);
+                            ui.memory().id_data.remove(&data_id);
+                        }
+                    }
+
+                    inline = !inline;
+
+                    if inline {
+                        let new_id = self.ids.get_unique();
+                        self.storage
+                            .insert(new_id, StorageInner::Inline(Default::default()));
+                        *id = Some(T::IdWrapper::wrap(new_id));
+                    } else {
+                        *id = None;
+                    }
                 }
-            }
 
-            inline = !inline;
+                if inline {
+                    ui.label("inline");
+                } else {
+                    // Named
+                    let mut current_name = if let Some(id_inner) = id {
+                        self.storage
+                            .get(&id_inner.un_wrap())
+                            .unwrap()
+                            .name()
+                            .unwrap()
+                            .to_owned()
+                    } else {
+                        ui.memory()
+                            .id_data
+                            .get_or_default::<String>(data_id)
+                            .clone()
+                    };
 
-            if inline {
-                let new_id = self.ids.get_unique();
-                self.storage
-                    .insert(new_id, StorageInner::Inline(Default::default()));
-                *id = Some(T::IdWrapper::wrap(new_id));
-            } else {
-                *id = None;
-            }
-        }
+                    let changed = ui
+                        .horizontal(|ui| {
+                            let mut response = egui_with_red_field(ui, id.is_none(), |ui| {
+                                ui.text_edit_singleline(&mut current_name)
+                            });
+                            if id.is_none() {
+                                response = response.on_hover_text("This name is not found");
+                            }
+
+                            response.changed()
+                        })
+                        .inner;
+                    if changed {
+                        if let Some((new_id, _)) = self
+                            .storage
+                            .iter()
+                            .find(|(_, elem)| elem.is_named_as(&current_name))
+                        {
+                            *id = Some(T::IdWrapper::wrap(*new_id));
+                            ui.memory().id_data.remove(&data_id);
+                        } else {
+                            *id = None;
+                            ui.memory().id_data.insert(data_id, current_name);
+                        }
+                    }
+                }
+            });
+        });
 
         if inline {
             // id now must be correct
@@ -332,48 +390,6 @@ impl<T: StorageElem2> Storage2<T> {
                     changed |= elem.0.as_mut().egui(ui, input, self, data_id.with("inline"));
                 });
             });
-        } else {
-            // Named
-            let mut current_name = if let Some(id_inner) = id {
-                self.storage
-                    .get(&id_inner.un_wrap())
-                    .unwrap()
-                    .name()
-                    .unwrap()
-                    .to_owned()
-            } else {
-                ui.memory()
-                    .id_data
-                    .get_or_default::<String>(data_id)
-                    .clone()
-            };
-
-            let changed = ui
-                .horizontal(|ui| {
-                    egui_label(ui, "Name:", 45.);
-                    let mut response = egui_with_red_field(ui, id.is_none(), |ui| {
-                        ui.text_edit_singleline(&mut current_name)
-                    });
-                    if id.is_none() {
-                        response = response.on_hover_text("This name is not found");
-                    }
-
-                    response.changed()
-                })
-                .inner;
-            if changed {
-                if let Some((new_id, _)) = self
-                    .storage
-                    .iter()
-                    .find(|(_, elem)| elem.is_named_as(&current_name))
-                {
-                    *id = Some(T::IdWrapper::wrap(*new_id));
-                    ui.memory().id_data.remove(&data_id);
-                } else {
-                    *id = None;
-                    ui.memory().id_data.insert(data_id, current_name);
-                }
-            }
         }
 
         changed
@@ -420,10 +436,6 @@ pub trait Wrapper<T> {
     fn un_wrap(self) -> T;
 }
 
-pub trait As<T> {
-    fn as_t(&self) -> &T;
-}
-
 pub trait StorageElem2: Sized + Default {
     type IdWrapper: Wrapper<UniqueId> + Copy;
     type GetType;
@@ -453,11 +465,10 @@ pub trait StorageElem2: Sized + Default {
 
 /*
 
-
 Очень сложные фичи:
     * сделать что-то для сборки мусора (наверное не надо, если ещё хорошо обработать удаление инлайн элемента)
     * можно было включать режим переноса вещей, чтобы их можно было двигать драг&дропом
-    * группировка элементов? (чтобы имя этого прибавлялось внутрь?)
+    * группировка элементов? (чтобы имя этого прибавлялось внутрь?) (тогда драг&дроп должен быть ещё сложнее?)
     * при изменении имени вызывается метод, который позволяет изменять это имя в местах, где используются не айдишники (? сомнительно).
     * есть подсчёт использований, и благодаря этому можно смотреть что есть мусор, и что можно удалить. наверное это можно сделать как отдельное окошко, которое перебирает все элементы и просто выводит кто кого использует, не надо сложный интефрейс, это же для меня только
 

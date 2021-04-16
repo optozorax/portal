@@ -13,7 +13,7 @@ pub enum Arithmetic {
 
 impl ComboBoxChoosable for Arithmetic {
     fn variants() -> &'static [&'static str] {
-        &["Float", "Sum", "Mul"]
+        &["Float", "a+b", "a*b"]
     }
     fn get_number(&self) -> usize {
         use Arithmetic::*;
@@ -72,27 +72,19 @@ impl StorageElem2 for Arithmetic {
         egui_combo_label(ui, "Type:", 45., self);
 
         match self {
-            Float(f) => WhatChanged::from_uniform(egui_f32(ui, f)),
+            Float(f) => {
+                WhatChanged::from_uniform(ui.centered_and_justified(|ui| egui_f32(ui, f)).inner)
+            }
             Sum(a, b) => {
                 let mut result = WhatChanged::default();
-
-                ui.label("Sum first argument:");
-                result |= self_storage.inline(&mut *a, ui, &mut (), data_id.with(0));
-
-                ui.label("Sum second argument:");
-                result |= self_storage.inline(&mut *b, ui, &mut (), data_id.with(1));
-
+                result |= self_storage.inline("a:", 10., &mut *a, ui, &mut (), data_id.with(0));
+                result |= self_storage.inline("b:", 10., &mut *b, ui, &mut (), data_id.with(1));
                 result
             }
             Mul(a, b) => {
                 let mut result = WhatChanged::default();
-
-                ui.label("Mul first argument:");
-                result |= self_storage.inline(&mut *a, ui, &mut (), data_id.with(0));
-
-                ui.label("Mul second argument:");
-                result |= self_storage.inline(&mut *b, ui, &mut (), data_id.with(1));
-
+                result |= self_storage.inline("a:", 10., &mut *a, ui, &mut (), data_id.with(0));
+                result |= self_storage.inline("b:", 10., &mut *b, ui, &mut (), data_id.with(1));
                 result
             }
         }
@@ -160,7 +152,7 @@ pub enum MoreArithmetic {
 
 impl ComboBoxChoosable for MoreArithmetic {
     fn variants() -> &'static [&'static str] {
-        &["Sin", "Cos"]
+        &["sin(x)", "cos(x)"]
     }
     fn get_number(&self) -> usize {
         use MoreArithmetic::*;
@@ -217,22 +209,8 @@ impl StorageElem2 for MoreArithmetic {
         egui_combo_label(ui, "Type:", 45., self);
 
         match self {
-            Sin(a) => {
-                let mut result = WhatChanged::default();
-
-                ui.label("Arguments:");
-                result |= storage.inline(&mut *a, ui, &mut (), data_id.with(0));
-
-                result
-            }
-            Cos(a) => {
-                let mut result = WhatChanged::default();
-
-                ui.label("Arguments:");
-                result |= storage.inline(&mut *a, ui, &mut (), data_id.with(0));
-
-                result
-            }
+            Sin(a) => storage.inline("x:", 10., &mut *a, ui, &mut (), data_id.with(0)),
+            Cos(a) => storage.inline("x:", 10., &mut *a, ui, &mut (), data_id.with(0)),
         }
     }
 
