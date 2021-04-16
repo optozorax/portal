@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use crate::code_generation::ErrId;
 use crate::code_generation::ErrorId;
 use crate::gui::object::MatrixName;
@@ -257,7 +258,7 @@ pub fn egui_errors(ui: &mut Ui, errors: &[(usize, String)]) {
     });
 }
 
-pub fn egui_with_red_field(ui: &mut Ui, has_errors: bool, f: impl FnOnce(&mut Ui)) {
+pub fn egui_with_red_field<Res>(ui: &mut Ui, has_errors: bool, f: impl FnOnce(&mut Ui) -> Res) -> Res {
     let previous = ui.visuals().clone();
     if has_errors {
         ui.visuals_mut().selection.stroke.color = Color32::RED;
@@ -266,10 +267,11 @@ pub fn egui_with_red_field(ui: &mut Ui, has_errors: bool, f: impl FnOnce(&mut Ui
         ui.visuals_mut().widgets.hovered.bg_stroke.color =
             Color32::from_rgb_additive(255, 128, 128);
     }
-    f(ui);
+    let result = f(ui);
     if has_errors {
         *ui.visuals_mut() = previous;
     }
+    result
 }
 
 pub fn egui_with_enabled_by(ui: &mut Ui, by: bool, f: impl FnOnce(&mut Ui)) {
@@ -277,6 +279,47 @@ pub fn egui_with_enabled_by(ui: &mut Ui, by: bool, f: impl FnOnce(&mut Ui)) {
     ui.set_enabled(by);
     f(ui);
     ui.set_enabled(previous);
+}
+
+pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::Response {
+    #[derive(Clone, Copy, Eq, PartialEq, Debug)]
+    #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
+    enum State {
+        View,
+        Edit,
+    }
+
+    impl Default for State {
+        fn default() -> Self {
+            State::View
+        }
+    }
+
+    ui.vertical(|ui| {
+        let id = Id::new(id_source);
+
+        let mut state = *ui.memory().id_data.get_or_default::<State>(id);
+
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut state, State::View, "View");
+            ui.selectable_value(&mut state, State::Edit, "Edit");
+        });
+
+        ui.memory().id_data.insert(id, state);
+
+        match state {
+            State::View => {
+                egui::experimental::easy_mark(ui, &text);
+            }
+            State::Edit => {
+                ui.add(
+                    TextEdit::multiline(text)
+                        .text_style(TextStyle::Monospace),
+                );
+            }
+        }
+    })
+    .response
 }
 
 pub const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);

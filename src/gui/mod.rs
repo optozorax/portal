@@ -8,5 +8,6 @@ pub mod object;
 pub mod scene;
 #[macro_use]
 pub mod storage;
+pub mod storage2;
 pub mod texture;
 pub mod uniform;

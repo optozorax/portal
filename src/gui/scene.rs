@@ -166,34 +166,12 @@ impl Scene {
                 CollapsingHeader::new("English")
                     .default_open(false)
                     .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(&mut data.description_en_edit, false, "View");
-                            ui.selectable_value(&mut data.description_en_edit, true, "Edit");
-                        });
-                        if data.description_en_edit {
-                            ui.add(
-                                TextEdit::multiline(&mut self.description_en)
-                                    .text_style(TextStyle::Monospace),
-                            );
-                        } else {
-                            egui::experimental::easy_mark(ui, &self.description_en);
-                        }
+                        view_edit(ui, &mut self.description_en, "english");
                     });
                 CollapsingHeader::new("Russian")
                     .default_open(false)
                     .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(&mut data.description_ru_edit, false, "View");
-                            ui.selectable_value(&mut data.description_ru_edit, true, "Edit");
-                        });
-                        if data.description_ru_edit {
-                            ui.add(
-                                TextEdit::multiline(&mut self.description_ru)
-                                    .text_style(TextStyle::Monospace),
-                            );
-                        } else {
-                            egui::experimental::easy_mark(ui, &self.description_ru);
-                        }
+                        view_edit(ui, &mut self.description_ru, "russian");
                     });
             });
 

@@ -278,11 +278,11 @@ impl Window {
                 "monoportal",
                 include_str!("../scenes/monoportal.json"),
             ),
-            // (
-            //     "Monoportal offset",
-            //     "monoportal_offset",
-            //     include_str!("../scenes/monoportal_offset.json"),
-            // ),
+            (
+                "Monoportal offset",
+                "monoportal_offset",
+                include_str!("../scenes/monoportal_offset.json"),
+            ),
             (
                 "Mobius portal",
                 "mobius",
@@ -293,7 +293,7 @@ impl Window {
                 "mobius_monoportal",
                 include_str!("../scenes/mobius_monoportal.json"),
             ),
-            // ("Misc", "misc", include_str!("../scenes/misc.json")),
+            ("Misc", "misc", include_str!("../scenes/misc.json")),
             (
                 "Triple portal",
                 "triple_portal",
@@ -304,26 +304,26 @@ impl Window {
                 "hopf_link",
                 include_str!("../scenes/hopf_link.json"),
             ),
-            // (
-            //     "Trefoil knot portal, order 1",
-            //     "trefoil_knot",
-            //     include_str!("../scenes/trefoil_knot_monoportal.json"),
-            // ),
-            // (
-            //     "Trefoil knot self-hiding portal, order 1",
-            //     "trefoil_knot",
-            //     include_str!("../scenes/trefoil_knot_monoportal_self_hiding.json"),
-            // ),
-            // (
-            //     "Trefoil knot portal, order 2",
-            //     "trefoil_knot",
-            //     include_str!("../scenes/trefoil_knot.json"),
-            // ),
-            // (
-            //     "Trefoil knot portal, order 3",
-            //     "trefoil_knot_3",
-            //     include_str!("../scenes/trefoil_knot_3.json"),
-            // ),
+            (
+                "Trefoil knot portal, order 1",
+                "trefoil_knot",
+                include_str!("../scenes/trefoil_knot_monoportal.json"),
+            ),
+            (
+                "Trefoil knot self-hiding portal, order 1",
+                "trefoil_knot",
+                include_str!("../scenes/trefoil_knot_monoportal_self_hiding.json"),
+            ),
+            (
+                "Trefoil knot portal, order 2",
+                "trefoil_knot",
+                include_str!("../scenes/trefoil_knot.json"),
+            ),
+            (
+                "Trefoil knot portal, order 3",
+                "trefoil_knot_3",
+                include_str!("../scenes/trefoil_knot_3.json"),
+            ),
         ]
         .into_iter()
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
@@ -785,6 +785,9 @@ async fn main() {
 
     let mut ui_changed_image = true;
 
+    let mut storage2 =
+        portal::gui::storage2::Storage2::<portal::gui::storage2::Arithmetic>::default();
+
     loop {
         clear_background(BLACK);
 
@@ -821,6 +824,15 @@ async fn main() {
         }
 
         egui_macroquad::ui(|ctx| {
+            egui::Window::new("Test storage2")
+                .scroll(true)
+                .show(ctx, |ui| {
+                    drop(storage2.egui(ui, &mut (), "Arithmetic"));
+
+                    for id in storage2.visible_elements() {
+                        ui.label(format!("{:?}", storage2.get(id, &())));
+                    }
+                });
             ui_changed_image = window.process_mouse_and_keys(ctx);
         });
         egui_macroquad::draw();

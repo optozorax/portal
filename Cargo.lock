@@ -164,18 +164,15 @@ checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
 name = "egui"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04fa506a0f70b14bc9d04b59b862e621521728df5beae4403ce69a033658f78f"
+version = "0.11.0"
+source = "git+https://github.com/emilk/egui#daf2e1323839d0796ffac2df57e97044a218e21f"
 dependencies = [
  "epaint",
 ]
 
 [[package]]
 name = "egui-macroquad"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b8d99958dd967628e416baa81a3c116ab3795f75e3fe00a86d9492caa3d1562"
+version = "0.2.0"
 dependencies = [
  "egui",
  "egui-miniquad",
@@ -185,8 +182,6 @@ dependencies = [
 [[package]]
 name = "egui-miniquad"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "526611b82f8a07fc0330c11d0a635b7a5bcced9a85773e338aedaf297cfb32d6"
 dependencies = [
  "copypasta",
  "egui",
@@ -196,19 +191,18 @@ dependencies = [
 
 [[package]]
 name = "emath"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "632c6ab1d569238921dc1e590640862ffb09226b0483f3b60950a3ec34f84b48"
+version = "0.11.0"
+source = "git+https://github.com/emilk/egui#daf2e1323839d0796ffac2df57e97044a218e21f"
 
 [[package]]
 name = "epaint"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d29cd86d676d3f0d6d348e66bb4ee7ccdff021d981fa2a4a9649416658a272ba"
+version = "0.11.0"
+source = "git+https://github.com/emilk/egui#daf2e1323839d0796ffac2df57e97044a218e21f"
 dependencies = [
  "ahash 0.7.2",
  "atomic_refcell",
  "emath",
+ "ordered-float",
  "rusttype",
 ]
 
@@ -346,9 +340,9 @@ dependencies = [
 
 [[package]]
 name = "macroquad"
-version = "0.3.0-alpha.16"
+version = "0.3.0-alpha.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42c71050d11f42fb2d132aad794bfe97e739407f9a7ef557d5c82fd60248a29d"
+checksum = "0d278eaf76c3fa5eac8c487002ac01646f8be47484a77db040a9a7b767a19fc1"
 dependencies = [
  "bumpalo",
  "fontdue",
@@ -391,9 +385,9 @@ dependencies = [
 
 [[package]]
 name = "miniquad"
-version = "0.3.0-alpha.28"
+version = "0.3.0-alpha.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3725e530c45970119ffeef7fc3ceec6ab96444c5e7b968ff1fc967d3b648f286"
+checksum = "f0c118b3ca8ee14b60dbadd67c20b84946a6c92db4761e60eb1c545e27863c24"
 dependencies = [
  "sapp-android",
  "sapp-darwin",
@@ -524,6 +518,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af8b08b04175473088b46763e51ee54da5f9a164bc162f615b91bc179dbf15a3"
 
 [[package]]
+name = "ordered-float"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "766f840da25490628d8e63e529cd21c014f6600c6b8517add12a6fa6167a6218"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "owned_ttf_parser"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -625,9 +628,9 @@ dependencies = [
 
 [[package]]
 name = "sapp-darwin"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf0d38a22937236c2ad6b90a12656a1f307efb144b6d7516104d2169f1dc3b18"
+checksum = "0310e2445f307468aa13f1cde94d6fba6b8fd329afbb642dedbe3faf1a145f31"
 dependencies = [
  "cc",
 ]

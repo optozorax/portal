@@ -5,12 +5,12 @@ authors = ["ilya sheprut <optozorax@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-macroquad = "0.3.0-alpha.16"
-egui-macroquad = "0.1.0"
+macroquad = "0.3.0-alpha.17"
+egui-macroquad = { path = "../egui-macroquad" }
 glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
 serde_json = "1.0"
-egui = "0.10.0"
+egui = { git = "https://github.com/emilk/egui" }
 fasteval = "0.2.4"
 quad-url = "0.1.0"
 # color-backtrace = "0.5.0"
