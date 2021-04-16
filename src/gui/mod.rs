@@ -11,3 +11,6 @@ pub mod storage;
 pub mod storage2;
 pub mod texture;
 pub mod uniform;
+
+pub mod arithmetic;
+pub mod unique_id;

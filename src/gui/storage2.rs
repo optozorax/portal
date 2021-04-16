@@ -1,84 +1,8 @@
-use crate::gui::combo_box::*;
 use crate::gui::common::*;
+use crate::gui::unique_id::*;
 use egui::*;
 
-use std::collections::{BTreeMap, VecDeque};
-
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Id(usize);
-
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
-pub struct Ids {
-    available: VecDeque<Id>,
-    max: usize,
-}
-
-impl Ids {
-    pub fn get_unique(&mut self) -> Id {
-        if let Some(result) = self.available.pop_front() {
-            result
-        } else {
-            let result = Id(self.max);
-            self.max += 1;
-            result
-        }
-    }
-
-    pub fn remove_existing(&mut self, id: Id) {
-        self.available.push_back(id);
-        self.available.make_contiguous().sort();
-        while self
-            .available
-            .back()
-            .map(|x| x.0 == self.max - 1)
-            .unwrap_or(false)
-        {
-            self.max -= 1;
-            self.available.pop_back().unwrap();
-        }
-    }
-}
-
-#[cfg(test)]
-mod id_test {
-    use super::*;
-
-    #[test]
-    fn test() {
-        let mut ids = Ids::default();
-        assert_eq!(ids.get_unique().0, 0);
-        assert_eq!(ids.get_unique().0, 1);
-        assert_eq!(ids.get_unique().0, 2);
-        assert_eq!(ids.get_unique().0, 3);
-        ids.remove_existing(Id(2));
-        assert_eq!(
-            ids,
-            Ids {
-                available: vec![Id(2)].into_iter().collect(),
-                max: 4,
-            }
-        );
-        ids.remove_existing(Id(3));
-        assert_eq!(
-            ids,
-            Ids {
-                available: vec![].into_iter().collect(),
-                max: 2,
-            }
-        );
-        ids.remove_existing(Id(1));
-        assert_eq!(
-            ids,
-            Ids {
-                available: vec![].into_iter().collect(),
-                max: 1,
-            }
-        );
-        assert_eq!(ids.get_unique().0, 1);
-        ids.remove_existing(Id(0));
-        assert_eq!(ids.get_unique().0, 0);
-    }
-}
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 enum StorageInner<T> {
@@ -112,7 +36,6 @@ impl<T> AsMut<T> for StorageInner<T> {
     }
 }
 
-
 impl<T> StorageInner<T> {
     fn is_named_as(&self, name: &str) -> bool {
         use StorageInner::*;
@@ -141,13 +64,15 @@ impl<T> StorageInner<T> {
 
 #[derive(Default, Clone, Debug)]
 pub struct Storage2<T> {
-    ids: Ids,
-    storage: BTreeMap<Id, StorageInner<T>>,
-    storage_order: Vec<Id>,
+    ids: UniqueIds,
+
+    // TODO move this two things in some struct without egui
+    storage: BTreeMap<UniqueId, StorageInner<T>>,
+    storage_order: Vec<UniqueId>,
 }
 
 impl<T: StorageElem2> Storage2<T> {
-    pub fn get(&self, id: T::IdWrapper, input: &T::GetInput) -> Option<T::GetType> {
+    pub fn get(&self, id: T::IdWrapper, input: &T::Input) -> Option<T::GetType> {
         let mut visited = vec![];
         self.get_inner(id, &mut visited, input)
     }
@@ -156,7 +81,7 @@ impl<T: StorageElem2> Storage2<T> {
         &self,
         id: T::IdWrapper,
         visited: &mut Vec<T::IdWrapper>,
-        input: &T::GetInput,
+        input: &T::Input,
     ) -> Option<T::GetType> {
         if visited.iter().any(|x| x.un_wrap() == id.un_wrap()) {
             return None;
@@ -172,32 +97,54 @@ impl<T: StorageElem2> Storage2<T> {
         result
     }
 
-    pub fn remove(&mut self, id: T::IdWrapper) {
+    pub fn remove(&mut self, id: T::IdWrapper, input: &mut T::Input) {
         let id = id.un_wrap();
-        self.storage.remove(&id);
+        let element = self.storage.remove(&id).unwrap();
         self.ids.remove_existing(id);
-        if let Some(pos) = self.storage_order.iter().find(|x| **x == id) {
-            self.storage.remove(pos);
+        if let Some(pos) = self.storage_order.iter().position(|x| *x == id) {
+            self.storage_order.remove(pos);
         }
-        // TODO: recursively delete other elements, require recursive travel by trait
+
+        // Recursively delete inline elements
+        element
+            .as_ref()
+            .remove(|id, input| self.remove_as_field(id, input), input);
     }
 
-    pub fn visible_elements<'a>(&'a self) -> impl Iterator<Item = T::IdWrapper> + 'a {
-        self.storage_order.iter().map(|id| T::IdWrapper::wrap(*id))
+    /// Removes field like it is was field of someone, then recursively removes inside content if it's inline.
+    pub fn remove_as_field(&mut self, id: T::IdWrapper, input: &mut T::Input) {
+        let id = id.un_wrap();
+        if self.storage.get(&id).unwrap().is_inline() {
+            let element = self.storage.remove(&id).unwrap();
+            self.ids.remove_existing(id);
+
+            element
+                .as_ref()
+                .remove(|id, input| self.remove_as_field(id, input), input);
+        }
     }
 
-    fn remove_by_pos(&mut self, pos: usize) {
+    pub fn remove_by_pos(&mut self, pos: usize, input: &mut T::Input) {
         let id = self.storage_order.remove(pos);
-        self.storage.remove(&id);
-        self.ids.remove_existing(id);
+        self.remove(T::IdWrapper::wrap(id), input);
     }
 
-    pub fn egui(&mut self, ui: &mut Ui, input: &mut T::EguiInput, name: &str) -> WhatChanged {
+    pub fn visible_elements<'a>(&'a self) -> impl Iterator<Item = (T::IdWrapper, &'a str)> + 'a {
+        let storage = &self.storage;
+        self.storage_order.iter().map(move |id| {
+            (
+                T::IdWrapper::wrap(*id),
+                storage.get(id).unwrap().name().unwrap(),
+            )
+        })
+    }
+
+    pub fn egui(&mut self, ui: &mut Ui, input: &mut T::Input, name: &str) -> WhatChanged {
         use std::borrow::Cow;
 
         let data_id = ui.make_persistent_id(name);
 
-        let errors_count = self.errors_count_all((*input).as_t());
+        let errors_count = self.errors_count_all(input);
         let header = if errors_count > 0 {
             Cow::Owned(format!("{} ({} err)", name, errors_count))
         } else {
@@ -213,7 +160,7 @@ impl<T: StorageElem2> Storage2<T> {
         changed
     }
 
-    fn egui_inner(&mut self, ui: &mut Ui, input: &mut T::EguiInput, data_id: egui::Id) -> WhatChanged {
+    fn egui_inner(&mut self, ui: &mut Ui, input: &mut T::Input, data_id: egui::Id) -> WhatChanged {
         let mut changed = WhatChanged::default();
         let mut to_delete = None;
         let mut to_move_up = None;
@@ -224,16 +171,13 @@ impl<T: StorageElem2> Storage2<T> {
 
         let len = storage_order.len();
         for (pos, id) in storage_order.iter().enumerate() {
-            let errors_count = self.errors_count_id(T::IdWrapper::wrap(*id), (*input).as_t());
+            let errors_count = self.errors_count_id(T::IdWrapper::wrap(*id), input);
 
             let mut elem = StorageInner::default();
             std::mem::swap(&mut elem, self.storage.get_mut(id).unwrap());
 
             if let StorageInner::Named(elem, name) = &mut elem {
-                let name_error = self
-                    .storage
-                    .iter()
-                    .any(|x| x.1.is_named_as(&name));
+                let name_error = self.storage.iter().any(|x| x.1.is_named_as(&name));
 
                 let errors_count = errors_count + name_error as usize;
 
@@ -244,63 +188,58 @@ impl<T: StorageElem2> Storage2<T> {
                 };
 
                 egui::CollapsingHeader::new(header_name)
-                .id_source(id)
-                .show(ui, |ui| {
-                    let mut name_response = None;
-                    ui.horizontal(|ui| {
-                        egui_label(ui, "Name:", 45.);
-                        name_response = Some(ui.put(
-                            Rect::from_min_size(
-                                ui.min_rect().min + egui::vec2(49., 0.),
-                                egui::vec2(ui.available_width() - 120., 0.),
-                            ),
-                            TextEdit::singleline(name),
-                        ));
-                        changed.shader |= name_response.as_ref().unwrap().changed();
-                        if ui
-                            .add(
-                                Button::new("⏶") // up
-                                    .text_color(ui.visuals().hyperlink_color)
-                                    .enabled(pos != 0),
-                            )
-                            .clicked()
-                        {
-                            to_move_up = Some(pos);
-                        }
-                        if ui
-                            .add(
-                                Button::new("⏷") // down
-                                    .text_color(ui.visuals().hyperlink_color)
-                                    .enabled(pos + 1 != len),
-                            )
-                            .clicked()
-                        {
-                            to_move_down = Some(pos);
-                        }
-                        if ui
-                            .add(Button::new("Delete").text_color(Color32::RED))
-                            .clicked()
-                        {
-                            to_delete = Some(pos);
-                        }
-                    });
-                    if name_error {
-                        ui.horizontal_wrapped(|ui| {
-                            ui.spacing_mut().item_spacing.x = 0.;
-                            ui.add(Label::new("Error: ").text_color(Color32::RED));
-                            ui.label(format!("name '{}' already used", name));
+                    .id_source(id)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            egui_label(ui, "Name:", 45.);
+                            ui.with_layout(Layout::right_to_left(), |ui| {
+                                if ui
+                                    .add(Button::new("Delete").text_color(Color32::RED))
+                                    .clicked()
+                                {
+                                    to_delete = Some(pos);
+                                }
+                                if ui
+                                .add(
+                                    Button::new("⏷") // down
+                                        .text_color(ui.visuals().hyperlink_color)
+                                        .enabled(pos + 1 != len),
+                                )
+                                .clicked()
+                            {
+                                to_move_down = Some(pos);
+                            }
+                                if ui
+                                .add(
+                                    Button::new("⏶") // up
+                                        .text_color(ui.visuals().hyperlink_color)
+                                        .enabled(pos != 0),
+                                )
+                                .clicked()
+                            {
+                                to_move_up = Some(pos);
+                            }
+                                let mut name_response = egui_with_red_field(ui, name_error, |ui| {
+                                    ui.text_edit_singleline(name)
+                                });
+                                changed.shader |= name_response.changed();
+                                if !T::SAFE_TO_RENAME {
+                                    name_response = name_response.on_hover_text(
+                                        "This name is not safe to rename, you will\n\
+                                    need to rename it in other places by yourself",
+                                    );
+                                }
+                                if name_error {
+                                    name_response.on_hover_text(format!(
+                                        "Error: name '{}' already used",
+                                        name
+                                    ));
+                                }
+                            });
                         });
-                    }
-                    if !T::SAFE_TO_RENAME && name_response.unwrap().has_focus() {
-                        ui.horizontal_wrapped(|ui| {
-                            ui.spacing_mut().item_spacing.x = 0.;
-                            ui.add(Label::new("Note: ").text_color(ui.visuals().hyperlink_color));
-                            ui.label("this name is not safe to rename, you will need to rename it in other places by yourself");
-                        });
-                    }
 
-                    changed |= elem.egui(ui, input, self, data_id.with(pos));
-                });
+                        changed |= elem.egui(ui, input, self, data_id.with(pos));
+                    });
             } else {
                 ui.label("Internal error, this is inline element, it shouldn't be here.");
             }
@@ -311,7 +250,7 @@ impl<T: StorageElem2> Storage2<T> {
 
         if let Some(pos) = to_delete {
             changed.shader = true;
-            self.remove_by_pos(pos);
+            self.remove_by_pos(pos, input);
         } else if let Some(pos) = to_move_up {
             self.storage_order.swap(pos, pos - 1);
         } else if let Some(pos) = to_move_down {
@@ -326,7 +265,7 @@ impl<T: StorageElem2> Storage2<T> {
             self.storage_order.push(id);
             self.storage.insert(
                 id,
-                StorageInner::Named(Default::default(), format!("_{}", id.0)),
+                StorageInner::Named(Default::default(), format!("_{}", id)),
             );
             changed.shader = true;
         }
@@ -338,7 +277,7 @@ impl<T: StorageElem2> Storage2<T> {
         &mut self,
         id: &mut Option<T::IdWrapper>,
         ui: &mut Ui,
-        input: &mut T::EguiInput,
+        input: &mut T::Input,
         data_id: egui::Id,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
@@ -347,7 +286,7 @@ impl<T: StorageElem2> Storage2<T> {
             if self.storage.get(&id_inner.un_wrap()).is_none() {
                 eprintln!("id {:?} transformed to `None`", id_inner.un_wrap());
                 *id = None;
-                changed.uniform = true;    
+                changed.uniform = true;
             }
         }
 
@@ -360,17 +299,16 @@ impl<T: StorageElem2> Storage2<T> {
             false
         };
 
-        // 📌 — inline
-        // or 📎 — inline
-
         if ui
             .add(egui::SelectableLabel::new(inline, "📌"))
-            .on_hover_text("Toggle inline anonymous element instead\nof referencing to name of the other.")
-            .clicked() 
+            .on_hover_text(
+                "Toggle inline anonymous element instead\nof referencing to name of the other.",
+            )
+            .clicked()
         {
             if inline {
                 if let Some(id) = id {
-                    self.remove(*id);
+                    self.remove(*id, input);
                     ui.memory().id_data.remove(&data_id);
                 }
             }
@@ -391,21 +329,38 @@ impl<T: StorageElem2> Storage2<T> {
             // id now must be correct
             with_swapped!(elem => (*self.storage.get_mut(&id.unwrap().un_wrap()).unwrap()); {
                 ui.group(|ui| {
-                    changed |= elem.0.as_mut().egui(ui, input, self, data_id.with("inline"));    
+                    changed |= elem.0.as_mut().egui(ui, input, self, data_id.with("inline"));
                 });
             });
         } else {
             // Named
             let mut current_name = if let Some(id_inner) = id {
-                self.storage.get(&id_inner.un_wrap()).unwrap().name().unwrap().to_owned()
+                self.storage
+                    .get(&id_inner.un_wrap())
+                    .unwrap()
+                    .name()
+                    .unwrap()
+                    .to_owned()
             } else {
-                ui.memory().id_data.get_or_default::<String>(data_id).clone()
+                ui.memory()
+                    .id_data
+                    .get_or_default::<String>(data_id)
+                    .clone()
             };
 
-            let changed = ui.horizontal(|ui| {
-                egui_label(ui, "Name:", 45.);
-                egui_with_red_field(ui, id.is_none(), |ui| ui.text_edit_singleline(&mut current_name)).changed()
-            }).inner;
+            let changed = ui
+                .horizontal(|ui| {
+                    egui_label(ui, "Name:", 45.);
+                    let mut response = egui_with_red_field(ui, id.is_none(), |ui| {
+                        ui.text_edit_singleline(&mut current_name)
+                    });
+                    if id.is_none() {
+                        response = response.on_hover_text("This name is not found");
+                    }
+
+                    response.changed()
+                })
+                .inner;
             if changed {
                 if let Some((new_id, _)) = self
                     .storage
@@ -416,7 +371,7 @@ impl<T: StorageElem2> Storage2<T> {
                     ui.memory().id_data.remove(&data_id);
                 } else {
                     *id = None;
-                    ui.memory().id_data.insert(data_id, current_name);        
+                    ui.memory().id_data.insert(data_id, current_name);
                 }
             }
         }
@@ -424,14 +379,14 @@ impl<T: StorageElem2> Storage2<T> {
         changed
     }
 
-    pub fn errors_count_all(&self, input: &T::ErrInput) -> usize {
+    pub fn errors_count_all(&self, input: &T::Input) -> usize {
         self.storage_order
             .iter()
             .map(|id| self.errors_count_id(T::IdWrapper::wrap(*id), input))
             .sum()
     }
 
-    pub fn errors_count_id(&self, id: T::IdWrapper, input: &T::ErrInput) -> usize {
+    pub fn errors_count_id(&self, id: T::IdWrapper, input: &T::Input) -> usize {
         let mut visited = vec![];
         self.errors_count_inner(id, &mut visited, input)
     }
@@ -440,7 +395,7 @@ impl<T: StorageElem2> Storage2<T> {
         &self,
         id: T::IdWrapper,
         visited: &mut Vec<T::IdWrapper>,
-        input: &T::ErrInput,
+        input: &T::Input,
     ) -> usize {
         if visited.iter().any(|x| x.un_wrap() == id.un_wrap()) {
             return 0;
@@ -469,26 +424,18 @@ pub trait As<T> {
     fn as_t(&self) -> &T;
 }
 
-impl<T> As<T> for T {
-    fn as_t(&self) -> &T {
-        self
-    }
-}
-
 pub trait StorageElem2: Sized + Default {
-    type IdWrapper: Wrapper<Id> + Copy;
+    type IdWrapper: Wrapper<UniqueId> + Copy;
     type GetType;
 
     const SAFE_TO_RENAME: bool;
 
-    type EguiInput: As<Self::ErrInput>;
-    type GetInput;
-    type ErrInput;
+    type Input;
 
     fn egui(
         &mut self,
         ui: &mut Ui,
-        input: &mut Self::EguiInput,
+        input: &mut Self::Input,
         self_storage: &mut Storage2<Self>,
         data_id: egui::Id,
     ) -> WhatChanged;
@@ -496,156 +443,22 @@ pub trait StorageElem2: Sized + Default {
     fn get<F: FnMut(Self::IdWrapper) -> Option<Self::GetType>>(
         &self,
         f: F,
-        input: &Self::GetInput,
+        input: &Self::Input,
     ) -> Option<Self::GetType>;
 
-    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
-        &self,
-        f: F,
-        input: &Self::ErrInput,
-    ) -> usize;
-}
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, f: F, input: &mut Self::Input);
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum Arithmetic {
-    Float(f32),
-    Sum(Option<ArithmeticId>, Option<ArithmeticId>),
-    Mul(Option<ArithmeticId>, Option<ArithmeticId>),
-}
-
-impl ComboBoxChoosable for Arithmetic {
-    fn variants() -> &'static [&'static str] {
-        &["Float", "Sum", "Mul"]
-    }
-    fn get_number(&self) -> usize {
-        use Arithmetic::*;
-        match self {
-            Float { .. } => 0,
-            Sum { .. } => 1,
-            Mul { .. } => 2,
-        }
-    }
-    fn set_number(&mut self, number: usize) {
-        use Arithmetic::*;
-        *self = match number {
-            0 => Float(0.0),
-            1 => Sum(None, None),
-            2 => Mul(None, None),
-            _ => unreachable!(),
-        };
-    }
-}
-
-impl Default for Arithmetic {
-    fn default() -> Self {
-        Arithmetic::Float(0.0)
-    }
-}
-
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct ArithmeticId(Id);
-
-impl Wrapper<Id> for ArithmeticId {
-    fn wrap(id: Id) -> Self {
-        ArithmeticId(id)
-    }
-    fn un_wrap(self) -> Id {
-        self.0
-    }
-}
-
-impl StorageElem2 for Arithmetic {
-    type IdWrapper = ArithmeticId;
-    type GetType = f32;
-
-    const SAFE_TO_RENAME: bool = false;
-
-    type EguiInput = ();
-    type GetInput = ();
-    type ErrInput = ();
-
-    fn egui(
-        &mut self,
-        ui: &mut Ui,
-        (): &mut Self::EguiInput,
-        self_storage: &mut Storage2<Self>,
-        data_id: egui::Id,
-    ) -> WhatChanged {
-        use Arithmetic::*;
-
-        egui_combo_label(ui, "Type:", 45., self);
-
-        match self {
-            Float(f) => WhatChanged::from_uniform(egui_f32(ui, f)),
-            Sum(a, b) => {
-                let mut result = WhatChanged::default();
-
-                ui.label("Sum first argument:");
-                result |= self_storage.inline(&mut *a, ui, &mut (), data_id.with(0));
-
-                ui.label("Sum second argument:");
-                result |= self_storage.inline(&mut *b, ui, &mut (), data_id.with(1));
-
-                result
-            }
-            Mul(a, b) => {
-                let mut result = WhatChanged::default();
-
-                ui.label("Mul first argument:");
-                result |= self_storage.inline(&mut *a, ui, &mut (), data_id.with(0));
-
-                ui.label("Mul second argument:");
-                result |= self_storage.inline(&mut *b, ui, &mut (), data_id.with(1));
-
-                result
-            }
-        }
-    }
-
-    fn get<F: FnMut(Self::IdWrapper) -> Option<Self::GetType>>(
-        &self,
-        mut f: F,
-        (): &Self::GetInput,
-    ) -> Option<Self::GetType> {
-        use Arithmetic::*;
-        match self {
-            Float(f) => Some(*f),
-            Sum(a, b) => Some(f((*a)?)? + f((*b)?)?),
-            Mul(a, b) => Some(f((*a)?)? * f((*b)?)?),
-        }
-    }
-
-    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
-        &self,
-        mut f: F,
-        (): &Self::ErrInput,
-    ) -> usize {
-        use Arithmetic::*;
-        match self {
-            Float(_) => 0,
-            Sum(a, b) => a.map(|a| f(a)).unwrap_or(1) + b.map(|b| f(b)).unwrap_or(1),
-            Mul(a, b) => a.map(|a| f(a)).unwrap_or(1) + b.map(|b| f(b)).unwrap_or(1),
-        }
-    }
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, f: F, input: &Self::Input) -> usize;
 }
 
 /*
 
-Фичи:
-    * не имена а айдишники
-    * имена ограничены только английскими буквами, цифрами, _, не с цифры начинается
-    * есть инлайн элементы, который скрыты в основном хранилище, но используются кем-то
-    * есть метод для рисования юая написания имени, где можно задать инлайн элементы, и где автоматически происходит ассоциирование с айдишником
-    * можно получить элемент используя рекурсию
-    * айдишники лежат под специальным типом-обёрткой, чтобы не путаться в типах когда работаю с разными хранилищами
-    * ассоциированная константа «Is it safe to rename», которая если задана в true, то человеку говорится при ренейминге, что тут придётся вручную переименовать во всех остальных местах
-
-    * сделать что-то для сборки мусора
 
 Очень сложные фичи:
+    * сделать что-то для сборки мусора (наверное не надо, если ещё хорошо обработать удаление инлайн элемента)
     * можно было включать режим переноса вещей, чтобы их можно было двигать драг&дропом
     * группировка элементов? (чтобы имя этого прибавлялось внутрь?)
-    * при изменении имени вызывается метод, который позволяет изменять это имя в местах, где используются не айдишники
-    * есть подсчёт использований, и благодаря этому можно любой элемент превратить в инлайн
+    * при изменении имени вызывается метод, который позволяет изменять это имя в местах, где используются не айдишники (? сомнительно).
+    * есть подсчёт использований, и благодаря этому можно смотреть что есть мусор, и что можно удалить. наверное это можно сделать как отдельное окошко, которое перебирает все элементы и просто выводит кто кого использует, не надо сложный интефрейс, это же для меня только
 
  */

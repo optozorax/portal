@@ -1,17 +1,21 @@
-use std::hash::Hash;
 use crate::code_generation::ErrId;
 use crate::code_generation::ErrorId;
 use crate::gui::object::MatrixName;
 use crate::gui::uniform::FormulasCache;
 use egui::*;
 use glam::*;
+use std::hash::Hash;
 
 use std::collections::BTreeMap;
 
 use std::f32::consts::PI;
 
 pub fn mymax(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
+    if a > b {
+        a
+    } else {
+        b
+    }
 }
 
 pub fn deg2rad(deg: f32) -> f32 {
@@ -258,7 +262,11 @@ pub fn egui_errors(ui: &mut Ui, errors: &[(usize, String)]) {
     });
 }
 
-pub fn egui_with_red_field<Res>(ui: &mut Ui, has_errors: bool, f: impl FnOnce(&mut Ui) -> Res) -> Res {
+pub fn egui_with_red_field<Res>(
+    ui: &mut Ui,
+    has_errors: bool,
+    f: impl FnOnce(&mut Ui) -> Res,
+) -> Res {
     let previous = ui.visuals().clone();
     if has_errors {
         ui.visuals_mut().selection.stroke.color = Color32::RED;
@@ -312,10 +320,7 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
                 egui::experimental::easy_mark(ui, &text);
             }
             State::Edit => {
-                ui.add(
-                    TextEdit::multiline(text)
-                        .text_style(TextStyle::Monospace),
-                );
+                ui.add(TextEdit::multiline(text).text_style(TextStyle::Monospace));
             }
         }
     })

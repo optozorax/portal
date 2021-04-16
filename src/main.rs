@@ -146,7 +146,7 @@ impl RotateAroundCam {
             changed |= check_changed(&mut self.alpha, |alpha| {
                 let mut current = rad2deg(*alpha);
                 ui.add(
-                    DragValue::f32(&mut current)
+                    DragValue::new(&mut current)
                         .speed(1.0)
                         .suffix("°")
                         .min_decimals(0)
@@ -159,7 +159,7 @@ impl RotateAroundCam {
             changed |= check_changed(&mut self.beta, |beta| {
                 let mut current = rad2deg(*beta);
                 ui.add(
-                    DragValue::f32(&mut current)
+                    DragValue::new(&mut current)
                         .speed(1.0)
                         .clamp_range(rad2deg(Self::BETA_MIN)..=rad2deg(Self::BETA_MAX))
                         .suffix("°")
@@ -172,7 +172,7 @@ impl RotateAroundCam {
             ui.label("R");
             changed |= check_changed(&mut self.r, |r| {
                 ui.add(
-                    DragValue::f32(r)
+                    DragValue::new(r)
                         .speed(0.01)
                         .clamp_range(0.01..=1000.0)
                         .min_decimals(0)
@@ -197,7 +197,7 @@ impl RotateAroundCam {
             ui.label("Panini parameter:");
             changed |= check_changed(&mut self.panini_param, |param| {
                 egui_with_enabled_by(ui, is_use, |ui| {
-                    ui.add(egui::Slider::f32(param, 0.0..=1.0));
+                    ui.add(egui::Slider::new(param, 0.0..=1.0));
                 });
             });
         });
@@ -206,7 +206,7 @@ impl RotateAroundCam {
         changed |= check_changed(&mut self.view_angle, |m| {
             let mut current = rad2deg(*m);
             ui.add(
-                egui::Slider::f32(&mut current, if is_use { 2.0..=250.0 } else { 2.0..=140.0 })
+                egui::Slider::new(&mut current, if is_use { 2.0..=250.0 } else { 2.0..=140.0 })
                     .text("View angle")
                     .suffix("°")
                     .clamp_to_range(true),
@@ -217,10 +217,10 @@ impl RotateAroundCam {
         ui.separator();
 
         changed |= check_changed(&mut self.mouse_sensitivity, |m| {
-            ui.add(egui::Slider::f32(m, 0.0..=3.0).text("Mouse sensivity"));
+            ui.add(egui::Slider::new(m, 0.0..=3.0).text("Mouse sensivity"));
         });
         changed |= check_changed(&mut self.scale_factor, |m| {
-            ui.add(egui::Slider::f32(m, 1.0..=2.0).text("Wheel R multiplier"));
+            ui.add(egui::Slider::new(m, 1.0..=2.0).text("Wheel R multiplier"));
         });
 
         ui.separator();
@@ -626,7 +626,8 @@ First, predefined library is included, then uniforms, then user library, then in
                         }
 
                         if let Some(err) = &self.import_window_errors {
-                            ui.horizontal_wrapped_for_text(egui::TextStyle::Body, |ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                ui.spacing_mut().item_spacing.x = 0.;
                                 ui.add(egui::Label::new("Error: ").text_color(egui::Color32::RED));
                                 ui.label(err);
                             });
@@ -693,7 +694,7 @@ First, predefined library is included, then uniforms, then user library, then in
                         const MIN: f32 = 0.0000001;
                         const MAX: f32 = 0.1;
                         ui.add(
-                            egui::Slider::f32(offset, MIN..=MAX)
+                            egui::Slider::new(offset, MIN..=MAX)
                                 .logarithmic(true)
                                 .clamp_to_range(true)
                                 .largest_finite(MAX.into())
@@ -704,7 +705,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.separator();
                     ui.label("Render depth:");
                     changed.uniform |= check_changed(&mut self.render_depth, |depth| {
-                        ui.add(egui::Slider::i32(depth, 0..=10000).clamp_to_range(true));
+                        ui.add(egui::Slider::new(depth, 0..=10000).clamp_to_range(true));
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
                 });
@@ -786,7 +787,9 @@ async fn main() {
     let mut ui_changed_image = true;
 
     let mut storage2 =
-        portal::gui::storage2::Storage2::<portal::gui::storage2::Arithmetic>::default();
+        portal::gui::storage2::Storage2::<portal::gui::arithmetic::Arithmetic>::default();
+    let mut storage3 =
+        portal::gui::storage2::Storage2::<portal::gui::arithmetic::MoreArithmetic>::default();
 
     loop {
         clear_background(BLACK);
@@ -828,9 +831,13 @@ async fn main() {
                 .scroll(true)
                 .show(ctx, |ui| {
                     drop(storage2.egui(ui, &mut (), "Arithmetic"));
-
-                    for id in storage2.visible_elements() {
-                        ui.label(format!("{:?}", storage2.get(id, &())));
+                    for (id, name) in storage2.visible_elements() {
+                        ui.monospace(format!("{}: {:?}", name, storage2.get(id, &())));
+                    }
+                    ui.separator();
+                    drop(storage3.egui(ui, &mut storage2, "MoreArithmetic"));
+                    for (id, name) in storage3.visible_elements() {
+                        ui.monospace(format!("{}: {:?}", name, storage3.get(id, &storage2)));
                     }
                 });
             ui_changed_image = window.process_mouse_and_keys(ctx);

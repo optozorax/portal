@@ -73,8 +73,7 @@ impl StorageElem for MaterialComboBox {
         input: &mut Self::Input,
         _: &[String],
     ) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0));
+        let mut changed = WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0));
         ui.separator();
         changed |= self.0.egui(ui, pos, input);
         changed
