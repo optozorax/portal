@@ -12,7 +12,7 @@ pub trait ComboBoxChoosable {
 pub fn egui_combo_label<T: ComboBoxChoosable>(
     ui: &mut Ui,
     label: &str,
-    size: f32,
+    size: f64,
     t: &mut T,
 ) -> bool {
     let mut is_changed = false;
@@ -38,7 +38,7 @@ pub fn egui_combo_label<T: ComboBoxChoosable>(
 pub fn egui_combo_box<T: ComboBoxChoosable>(
     ui: &mut Ui,
     label: &str,
-    size: f32,
+    size: f64,
     t: &mut T,
 ) -> bool {
     let mut is_changed = false;

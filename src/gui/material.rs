@@ -13,18 +13,18 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Material {
     Simple {
-        color: [f32; 3],
-        normal_coef: f32, // 0..1
+        color: [f64; 3],
+        normal_coef: f64, // 0..1
         grid: bool,
-        grid_scale: f32,
-        grid_coef: f32, // 0..1
+        grid_scale: f64,
+        grid_coef: f64, // 0..1
     },
     Reflect {
-        add_to_color: [f32; 3],
+        add_to_color: [f64; 3],
     },
     Refract {
-        refractive_index: f32,
-        add_to_color: [f32; 3],
+        refractive_index: f64,
+        add_to_color: [f64; 3],
     },
     Complex {
         code: MaterialCode, // gets (SphereIntersection hit, Ray r) -> MaterialProcessing, must use material_next or material_final
@@ -131,7 +131,7 @@ impl Material {
             } => {
                 ui.horizontal(|ui| {
                     ui.label("Color");
-                    changed |= check_changed(color, |color| drop(ui.color_edit_button_rgb(color)));
+                    changed |= egui_color_f64(ui, color);
                     ui.separator();
                     ui.label("Normal coef");
                     changed |= check_changed(normal_coef, |normal_coef| {
@@ -181,8 +181,7 @@ impl Material {
             Reflect { add_to_color } => {
                 ui.horizontal(|ui| {
                     ui.label("Add to color");
-                    changed |=
-                        check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
+                    changed |= egui_color_f64(ui, add_to_color);
                 });
             }
             Refract {
@@ -191,8 +190,7 @@ impl Material {
             } => {
                 ui.horizontal(|ui| {
                     ui.label("Add to color");
-                    changed |=
-                        check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
+                    changed |= egui_color_f64(ui, add_to_color);
                 });
                 ui.horizontal(|ui| {
                     ui.label("Refractive index");

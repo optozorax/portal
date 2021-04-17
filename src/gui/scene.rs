@@ -21,11 +21,11 @@ use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CamSettings {
-    pub look_at: Vec3,
-    pub alpha: f32,
-    pub beta: f32,
-    pub r: f32,
-    pub offset_after_material: f32,
+    pub look_at: DVec3,
+    pub alpha: f64,
+    pub beta: f64,
+    pub r: f64,
+    pub offset_after_material: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -389,27 +389,27 @@ impl Scene {
             match &object.0 {
                 DebugMatrix(matrix) => {
                     local_try!(matrix, m, {
-                        material.set_uniform(&matrix.normal_name(), m);
-                        material.set_uniform(&matrix.inverse_name(), m.inverse());
+                        material.set_uniform(&matrix.normal_name(), m.as_f32());
+                        material.set_uniform(&matrix.inverse_name(), m.inverse().as_f32());
                     })
                 }
                 Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
                     Simple(matrix) => {
                         local_try!(matrix, m, {
-                            material.set_uniform(&matrix.normal_name(), m);
-                            material.set_uniform(&matrix.inverse_name(), m.inverse());
+                            material.set_uniform(&matrix.normal_name(), m.as_f32());
+                            material.set_uniform(&matrix.inverse_name(), m.inverse().as_f32());
                         })
                     }
                     Portal(a, b) => {
                         local_try!(a, ma, {
                             local_try!(b, mb, {
-                                material.set_uniform(&a.normal_name(), ma);
-                                material.set_uniform(&a.inverse_name(), ma.inverse());
-                                material.set_uniform(&b.normal_name(), mb);
-                                material.set_uniform(&b.inverse_name(), mb.inverse());
-                                material.set_uniform(&a.teleport_to_name(b), mb * ma.inverse());
+                                material.set_uniform(&a.normal_name(), ma.as_f32());
+                                material.set_uniform(&a.inverse_name(), ma.inverse().as_f32());
+                                material.set_uniform(&b.normal_name(), mb.as_f32());
+                                material.set_uniform(&b.inverse_name(), mb.inverse().as_f32());
+                                material.set_uniform(&a.teleport_to_name(b), (mb * ma.inverse()).as_f32());
                                 if a != b {
-                                    material.set_uniform(&b.teleport_to_name(a), ma * mb.inverse());
+                                    material.set_uniform(&b.teleport_to_name(a), (ma * mb.inverse()).as_f32());
                                 }
                             })
                         })

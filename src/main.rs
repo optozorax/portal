@@ -1,38 +1,44 @@
-use std::f32::consts::PI;
+use glam::{DMat4, DVec2, DVec3, DVec4};
+use std::f64::consts::PI;
 
-use macroquad::prelude::*;
+use macroquad::prelude::{
+    clamp, clear_background, draw_rectangle, draw_texture_ex, get_internal_gl, get_screen_data,
+    gl_use_default_material, gl_use_material, is_mouse_button_down, load_texture_from_image,
+    mouse_position_local, mouse_wheel, next_frame, screen_height, screen_width, set_default_camera,
+    Conf, DrawTextureParams, MouseButton, Texture2D, BLACK, WHITE,
+};
 use portal::gui::{common::*, scene::*, texture::*};
 
 use egui::{DragValue, Ui};
 
 struct RotateAroundCam {
-    look_at: Vec3,
-    alpha: f32,
-    beta: f32,
-    r: f32,
-    previous_mouse: Vec2,
+    look_at: DVec3,
+    alpha: f64,
+    beta: f64,
+    r: f64,
+    previous_mouse: DVec2,
 
-    mouse_sensitivity: f32,
-    scale_factor: f32,
-    view_angle: f32,
+    mouse_sensitivity: f64,
+    scale_factor: f64,
+    view_angle: f64,
     use_panini_projection: bool,
-    panini_param: f32,
+    panini_param: f64,
 
     inverse_x: bool,
     inverse_y: bool,
 }
 
 impl RotateAroundCam {
-    const BETA_MIN: f32 = 0.01;
-    const BETA_MAX: f32 = PI - 0.01;
+    const BETA_MIN: f64 = 0.01;
+    const BETA_MAX: f64 = PI - 0.01;
 
     fn new() -> Self {
         Self {
-            look_at: Vec3::new(0., 0., 0.),
+            look_at: DVec3::new(0., 0., 0.),
             alpha: deg2rad(81.),
             beta: deg2rad(64.),
             r: 3.5,
-            previous_mouse: Vec2::default(),
+            previous_mouse: DVec2::default(),
 
             mouse_sensitivity: 1.4,
             scale_factor: 1.1,
@@ -49,10 +55,10 @@ impl RotateAroundCam {
     fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool) -> bool {
         let mut is_something_changed = false;
 
-        let mouse_pos: Vec2 = mouse_position_local();
+        let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
 
         if is_mouse_button_down(MouseButton::Left) && mouse_over_canvas {
-            let size = mymax(screen_width(), screen_height());
+            let size = mymax(screen_width().into(), screen_height().into());
             let mut dalpha =
                 (mouse_pos.x - self.previous_mouse.x) * self.mouse_sensitivity * size / 800.;
             let mut dbeta =
@@ -90,8 +96,8 @@ impl RotateAroundCam {
         return is_something_changed;
     }
 
-    fn get_matrix(&self) -> Mat4 {
-        let pos = Vec3::new(
+    fn get_matrix(&self) -> DMat4 {
+        let pos = DVec3::new(
             self.beta.sin() * self.alpha.cos(),
             self.beta.cos(),
             self.beta.sin() * self.alpha.sin(),
@@ -99,26 +105,26 @@ impl RotateAroundCam {
             + self.look_at;
 
         let k = (self.look_at - pos).normalize();
-        let i = k.cross(Vec3::new(0., 1., 0.)).normalize();
+        let i = k.cross(DVec3::new(0., 1., 0.)).normalize();
         let j = k.cross(i).normalize();
 
-        Mat4::from_cols(
-            Vec4::new(i.x, i.y, i.z, 0.),
-            Vec4::new(j.x, j.y, j.z, 0.),
-            Vec4::new(k.x, k.y, k.z, 0.),
-            Vec4::new(pos.x, pos.y, pos.z, 1.),
+        DMat4::from_cols(
+            DVec4::new(i.x, i.y, i.z, 0.),
+            DVec4::new(j.x, j.y, j.z, 0.),
+            DVec4::new(k.x, k.y, k.z, 0.),
+            DVec4::new(pos.x, pos.y, pos.z, 1.),
         )
     }
 
     fn set_cam(&mut self, s: &CamSettings) {
-        self.look_at = Vec3::new(s.look_at.x, s.look_at.y, s.look_at.z);
+        self.look_at = DVec3::new(s.look_at.x, s.look_at.y, s.look_at.z);
         self.alpha = s.alpha;
         self.beta = s.beta;
         self.r = s.r;
     }
 
     fn get_cam(&mut self, cam_settings: &mut CamSettings) {
-        cam_settings.look_at = ::glam::Vec3::new(self.look_at.x, self.look_at.y, self.look_at.z);
+        cam_settings.look_at = DVec3::new(self.look_at.x, self.look_at.y, self.look_at.z);
         cam_settings.alpha = self.alpha;
         cam_settings.beta = self.beta;
         cam_settings.r = self.r;
@@ -131,13 +137,13 @@ impl RotateAroundCam {
         ui.horizontal(|ui| {
             ui.label("Look at: ");
             ui.label("X");
-            changed |= egui_f32(ui, &mut self.look_at.x);
+            changed |= egui_f64(ui, &mut self.look_at.x);
             ui.separator();
             ui.label("Y");
-            changed |= egui_f32(ui, &mut self.look_at.y);
+            changed |= egui_f64(ui, &mut self.look_at.y);
             ui.separator();
             ui.label("Z");
-            changed |= egui_f32(ui, &mut self.look_at.z);
+            changed |= egui_f64(ui, &mut self.look_at.z);
             ui.separator();
         });
         ui.separator();
@@ -257,7 +263,7 @@ struct Window {
 
     data: Data,
 
-    offset_after_material: f32,
+    offset_after_material: f64,
     render_depth: i32,
 
     available_scenes: Vec<(String, String, String)>,
@@ -354,7 +360,11 @@ impl Window {
         let material = scene.get_new_material().unwrap_or_else(|err| {
             println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
             dbg!(&err);
-            crate::miniquad::error!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+            macroquad::prelude::miniquad::error!(
+                "code:\n{}\n\nmessage:\n{}",
+                add_line_numbers(&err.0),
+                err.1
+            );
             std::process::exit(1)
         });
         scene.set_uniforms(material, &mut data, &scene.uniforms);
@@ -691,8 +701,8 @@ First, predefined library is included, then uniforms, then user library, then in
                 .show(ctx, |ui| {
                     ui.label("Offset after material:");
                     changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
-                        const MIN: f32 = 0.0000001;
-                        const MAX: f32 = 0.1;
+                        const MIN: f64 = 0.0000001;
+                        const MAX: f64 = 0.1;
                         ui.add(
                             egui::Slider::new(offset, MIN..=MAX)
                                 .logarithmic(true)
@@ -741,11 +751,11 @@ First, predefined library is included, then uniforms, then user library, then in
         self.scene.cam.offset_after_material = self.offset_after_material;
         self.material
             .set_uniform("_resolution", (screen_width(), screen_height()));
-        self.material.set_uniform("_camera", self.cam.get_matrix());
+        self.material.set_uniform("_camera", self.cam.get_matrix().as_f32());
         self.material
-            .set_uniform("_view_angle", self.cam.view_angle);
+            .set_uniform("_view_angle", self.cam.view_angle as f32);
         self.material
-            .set_uniform("_panini_param", self.cam.panini_param);
+            .set_uniform("_panini_param", self.cam.panini_param as f32);
         self.material.set_uniform(
             "_use_panini_projection",
             self.cam.use_panini_projection as i32,
@@ -753,7 +763,7 @@ First, predefined library is included, then uniforms, then user library, then in
         self.material
             .set_uniform("_ray_tracing_depth", self.render_depth);
         self.material
-            .set_uniform("_offset_after_material", self.offset_after_material);
+            .set_uniform("_offset_after_material", self.offset_after_material as f32);
     }
 
     fn draw(&mut self) {
@@ -819,7 +829,10 @@ async fn main() {
                 0.,
                 WHITE,
                 DrawTextureParams {
-                    dest_size: Some(Vec2::new(screen_width(), screen_height())),
+                    dest_size: Some(macroquad::prelude::Vec2::new(
+                        screen_width(),
+                        screen_height(),
+                    )),
                     flip_y: true,
                     ..Default::default()
                 },

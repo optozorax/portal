@@ -27,9 +27,9 @@ pub enum Matrix {
         what: String,
     },
     Simple {
-        offset: Vec3,
-        scale: f32,
-        rotate: Vec3,
+        offset: DVec3,
+        scale: f64,
+        rotate: DVec3,
         mirror: (bool, bool, bool),
     },
     Parametrized {
@@ -43,9 +43,9 @@ pub enum Matrix {
 impl Default for Matrix {
     fn default() -> Self {
         Matrix::Simple {
-            offset: Vec3::default(),
+            offset: DVec3::default(),
             scale: 1.0,
-            rotate: Vec3::default(),
+            rotate: DVec3::default(),
             mirror: (false, false, false),
         }
     }
@@ -75,12 +75,12 @@ impl ComboBoxChoosable for Matrix {
                     mirror,
                     scale,
                 } => Simple {
-                    offset: Vec3::new(
+                    offset: DVec3::new(
                         offset.x.freeget().unwrap_or(0.0),
                         offset.y.freeget().unwrap_or(0.0),
                         offset.z.freeget().unwrap_or(0.0),
                     ),
-                    rotate: Vec3::new(
+                    rotate: DVec3::new(
                         rotate.x.freeget().unwrap_or(0.0),
                         rotate.y.freeget().unwrap_or(0.0),
                         rotate.z.freeget().unwrap_or(0.0),
@@ -123,9 +123,9 @@ impl ComboBoxChoosable for Matrix {
                         z: ParametrizeOrNot::No(rotate.z),
                     },
                     mirror: TVec3 {
-                        x: ParametrizeOrNot::No(mirror.0 as i32 as f32),
-                        y: ParametrizeOrNot::No(mirror.1 as i32 as f32),
-                        z: ParametrizeOrNot::No(mirror.2 as i32 as f32),
+                        x: ParametrizeOrNot::No(mirror.0 as i32 as f64),
+                        y: ParametrizeOrNot::No(mirror.1 as i32 as f64),
+                        z: ParametrizeOrNot::No(mirror.2 as i32 as f64),
                     },
                     scale: ParametrizeOrNot::No(*scale),
                 },
@@ -175,9 +175,9 @@ impl Matrix {
                         ui.end_row();
 
                         ui.label("Offset: ");
-                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.x));
-                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.y));
-                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.z));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f64(ui, &mut offset.x));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f64(ui, &mut offset.y));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f64(ui, &mut offset.z));
                         ui.end_row();
 
                         ui.label("Rotate: ");
@@ -193,7 +193,7 @@ impl Matrix {
                         ui.end_row();
 
                         ui.label("Scale: ");
-                        is_changed |= egui_f32_positive(ui, scale);
+                        is_changed |= egui_f64_positive(ui, scale);
                         ui.end_row();
                     });
             }
@@ -251,9 +251,9 @@ impl Matrix {
                         ui.end_row();
 
                         ui.label("Offset: ");
-                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.x));
-                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.y));
-                        ui.centered_and_justified(|ui| is_changed |= egui_f32(ui, &mut offset.z));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f64(ui, &mut offset.x));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f64(ui, &mut offset.y));
+                        ui.centered_and_justified(|ui| is_changed |= egui_f64(ui, &mut offset.z));
                         ui.end_row();
 
                         ui.label("Rotate: ");
@@ -269,7 +269,7 @@ impl Matrix {
                         ui.end_row();
 
                         ui.label("Scale: ");
-                        is_changed |= egui_f32_positive(ui, scale);
+                        is_changed |= egui_f64_positive(ui, scale);
                         ui.end_row();
                     });
             }
@@ -282,13 +282,13 @@ impl Matrix {
                 ui.label("Offset: ");
                 is_changed |= offset
                     .x
-                    .egui(ui, formulas_names, "X", 0.0, |ui, x| egui_f32(ui, x));
+                    .egui(ui, formulas_names, "X", 0.0, |ui, x| egui_f64(ui, x));
                 is_changed |= offset
                     .y
-                    .egui(ui, formulas_names, "Y", 0.0, |ui, x| egui_f32(ui, x));
+                    .egui(ui, formulas_names, "Y", 0.0, |ui, x| egui_f64(ui, x));
                 is_changed |= offset
                     .z
-                    .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_f32(ui, x));
+                    .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_f64(ui, x));
                 ui.separator();
                 ui.label("Rotate: ");
                 is_changed |= rotate
@@ -313,7 +313,7 @@ impl Matrix {
                     .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_0_1(ui, x));
                 ui.separator();
                 is_changed |= scale.egui(ui, formulas_names, "Scale:", 1.0, |ui, x| {
-                    egui_f32_positive(ui, x)
+                    egui_f64_positive(ui, x)
                 });
             }
         }
@@ -337,7 +337,7 @@ impl Matrix {
 pub struct MatrixComboBox(pub Matrix);
 
 impl StorageElem for MatrixComboBox {
-    type GetType = Mat4;
+    type GetType = DMat4;
     type Input = megatuple!(Vec<String>, MatrixRecursionError);
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
@@ -368,15 +368,15 @@ impl StorageElem for MatrixComboBox {
                 scale,
                 rotate,
                 mirror,
-            } => Mat4::from_scale_rotation_translation(
-                Vec3::new(
+            } => DMat4::from_scale_rotation_translation(
+                DVec3::new(
                     *scale * if mirror.0 { -1. } else { 1. },
                     *scale * if mirror.1 { -1. } else { 1. },
                     *scale * if mirror.2 { -1. } else { 1. },
                 ),
-                Quat::from_rotation_x(rotate.x)
-                    * Quat::from_rotation_y(rotate.y)
-                    * Quat::from_rotation_z(rotate.z),
+                DQuat::from_rotation_x(rotate.x)
+                    * DQuat::from_rotation_y(rotate.y)
+                    * DQuat::from_rotation_z(rotate.z),
                 *offset,
             ),
             Parametrized {
@@ -385,20 +385,20 @@ impl StorageElem for MatrixComboBox {
                 rotate,
                 mirror,
             } => {
-                let scale = scale.get(uniforms, formulas_cache) as f32;
-                Mat4::from_scale_rotation_translation(
-                    Vec3::new(
-                        scale * (1. - 2.0 * mirror.x.get(uniforms, formulas_cache) as f32),
-                        scale * (1. - 2.0 * mirror.y.get(uniforms, formulas_cache) as f32),
-                        scale * (1. - 2.0 * mirror.z.get(uniforms, formulas_cache) as f32),
+                let scale = scale.get(uniforms, formulas_cache) as f64;
+                DMat4::from_scale_rotation_translation(
+                    DVec3::new(
+                        scale * (1. - 2.0 * mirror.x.get(uniforms, formulas_cache) as f64),
+                        scale * (1. - 2.0 * mirror.y.get(uniforms, formulas_cache) as f64),
+                        scale * (1. - 2.0 * mirror.z.get(uniforms, formulas_cache) as f64),
                     ),
-                    Quat::from_rotation_x(rotate.x.get(uniforms, formulas_cache) as f32)
-                        * Quat::from_rotation_y(rotate.y.get(uniforms, formulas_cache) as f32)
-                        * Quat::from_rotation_z(rotate.z.get(uniforms, formulas_cache) as f32),
-                    Vec3::new(
-                        offset.x.get(uniforms, formulas_cache) as f32,
-                        offset.y.get(uniforms, formulas_cache) as f32,
-                        offset.z.get(uniforms, formulas_cache) as f32,
+                    DQuat::from_rotation_x(rotate.x.get(uniforms, formulas_cache) as f64)
+                        * DQuat::from_rotation_y(rotate.y.get(uniforms, formulas_cache) as f64)
+                        * DQuat::from_rotation_z(rotate.z.get(uniforms, formulas_cache) as f64),
+                    DVec3::new(
+                        offset.x.get(uniforms, formulas_cache) as f64,
+                        offset.y.get(uniforms, formulas_cache) as f64,
+                        offset.z.get(uniforms, formulas_cache) as f64,
                     ),
                 )
             }

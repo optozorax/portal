@@ -8,9 +8,9 @@ use std::hash::Hash;
 
 use std::collections::BTreeMap;
 
-use std::f32::consts::PI;
+use std::f64::consts::PI;
 
-pub fn mymax(a: f32, b: f32) -> f32 {
+pub fn mymax(a: f64, b: f64) -> f64 {
     if a > b {
         a
     } else {
@@ -18,11 +18,11 @@ pub fn mymax(a: f32, b: f32) -> f32 {
     }
 }
 
-pub fn deg2rad(deg: f32) -> f32 {
+pub fn deg2rad(deg: f64) -> f64 {
     deg / 180. * PI
 }
 
-pub fn rad2deg(rad: f32) -> f32 {
+pub fn rad2deg(rad: f64) -> f64 {
     rad * 180. / PI
 }
 
@@ -114,18 +114,18 @@ pub fn egui_bool(ui: &mut Ui, flag: &mut bool) -> bool {
     check_changed(flag, |flag| drop(ui.add(Checkbox::new(flag, ""))))
 }
 
-pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
+pub fn egui_angle(ui: &mut Ui, angle: &mut f64) -> bool {
     let mut current = rad2deg(*angle);
     let previous = current;
     ui.add(
         DragValue::from_get_set(|v| {
             if let Some(v) = v {
                 if v > 360. {
-                    current = v as f32 % 360.;
+                    current = v as f64 % 360.;
                 } else if v < 0. {
-                    current = 360. + (v as f32 % 360.);
+                    current = 360. + (v as f64 % 360.);
                 } else {
-                    current = v as f32;
+                    current = v as f64;
                 }
             }
             current.into()
@@ -142,7 +142,6 @@ pub fn egui_angle(ui: &mut Ui, angle: &mut f32) -> bool {
 }
 
 pub fn egui_angle_f64(ui: &mut Ui, angle: &mut f64) -> bool {
-    use std::f64::consts::PI;
     let mut current = *angle / PI * 180.;
     let previous = current;
     ui.add(
@@ -169,7 +168,7 @@ pub fn egui_angle_f64(ui: &mut Ui, angle: &mut f64) -> bool {
     }
 }
 
-pub fn egui_f32(ui: &mut Ui, value: &mut f32) -> bool {
+pub fn egui_f64(ui: &mut Ui, value: &mut f64) -> bool {
     check_changed(value, |value| {
         ui.add(
             DragValue::new(value)
@@ -180,7 +179,7 @@ pub fn egui_f32(ui: &mut Ui, value: &mut f32) -> bool {
     })
 }
 
-pub fn egui_0_1(ui: &mut Ui, value: &mut f32) -> bool {
+pub fn egui_0_1(ui: &mut Ui, value: &mut f64) -> bool {
     check_changed(value, |value| {
         ui.add(
             Slider::new(value, 0.0..=1.0)
@@ -191,7 +190,7 @@ pub fn egui_0_1(ui: &mut Ui, value: &mut f32) -> bool {
     })
 }
 
-pub fn egui_f32_positive(ui: &mut Ui, value: &mut f32) -> bool {
+pub fn egui_f64_positive(ui: &mut Ui, value: &mut f64) -> bool {
     check_changed(value, |value| {
         ui.add(
             DragValue::new(value)
@@ -204,8 +203,8 @@ pub fn egui_f32_positive(ui: &mut Ui, value: &mut f32) -> bool {
     })
 }
 
-pub fn egui_label(ui: &mut Ui, label: &str, size: f32) {
-    let (rect, _) = ui.allocate_at_least(egui::vec2(size, 0.), Sense::hover());
+pub fn egui_label(ui: &mut Ui, label: &str, size: f64) {
+    let (rect, _) = ui.allocate_at_least(egui::vec2(size as f32, 0.), Sense::hover());
     ui.painter().text(
         rect.max,
         Align2::RIGHT_CENTER,
@@ -218,7 +217,7 @@ pub fn egui_label(ui: &mut Ui, label: &str, size: f32) {
 pub fn egui_existing_name(
     ui: &mut Ui,
     label: &str,
-    size: f32,
+    size: f64,
     current: &mut String,
     names: &[String],
     add_to_errors_count: &mut usize,
@@ -325,6 +324,15 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
         }
     })
     .response
+}
+
+pub fn egui_color_f64(ui: &mut Ui, color: &mut [f64; 3]) -> bool {
+    let [r, g, b] = color;
+    let mut temp: [f32; 3] = [*r as _, *g as _, *b as _];
+    let result = check_changed(&mut temp, |temp| drop(ui.color_edit_button_rgb(temp)));
+    let [r, g, b] = temp;
+    *color = [r.into(), g.into(), b.into()];
+    result
 }
 
 pub const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);

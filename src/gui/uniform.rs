@@ -81,7 +81,7 @@ pub struct TVec3<T> {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ParametrizeOrNot {
     Yes(FormulaName),
-    No(f32),
+    No(f64),
 }
 
 impl ParametrizeOrNot {
@@ -99,8 +99,8 @@ impl ParametrizeOrNot {
         ui: &mut Ui,
         formulas_names: &[String],
         label: &str,
-        default: f32,
-        f: impl FnOnce(&mut Ui, &mut f32) -> bool,
+        default: f64,
+        f: impl FnOnce(&mut Ui, &mut f64) -> bool,
     ) -> bool {
         use ParametrizeOrNot::*;
         let mut not_found = false;
@@ -152,7 +152,7 @@ impl ParametrizeOrNot {
         }
     }
 
-    pub fn freeget(&self) -> Option<f32> {
+    pub fn freeget(&self) -> Option<f64> {
         use ParametrizeOrNot::*;
         match self {
             Yes(_) => None,
@@ -294,7 +294,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Bool(b) => AnyUniform::int(*b as i32),
                 Int { .. } => self.clone(),
                 Float { value, .. } => AnyUniform::int(*value as i32),
-                Angle(a) => AnyUniform::int(rad2deg(*a as f32) as i32),
+                Angle(a) => AnyUniform::int(rad2deg(*a as f64) as i32),
                 Formula { .. } => AnyUniform::int(0),
             },
             2 => match self {
@@ -307,7 +307,7 @@ impl ComboBoxChoosable for AnyUniform {
             3 => Angle(match self {
                 Bool(b) => (*b as i32 as f64) * std::f64::consts::PI,
                 Int { value, .. } => {
-                    macroquad::math::clamp(deg2rad(*value as f32), 0., std::f32::consts::TAU) as f64
+                    macroquad::math::clamp(deg2rad(*value as f64), 0., std::f64::consts::TAU) as f64
                 }
                 Angle(a) => *a,
                 Float { value, .. } => macroquad::math::clamp(*value, 0., std::f64::consts::TAU),

@@ -6,7 +6,7 @@ use egui::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Arithmetic {
-    Float(f32),
+    Float(f64),
     Sum(Option<ArithmeticId>, Option<ArithmeticId>),
     Mul(Option<ArithmeticId>, Option<ArithmeticId>),
 }
@@ -54,7 +54,7 @@ impl Wrapper<UniqueId> for ArithmeticId {
 
 impl StorageElem2 for Arithmetic {
     type IdWrapper = ArithmeticId;
-    type GetType = f32;
+    type GetType = f64;
 
     const SAFE_TO_RENAME: bool = true;
 
@@ -73,7 +73,7 @@ impl StorageElem2 for Arithmetic {
 
         match self {
             Float(f) => {
-                WhatChanged::from_uniform(ui.centered_and_justified(|ui| egui_f32(ui, f)).inner)
+                WhatChanged::from_uniform(ui.centered_and_justified(|ui| egui_f64(ui, f)).inner)
             }
             Sum(a, b) => {
                 let mut result = WhatChanged::default();
@@ -191,7 +191,7 @@ impl Wrapper<UniqueId> for MoreArithmeticId {
 
 impl StorageElem2 for MoreArithmetic {
     type IdWrapper = MoreArithmeticId;
-    type GetType = f32;
+    type GetType = f64;
 
     const SAFE_TO_RENAME: bool = true;
 

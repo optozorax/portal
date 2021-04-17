@@ -281,7 +281,7 @@ impl<T: StorageElem2> Storage2<T> {
     pub fn inline(
         &mut self,
         label: &str,
-        label_size: f32,
+        label_size: f64,
         id: &mut Option<T::IdWrapper>,
         ui: &mut Ui,
         input: &mut T::Input,
