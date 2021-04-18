@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 use std::fmt;
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct UniqueId(usize);
 
 impl fmt::Display for UniqueId {
@@ -10,7 +11,7 @@ impl fmt::Display for UniqueId {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Serialize, Deserialize)]
 pub struct UniqueIds {
     available: VecDeque<UniqueId>,
     max: usize,

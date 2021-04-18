@@ -351,7 +351,9 @@ impl Window {
 
         let mut data = Default::default();
 
-        let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].2).unwrap();
+        let mut scene = Scene::default();
+
+        // let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].2).unwrap();
         // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2) .unwrap() .into();
         scene.init(&mut data);
 
@@ -796,10 +798,10 @@ async fn main() {
 
     let mut ui_changed_image = true;
 
-    let mut storage2 =
-        portal::gui::storage2::Storage2::<portal::gui::arithmetic::Arithmetic>::default();
-    let mut storage3 =
-        portal::gui::storage2::Storage2::<portal::gui::arithmetic::MoreArithmetic>::default();
+    // let mut storage2 =
+    //     portal::gui::storage2::Storage2::<portal::gui::arithmetic::Arithmetic>::default();
+    // let mut storage3 =
+    //     portal::gui::storage2::Storage2::<portal::gui::arithmetic::MoreArithmetic>::default();
 
     loop {
         clear_background(BLACK);
@@ -840,19 +842,19 @@ async fn main() {
         }
 
         egui_macroquad::ui(|ctx| {
-            egui::Window::new("Test storage2")
-                .scroll(true)
-                .show(ctx, |ui| {
-                    drop(storage2.egui(ui, &mut (), "Arithmetic"));
-                    for (id, name) in storage2.visible_elements() {
-                        ui.monospace(format!("{}: {:?}", name, storage2.get(id, &())));
-                    }
-                    ui.separator();
-                    drop(storage3.egui(ui, &mut storage2, "MoreArithmetic"));
-                    for (id, name) in storage3.visible_elements() {
-                        ui.monospace(format!("{}: {:?}", name, storage3.get(id, &storage2)));
-                    }
-                });
+            // egui::Window::new("Test storage2")
+            //     .scroll(true)
+            //     .show(ctx, |ui| {
+            //         drop(storage2.egui(ui, &mut (), "Arithmetic"));
+            //         for (id, name) in storage2.visible_elements() {
+            //             ui.monospace(format!("{}: {:?}", name, storage2.get(id, &())));
+            //         }
+            //         ui.separator();
+            //         drop(storage3.egui(ui, &mut storage2, "MoreArithmetic"));
+            //         for (id, name) in storage3.visible_elements() {
+            //             ui.monospace(format!("{}: {:?}", name, storage3.get(id, &storage2)));
+            //         }
+            //     });
             ui_changed_image = window.process_mouse_and_keys(ctx);
         });
         egui_macroquad::draw();

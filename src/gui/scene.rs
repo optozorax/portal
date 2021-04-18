@@ -1,3 +1,4 @@
+use crate::gui::storage2::Storage2;
 use crate::code_generation::apply_template;
 use crate::gui::glsl::*;
 
@@ -28,7 +29,19 @@ pub struct CamSettings {
     pub offset_after_material: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl Default for CamSettings {
+    fn default() -> Self {
+        Self {
+            look_at: DVec3::default(),
+            alpha: 0.,
+            beta: 0.,
+            r: 0.,
+            offset_after_material: 0.000025,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Scene {
     pub description_en: String,
     pub description_ru: String,
@@ -37,7 +50,7 @@ pub struct Scene {
 
     pub uniforms: StorageWithNames<AnyUniformComboBox>,
 
-    pub matrices: StorageWithNames<MatrixComboBox>,
+    pub matrices: Storage2<Matrix>,
     objects: StorageWithNames<ObjectComboBox>,
 
     pub textures: StorageWithNames<TextureName>,
@@ -56,11 +69,11 @@ pub struct OldScene {
     pub description_en: String,
     pub description_ru: String,
 
-    pub uniforms: StorageWithNames<AnyUniformComboBox>,
-
     pub cam: CamSettings,
 
-    pub matrices: StorageWithNames<MatrixComboBox>,
+    pub uniforms: StorageWithNames<AnyUniformComboBox>,
+
+    pub matrices: StorageWithNames<Matrix>,
     objects: StorageWithNames<ObjectComboBox>,
 
     pub textures: StorageWithNames<TextureName>,
@@ -84,7 +97,7 @@ impl From<OldScene> for Scene {
 
             uniforms: old.uniforms,
 
-            matrices: old.matrices,
+            matrices: old.matrices.into(),
             objects: old.objects,
 
             textures: old.textures,
@@ -102,9 +115,10 @@ impl From<OldScene> for Scene {
 
 impl Scene {
     pub fn init(&mut self, data: &mut Data) {
+        let formulas_cache = &mut data.formulas_cache.borrow_mut();
         for (_, object) in self.uniforms.iter() {
             if let AnyUniform::Formula(f) = &object.0 {
-                data.formulas_cache.compile(&f.0);
+                formulas_cache.compile(&f.0);
             }
         }
         data.errors = Default::default();
@@ -114,7 +128,7 @@ impl Scene {
             .resize(self.uniforms.storage.len(), false);
         self.user_uniforms
             .matrices
-            .resize(self.matrices.storage.len(), false);
+            .resize(self.matrices.len(), false);
         drop(self.init_stage(self.current_stage));
     }
 
@@ -177,7 +191,7 @@ impl Scene {
 
         changed |= self
             .uniforms
-            .rich_egui(ui, &mut data.formulas_cache, "Uniforms");
+            .rich_egui(ui, &mut *data.formulas_cache.borrow_mut(), "Uniforms");
 
         if changed.uniform {
             self.user_uniforms
@@ -185,7 +199,7 @@ impl Scene {
                 .resize(self.uniforms.storage.len(), false);
             self.user_uniforms
                 .matrices
-                .resize(self.matrices.storage.len(), false);
+                .resize(self.matrices.len(), false);
         }
 
         ui.collapsing("Calculated uniforms", |ui| {
@@ -196,7 +210,7 @@ impl Scene {
                     use AnyUniformResult::*;
                     match self
                         .uniforms
-                        .get(name, &self.uniforms, &data.formulas_cache)
+                        .get(name, &self.uniforms, &*data.formulas_cache.borrow())
                     {
                         GetEnum::Ok(x) => match x {
                             Bool(b) => ui.label(b.to_string()),
@@ -210,10 +224,10 @@ impl Scene {
             }
         });
 
-        with_swapped!(x => (self.uniforms.names, data.matrix_recursion_error);
-            changed |= self.matrices.rich_egui(ui, &mut x, "Matrices"));
+        with_swapped!(x => (self.uniforms, data.formulas_cache);
+            changed |= self.matrices.egui(ui, &mut x, "Matrices"));
 
-        with_swapped!(x => (self.matrices.names, data.errors);
+        with_swapped!(x => (vec![/* matrices.names */], data.errors);
             changed |= self.objects.rich_egui(ui, &mut x, "Objects"));
 
         changed |= self.materials.rich_egui(ui, &mut data.errors, "Materials");
@@ -229,13 +243,14 @@ impl Scene {
         ui.collapsing("Global user uniforms", |ui| {
             changed |=
                 self.user_uniforms
-                    .egui(ui, &mut self.matrices.names, &mut self.uniforms.names);
+                    .egui(ui, &mut vec![]/* self.matrices.names */, &mut self.uniforms.names);
         });
 
-        with_swapped!(x => (self.matrices, self.uniforms, self.user_uniforms);
-            changed |= self
-                .animation_stages
-                .rich_egui(ui, &mut x, "Animation stages"));
+        // // TODO
+        // with_swapped!(x => (self.matrices, self.uniforms, self.user_uniforms);
+        //     changed |= self
+        //         .animation_stages
+        //         .rich_egui(ui, &mut x, "Animation stages"));
 
         ui.separator();
 
@@ -265,9 +280,9 @@ impl Scene {
 
 impl Scene {
     pub fn errors_count(&mut self, _: usize, data: &mut Data) -> usize {
-        with_swapped!(x => (self.uniforms.names, data.matrix_recursion_error);
-            self.matrices.errors_count(0, &x))
-            + with_swapped!(x => (self.matrices.names, data.errors);
+        with_swapped!(x => (self.uniforms, data.formulas_cache);
+            self.matrices.errors_count_all(&x))
+            + with_swapped!(x => (/* self.matrices.names */vec![], data.errors);
                 self.objects.errors_count(0, &x))
             + self.materials.errors_count(0, &data.errors)
             + self.library.errors_count(0, &data.errors)
@@ -360,24 +375,19 @@ impl Scene {
         data: &mut Data,
         uniforms: &StorageWithNames<AnyUniformComboBox>,
     ) {
+        /*
+        // TODO
         data.matrix_recursion_error.0.clear();
         macro_rules! local_try {
             ($a:expr, $c:ident, $b: expr) => {
-                match self.matrices.get(&$a.0, uniforms, &data.formulas_cache) {
-                    GetEnum::Ok($c) => {
+                match self.matrices.get($a.0, (uniforms, (&data.formulas_cache, ()))) {
+                    Some($c) => {
                         *data
                             .matrix_recursion_error
                             .0
                             .entry($a.clone())
                             .or_insert(false) = false;
                         $b
-                    }
-                    GetEnum::Recursion => {
-                        *data
-                            .matrix_recursion_error
-                            .0
-                            .entry($a.clone())
-                            .or_insert(false) = true;
                     }
                     _ => {}
                 }
@@ -431,6 +441,7 @@ impl Scene {
                 }
             }
         }
+        */
     }
 }
 
@@ -822,9 +833,12 @@ impl Scene {
                 use Animation::*;
                 match matrix {
                     Changed(x) | ChangedAndToUser(x) => {
-                        result.uniform |= check_changed(&mut self.matrices.storage[pos].0, |u| {
+                        /*
+                        // TODO
+                        result.uniform |= check_changed(&mut self.matrices.storage[pos], |u| {
                             *u = x.clone();
                         });
+                        */
                     }
                     ProvidedToUser | Remains => {}
                 }
@@ -852,6 +866,8 @@ impl Scene {
             ui.separator();
         }
 
+        /*
+        // TODO
         if self.user_uniforms.matrices.iter().any(|x| *x) {
             for ((matrix, name), _) in self
                 .matrices
@@ -863,7 +879,7 @@ impl Scene {
             {
                 ui.separator();
                 ui.label(name);
-                result |= matrix.0.simple_egui(ui);
+                result |= matrix.simple_egui(ui);
             }
             ui.separator();
         }
@@ -912,13 +928,14 @@ impl Scene {
                     ProvidedToUser | ChangedAndToUser(_) => {
                         ui.separator();
                         ui.label(&matrices.names[pos]);
-                        result |= matrices.storage[pos].0.simple_egui(ui)
+                        result |= matrices.storage[pos].simple_egui(ui)
                     }
                     Remains => {}
                     Changed(_) => {}
                 }
             }
         }
+        */
         result
     }
 }

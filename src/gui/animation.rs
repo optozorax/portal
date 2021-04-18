@@ -1,7 +1,6 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::matrix::Matrix;
-use crate::gui::matrix::MatrixComboBox;
 use crate::gui::storage::*;
 use crate::gui::uniform::*;
 use egui::*;
@@ -9,7 +8,7 @@ use glam::*;
 
 use serde::{Deserialize, Serialize};
 
-use crate::megatuple;
+use crate::hlist;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Animation<T> {
@@ -81,8 +80,8 @@ impl GlobalUserUniforms {
 
 impl StorageElem for AnimationStage {
     type GetType = Self;
-    type Input = megatuple!(
-        StorageWithNames<MatrixComboBox>,
+    type Input = hlist!(
+        StorageWithNames<Matrix>,
         StorageWithNames<AnyUniformComboBox>,
         GlobalUserUniforms
     );
@@ -100,7 +99,7 @@ impl StorageElem for AnimationStage {
         &mut self,
         ui: &mut Ui,
         _: usize,
-        megapattern!(matrices, uniforms, global_uniforms): &mut Self::Input,
+        hpat!(matrices, uniforms, global_uniforms): &mut Self::Input,
         _: &[String],
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
@@ -155,8 +154,8 @@ impl StorageElem for AnimationStage {
                     changed.uniform |= egui_combo_box(ui, name, 60., anim);
                     match anim {
                         Animation::Changed(x) | Animation::ChangedAndToUser(x) => {
-                            if x.get_number() != matrix.0.get_number() {
-                                *x = matrix.0.clone();
+                            if x.get_number() != matrix.get_number() {
+                                *x = matrix.clone();
                                 changed.uniform = true;
                             }
                             changed |= x.simple_egui(ui);

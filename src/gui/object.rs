@@ -8,7 +8,7 @@ use egui::*;
 
 use serde::{Deserialize, Serialize};
 
-use crate::megatuple;
+use crate::hlist;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Ord, PartialOrd)]
 pub struct MatrixName(pub String);
@@ -140,10 +140,10 @@ impl Object {
         &mut self,
         ui: &mut Ui,
         pos: usize,
-        input: &mut megatuple!(Vec<String>, ShaderErrors),
+        input: &mut hlist!(Vec<String>, ShaderErrors),
     ) -> WhatChanged {
         use Object::*;
-        let megapattern!(names, errors) = input;
+        let hpat!(names, errors) = input;
         let mut is_changed = WhatChanged::default();
         let has_errors = errors.get_errors(self, pos).is_some();
         let mut errors_count = 0;
@@ -288,7 +288,7 @@ impl Object {
     pub fn errors_count(
         &self,
         pos: usize,
-        megapattern!(names, errors): &megatuple!(Vec<String>, ShaderErrors),
+        hpat!(names, errors): &hlist!(Vec<String>, ShaderErrors),
     ) -> usize {
         let mut result = if let Some(local_errors) = errors.get_errors(self, pos) {
             local_errors.len()
@@ -317,7 +317,7 @@ impl Object {
 
 impl StorageElem for ObjectComboBox {
     type GetType = Object;
-    type Input = megatuple!(Vec<String>, ShaderErrors);
+    type Input = hlist!(Vec<String>, ShaderErrors);
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,

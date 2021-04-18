@@ -1,10 +1,13 @@
+use crate::gui::storage::StorageWithNames;
+use crate::gui::storage::StorageElem;
 use crate::gui::common::*;
 use crate::gui::unique_id::*;
 use egui::*;
+use serde::{Serialize, Deserialize};
 
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 enum StorageInner<T> {
     Named(T, String),
     Inline(T),
@@ -63,7 +66,7 @@ impl<T> StorageInner<T> {
     }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Storage2<T> {
     ids: UniqueIds,
 
@@ -395,6 +398,12 @@ impl<T: StorageElem2> Storage2<T> {
         changed
     }
 
+    // This element is inline, so errors counted only for inline elements and inner inline elements
+    pub fn errors_inline(&self, id: T::IdWrapper, input: &T::Input) -> usize {
+        let mut visited = vec![];
+        self.errors_count_inner(id, &mut visited, input, false)   
+    }
+
     pub fn errors_count_all(&self, input: &T::Input) -> usize {
         self.storage_order
             .iter()
@@ -402,9 +411,10 @@ impl<T: StorageElem2> Storage2<T> {
             .sum()
     }
 
+    // Errors count for current id, it must be not inline element.
     pub fn errors_count_id(&self, id: T::IdWrapper, input: &T::Input) -> usize {
         let mut visited = vec![];
-        self.errors_count_inner(id, &mut visited, input)
+        self.errors_count_inner(id, &mut visited, input, true)   
     }
 
     fn errors_count_inner(
@@ -412,22 +422,29 @@ impl<T: StorageElem2> Storage2<T> {
         id: T::IdWrapper,
         visited: &mut Vec<T::IdWrapper>,
         input: &T::Input,
+        allow_not_inline: bool,
     ) -> usize {
-        if visited.iter().any(|x| x.un_wrap() == id.un_wrap()) {
-            return 0;
-        }
+        if let Some(elem) = self.storage.get(&id.un_wrap()) {
+            if !allow_not_inline && !elem.is_inline() {
+                return 0;
+            }
 
-        visited.push(id);
-        let result = self
-            .storage
-            .get(&id.un_wrap())
-            .map(|elem| {
-                elem.as_ref()
-                    .errors_count(|id| self.errors_count_inner(id, visited, input), input)
-            })
-            .unwrap_or(1);
-        visited.pop().unwrap();
-        result
+            if visited.iter().any(|x| x.un_wrap() == id.un_wrap()) {
+                return 0;
+            }
+
+            visited.push(id);
+            let result = elem.as_ref()
+                .errors_count(|id| self.errors_count_inner(id, visited, input, false), input);
+            visited.pop().unwrap();
+            result
+        } else {
+            1
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.storage_order.len()
     }
 }
 
@@ -461,6 +478,12 @@ pub trait StorageElem2: Sized + Default {
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, f: F, input: &mut Self::Input);
 
     fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, f: F, input: &Self::Input) -> usize;
+}
+
+impl<T: StorageElem2 + StorageElem> From<StorageWithNames<T>> for Storage2<T> {
+    fn from(storage: StorageWithNames<T>) -> Storage2<T> {
+        todo!()
+    }
 }
 
 /*

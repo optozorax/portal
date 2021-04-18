@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use crate::code_generation::ErrId;
 use crate::code_generation::ErrorId;
 use crate::gui::object::MatrixName;
@@ -53,10 +54,8 @@ pub struct Data {
     pub show_error_window: bool,
     pub show_glsl_library: bool,
     pub show_compiled_code: Option<String>,
-    pub description_en_edit: bool,
-    pub description_ru_edit: bool,
 
-    pub formulas_cache: FormulasCache,
+    pub formulas_cache: RefCell<FormulasCache>,
 
     pub reload_textures: bool,
     pub texture_errors: TextureErrors,
