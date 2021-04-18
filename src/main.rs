@@ -753,7 +753,8 @@ First, predefined library is included, then uniforms, then user library, then in
         self.scene.cam.offset_after_material = self.offset_after_material;
         self.material
             .set_uniform("_resolution", (screen_width(), screen_height()));
-        self.material.set_uniform("_camera", self.cam.get_matrix().as_f32());
+        self.material
+            .set_uniform("_camera", self.cam.get_matrix().as_f32());
         self.material
             .set_uniform("_view_angle", self.cam.view_angle as f32);
         self.material

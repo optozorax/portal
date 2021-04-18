@@ -1,13 +1,13 @@
-use std::cell::RefCell;
-use crate::gui::storage2::StorageElem2;
-use crate::gui::storage2::Wrapper;
-use crate::gui::unique_id::UniqueId;
-use crate::gui::storage2::Storage2;
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::object::*;
 use crate::gui::storage::*;
+use crate::gui::storage2::Storage2;
+use crate::gui::storage2::StorageElem2;
+use crate::gui::storage2::Wrapper;
 use crate::gui::uniform::*;
+use crate::gui::unique_id::UniqueId;
+use std::cell::RefCell;
 
 use egui::*;
 use glam::*;
@@ -156,14 +156,14 @@ impl ComboBoxChoosable for Matrix {
 }
 
 pub fn simple_matrix_egui(
-    ui: &mut Ui, 
-    offset: &mut DVec3, 
+    ui: &mut Ui,
+    offset: &mut DVec3,
     rotate: &mut DVec3,
     mirror: &mut (bool, bool, bool),
     scale: &mut f64,
 ) -> bool {
     let mut is_changed = false;
-     Grid::new("matrix")
+    Grid::new("matrix")
         .striped(true)
         .min_col_width(45.)
         .max_col_width(45.)
@@ -213,7 +213,7 @@ impl Matrix {
                     "Internal error, other types of matrices are not allowed to be accessed by user.",
                 ));
                 WhatChanged::default()
-            },
+            }
         }
     }
 }
@@ -230,17 +230,16 @@ impl Matrix {
         let hpat!(formulas_names, matrix_recursion_error) = input;
         match self {
             Mul { to, what } => {
-                errors_count += to.is_none() as usize + 
-                what.is_none() as usize;
+                errors_count += to.is_none() as usize + what.is_none() as usize;
             }
             Teleport {
                 first_portal,
                 second_portal,
                 what,
             } => {
-                errors_count += first_portal.is_none() as usize + 
-                second_portal.is_none() as usize + 
-                what.is_none() as usize;
+                errors_count += first_portal.is_none() as usize
+                    + second_portal.is_none() as usize
+                    + what.is_none() as usize;
             }
             Simple { .. } => {}
             Parametrized {
@@ -277,8 +276,12 @@ impl Matrix {
 pub struct MatrixId(UniqueId);
 
 impl Wrapper<UniqueId> for MatrixId {
-    fn wrap(id: UniqueId) -> Self { Self(id) }
-    fn un_wrap(self) -> UniqueId { self.0 }
+    fn wrap(id: UniqueId) -> Self {
+        Self(id)
+    }
+    fn un_wrap(self) -> UniqueId {
+        self.0
+    }
 }
 
 impl StorageElem2 for Matrix {
@@ -296,12 +299,11 @@ impl StorageElem2 for Matrix {
         self_storage: &mut Storage2<Self>,
         data_id: egui::Id,
     ) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., self));
+        let mut changed = WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., self));
         ui.separator();
 
         use Matrix::*;
-        
+
         match self {
             Mul { to, what } => {
                 changed |= self_storage.inline("Mul to:", 45., to, ui, input, data_id.with(0));
@@ -312,8 +314,10 @@ impl StorageElem2 for Matrix {
                 second_portal,
                 what,
             } => {
-                changed |= self_storage.inline("From:", 45., first_portal, ui, input, data_id.with(0));
-                changed |= self_storage.inline("To:", 45., second_portal, ui, input, data_id.with(1));
+                changed |=
+                    self_storage.inline("From:", 45., first_portal, ui, input, data_id.with(0));
+                changed |=
+                    self_storage.inline("To:", 45., second_portal, ui, input, data_id.with(1));
                 changed |= self_storage.inline("What:", 45., what, ui, input, data_id.with(2));
             }
             Simple {
@@ -455,7 +459,11 @@ impl StorageElem2 for Matrix {
         })
     }
 
-    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, mut f: F, input: &mut Self::Input) {
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(
+        &self,
+        mut f: F,
+        input: &mut Self::Input,
+    ) {
         use Matrix::*;
         match &self {
             Mul { to, what } => {
@@ -481,8 +489,8 @@ impl StorageElem2 for Matrix {
                     f(*x, input);
                 }
             }
-            Simple { .. } => {},
-            Parametrized { .. } => {},
+            Simple { .. } => {}
+            Parametrized { .. } => {}
         }
     }
 

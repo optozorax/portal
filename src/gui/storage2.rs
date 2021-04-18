@@ -1,9 +1,9 @@
-use crate::gui::storage::StorageWithNames;
-use crate::gui::storage::StorageElem;
 use crate::gui::common::*;
+use crate::gui::storage::StorageElem;
+use crate::gui::storage::StorageWithNames;
 use crate::gui::unique_id::*;
 use egui::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use std::collections::BTreeMap;
 
@@ -401,7 +401,7 @@ impl<T: StorageElem2> Storage2<T> {
     // This element is inline, so errors counted only for inline elements and inner inline elements
     pub fn errors_inline(&self, id: T::IdWrapper, input: &T::Input) -> usize {
         let mut visited = vec![];
-        self.errors_count_inner(id, &mut visited, input, false)   
+        self.errors_count_inner(id, &mut visited, input, false)
     }
 
     pub fn errors_count_all(&self, input: &T::Input) -> usize {
@@ -414,7 +414,7 @@ impl<T: StorageElem2> Storage2<T> {
     // Errors count for current id, it must be not inline element.
     pub fn errors_count_id(&self, id: T::IdWrapper, input: &T::Input) -> usize {
         let mut visited = vec![];
-        self.errors_count_inner(id, &mut visited, input, true)   
+        self.errors_count_inner(id, &mut visited, input, true)
     }
 
     fn errors_count_inner(
@@ -434,8 +434,10 @@ impl<T: StorageElem2> Storage2<T> {
             }
 
             visited.push(id);
-            let result = elem.as_ref()
-                .errors_count(|id| self.errors_count_inner(id, visited, input, false), input);
+            let result = elem.as_ref().errors_count(
+                |id| self.errors_count_inner(id, visited, input, false),
+                input,
+            );
             visited.pop().unwrap();
             result
         } else {

@@ -1,6 +1,6 @@
-use crate::gui::storage2::Storage2;
 use crate::code_generation::apply_template;
 use crate::gui::glsl::*;
+use crate::gui::storage2::Storage2;
 
 use crate::code_generation::*;
 use crate::gui::animation::*;
@@ -116,11 +116,6 @@ impl From<OldScene> for Scene {
 impl Scene {
     pub fn init(&mut self, data: &mut Data) {
         let formulas_cache = &mut data.formulas_cache.borrow_mut();
-        for (_, object) in self.uniforms.iter() {
-            if let AnyUniform::Formula(f) = &object.0 {
-                formulas_cache.compile(&f.0);
-            }
-        }
         data.errors = Default::default();
         data.show_error_window = false;
         self.user_uniforms
@@ -241,9 +236,11 @@ impl Scene {
             .rich_egui(ui, &mut data.errors, "User GLSL code");
 
         ui.collapsing("Global user uniforms", |ui| {
-            changed |=
-                self.user_uniforms
-                    .egui(ui, &mut vec![]/* self.matrices.names */, &mut self.uniforms.names);
+            changed |= self.user_uniforms.egui(
+                ui,
+                &mut vec![], /* self.matrices.names */
+                &mut self.uniforms.names,
+            );
         });
 
         // // TODO

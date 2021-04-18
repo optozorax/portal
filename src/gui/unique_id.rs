@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::fmt;
-use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct UniqueId(usize);

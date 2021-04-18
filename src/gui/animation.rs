@@ -179,71 +179,17 @@ impl AnyUniform {
         let mut result = WhatChanged::default();
         match self {
             Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
-            Int { min, max, value } => {
+            Int(value) => {
                 ui.centered_and_justified(|ui| {
-                    if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
-                        result.uniform |= check_changed(value, |value| {
-                            ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
-                        })
-                    } else {
-                        result.uniform |= check_changed(value, |value| {
-                            ui.add(
-                                DragValue::from_get_set(|v| {
-                                    if let Some(v) = v {
-                                        *value = v as i32;
-                                        if let Some(min) = min {
-                                            if value < min {
-                                                *value = *min;
-                                            }
-                                        }
-                                        if let Some(max) = max {
-                                            if value > max {
-                                                *value = *max;
-                                            }
-                                        }
-                                    }
-                                    (*value).into()
-                                })
-                                .speed(1),
-                            );
-                        });
-                    }
+                    result |= value.user_egui(ui, 1.0, 0..=0);
                 });
             }
             Angle(a) => {
                 drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
             }
-            Float { min, max, value } => {
+            Float(value) => {
                 ui.centered_and_justified(|ui| {
-                    if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
-                        result.uniform |= check_changed(value, |value| {
-                            ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
-                        });
-                    } else {
-                        result.uniform |= check_changed(value, |value| {
-                            ui.add(
-                                DragValue::from_get_set(|v| {
-                                    if let Some(v) = v {
-                                        *value = v;
-                                        if let Some(min) = min {
-                                            if value < min {
-                                                *value = *min;
-                                            }
-                                        }
-                                        if let Some(max) = max {
-                                            if value > max {
-                                                *value = *max;
-                                            }
-                                        }
-                                    }
-                                    *value
-                                })
-                                .speed(0.01)
-                                .min_decimals(0)
-                                .max_decimals(2),
-                            );
-                        });
-                    }
+                    result |= value.user_egui(ui, 0.01, 0..=2);
                 });
             }
             Formula(_) => {
