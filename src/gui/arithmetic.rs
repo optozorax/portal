@@ -64,7 +64,7 @@ impl StorageElem2 for Arithmetic {
         &mut self,
         ui: &mut Ui,
         (): &mut Self::Input,
-        self_storage: &mut Storage2<Self>,
+        inline_helper: &mut InlineHelper<Self>,
         data_id: egui::Id,
     ) -> WhatChanged {
         use Arithmetic::*;
@@ -77,29 +77,25 @@ impl StorageElem2 for Arithmetic {
             }
             Sum(a, b) => {
                 let mut result = WhatChanged::default();
-                result |= self_storage.inline("a:", 10., &mut *a, ui, &mut (), data_id.with(0));
-                result |= self_storage.inline("b:", 10., &mut *b, ui, &mut (), data_id.with(1));
+                result |= inline_helper.inline("a:", 10., &mut *a, ui, &mut (), data_id.with(0));
+                result |= inline_helper.inline("b:", 10., &mut *b, ui, &mut (), data_id.with(1));
                 result
             }
             Mul(a, b) => {
                 let mut result = WhatChanged::default();
-                result |= self_storage.inline("a:", 10., &mut *a, ui, &mut (), data_id.with(0));
-                result |= self_storage.inline("b:", 10., &mut *b, ui, &mut (), data_id.with(1));
+                result |= inline_helper.inline("a:", 10., &mut *a, ui, &mut (), data_id.with(0));
+                result |= inline_helper.inline("b:", 10., &mut *b, ui, &mut (), data_id.with(1));
                 result
             }
         }
     }
 
-    fn get<F: FnMut(Self::IdWrapper) -> Option<Self::GetType>>(
-        &self,
-        mut f: F,
-        (): &Self::Input,
-    ) -> Option<Self::GetType> {
+    fn get(&self, get_helper: &GetHelper<Self>, (): &Self::Input) -> Option<Self::GetType> {
         use Arithmetic::*;
         match self {
             Float(f) => Some(*f),
-            Sum(a, b) => Some(f((*a)?)? + f((*b)?)?),
-            Mul(a, b) => Some(f((*a)?)? * f((*b)?)?),
+            Sum(a, b) => Some(get_helper.get((*a)?)? + get_helper.get((*b)?)?),
+            Mul(a, b) => Some(get_helper.get((*a)?)? * get_helper.get((*b)?)?),
         }
     }
 
@@ -201,7 +197,7 @@ impl StorageElem2 for MoreArithmetic {
         &mut self,
         ui: &mut Ui,
         storage: &mut Self::Input,
-        _: &mut Storage2<Self>,
+        _: &mut InlineHelper<Self>,
         data_id: egui::Id,
     ) -> WhatChanged {
         use MoreArithmetic::*;
@@ -214,11 +210,7 @@ impl StorageElem2 for MoreArithmetic {
         }
     }
 
-    fn get<F: FnMut(Self::IdWrapper) -> Option<Self::GetType>>(
-        &self,
-        _: F,
-        storage: &Self::Input,
-    ) -> Option<Self::GetType> {
+    fn get(&self, _: &GetHelper<Self>, storage: &Self::Input) -> Option<Self::GetType> {
         use MoreArithmetic::*;
         match self {
             Sin(a) => Some((storage.get((*a)?, &())?).sin()),

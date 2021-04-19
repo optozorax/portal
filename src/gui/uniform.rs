@@ -1,6 +1,8 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::storage::*;
+use crate::gui::storage2::GetHelper;
+use crate::gui::storage2::InlineHelper;
 use crate::gui::storage2::Storage2;
 use crate::gui::storage2::StorageElem2;
 use crate::gui::storage2::Wrapper;
@@ -15,9 +17,6 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Formula(pub String);
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct FormulaName(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AnyUniform {
@@ -62,24 +61,44 @@ impl From<AnyUniformResult> for f64 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TVec3<T> {
-    pub x: T,
-    pub y: T,
-    pub z: T,
+pub struct TVec3 {
+    pub x: ParametrizeOrNot,
+    pub y: ParametrizeOrNot,
+    pub z: ParametrizeOrNot,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ParametrizeOrNot {
-    Yes(FormulaName),
+    Yes(Option<UniformId>),
     No(f64),
 }
 
-impl ParametrizeOrNot {
-    pub fn errors_count(&self, formulas_names: &[String]) -> usize {
-        match self {
-            ParametrizeOrNot::Yes(name) => !formulas_names.contains(&name.0) as usize,
-            ParametrizeOrNot::No { .. } => 0,
-        }
+impl TVec3 {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        f: impl Fn(&mut Ui, &mut f64) -> bool,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+        data_id: egui::Id,
+    ) -> bool {
+        let mut changed = false;
+        changed |= self.x.egui(ui, "X", 0.0, &f, uniforms, formulas_cache, data_id.with(0));
+        changed |= self.y.egui(ui, "Y", 0.0, &f, uniforms, formulas_cache, data_id.with(1));
+        changed |= self.z.egui(ui, "Z", 0.0, &f, uniforms, formulas_cache, data_id.with(2));
+        changed
+    }
+
+    pub fn remove_as_field(&self, uniforms: &mut Storage2<AnyUniform>, formulas_cache: &mut FormulasCache) {
+        self.x.remove_as_field(uniforms, formulas_cache);
+        self.y.remove_as_field(uniforms, formulas_cache);
+        self.z.remove_as_field(uniforms, formulas_cache);
+    }
+
+    pub fn errors_count(&self, uniforms: &Storage2<AnyUniform>, formulas_cache: &FormulasCache) -> usize {
+        self.x.errors_count(uniforms, formulas_cache) + 
+        self.y.errors_count(uniforms, formulas_cache) + 
+        self.z.errors_count(uniforms, formulas_cache)
     }
 }
 
@@ -87,59 +106,40 @@ impl ParametrizeOrNot {
     pub fn egui(
         &mut self,
         ui: &mut Ui,
-        formulas_names: &[String],
         label: &str,
         default: f64,
         f: impl FnOnce(&mut Ui, &mut f64) -> bool,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+        data_id: egui::Id,
     ) -> bool {
         use ParametrizeOrNot::*;
-        let mut not_found = false;
         let mut changed = false;
         ui.horizontal(|ui| {
             ui.label(label);
             let mut current = matches!(self, Yes { .. });
             changed |= egui_bool(ui, &mut current);
             if changed {
-                *self = if current {
-                    Yes(FormulaName("a".to_owned()))
-                } else {
-                    No(default)
-                };
+                *self = if current { Yes(None) } else { No(default) };
             }
             changed |= match self {
-                Yes(current) => {
-                    not_found = !formulas_names.contains(&current.0);
-                    check_changed(&mut current.0, |text| drop(ui.text_edit_singleline(text)))
-                }
+                Yes(current) => uniforms.inline("", 0.0, current, ui, formulas_cache, data_id).uniform,
                 No(float) => f(ui, float),
             };
         });
-        if not_found {
-            ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = 0.;
-                ui.add(Label::new("Error: ").text_color(Color32::RED));
-                ui.label("uniform with this name is not found");
-            });
-        }
         changed
     }
 
     pub fn get(
         &self,
-        uniforms: &StorageWithNames<AnyUniformComboBox>,
+        uniforms: &Storage2<AnyUniform>,
         formulas_cache: &FormulasCache,
-    ) -> f64 {
+    ) -> Option<f64> {
         use ParametrizeOrNot::*;
-        match self {
-            Yes(f) => match uniforms.get(&f.0, uniforms, formulas_cache) {
-                GetEnum::Ok(x) => x.into(),
-                _ => {
-                    eprintln!("can't find uniform {}", f.0);
-                    0.0
-                }
-            },
+        Some(match self {
+            Yes(f) => uniforms.get((*f)?, formulas_cache)?.into(),
             No(f) => (*f).into(),
-        }
+        })
     }
 
     pub fn freeget(&self) -> Option<f64> {
@@ -147,6 +147,21 @@ impl ParametrizeOrNot {
         match self {
             Yes(_) => None,
             No(f) => Some(*f),
+        }
+    }
+
+    pub fn remove_as_field(&self, uniforms: &mut Storage2<AnyUniform>, formulas_cache: &mut FormulasCache) {
+        if let ParametrizeOrNot::Yes(Some(id)) = self {
+            uniforms.remove_as_field(*id, formulas_cache);
+        }
+    }
+
+    pub fn errors_count(&self, uniforms: &Storage2<AnyUniform>, formulas_cache: &FormulasCache) -> usize {
+        use ParametrizeOrNot::*;
+        match self {
+            Yes(Some(id)) => uniforms.errors_inline(*id, formulas_cache),
+            Yes(None) => 1,
+            No(_) => 0,
         }
     }
 }
@@ -540,10 +555,75 @@ impl StorageElem for AnyUniformComboBox {
 
     fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
         &self,
-        mut f: F,
+        _: F,
         _: &StorageWithNames<AnyUniformComboBox>,
-        formulas_cache: &FormulasCache,
+        _: &FormulasCache,
     ) -> GetEnum<Self::GetType> {
+        GetEnum::NotFound
+    }
+
+    fn egui(&mut self, _: &mut Ui, _: usize, _: &mut Self::Input, _: &[String]) -> WhatChanged {
+        Default::default()
+    }
+
+    fn errors_count(&self, _: usize, _: &Self::Input, _: &[String]) -> usize {
+        0
+    }
+}
+
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct UniformId(UniqueId);
+
+impl Wrapper<UniqueId> for UniformId {
+    fn wrap(id: UniqueId) -> Self {
+        Self(id)
+    }
+    fn un_wrap(self) -> UniqueId {
+        self.0
+    }
+}
+
+impl StorageElem2 for AnyUniform {
+    type IdWrapper = UniformId;
+    type GetType = AnyUniformResult;
+
+    const SAFE_TO_RENAME: bool = false;
+
+    type Input = FormulasCache;
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        formulas_cache: &mut Self::Input,
+        _: &mut InlineHelper<Self>,
+        _: egui::Id,
+    ) -> WhatChanged {
+        let mut result = WhatChanged::from_uniform(egui_combo_box(ui, "Type:", 45., self));
+        ui.separator();
+        use AnyUniform::*;
+        match self {
+            Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
+            Int(value) => {
+                result |= value.egui(ui, 1.0, 0..=0, -10..=10);
+            }
+            Angle(a) => {
+                drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
+            }
+            Float(value) => {
+                result |= value.egui(ui, 0.01, 0..=2, -10.0..=10.0);
+            }
+            Formula(x) => {
+                drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
+            }
+        }
+        result
+    }
+
+    fn get(
+        &self,
+        get_helper: &GetHelper<Self>,
+        formulas_cache: &Self::Input,
+    ) -> Option<Self::GetType> {
         let mut cb = |name: &str, args: Vec<f64>| -> Option<f64> {
             Some(match name {
                 // Custom functions
@@ -580,88 +660,32 @@ impl StorageElem for AnyUniformComboBox {
                 "switch" => *args.get(*args.get(0)? as usize)?,
 
                 // Free variables
-                _ => match f(name) {
-                    GetEnum::Ok(x) => x.into(),
-                    _ => None?,
-                },
+                _ => get_helper.get(get_helper.find_id(name)?)?.into(),
             })
         };
 
-        match &self.0 {
-            AnyUniform::Bool(b) => GetEnum::Ok(AnyUniformResult::Bool(*b)),
-            AnyUniform::Int(value) => GetEnum::Ok(AnyUniformResult::Int(value.get_value())),
-            AnyUniform::Angle(a) => GetEnum::Ok(AnyUniformResult::Float(*a)),
-            AnyUniform::Float(value) => GetEnum::Ok(AnyUniformResult::Float(value.get_value())),
-            AnyUniform::Formula(f) => match formulas_cache.eval(&f.0, &mut cb) {
-                Some(Ok(x)) => GetEnum::Ok(AnyUniformResult::Float(x)),
-                _ => GetEnum::NotFound,
-            },
-        }
+        Some(match &self {
+            AnyUniform::Bool(b) => AnyUniformResult::Bool(*b),
+            AnyUniform::Int(value) => AnyUniformResult::Int(value.get_value()),
+            AnyUniform::Angle(a) => AnyUniformResult::Float(*a),
+            AnyUniform::Float(value) => AnyUniformResult::Float(value.get_value()),
+            AnyUniform::Formula(f) => {
+                AnyUniformResult::Float(formulas_cache.eval(&f.0, &mut cb)?.ok()?)
+            }
+        })
     }
 
-    fn egui(&mut self, ui: &mut Ui, _: usize, data: &mut Self::Input, _: &[String]) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
-        ui.separator();
-        changed |= self.0.egui(ui, data);
-        changed
-    }
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, _: F, _: &mut Self::Input) {}
 
-    fn errors_count(&self, _: usize, formulas_cache: &Self::Input, _: &[String]) -> usize {
-        match &self.0 {
-            AnyUniform::Formula(text) => formulas_cache.has_errors(&text.0) as usize,
-            _ => 0,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub struct UniformId(UniqueId);
-
-impl Wrapper<UniqueId> for UniformId {
-    fn wrap(id: UniqueId) -> Self {
-        Self(id)
-    }
-    fn un_wrap(self) -> UniqueId {
-        self.0
-    }
-}
-
-impl StorageElem2 for AnyUniform {
-    type IdWrapper = UniformId;
-    type GetType = AnyUniformResult;
-
-    const SAFE_TO_RENAME: bool = false;
-
-    type Input = RefCell<FormulasCache>;
-
-    fn egui(
-        &mut self,
-        ui: &mut Ui,
-        input: &mut Self::Input,
-        self_storage: &mut Storage2<Self>,
-        data_id: egui::Id,
-    ) -> WhatChanged {
-        todo!()
-    }
-
-    fn get<F: FnMut(Self::IdWrapper) -> Option<Self::GetType>>(
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
         &self,
-        mut f: F,
-        input: &Self::Input,
-    ) -> Option<Self::GetType> {
-        todo!()
-    }
-
-    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(
-        &self,
-        mut f: F,
-        input: &mut Self::Input,
-    ) {
-        todo!()
-    }
-
-    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, f: F, input: &Self::Input) -> usize {
-        todo!()
+        _: F,
+        formulas_cache: &Self::Input,
+    ) -> usize {
+        if let AnyUniform::Formula(formula) = self {
+            formulas_cache.has_errors(&formula.0) as usize
+        } else {
+            0
+        }
     }
 }

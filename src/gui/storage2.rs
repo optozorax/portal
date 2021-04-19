@@ -75,10 +75,50 @@ pub struct Storage2<T> {
     storage_order: Vec<UniqueId>,
 }
 
+pub struct GetHelper<'a, T: StorageElem2>(&'a Storage2<T>, &'a T::Input);
+
+impl<'a, T: StorageElem2> GetHelper<'a, T> {
+    pub fn get(&self, id: T::IdWrapper) -> Option<T::GetType> {
+        self.0.get(id, self.1)
+    }
+
+    pub fn find_id(&self, name: &str) -> Option<T::IdWrapper> {
+        self.0.find_id(name)
+    }
+}
+
+pub struct InlineHelper<'a, T>(&'a mut Storage2<T>);
+
+impl<'a, T: StorageElem2> InlineHelper<'a, T> {
+    pub fn inline(
+        &mut self,
+        label: &str,
+        label_size: f64,
+        id: &mut Option<T::IdWrapper>,
+        ui: &mut Ui,
+        input: &mut T::Input,
+        data_id: egui::Id,
+    ) -> WhatChanged {
+        self.0.inline(label, label_size, id, ui, input, data_id)
+    }
+}
+
 impl<T: StorageElem2> Storage2<T> {
     pub fn get(&self, id: T::IdWrapper, input: &T::Input) -> Option<T::GetType> {
         let mut visited = vec![];
         self.get_inner(id, &mut visited, input)
+    }
+
+    pub fn find_id(&self, name: &str) -> Option<T::IdWrapper> {
+        self.storage_order
+            .iter()
+            .find(|id| {
+                self.storage
+                    .get(id)
+                    .map(|elem| elem.is_named_as(name))
+                    .unwrap_or(false)
+            })
+            .map(|id| T::IdWrapper::wrap(*id))
     }
 
     fn get_inner(
@@ -96,7 +136,7 @@ impl<T: StorageElem2> Storage2<T> {
             .storage
             .get(&id.un_wrap())?
             .as_ref()
-            .get(|id| self.get_inner(id, visited, input), input);
+            .get(&GetHelper(self, input), input);
         visited.pop().unwrap();
         result
     }
@@ -113,6 +153,26 @@ impl<T: StorageElem2> Storage2<T> {
         element
             .as_ref()
             .remove(|id, input| self.remove_as_field(id, input), input);
+    }
+
+    pub fn set(&mut self, id: T::IdWrapper, t: T) -> T {
+        let id = id.un_wrap();
+        let element = self.storage.remove(&id).unwrap();
+        self.storage.insert(
+            id,
+            match &element {
+                StorageInner::Named(_, name) => StorageInner::Named(t, name.clone()),
+                StorageInner::Inline(_) => StorageInner::Inline(t), // TODO: maybe panic here?
+            },
+        );
+
+        // TODO придумать как удалять элементы, ибо обычным образом их удалять нельзя, иначе если вдруг мы удаляем тот же элемент, что и вставляем?
+        // А может тут не удалять вообще ничего, потому что будет animation stage dev?
+
+        match element {
+            StorageInner::Named(t, _) => t,
+            StorageInner::Inline(t) => t, // TODO: maybe panic here?
+        }
     }
 
     pub fn push_default(&mut self) {
@@ -251,7 +311,7 @@ impl<T: StorageElem2> Storage2<T> {
                             });
                         });
 
-                        changed |= elem.egui(ui, input, self, data_id.with(pos));
+                        changed |= elem.egui(ui, input, &mut InlineHelper(self), data_id.with(pos));
                     });
             } else {
                 ui.label("Internal error, this is inline element, it shouldn't be here.");
@@ -292,108 +352,110 @@ impl<T: StorageElem2> Storage2<T> {
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
 
-        if let Some(id_inner) = id {
-            if self.storage.get(&id_inner.un_wrap()).is_none() {
-                eprintln!("id {:?} transformed to `None`", id_inner.un_wrap());
-                *id = None;
-                changed.uniform = true;
-            }
-        }
-
-        let mut inline = if let Some(id_inner) = id {
-            self.storage
-                .get(&id_inner.un_wrap())
-                .map(|x| x.is_inline())
-                .unwrap() // Because we earlier checked this
-        } else {
-            false
-        };
-
-        ui.horizontal(|ui| {
-            egui_label(ui, label, label_size);
-
-            ui.with_layout(Layout::right_to_left(), |ui| {
-                if ui
-                    .add(egui::SelectableLabel::new(inline, "📌"))
-                    .on_hover_text(
-                        "Toggle inline anonymous element instead\nof referencing to name of the other.",
-                    )
-                    .clicked()
-                {
-                    if inline {
-                        if let Some(id) = id {
-                            self.remove(*id, input);
-                            ui.memory().id_data.remove(&data_id);
-                        }
-                    }
-
-                    inline = !inline;
-
-                    if inline {
-                        let new_id = self.ids.get_unique();
-                        self.storage
-                            .insert(new_id, StorageInner::Inline(Default::default()));
-                        *id = Some(T::IdWrapper::wrap(new_id));
-                    } else {
-                        *id = None;
-                    }
+        ui.vertical(|ui| {
+            if let Some(id_inner) = id {
+                if self.storage.get(&id_inner.un_wrap()).is_none() {
+                    eprintln!("id {:?} transformed to `None`", id_inner.un_wrap());
+                    *id = None;
+                    changed.uniform = true;
                 }
+            }
 
-                if inline {
-                    ui.label("inline");
-                } else {
-                    // Named
-                    let mut current_name = if let Some(id_inner) = id {
-                        self.storage
-                            .get(&id_inner.un_wrap())
-                            .unwrap()
-                            .name()
-                            .unwrap()
-                            .to_owned()
-                    } else {
-                        ui.memory()
-                            .id_data
-                            .get_or_default::<String>(data_id)
-                            .clone()
-                    };
+            let mut inline = if let Some(id_inner) = id {
+                self.storage
+                    .get(&id_inner.un_wrap())
+                    .map(|x| x.is_inline())
+                    .unwrap() // Because we earlier checked this
+            } else {
+                false
+            };
 
-                    let changed = ui
-                        .horizontal(|ui| {
-                            let mut response = egui_with_red_field(ui, id.is_none(), |ui| {
-                                ui.text_edit_singleline(&mut current_name)
-                            });
-                            if id.is_none() {
-                                response = response.on_hover_text("This name is not found");
+            ui.horizontal(|ui| {
+                egui_label(ui, label, label_size);
+
+                ui.with_layout(Layout::right_to_left(), |ui| {
+                    if ui
+                        .add(egui::SelectableLabel::new(inline, "📌"))
+                        .on_hover_text(
+                            "Toggle inline anonymous element instead\nof referencing to name of the other.",
+                        )
+                        .clicked()
+                    {
+                        if inline {
+                            if let Some(id) = id {
+                                self.remove(*id, input);
+                                ui.memory().id_data.remove(&data_id);
                             }
+                        }
 
-                            response.changed()
-                        })
-                        .inner;
-                    if changed {
-                        if let Some((new_id, _)) = self
-                            .storage
-                            .iter()
-                            .find(|(_, elem)| elem.is_named_as(&current_name))
-                        {
-                            *id = Some(T::IdWrapper::wrap(*new_id));
-                            ui.memory().id_data.remove(&data_id);
+                        inline = !inline;
+
+                        if inline {
+                            let new_id = self.ids.get_unique();
+                            self.storage
+                                .insert(new_id, StorageInner::Inline(Default::default()));
+                            *id = Some(T::IdWrapper::wrap(new_id));
                         } else {
                             *id = None;
-                            ui.memory().id_data.insert(data_id, current_name);
                         }
                     }
-                }
-            });
-        });
 
-        if inline {
-            // id now must be correct
-            with_swapped!(elem => (*self.storage.get_mut(&id.unwrap().un_wrap()).unwrap()); {
-                ui.group(|ui| {
-                    changed |= elem.0.as_mut().egui(ui, input, self, data_id.with("inline"));
+                    if inline {
+                        ui.label("inline");
+                    } else {
+                        // Named
+                        let mut current_name = if let Some(id_inner) = id {
+                            self.storage
+                                .get(&id_inner.un_wrap())
+                                .unwrap()
+                                .name()
+                                .unwrap()
+                                .to_owned()
+                        } else {
+                            ui.memory()
+                                .id_data
+                                .get_or_default::<String>(data_id)
+                                .clone()
+                        };
+
+                        let changed = ui
+                            .horizontal(|ui| {
+                                let mut response = egui_with_red_field(ui, id.is_none(), |ui| {
+                                    ui.text_edit_singleline(&mut current_name)
+                                });
+                                if id.is_none() {
+                                    response = response.on_hover_text("This name is not found");
+                                }
+
+                                response.changed()
+                            })
+                            .inner;
+                        if changed {
+                            if let Some((new_id, _)) = self
+                                .storage
+                                .iter()
+                                .find(|(_, elem)| elem.is_named_as(&current_name))
+                            {
+                                *id = Some(T::IdWrapper::wrap(*new_id));
+                                ui.memory().id_data.remove(&data_id);
+                            } else {
+                                *id = None;
+                                ui.memory().id_data.insert(data_id, current_name);
+                            }
+                        }
+                    }
                 });
             });
-        }
+
+            if inline {
+                // id now must be correct
+                with_swapped!(elem => (*self.storage.get_mut(&id.unwrap().un_wrap()).unwrap()); {
+                    ui.group(|ui| {
+                        changed |= elem.0.as_mut().egui(ui, input, &mut InlineHelper(self), data_id.with("inline"));
+                    });
+                });
+            }
+        });
 
         changed
     }
@@ -467,15 +529,11 @@ pub trait StorageElem2: Sized + Default {
         &mut self,
         ui: &mut Ui,
         input: &mut Self::Input,
-        self_storage: &mut Storage2<Self>,
+        inline_helper: &mut InlineHelper<Self>,
         data_id: egui::Id,
     ) -> WhatChanged;
 
-    fn get<F: FnMut(Self::IdWrapper) -> Option<Self::GetType>>(
-        &self,
-        f: F,
-        input: &Self::Input,
-    ) -> Option<Self::GetType>;
+    fn get(&self, get_helper: &GetHelper<Self>, input: &Self::Input) -> Option<Self::GetType>;
 
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, f: F, input: &mut Self::Input);
 

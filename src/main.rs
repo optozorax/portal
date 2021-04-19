@@ -359,16 +359,18 @@ impl Window {
 
         data.reload_textures = true;
 
-        let material = scene.get_new_material().unwrap_or_else(|err| {
-            println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
-            dbg!(&err);
-            macroquad::prelude::miniquad::error!(
-                "code:\n{}\n\nmessage:\n{}",
-                add_line_numbers(&err.0),
-                err.1
-            );
-            std::process::exit(1)
-        });
+        let material = scene
+            .get_new_material(&data.formulas_cache)
+            .unwrap_or_else(|err| {
+                println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+                dbg!(&err);
+                macroquad::prelude::miniquad::error!(
+                    "code:\n{}\n\nmessage:\n{}",
+                    add_line_numbers(&err.0),
+                    err.1
+                );
+                std::process::exit(1)
+            });
         scene.set_uniforms(material, &mut data, &scene.uniforms);
         let mut result = Window {
             should_recompile: false,
@@ -438,7 +440,10 @@ impl Window {
                             self.scene = serde_json::from_str(&s).unwrap();
                             self.scene.init(&mut self.data);
                             self.material.delete();
-                            self.material = self.scene.get_new_material().unwrap();
+                            self.material = self
+                                .scene
+                                .get_new_material(&self.data.formulas_cache)
+                                .unwrap();
                             changed.uniform = true;
                             self.data.reload_textures = true;
                             self.cam.set_cam(&self.scene.cam);
@@ -620,7 +625,7 @@ First, predefined library is included, then uniforms, then user library, then in
                                     self.offset_after_material = self.scene.cam.offset_after_material;
                                     changed.uniform = true;
                                     self.data.reload_textures = true;
-                                    match self.scene.get_new_material() {
+                                    match self.scene.get_new_material(&self.data.formulas_cache) {
                                         Ok(material) => {
                                             self.material.delete();
                                             self.material = material;

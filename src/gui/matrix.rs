@@ -1,13 +1,13 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
-use crate::gui::object::*;
 use crate::gui::storage::*;
+use crate::gui::storage2::GetHelper;
+use crate::gui::storage2::InlineHelper;
 use crate::gui::storage2::Storage2;
 use crate::gui::storage2::StorageElem2;
 use crate::gui::storage2::Wrapper;
 use crate::gui::uniform::*;
 use crate::gui::unique_id::UniqueId;
-use std::cell::RefCell;
 
 use egui::*;
 use glam::*;
@@ -35,9 +35,9 @@ pub enum Matrix {
         mirror: (bool, bool, bool),
     },
     Parametrized {
-        offset: TVec3<ParametrizeOrNot>,
-        rotate: TVec3<ParametrizeOrNot>,
-        mirror: TVec3<ParametrizeOrNot>,
+        offset: TVec3,
+        rotate: TVec3,
+        mirror: TVec3,
         scale: ParametrizeOrNot,
     },
 }
@@ -200,7 +200,7 @@ pub fn simple_matrix_egui(
 }
 
 impl Matrix {
-    pub fn simple_egui(&mut self, ui: &mut Ui) -> WhatChanged {
+    pub fn user_egui(&mut self, ui: &mut Ui) -> WhatChanged {
         match self {
             Matrix::Simple {
                 offset,
@@ -215,60 +215,6 @@ impl Matrix {
                 WhatChanged::default()
             }
         }
-    }
-}
-
-impl Matrix {
-    pub fn errors_count(
-        &self,
-        pos: usize,
-        input: &hlist![Vec<String>, MatrixRecursionError],
-        names: &[String],
-    ) -> usize {
-        use Matrix::*;
-        let mut errors_count = 0;
-        let hpat!(formulas_names, matrix_recursion_error) = input;
-        match self {
-            Mul { to, what } => {
-                errors_count += to.is_none() as usize + what.is_none() as usize;
-            }
-            Teleport {
-                first_portal,
-                second_portal,
-                what,
-            } => {
-                errors_count += first_portal.is_none() as usize
-                    + second_portal.is_none() as usize
-                    + what.is_none() as usize;
-            }
-            Simple { .. } => {}
-            Parametrized {
-                offset,
-                scale,
-                rotate,
-                mirror,
-            } => {
-                errors_count += offset.x.errors_count(formulas_names)
-                    + offset.y.errors_count(formulas_names)
-                    + offset.z.errors_count(formulas_names);
-                errors_count += rotate.x.errors_count(formulas_names)
-                    + rotate.y.errors_count(formulas_names)
-                    + rotate.z.errors_count(formulas_names);
-                errors_count += mirror.x.errors_count(formulas_names)
-                    + mirror.y.errors_count(formulas_names)
-                    + mirror.z.errors_count(formulas_names);
-                errors_count += scale.errors_count(formulas_names);
-            }
-        }
-        if matrix_recursion_error
-            .0
-            .get(&MatrixName(names[pos].clone()))
-            .copied()
-            .unwrap_or(false)
-        {
-            errors_count += 1;
-        }
-        errors_count
     }
 }
 
@@ -290,13 +236,13 @@ impl StorageElem2 for Matrix {
 
     const SAFE_TO_RENAME: bool = false;
 
-    type Input = hlist![StorageWithNames<AnyUniformComboBox>, RefCell<FormulasCache>];
+    type Input = hlist![Storage2<AnyUniform>, FormulasCache];
 
     fn egui(
         &mut self,
         ui: &mut Ui,
         input: &mut Self::Input,
-        self_storage: &mut Storage2<Self>,
+        inline_helper: &mut InlineHelper<Self>,
         data_id: egui::Id,
     ) -> WhatChanged {
         let mut changed = WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., self));
@@ -306,8 +252,8 @@ impl StorageElem2 for Matrix {
 
         match self {
             Mul { to, what } => {
-                changed |= self_storage.inline("Mul to:", 45., to, ui, input, data_id.with(0));
-                changed |= self_storage.inline("What:", 45., what, ui, input, data_id.with(1));
+                changed |= inline_helper.inline("Mul to:", 45., to, ui, input, data_id.with(0));
+                changed |= inline_helper.inline("What:", 45., what, ui, input, data_id.with(1));
             }
             Teleport {
                 first_portal,
@@ -315,10 +261,10 @@ impl StorageElem2 for Matrix {
                 what,
             } => {
                 changed |=
-                    self_storage.inline("From:", 45., first_portal, ui, input, data_id.with(0));
+                    inline_helper.inline("From:", 45., first_portal, ui, input, data_id.with(0));
                 changed |=
-                    self_storage.inline("To:", 45., second_portal, ui, input, data_id.with(1));
-                changed |= self_storage.inline("What:", 45., what, ui, input, data_id.with(2));
+                    inline_helper.inline("To:", 45., second_portal, ui, input, data_id.with(1));
+                changed |= inline_helper.inline("What:", 45., what, ui, input, data_id.with(2));
             }
             Simple {
                 offset,
@@ -335,49 +281,20 @@ impl StorageElem2 for Matrix {
                 scale,
             } => {
                 let hpat![uniforms, formulas_cache] = input;
-                /*
-                // TODO
                 ui.label("Offset: ");
-                changed.uniform |= offset
-                    .x
-                    .egui(ui, formulas_names, "X", 0.0, |ui, x| egui_f64(ui, x));
-                changed.uniform |= offset
-                    .y
-                    .egui(ui, formulas_names, "Y", 0.0, |ui, x| egui_f64(ui, x));
-                changed.uniform |= offset
-                    .z
-                    .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_f64(ui, x));
+                changed.uniform |= offset.egui(ui, |ui, x| egui_f64(ui, x), uniforms, formulas_cache, data_id.with(0));
                 ui.separator();
                 ui.label("Rotate: ");
-                changed.uniform |= rotate
-                    .x
-                    .egui(ui, formulas_names, "X", 0.0, |ui, x| egui_angle(ui, x));
-                changed.uniform |= rotate
-                    .y
-                    .egui(ui, formulas_names, "Y", 0.0, |ui, x| egui_angle(ui, x));
-                changed.uniform |= rotate
-                    .z
-                    .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_angle(ui, x));
+                changed.uniform |= rotate.egui(ui, |ui, x| egui_angle(ui, x), uniforms, formulas_cache, data_id.with(1));
                 ui.separator();
                 ui.label("Mirror: ");
-                changed.uniform |= mirror
-                    .x
-                    .egui(ui, formulas_names, "X", 0.0, |ui, x| egui_0_1(ui, x));
-                changed |= mirror
-                    .y
-                    .egui(ui, formulas_names, "Y", 0.0, |ui, x| egui_0_1(ui, x));
-                changed |= mirror
-                    .z
-                    .egui(ui, formulas_names, "Z", 0.0, |ui, x| egui_0_1(ui, x));
+                changed.uniform |= mirror.egui(ui, |ui, x| egui_0_1(ui, x), uniforms, formulas_cache, data_id.with(2));
                 ui.separator();
-                changed |= scale.egui(ui, formulas_names, "Scale:", 1.0, |ui, x| {
-                    egui_f64_positive(ui, x)
-                });
-                */
+                changed.uniform |= scale.egui(ui, "Scale:", 1.0, |ui, x| egui_f64_positive(ui, x), uniforms, formulas_cache, data_id.with(3));
             }
         }
         /*
-        // TODO
+        // POSTPONE
         if matrix_recursion_error
             .0
             .get(&MatrixName(names[pos].clone()))
@@ -394,16 +311,16 @@ impl StorageElem2 for Matrix {
         changed
     }
 
-    fn get<F: FnMut(Self::IdWrapper) -> Option<Self::GetType>>(
+    fn get(
         &self,
-        mut f: F,
+        get_helper: &GetHelper<Self>,
         hpat![uniforms, formulas_cache]: &Self::Input,
     ) -> Option<Self::GetType> {
         use Matrix::*;
         Some(match &self {
             Mul { to, what } => {
-                let to = f((*to)?)?;
-                let what = f((*what)?)?;
+                let to = get_helper.get((*to)?)?;
+                let what = get_helper.get((*what)?)?;
                 what * to
             }
             Teleport {
@@ -411,9 +328,9 @@ impl StorageElem2 for Matrix {
                 second_portal,
                 what,
             } => {
-                let first_portal = f((*first_portal)?)?;
-                let second_portal = f((*second_portal)?)?;
-                let what = f((*what)?)?;
+                let first_portal = get_helper.get((*first_portal)?)?;
+                let second_portal = get_helper.get((*second_portal)?)?;
+                let what = get_helper.get((*what)?)?;
                 second_portal * first_portal.inverse() * what
             }
             Simple {
@@ -438,21 +355,20 @@ impl StorageElem2 for Matrix {
                 rotate,
                 mirror,
             } => {
-                let formulas_cache = &*formulas_cache.borrow();
-                let scale = scale.get(uniforms, formulas_cache);
+                let scale = scale.get(uniforms, formulas_cache)?;
                 DMat4::from_scale_rotation_translation(
                     DVec3::new(
-                        scale * (1. - 2.0 * mirror.x.get(uniforms, formulas_cache)),
-                        scale * (1. - 2.0 * mirror.y.get(uniforms, formulas_cache)),
-                        scale * (1. - 2.0 * mirror.z.get(uniforms, formulas_cache)),
+                        scale * (1. - 2.0 * mirror.x.get(uniforms, formulas_cache)?),
+                        scale * (1. - 2.0 * mirror.y.get(uniforms, formulas_cache)?),
+                        scale * (1. - 2.0 * mirror.z.get(uniforms, formulas_cache)?),
                     ),
-                    DQuat::from_rotation_x(rotate.x.get(uniforms, formulas_cache))
-                        * DQuat::from_rotation_y(rotate.y.get(uniforms, formulas_cache))
-                        * DQuat::from_rotation_z(rotate.z.get(uniforms, formulas_cache)),
+                    DQuat::from_rotation_x(rotate.x.get(uniforms, formulas_cache)?)
+                        * DQuat::from_rotation_y(rotate.y.get(uniforms, formulas_cache)?)
+                        * DQuat::from_rotation_z(rotate.z.get(uniforms, formulas_cache)?),
                     DVec3::new(
-                        offset.x.get(uniforms, formulas_cache),
-                        offset.y.get(uniforms, formulas_cache),
-                        offset.z.get(uniforms, formulas_cache),
+                        offset.x.get(uniforms, formulas_cache)?,
+                        offset.y.get(uniforms, formulas_cache)?,
+                        offset.z.get(uniforms, formulas_cache)?,
                     ),
                 )
             }
@@ -490,74 +406,61 @@ impl StorageElem2 for Matrix {
                 }
             }
             Simple { .. } => {}
-            Parametrized { .. } => {}
+            Parametrized { offset, scale, rotate, mirror } => {
+                let hpat![uniforms, formulas_cache] = input;
+                offset.remove_as_field(uniforms, formulas_cache);
+                rotate.remove_as_field(uniforms, formulas_cache);
+                mirror.remove_as_field(uniforms, formulas_cache);
+                scale.remove_as_field(uniforms, formulas_cache);
+            }
         }
     }
 
-    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, f: F, input: &Self::Input) -> usize {
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
+        &self,
+        mut f: F,
+        hpat![uniforms, formulas_cache]: &Self::Input,
+    ) -> usize {
         use Matrix::*;
-        /*
-        // TODO
-        match &self {
-            Mul { to, what } => {
-                to.map(|x| )
-            }
+        match self {
+            Mul { to, what } => to.map(|a| f(a)).unwrap_or(1) + what.map(|a| f(a)).unwrap_or(1),
             Teleport {
                 first_portal,
                 second_portal,
                 what,
             } => {
-                let first_portal = f((*first_portal)?)?;
-                let second_portal = f((*second_portal)?)?;
-                let what = f((*what)?)?;
-                second_portal * first_portal.inverse() * what
+                first_portal.map(|a| f(a)).unwrap_or(1)
+                    + second_portal.map(|a| f(a)).unwrap_or(1)
+                    + what.map(|a| f(a)).unwrap_or(1)
             }
-            Simple {
-                offset,
-                scale,
-                rotate,
-                mirror,
-            } => DMat4::from_scale_rotation_translation(
-                DVec3::new(
-                    *scale * if mirror.0 { -1. } else { 1. },
-                    *scale * if mirror.1 { -1. } else { 1. },
-                    *scale * if mirror.2 { -1. } else { 1. },
-                ),
-                DQuat::from_rotation_x(rotate.x)
-                    * DQuat::from_rotation_y(rotate.y)
-                    * DQuat::from_rotation_z(rotate.z),
-                *offset,
-            ),
+            Simple { .. } => 0,
             Parametrized {
                 offset,
                 scale,
                 rotate,
                 mirror,
             } => {
-                let formulas_cache = &*formulas_cache.borrow();
-                let scale = scale.get(uniforms, formulas_cache);
-                DMat4::from_scale_rotation_translation(
-                    DVec3::new(
-                        scale * (1. - 2.0 * mirror.x.get(uniforms, formulas_cache)),
-                        scale * (1. - 2.0 * mirror.y.get(uniforms, formulas_cache)),
-                        scale * (1. - 2.0 * mirror.z.get(uniforms, formulas_cache)),
-                    ),
-                    DQuat::from_rotation_x(rotate.x.get(uniforms, formulas_cache))
-                        * DQuat::from_rotation_y(rotate.y.get(uniforms, formulas_cache))
-                        * DQuat::from_rotation_z(rotate.z.get(uniforms, formulas_cache)),
-                    DVec3::new(
-                        offset.x.get(uniforms, formulas_cache),
-                        offset.y.get(uniforms, formulas_cache),
-                        offset.z.get(uniforms, formulas_cache),
-                    ),
-                )
+                offset.errors_count(uniforms, formulas_cache)
+                + rotate.errors_count(uniforms, formulas_cache)
+                + mirror.errors_count(uniforms, formulas_cache)
+                + scale.errors_count(uniforms, formulas_cache)
             }
         }
+        // POSTPONE
+        /*
+        if matrix_recursion_error
+            .0
+            .get(&MatrixName(names[pos].clone()))
+            .copied()
+            .unwrap_or(false)
+        {
+            errors_count += 1;
+        }
         */
-        0
     }
 }
 
+// TODO remove this after refactoring
 impl StorageElem for Matrix {
     type GetType = ();
     type Input = ();
@@ -571,17 +474,11 @@ impl StorageElem for Matrix {
         GetEnum::Ok(())
     }
 
-    fn egui(
-        &mut self,
-        ui: &mut Ui,
-        pos: usize,
-        input: &mut Self::Input,
-        _: &[String],
-    ) -> WhatChanged {
+    fn egui(&mut self, _: &mut Ui, _: usize, _: &mut Self::Input, _: &[String]) -> WhatChanged {
         Default::default()
     }
 
-    fn errors_count(&self, pos: usize, data: &Self::Input, _: &[String]) -> usize {
+    fn errors_count(&self, _: usize, _: &Self::Input, _: &[String]) -> usize {
         0
     }
 }

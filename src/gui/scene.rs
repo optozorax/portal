@@ -48,7 +48,7 @@ pub struct Scene {
 
     pub cam: CamSettings,
 
-    pub uniforms: StorageWithNames<AnyUniformComboBox>,
+    pub uniforms: Storage2<AnyUniform>,
 
     pub matrices: Storage2<Matrix>,
     objects: StorageWithNames<ObjectComboBox>,
@@ -64,6 +64,7 @@ pub struct Scene {
     current_stage: usize,
 }
 
+/*
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OldScene {
     pub description_en: String,
@@ -71,7 +72,7 @@ pub struct OldScene {
 
     pub cam: CamSettings,
 
-    pub uniforms: StorageWithNames<AnyUniformComboBox>,
+    pub uniforms: Storage2<AnyUniform>,
 
     pub matrices: StorageWithNames<Matrix>,
     objects: StorageWithNames<ObjectComboBox>,
@@ -95,7 +96,7 @@ impl From<OldScene> for Scene {
 
             cam: old.cam,
 
-            uniforms: old.uniforms,
+            uniforms: todo!(),
 
             matrices: old.matrices.into(),
             objects: old.objects,
@@ -112,19 +113,13 @@ impl From<OldScene> for Scene {
         }
     }
 }
+*/
 
 impl Scene {
     pub fn init(&mut self, data: &mut Data) {
-        let formulas_cache = &mut data.formulas_cache.borrow_mut();
         data.errors = Default::default();
         data.show_error_window = false;
-        self.user_uniforms
-            .uniforms
-            .resize(self.uniforms.storage.len(), false);
-        self.user_uniforms
-            .matrices
-            .resize(self.matrices.len(), false);
-        drop(self.init_stage(self.current_stage));
+        drop(self.init_stage(self.current_stage, data));
     }
 
     #[allow(clippy::type_complexity)] // TODO: reduce type complexity
@@ -149,7 +144,7 @@ impl Scene {
                 .add(Button::new("Recompile").enabled(*should_recompile))
                 .clicked()
             {
-                match self.get_new_material() {
+                match self.get_new_material(&data.formulas_cache) {
                     Ok(m) => {
                         data.reload_textures = true;
                         material = Some(Ok(m));
@@ -184,36 +179,21 @@ impl Scene {
                     });
             });
 
-        changed |= self
-            .uniforms
-            .rich_egui(ui, &mut *data.formulas_cache.borrow_mut(), "Uniforms");
-
-        if changed.uniform {
-            self.user_uniforms
-                .uniforms
-                .resize(self.uniforms.storage.len(), false);
-            self.user_uniforms
-                .matrices
-                .resize(self.matrices.len(), false);
-        }
+        changed |= self.uniforms.egui(ui, &mut data.formulas_cache, "Uniforms");
 
         ui.collapsing("Calculated uniforms", |ui| {
-            for name in self.uniforms.names_iter() {
+            for (id, name) in self.uniforms.visible_elements() {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
                     ui.label(format!("{} = ", name));
                     use AnyUniformResult::*;
-                    match self
-                        .uniforms
-                        .get(name, &self.uniforms, &*data.formulas_cache.borrow())
-                    {
-                        GetEnum::Ok(x) => match x {
+                    match self.uniforms.get(id, &data.formulas_cache) {
+                        Some(x) => match x {
                             Bool(b) => ui.label(b.to_string()),
                             Int(b) => ui.label(b.to_string()),
                             Float(b) => ui.label(b.to_string()),
                         },
-                        GetEnum::NotFound => ui.label("NotFound"),
-                        GetEnum::Recursion => ui.label("Recursion"),
+                        None => ui.label("NotFound"),
                     }
                 });
             }
@@ -236,11 +216,9 @@ impl Scene {
             .rich_egui(ui, &mut data.errors, "User GLSL code");
 
         ui.collapsing("Global user uniforms", |ui| {
-            changed |= self.user_uniforms.egui(
-                ui,
-                &mut vec![], /* self.matrices.names */
-                &mut self.uniforms.names,
-            );
+            changed |= self
+                .user_uniforms
+                .egui(ui, &mut self.uniforms, &mut self.matrices);
         });
 
         // // TODO
@@ -256,7 +234,8 @@ impl Scene {
                 data.show_glsl_library = true;
             }
             if ui.button("View generated GLSL code").clicked() {
-                data.show_compiled_code = Some(self.generate_shader_code().storage);
+                data.show_compiled_code =
+                    Some(self.generate_shader_code(&data.formulas_cache).storage);
             }
         });
 
@@ -305,7 +284,7 @@ impl Scene {
             .collect()
     }
 
-    pub fn uniforms(&self) -> Vec<(String, UniformType)> {
+    pub fn uniforms(&self, formulas_cache: &FormulasCache) -> Vec<(String, UniformType)> {
         use Object::*;
         use ObjectType::*;
 
@@ -342,14 +321,13 @@ impl Scene {
             .map(|name| (name, UniformType::Mat4))
             .collect::<Vec<_>>();
 
-        for (name, uniform) in self.uniforms.iter() {
+        for (id, name) in self.uniforms.visible_elements() {
             let name = format!("{}_u", name);
-            match uniform.0 {
-                AnyUniform::Bool(_) => result.push((name, UniformType::Int1)),
-                AnyUniform::Int { .. } => result.push((name, UniformType::Int1)),
-                AnyUniform::Float { .. } => result.push((name, UniformType::Float1)),
-                AnyUniform::Angle { .. } => result.push((name, UniformType::Float1)),
-                AnyUniform::Formula(_) => result.push((name, UniformType::Float1)),
+            match self.uniforms.get(id, formulas_cache) {
+                Some(AnyUniformResult::Bool(_)) => result.push((name, UniformType::Int1)),
+                Some(AnyUniformResult::Int { .. }) => result.push((name, UniformType::Int1)),
+                Some(AnyUniformResult::Float { .. }) => result.push((name, UniformType::Float1)),
+                None => {}
             }
         }
 
@@ -370,7 +348,7 @@ impl Scene {
         &self,
         material: macroquad::material::Material,
         data: &mut Data,
-        uniforms: &StorageWithNames<AnyUniformComboBox>,
+        uniforms: &Storage2<AnyUniform>,
     ) {
         /*
         // TODO
@@ -443,13 +421,13 @@ impl Scene {
 }
 
 impl Scene {
-    pub fn generate_shader_code(&self) -> StringStorage {
+    pub fn generate_shader_code(&self, formulas_cache: &FormulasCache) -> StringStorage {
         let mut storages: BTreeMap<String, StringStorage> = BTreeMap::new();
 
         storages.insert("uniforms".to_owned(), {
             let mut result = StringStorage::default();
             for (name, kind) in self
-                .uniforms()
+                .uniforms(formulas_cache)
                 .into_iter()
                 .filter(|(name, _)| !name.starts_with('_'))
             {
@@ -744,8 +722,9 @@ impl Scene {
 
     pub fn get_new_material(
         &self,
+        formulas_cache: &FormulasCache,
     ) -> Result<macroquad::prelude::Material, (String, String, ShaderErrors)> {
-        let code = self.generate_shader_code();
+        let code = self.generate_shader_code(formulas_cache);
 
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
@@ -754,7 +733,7 @@ impl Scene {
             VERTEX_SHADER,
             &code.storage,
             MaterialParams {
-                uniforms: self.uniforms(),
+                uniforms: self.uniforms(formulas_cache),
                 textures: self.textures(),
                 ..Default::default()
             },
@@ -802,10 +781,11 @@ impl Scene {
 }
 
 impl Scene {
-    fn init_stage(&mut self, stage: usize) -> WhatChanged {
+    fn init_stage(&mut self, stage: usize, data: &mut Data) -> WhatChanged {
+        /*
         let mut result = WhatChanged::default();
         if !self.animation_stages.storage.is_empty() {
-            for (pos, uniform) in self.animation_stages.storage[stage]
+            for (id, uniform) in self.animation_stages.storage[stage]
                 .uniforms
                 .iter()
                 .enumerate()
@@ -813,9 +793,8 @@ impl Scene {
                 use Animation::*;
                 match uniform {
                     Changed(x) | ChangedAndToUser(x) => {
-                        result.uniform |= check_changed(&mut self.uniforms.storage[pos].0, |u| {
-                            *u = x.clone();
-                        });
+                        let previous = self.uniforms.set(id, x.clone(), &mut data.formulas_cache);
+                        result.uniform |= previous != *x;
                     }
                     ProvidedToUser | Remains => {}
                 }
@@ -842,26 +821,31 @@ impl Scene {
             }
         }
         result
+        */
+        Default::default()
     }
 
     pub fn control_egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
+        // TODO
+        /*
         let mut result = WhatChanged::default();
         if self.user_uniforms.uniforms.iter().any(|x| *x) {
             for ((uniform, name), _) in self
                 .uniforms
                 .storage
                 .iter_mut()
-                .zip(self.uniforms.names.iter())
+                .zip(self.uniforms.visible_elements())
                 .zip(self.user_uniforms.uniforms.iter())
                 .filter(|(_, x)| **x)
             {
                 ui.horizontal(|ui| {
                     ui.label(name);
-                    result |= uniform.0.simple_egui(ui);
+                    result |= uniform.0.user_egui(ui);
                 });
             }
             ui.separator();
         }
+        */
 
         /*
         // TODO
@@ -876,7 +860,7 @@ impl Scene {
             {
                 ui.separator();
                 ui.label(name);
-                result |= matrix.simple_egui(ui);
+                result |= matrix.user_egui(ui);
             }
             ui.separator();
         }
@@ -907,7 +891,7 @@ impl Scene {
                 match uniform {
                     ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
                         ui.label(&uniforms.names[pos]);
-                        result |= uniforms.storage[pos].0.simple_egui(ui)
+                        result |= uniforms.storage[pos].0.user_egui(ui)
                     })),
                     Remains => {}
                     Changed(_) => {}
@@ -925,15 +909,18 @@ impl Scene {
                     ProvidedToUser | ChangedAndToUser(_) => {
                         ui.separator();
                         ui.label(&matrices.names[pos]);
-                        result |= matrices.storage[pos].simple_egui(ui)
+                        result |= matrices.storage[pos].user_egui(ui)
                     }
                     Remains => {}
                     Changed(_) => {}
                 }
             }
         }
-        */
+
         result
+        */
+
+        Default::default()
     }
 }
 

@@ -4,7 +4,6 @@ use crate::gui::object::MatrixName;
 use crate::gui::uniform::FormulasCache;
 use egui::*;
 use glam::*;
-use std::cell::RefCell;
 use std::hash::Hash;
 
 use std::collections::BTreeMap;
@@ -55,7 +54,7 @@ pub struct Data {
     pub show_glsl_library: bool,
     pub show_compiled_code: Option<String>,
 
-    pub formulas_cache: RefCell<FormulasCache>,
+    pub formulas_cache: FormulasCache,
 
     pub reload_textures: bool,
     pub texture_errors: TextureErrors,

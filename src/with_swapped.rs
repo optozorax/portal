@@ -6,7 +6,7 @@ macro_rules! hlist {
 
 #[macro_export]
 macro_rules! hval {
-    ($x:expr, $($tail:tt)+) => { ($x, hlist!($($tail)+)) };
+    ($x:expr, $($tail:tt)+) => { ($x, hval!($($tail)+)) };
     ($x:expr) => { ($x, ()) };
 }
 
