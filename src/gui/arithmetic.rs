@@ -66,6 +66,7 @@ impl StorageElem2 for Arithmetic {
         (): &mut Self::Input,
         inline_helper: &mut InlineHelper<Self>,
         data_id: egui::Id,
+        _: Self::IdWrapper,
     ) -> WhatChanged {
         use Arithmetic::*;
 
@@ -130,6 +131,7 @@ impl StorageElem2 for Arithmetic {
         &self,
         mut f: F,
         (): &Self::Input,
+        _: Self::IdWrapper,
     ) -> usize {
         use Arithmetic::*;
         match self {
@@ -199,6 +201,7 @@ impl StorageElem2 for MoreArithmetic {
         storage: &mut Self::Input,
         _: &mut InlineHelper<Self>,
         data_id: egui::Id,
+        _: Self::IdWrapper,
     ) -> WhatChanged {
         use MoreArithmetic::*;
 
@@ -234,7 +237,7 @@ impl StorageElem2 for MoreArithmetic {
         }
     }
 
-    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, _: F, _: &Self::Input) -> usize {
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, _: F, _: &Self::Input, _: Self::IdWrapper) -> usize {
         use MoreArithmetic::*;
         match self {
             Sin(a) => a.is_none() as usize,

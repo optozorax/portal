@@ -1,22 +1,19 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::storage::*;
-use crate::gui::storage2::GetHelper;
-use crate::gui::storage2::InlineHelper;
-use crate::gui::storage2::Storage2;
-use crate::gui::storage2::StorageElem2;
-use crate::gui::storage2::Wrapper;
+use crate::gui::storage2::*;
 use crate::gui::unique_id::UniqueId;
 use core::cell::RefCell;
 use egui::*;
 use glam::*;
 use std::ops::RangeInclusive;
+use std::fmt::{self, Debug, Formatter};
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct Formula(pub String);
+pub struct Formula(pub String); // TODO make not public and make that this formula can be changed only by with_edit function
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AnyUniform {
@@ -174,29 +171,38 @@ impl Default for Formula {
 
 impl Formula {
     pub fn egui(&mut self, ui: &mut Ui, formulas_cache: &mut FormulasCache) -> WhatChanged {
+        let has_errors = formulas_cache.has_errors(&self.0);
         let edit = formulas_cache.with_edit(&mut self.0, |text| {
-            ui.add(
-                TextEdit::multiline(text)
-                    .text_style(TextStyle::Monospace)
-                    .desired_rows(1),
-            );
-        });
-        if edit.has_errors {
-            ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = 0.;
-                ui.add(Label::new("Error with this formula").text_color(Color32::RED));
+            let response = egui_with_red_field(ui, has_errors, |ui| {
+                ui.add(
+                    TextEdit::multiline(text)
+                        .text_style(TextStyle::Monospace)
+                        .desired_rows(1),
+                )
             });
-        }
-        WhatChanged::from_uniform(edit.changed)
+            if has_errors {
+                response.on_hover_text("Error in this formula");
+            }
+            
+        });
+        WhatChanged::from_uniform(edit)
     }
 }
-
-pub struct FormulasCache(RefCell<FormulasCacheInner>);
 
 struct FormulasCacheInner {
     parser: fasteval::Parser,
     slab: fasteval::Slab,
     cache: BTreeMap<String, Option<fasteval::Instruction>>,
+}
+
+impl Default for FormulasCacheInner {
+    fn default() -> Self {
+        Self {
+            parser: fasteval::Parser::new(),
+            slab: fasteval::Slab::new(),
+            cache: Default::default(),
+        }
+    }
 }
 
 impl FormulasCacheInner {
@@ -248,17 +254,8 @@ impl FormulasCacheInner {
     }
 }
 
-impl Default for FormulasCache {
-    fn default() -> Self {
-        Self(RefCell::new(FormulasCacheInner {
-            parser: fasteval::Parser::new(),
-            slab: fasteval::Slab::new(),
-            cache: Default::default(),
-        }))
-    }
-}
-
-use std::fmt::{self, Debug, Formatter};
+#[derive(Default)]
+pub struct FormulasCache(RefCell<FormulasCacheInner>);
 
 impl Debug for FormulasCache {
     fn fmt(&self, _: &mut Formatter<'_>) -> fmt::Result {
@@ -266,31 +263,20 @@ impl Debug for FormulasCache {
     }
 }
 
-#[derive(Default)]
-pub struct EditResult {
-    changed: bool,
-    has_errors: bool,
-}
 
 impl FormulasCache {
     pub fn has_errors(&self, text: &str) -> bool {
         self.0.borrow_mut().get(text).is_none()
     }
 
-    pub fn with_edit(&self, text: &mut String, f: impl FnOnce(&mut String)) -> EditResult {
+    pub fn with_edit(&self, text: &mut String, f: impl FnOnce(&mut String)) -> bool {
         let previous = text.clone();
         f(text);
         if previous == *text {
-            EditResult {
-                changed: false,
-                has_errors: self.has_errors(text),
-            }
+            false
         } else {
             self.0.borrow_mut().cache.remove(&previous);
-            EditResult {
-                changed: false,
-                has_errors: self.has_errors(text),
-            }
+            true
         }
     }
 
@@ -373,29 +359,6 @@ pub struct AnyUniformComboBox(pub AnyUniform);
 impl Default for AnyUniform {
     fn default() -> Self {
         AnyUniform::Formula(Default::default())
-    }
-}
-
-impl AnyUniform {
-    pub fn egui(&mut self, ui: &mut Ui, formulas_cache: &mut FormulasCache) -> WhatChanged {
-        use AnyUniform::*;
-        let mut result = WhatChanged::default();
-        match self {
-            Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
-            Int(value) => {
-                result |= value.egui(ui, 1.0, 0..=0, -10..=10);
-            }
-            Angle(a) => {
-                drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
-            }
-            Float(value) => {
-                result |= value.egui(ui, 0.01, 0..=2, -10.0..=10.0);
-            }
-            Formula(x) => {
-                drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
-            }
-        }
-        result
     }
 }
 
@@ -597,24 +560,17 @@ impl StorageElem2 for AnyUniform {
         formulas_cache: &mut Self::Input,
         _: &mut InlineHelper<Self>,
         _: egui::Id,
+        _: Self::IdWrapper,
     ) -> WhatChanged {
         let mut result = WhatChanged::from_uniform(egui_combo_box(ui, "Type:", 45., self));
         ui.separator();
         use AnyUniform::*;
         match self {
+            Int(value) => result |= value.egui(ui, 1.0, 0..=0, -10..=10),
+            Float(value) => result |= value.egui(ui, 0.01, 0..=2, -10.0..=10.0),
             Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
-            Int(value) => {
-                result |= value.egui(ui, 1.0, 0..=0, -10..=10);
-            }
-            Angle(a) => {
-                drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
-            }
-            Float(value) => {
-                result |= value.egui(ui, 0.01, 0..=2, -10.0..=10.0);
-            }
-            Formula(x) => {
-                drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
-            }
+            Angle(a) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a))),
+            Formula(x) => drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache))),
         }
         result
     }
@@ -681,6 +637,7 @@ impl StorageElem2 for AnyUniform {
         &self,
         _: F,
         formulas_cache: &Self::Input,
+        _: Self::IdWrapper,
     ) -> usize {
         if let AnyUniform::Formula(formula) = self {
             formulas_cache.has_errors(&formula.0) as usize

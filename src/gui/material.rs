@@ -45,7 +45,7 @@ impl Default for Material {
 
 impl Material {
     pub fn errors_count(&self, pos: usize, errors: &ShaderErrors) -> usize {
-        if let Some(local_errors) = errors.get_errors(self, pos) {
+        if let Some(local_errors) = errors.get_errors_library(self, pos) {
             local_errors.len()
         } else {
             0
@@ -120,7 +120,7 @@ impl Material {
     fn egui(&mut self, ui: &mut Ui, pos: usize, errors: &mut ShaderErrors) -> WhatChanged {
         use Material::*;
         let mut changed = false;
-        let has_errors = errors.get_errors(&*self, pos).is_some();
+        let has_errors = errors.get_errors_library(&*self, pos).is_some();
         match self {
             Simple {
                 color,
@@ -236,7 +236,7 @@ impl Material {
                 });
                 ui.add(Label::new("}").monospace());
 
-                if let Some(local_errors) = errors.get_errors(self, pos) {
+                if let Some(local_errors) = errors.get_errors_library(self, pos) {
                     egui_errors(ui, local_errors);
                 }
             }

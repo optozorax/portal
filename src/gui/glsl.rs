@@ -33,12 +33,12 @@ impl StorageElem for LibraryCode {
         _: &[String],
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        egui_with_red_field(ui, input.get_errors(self, pos).is_some(), |ui| {
+        egui_with_red_field(ui, input.get_errors_library(self, pos).is_some(), |ui| {
             changed = WhatChanged::from_shader(
                 ui.add(TextEdit::multiline(&mut self.0 .0).text_style(TextStyle::Monospace))
                     .changed(),
             );
-            if let Some(local_errors) = input.get_errors(self, pos) {
+            if let Some(local_errors) = input.get_errors_library(self, pos) {
                 egui_errors(ui, local_errors);
             }
         });
@@ -46,7 +46,7 @@ impl StorageElem for LibraryCode {
     }
 
     fn errors_count(&self, pos: usize, input: &Self::Input, _: &[String]) -> usize {
-        if let Some(local_errors) = input.get_errors(self, pos) {
+        if let Some(local_errors) = input.get_errors_library(self, pos) {
             local_errors.len()
         } else {
             0

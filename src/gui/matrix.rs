@@ -244,6 +244,7 @@ impl StorageElem2 for Matrix {
         input: &mut Self::Input,
         inline_helper: &mut InlineHelper<Self>,
         data_id: egui::Id,
+        _: Self::IdWrapper,
     ) -> WhatChanged {
         let mut changed = WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., self));
         ui.separator();
@@ -420,6 +421,7 @@ impl StorageElem2 for Matrix {
         &self,
         mut f: F,
         hpat![uniforms, formulas_cache]: &Self::Input,
+        _: Self::IdWrapper,
     ) -> usize {
         use Matrix::*;
         match self {

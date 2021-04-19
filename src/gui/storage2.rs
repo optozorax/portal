@@ -311,7 +311,7 @@ impl<T: StorageElem2> Storage2<T> {
                             });
                         });
 
-                        changed |= elem.egui(ui, input, &mut InlineHelper(self), data_id.with(pos));
+                        changed |= elem.egui(ui, input, &mut InlineHelper(self), data_id.with(pos), T::IdWrapper::wrap(*id));
                     });
             } else {
                 ui.label("Internal error, this is inline element, it shouldn't be here.");
@@ -451,7 +451,7 @@ impl<T: StorageElem2> Storage2<T> {
                 // id now must be correct
                 with_swapped!(elem => (*self.storage.get_mut(&id.unwrap().un_wrap()).unwrap()); {
                     ui.group(|ui| {
-                        changed |= elem.0.as_mut().egui(ui, input, &mut InlineHelper(self), data_id.with("inline"));
+                        changed |= elem.0.as_mut().egui(ui, input, &mut InlineHelper(self), data_id.with("inline"), id.unwrap());
                     });
                 });
             }
@@ -499,6 +499,7 @@ impl<T: StorageElem2> Storage2<T> {
             let result = elem.as_ref().errors_count(
                 |id| self.errors_count_inner(id, visited, input, false),
                 input,
+                id
             );
             visited.pop().unwrap();
             result
@@ -531,13 +532,14 @@ pub trait StorageElem2: Sized + Default {
         input: &mut Self::Input,
         inline_helper: &mut InlineHelper<Self>,
         data_id: egui::Id,
+        self_id: Self::IdWrapper,
     ) -> WhatChanged;
 
     fn get(&self, get_helper: &GetHelper<Self>, input: &Self::Input) -> Option<Self::GetType>;
 
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, f: F, input: &mut Self::Input);
 
-    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, f: F, input: &Self::Input) -> usize;
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, f: F, input: &Self::Input, self_id: Self::IdWrapper) -> usize;
 }
 
 impl<T: StorageElem2 + StorageElem> From<StorageWithNames<T>> for Storage2<T> {

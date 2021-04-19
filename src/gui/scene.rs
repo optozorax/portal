@@ -1,3 +1,4 @@
+use crate::gui::common::Either;
 use crate::code_generation::apply_template;
 use crate::gui::glsl::*;
 use crate::gui::storage2::Storage2;
@@ -51,7 +52,7 @@ pub struct Scene {
     pub uniforms: Storage2<AnyUniform>,
 
     pub matrices: Storage2<Matrix>,
-    objects: StorageWithNames<ObjectComboBox>,
+    objects: StorageWithNames<Object>,
 
     pub textures: StorageWithNames<TextureName>,
 
@@ -221,11 +222,10 @@ impl Scene {
                 .egui(ui, &mut self.uniforms, &mut self.matrices);
         });
 
-        // // TODO
-        // with_swapped!(x => (self.matrices, self.uniforms, self.user_uniforms);
-        //     changed |= self
-        //         .animation_stages
-        //         .rich_egui(ui, &mut x, "Animation stages"));
+        with_swapped!(x => (self.matrices, self.uniforms, self.user_uniforms, data.formulas_cache);
+            changed |= self
+                .animation_stages
+                .rich_egui(ui, &mut x, "Animation stages"));
 
         ui.separator();
 
@@ -239,12 +239,14 @@ impl Scene {
             }
         });
 
-        if let Some(local_errors) = data.errors.0.get(&ErrId::default()).cloned() {
+        let errors = &data.errors;
+        let show_error_window = &mut data.show_error_window;
+        if let Some(local_errors) = errors.get_default() {
             ui.separator();
             ui.horizontal(|ui| {
                 ui.label("Other errors:");
                 if ui.button("Show full code and errors").clicked() {
-                    data.show_error_window = true;
+                    *show_error_window = true;
                 }
             });
             egui_errors(ui, &local_errors);
@@ -262,7 +264,7 @@ impl Scene {
                 self.objects.errors_count(0, &x))
             + self.materials.errors_count(0, &data.errors)
             + self.library.errors_count(0, &data.errors)
-            + if let Some(local_errors) = data.errors.0.get(&ErrId::default()).cloned() {
+            + if let Some(local_errors) = data.errors.get_default() {
                 local_errors.len()
             } else {
                 0
@@ -288,7 +290,10 @@ impl Scene {
         use Object::*;
         use ObjectType::*;
 
+
         let mut result = Vec::new();
+        // TODO
+        /*
         for (_, object) in self.objects.iter() {
             match &object.0 {
                 DebugMatrix(matrix) => {
@@ -313,6 +318,7 @@ impl Scene {
                 },
             }
         }
+        */
 
         let mut result = result
             .into_iter()
@@ -348,11 +354,8 @@ impl Scene {
         &self,
         material: macroquad::material::Material,
         data: &mut Data,
-        uniforms: &Storage2<AnyUniform>,
     ) {
-        /*
         // TODO
-        data.matrix_recursion_error.0.clear();
         macro_rules! local_try {
             ($a:expr, $c:ident, $b: expr) => {
                 match self.matrices.get($a.0, (uniforms, (&data.formulas_cache, ()))) {
@@ -371,42 +374,43 @@ impl Scene {
         use Object::*;
         use ObjectType::*;
         for (_, object) in self.objects.iter() {
-            match &object.0 {
+            match &object {
                 DebugMatrix(matrix) => {
-                    local_try!(matrix, m, {
-                        material.set_uniform(&matrix.normal_name(), m.as_f32());
-                        material.set_uniform(&matrix.inverse_name(), m.inverse().as_f32());
-                    })
+                    // let id = self.matrices.find_by_name()
+                    // local_try!(matrix, m, {
+                    //     material.set_uniform(&matrix.normal_name(), m.as_f32());
+                    //     material.set_uniform(&matrix.inverse_name(), m.inverse().as_f32());
+                    // })
                 }
                 Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
                     Simple(matrix) => {
-                        local_try!(matrix, m, {
-                            material.set_uniform(&matrix.normal_name(), m.as_f32());
-                            material.set_uniform(&matrix.inverse_name(), m.inverse().as_f32());
-                        })
+                        // local_try!(matrix, m, {
+                        //     material.set_uniform(&matrix.normal_name(), m.as_f32());
+                        //     material.set_uniform(&matrix.inverse_name(), m.inverse().as_f32());
+                        // })
                     }
                     Portal(a, b) => {
-                        local_try!(a, ma, {
-                            local_try!(b, mb, {
-                                material.set_uniform(&a.normal_name(), ma.as_f32());
-                                material.set_uniform(&a.inverse_name(), ma.inverse().as_f32());
-                                material.set_uniform(&b.normal_name(), mb.as_f32());
-                                material.set_uniform(&b.inverse_name(), mb.inverse().as_f32());
-                                material.set_uniform(&a.teleport_to_name(b), (mb * ma.inverse()).as_f32());
-                                if a != b {
-                                    material.set_uniform(&b.teleport_to_name(a), (ma * mb.inverse()).as_f32());
-                                }
-                            })
-                        })
+                        // local_try!(a, ma, {
+                            // local_try!(b, mb, {
+                            //     material.set_uniform(&a.normal_name(), ma.as_f32());
+                            //     material.set_uniform(&a.inverse_name(), ma.inverse().as_f32());
+                            //     material.set_uniform(&b.normal_name(), mb.as_f32());
+                            //     material.set_uniform(&b.inverse_name(), mb.inverse().as_f32());
+                            //     material.set_uniform(&a.teleport_to_name(b), (mb * ma.inverse()).as_f32());
+                            //     if a != b {
+                            //         material.set_uniform(&b.teleport_to_name(a), (ma * mb.inverse()).as_f32());
+                            //     }
+                            // })
+                        // })
                     }
                 },
             }
         }
 
-        for name in self.uniforms.names_iter() {
+        for (id, name) in self.uniforms.visible_elements() {
             let name_u = format!("{}_u", name);
-            match self.uniforms.get(&name, uniforms, &data.formulas_cache) {
-                GetEnum::Ok(result) => match result {
+            match self.uniforms.get(id, &data.formulas_cache) {
+                Some(result) => match result {
                     AnyUniformResult::Bool(b) => material.set_uniform(&name_u, b as i32),
                     AnyUniformResult::Int(i) => material.set_uniform(&name_u, i),
                     AnyUniformResult::Float(f) => material.set_uniform(&name_u, f as f32),
@@ -416,7 +420,6 @@ impl Scene {
                 }
             }
         }
-        */
     }
 }
 
@@ -459,6 +462,8 @@ impl Scene {
             result
         });
 
+        // TODO
+        /*
         let (material_processing, material_defines) = {
             let mut material_processing = StringStorage::default();
             let mut material_defines = StringStorage::default();
@@ -574,6 +579,7 @@ impl Scene {
 
         storages.insert("material_processing".to_owned(), material_processing);
         storages.insert("materials_defines".to_owned(), material_defines);
+        */
 
         storages.insert("intersection_functions".to_owned(), {
             use Object::*;
@@ -581,7 +587,7 @@ impl Scene {
             let mut result = StringStorage::default();
 
             for (pos, (_, i)) in self.objects.iter().enumerate() {
-                match &i.0 {
+                match &i {
                     DebugMatrix(_) => {}
                     Flat { kind, is_inside } => {
                         if matches!(kind, Portal { .. }) {
@@ -592,7 +598,7 @@ impl Scene {
                         } else {
                             result.add_string(format!("int is_inside_{}(vec4 pos, float x, float y) {{\n", pos));
                         }
-                        result.add_identifier_string(i.0.identifier(pos), &is_inside.0.0);
+                        result.add_identifier_string(i.identifier(pos), &is_inside.0.0);
                         result.add_string("\n}\n");
                     }
                     Complex { kind, intersect } => {
@@ -604,7 +610,7 @@ impl Scene {
                         } else {
                             result.add_string(format!("SceneIntersection intersect_{}(Ray r) {{\n", pos));
                         }
-                        result.add_identifier_string(i.0.identifier(pos), &intersect.0.0);
+                        result.add_identifier_string(i.identifier(pos), &intersect.0.0);
                         result.add_string("\n}\n");
                     }
                 }
@@ -612,6 +618,8 @@ impl Scene {
             result
         });
 
+        // TODO
+        /*
         storages.insert("intersections".to_owned(), {
             use Object::*;
             use ObjectType::*;
@@ -702,6 +710,7 @@ impl Scene {
             }
             result
         });
+        */
 
         storages.insert("library".to_owned(), {
             let mut result = StringStorage::default();
@@ -750,26 +759,26 @@ impl Scene {
                     Default::default()
                 }
             };
-            let mut errors: BTreeMap<ErrId, Vec<(usize, String)>> = BTreeMap::new();
+            let mut errors: BTreeMap<Either<ObjectId, ErrId>, Vec<(usize, String)>> = BTreeMap::new();
             for x in shader_error_parser(&error_message) {
                 match x {
                     Ok((line_no, message)) => match code.line_numbers.get_identifier(line_no) {
                         Some((identifier, local_line_no)) => {
                             errors
-                                .entry(identifier)
+                                .entry(Either::Right(identifier))
                                 .or_insert_with(Default::default)
                                 .push((local_line_no, message.to_owned()));
                         }
                         None => {
                             errors
-                                .entry(ErrId::default())
+                                .entry(Either::Right(ErrId::default()))
                                 .or_insert_with(Default::default)
                                 .push((line_no, message.to_owned()));
                         }
                     },
                     Err(message) => {
                         errors
-                            .entry(ErrId::default())
+                            .entry(Either::Right(ErrId::default()))
                             .or_insert_with(Default::default)
                             .push((usize::MAX, message.to_owned()));
                     }

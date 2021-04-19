@@ -1,6 +1,6 @@
 use crate::code_generation::ErrId;
+use crate::gui::object::ObjectId;
 use crate::code_generation::ErrorId;
-use crate::gui::object::MatrixName;
 use crate::gui::uniform::FormulasCache;
 use egui::*;
 use glam::*;
@@ -26,22 +26,47 @@ pub fn rad2deg(rad: f64) -> f64 {
     rad * 180. / PI
 }
 
-#[derive(Debug, Default)]
-pub struct MatrixRecursionError(pub BTreeMap<MatrixName, bool>);
+// TODO: return matrix recursion errors
+// #[derive(Debug, Default)]
+// pub struct MatrixRecursionError(pub BTreeMap<MatrixName, bool>);
 
-#[derive(Debug, Default)]
-pub struct ShaderErrors(pub BTreeMap<ErrId, Vec<(usize, String)>>);
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
+pub enum Either<A, B> {
+    Left(A),
+    Right(B)
+}
+
+// TODO change ErrId to LibraryId
+#[derive(Debug)]
+pub struct ShaderErrors(pub BTreeMap<Either<ObjectId, ErrId>, Vec<(usize, String)>>);
+
+impl Default for ShaderErrors {
+    fn default() -> Self {
+        ShaderErrors(BTreeMap::new())
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct TextureErrors(pub BTreeMap<String, macroquad::file::FileError>);
 
 impl ShaderErrors {
-    pub fn get_errors<'a, T: ErrorId>(
+    pub fn get_errors_object<'a>(
+        &'a self,
+        id: ObjectId, 
+    ) -> Option<&'a [(usize, String)]> {
+        self.0.get(&Either::Left(id)).map(|x| &x[..])
+    }
+
+    pub fn get_errors_library<'a, T: ErrorId>(
         &'a self,
         t: &T,
         pos: usize,
     ) -> Option<&'a [(usize, String)]> {
-        self.0.get(&t.identifier(pos)).map(|x| &x[..])
+        self.0.get(&Either::Right(t.identifier(pos))).map(|x| &x[..])
+    }
+
+    pub fn get_default<'a>(&'a self) -> Option<&'a [(usize, String)]> {
+        self.0.get(&Either::Right(ErrId::default())).map(|x| &x[..])
     }
 }
 
@@ -49,7 +74,7 @@ impl ShaderErrors {
 pub struct Data {
     pub to_export: Option<String>,
     pub errors: ShaderErrors,
-    pub matrix_recursion_error: MatrixRecursionError,
+    // pub matrix_recursion_error: MatrixRecursionError,
     pub show_error_window: bool,
     pub show_glsl_library: bool,
     pub show_compiled_code: Option<String>,
