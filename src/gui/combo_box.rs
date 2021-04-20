@@ -40,6 +40,7 @@ pub fn egui_combo_box<T: ComboBoxChoosable>(
     label: &str,
     size: f64,
     t: &mut T,
+    data_id: egui::Id,
 ) -> bool {
     let mut is_changed = false;
 
@@ -48,7 +49,7 @@ pub fn egui_combo_box<T: ComboBoxChoosable>(
 
     ui.horizontal(|ui| {
         egui_label(ui, label, size);
-        egui::ComboBox::from_label("")
+        egui::ComboBox::from_id_source(data_id)
             .selected_text(T::variants()[current_type])
             .show_ui(ui, |ui| {
                 for (pos, name) in T::variants().iter().enumerate() {

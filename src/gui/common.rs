@@ -1,9 +1,11 @@
-use crate::code_generation::ErrId;
-use crate::gui::object::ObjectId;
-use crate::code_generation::ErrorId;
+use crate::gui::storage2::Wrapper;
 use crate::gui::uniform::FormulasCache;
+use crate::gui::unique_id::UniqueId;
 use egui::*;
 use glam::*;
+use std::any::Any;
+use std::any::TypeId;
+use std::collections::HashMap;
 use std::hash::Hash;
 
 use std::collections::BTreeMap;
@@ -26,23 +28,12 @@ pub fn rad2deg(rad: f64) -> f64 {
     rad * 180. / PI
 }
 
-// TODO: return matrix recursion errors
-// #[derive(Debug, Default)]
-// pub struct MatrixRecursionError(pub BTreeMap<MatrixName, bool>);
-
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub enum Either<A, B> {
-    Left(A),
-    Right(B)
-}
-
-// TODO change ErrId to LibraryId
 #[derive(Debug)]
-pub struct ShaderErrors(pub BTreeMap<Either<ObjectId, ErrId>, Vec<(usize, String)>>);
+pub struct ShaderErrors(HashMap<TypeId, HashMap<UniqueId, Vec<(usize, String)>>>);
 
 impl Default for ShaderErrors {
     fn default() -> Self {
-        ShaderErrors(BTreeMap::new())
+        Self(HashMap::new())
     }
 }
 
@@ -50,23 +41,24 @@ impl Default for ShaderErrors {
 pub struct TextureErrors(pub BTreeMap<String, macroquad::file::FileError>);
 
 impl ShaderErrors {
-    pub fn get_errors_object<'a>(
-        &'a self,
-        id: ObjectId, 
-    ) -> Option<&'a [(usize, String)]> {
-        self.0.get(&Either::Left(id)).map(|x| &x[..])
+    pub fn get<T: Any + Wrapper>(&self, id: T) -> Option<&[(usize, String)]> {
+        self.0
+            .get(&id.type_id())?
+            .get(&id.un_wrap())
+            .map(|x| &x[..])
     }
 
-    pub fn get_errors_library<'a, T: ErrorId>(
-        &'a self,
-        t: &T,
-        pos: usize,
-    ) -> Option<&'a [(usize, String)]> {
-        self.0.get(&Either::Right(t.identifier(pos))).map(|x| &x[..])
+    pub fn push(&mut self, (type_id, uniq_id): (TypeId, UniqueId), value: (usize, String)) {
+        self.0
+            .entry(type_id)
+            .or_insert_with(HashMap::new)
+            .entry(uniq_id)
+            .or_insert_with(Vec::new)
+            .push(value);
     }
 
-    pub fn get_default<'a>(&'a self) -> Option<&'a [(usize, String)]> {
-        self.0.get(&Either::Right(ErrId::default())).map(|x| &x[..])
+    pub fn push_t<T: Any + Wrapper>(&mut self, id: T, value: (usize, String)) {
+        self.push((id.type_id(), id.un_wrap()), value);
     }
 }
 

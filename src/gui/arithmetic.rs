@@ -40,10 +40,12 @@ impl Default for Arithmetic {
     }
 }
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ArithmeticId(UniqueId);
 
-impl Wrapper<UniqueId> for ArithmeticId {
+impl Wrapper for ArithmeticId {
     fn wrap(id: UniqueId) -> Self {
         ArithmeticId(id)
     }
@@ -175,10 +177,12 @@ impl Default for MoreArithmetic {
     }
 }
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct MoreArithmeticId(UniqueId);
 
-impl Wrapper<UniqueId> for MoreArithmeticId {
+impl Wrapper for MoreArithmeticId {
     fn wrap(id: UniqueId) -> Self {
         Self(id)
     }
@@ -237,7 +241,12 @@ impl StorageElem2 for MoreArithmetic {
         }
     }
 
-    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, _: F, _: &Self::Input, _: Self::IdWrapper) -> usize {
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
+        &self,
+        _: F,
+        _: &Self::Input,
+        _: Self::IdWrapper,
+    ) -> usize {
         use MoreArithmetic::*;
         match self {
             Sin(a) => a.is_none() as usize,

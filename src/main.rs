@@ -371,7 +371,7 @@ impl Window {
                 );
                 std::process::exit(1)
             });
-        scene.set_uniforms(material, &mut data, &scene.uniforms);
+        scene.set_uniforms(material, &mut data);
         let mut result = Window {
             should_recompile: false,
             scene,
@@ -406,7 +406,12 @@ impl Window {
         if self.data.reload_textures {
             self.data.reload_textures = false;
             self.data.texture_errors.0.clear();
-            for (name, path) in self.scene.textures.iter() {
+            for (id, name) in self.scene.textures.visible_elements() {
+                let path = self
+                    .scene
+                    .textures
+                    .get(id, &self.data.texture_errors)
+                    .unwrap();
                 match macroquad::file::load_file(&path.0).await {
                     Ok(bytes) => {
                         let context = unsafe { get_internal_gl().quad_context };
@@ -742,8 +747,7 @@ First, predefined library is included, then uniforms, then user library, then in
         let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
 
         if changed.uniform {
-            self.scene
-                .set_uniforms(self.material, &mut self.data, &self.scene.uniforms);
+            self.scene.set_uniforms(self.material, &mut self.data);
             self.set_uniforms();
             is_something_changed = true;
         }

@@ -1,3 +1,4 @@
+use crate::gui::storage2::Wrapper;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::fmt;
@@ -15,6 +16,15 @@ impl fmt::Display for UniqueId {
 pub struct UniqueIds {
     available: VecDeque<UniqueId>,
     max: usize,
+}
+
+impl Wrapper for () {
+    fn wrap(t: UniqueId) -> Self {
+        ()
+    }
+    fn un_wrap(self) -> UniqueId {
+        UniqueId(0)
+    }
 }
 
 impl UniqueIds {

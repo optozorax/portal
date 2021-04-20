@@ -1,5 +1,3 @@
-use crate::gui::common::Either;
-use crate::code_generation::apply_template;
 use crate::gui::glsl::*;
 use crate::gui::storage2::Storage2;
 
@@ -9,7 +7,6 @@ use crate::gui::common::*;
 use crate::gui::material::*;
 use crate::gui::matrix::*;
 use crate::gui::object::*;
-use crate::gui::storage::*;
 use crate::gui::texture::*;
 use crate::gui::uniform::*;
 use crate::shader_error_parser::*;
@@ -52,15 +49,15 @@ pub struct Scene {
     pub uniforms: Storage2<AnyUniform>,
 
     pub matrices: Storage2<Matrix>,
-    objects: StorageWithNames<Object>,
+    objects: Storage2<Object>,
 
-    pub textures: StorageWithNames<TextureName>,
+    pub textures: Storage2<TextureName>,
 
-    materials: StorageWithNames<MaterialComboBox>,
-    library: StorageWithNames<LibraryCode>,
+    materials: Storage2<Material>,
+    library: Storage2<LibraryCode>,
 
     user_uniforms: GlobalUserUniforms,
-    animation_stages: StorageWithNames<AnimationStage>,
+    animation_stages: Storage2<AnimationStage>,
 
     current_stage: usize,
 }
@@ -203,18 +200,14 @@ impl Scene {
         with_swapped!(x => (self.uniforms, data.formulas_cache);
             changed |= self.matrices.egui(ui, &mut x, "Matrices"));
 
-        with_swapped!(x => (vec![/* matrices.names */], data.errors);
-            changed |= self.objects.rich_egui(ui, &mut x, "Objects"));
+        with_swapped!(x => (data.errors, self.matrices, self.uniforms, data.formulas_cache);
+            changed |= self.objects.egui(ui, &mut x, "Objects"));
 
-        changed |= self.materials.rich_egui(ui, &mut data.errors, "Materials");
+        changed |= self.materials.egui(ui, &mut data.errors, "Materials");
 
-        changed |= self
-            .textures
-            .rich_egui(ui, &mut data.texture_errors, "Textures");
+        changed |= self.textures.egui(ui, &mut data.texture_errors, "Textures");
 
-        changed |= self
-            .library
-            .rich_egui(ui, &mut data.errors, "User GLSL code");
+        changed |= self.library.egui(ui, &mut data.errors, "User GLSL code");
 
         ui.collapsing("Global user uniforms", |ui| {
             changed |= self
@@ -222,10 +215,10 @@ impl Scene {
                 .egui(ui, &mut self.uniforms, &mut self.matrices);
         });
 
-        with_swapped!(x => (self.matrices, self.uniforms, self.user_uniforms, data.formulas_cache);
+        with_swapped!(x => (self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
             changed |= self
                 .animation_stages
-                .rich_egui(ui, &mut x, "Animation stages"));
+                .egui(ui, &mut x, "Animation stages"));
 
         ui.separator();
 
@@ -241,7 +234,7 @@ impl Scene {
 
         let errors = &data.errors;
         let show_error_window = &mut data.show_error_window;
-        if let Some(local_errors) = errors.get_default() {
+        if let Some(local_errors) = errors.get::<()>(()) {
             ui.separator();
             ui.horizontal(|ui| {
                 ui.label("Other errors:");
@@ -260,11 +253,11 @@ impl Scene {
     pub fn errors_count(&mut self, _: usize, data: &mut Data) -> usize {
         with_swapped!(x => (self.uniforms, data.formulas_cache);
             self.matrices.errors_count_all(&x))
-            + with_swapped!(x => (/* self.matrices.names */vec![], data.errors);
-                self.objects.errors_count(0, &x))
-            + self.materials.errors_count(0, &data.errors)
-            + self.library.errors_count(0, &data.errors)
-            + if let Some(local_errors) = data.errors.get_default() {
+            + with_swapped!(x => (data.errors, self.matrices, self.uniforms, data.formulas_cache);
+                self.objects.errors_count_all(&x))
+            + self.materials.errors_count_all(&data.errors)
+            + self.library.errors_count_all(&data.errors)
+            + if let Some(local_errors) = data.errors.get::<()>(()) {
                 local_errors.len()
             } else {
                 0
@@ -279,21 +272,19 @@ pub trait UniformStruct {
 
 impl Scene {
     pub fn textures(&self) -> Vec<String> {
+        // TODO
         self.textures
-            .names_iter()
-            .cloned()
-            .map(|x| TextureName::name(&x))
+            .visible_elements()
+            .map(|(_, name)| TextureName::name(name))
             .collect()
     }
 
     pub fn uniforms(&self, formulas_cache: &FormulasCache) -> Vec<(String, UniformType)> {
-        use Object::*;
-        use ObjectType::*;
-
-
         let mut result = Vec::new();
         // TODO
         /*
+        use Object::*;
+        use ObjectType::*;
         for (_, object) in self.objects.iter() {
             match &object.0 {
                 DebugMatrix(matrix) => {
@@ -350,12 +341,9 @@ impl Scene {
         result
     }
 
-    pub fn set_uniforms(
-        &self,
-        material: macroquad::material::Material,
-        data: &mut Data,
-    ) {
+    pub fn set_uniforms(&self, material: macroquad::material::Material, data: &mut Data) {
         // TODO
+        /*
         macro_rules! local_try {
             ($a:expr, $c:ident, $b: expr) => {
                 match self.matrices.get($a.0, (uniforms, (&data.formulas_cache, ()))) {
@@ -373,7 +361,11 @@ impl Scene {
         }
         use Object::*;
         use ObjectType::*;
-        for (_, object) in self.objects.iter() {
+        */
+        for (id, name) in self.objects.visible_elements() {
+            // TODO
+            /*
+            let object = self.objects.get(id, ).unwrap();
             match &object {
                 DebugMatrix(matrix) => {
                     // let id = self.matrices.find_by_name()
@@ -405,6 +397,7 @@ impl Scene {
                     }
                 },
             }
+            */
         }
 
         for (id, name) in self.uniforms.visible_elements() {
@@ -456,7 +449,7 @@ impl Scene {
 
         storages.insert("textures".to_owned(), {
             let mut result = StringStorage::default();
-            for name in self.textures.names_iter() {
+            for (_, name) in self.textures.visible_elements() {
                 result.add_string(format!("uniform sampler2D {};\n", TextureName::name(name)));
             }
             result
@@ -586,7 +579,9 @@ impl Scene {
             use ObjectType::*;
             let mut result = StringStorage::default();
 
-            for (pos, (_, i)) in self.objects.iter().enumerate() {
+            for (pos, (id, name)) in self.objects.visible_elements().enumerate() {
+                // TODO
+                /*
                 match &i {
                     DebugMatrix(_) => {}
                     Flat { kind, is_inside } => {
@@ -614,6 +609,7 @@ impl Scene {
                         result.add_string("\n}\n");
                     }
                 }
+                */
             }
             result
         });
@@ -712,6 +708,7 @@ impl Scene {
         });
         */
 
+        /*
         storages.insert("library".to_owned(), {
             let mut result = StringStorage::default();
             for (pos, (_, i)) in self.library.iter().enumerate() {
@@ -725,8 +722,10 @@ impl Scene {
             result.add_string(LIBRARY);
             result
         });
+        */
 
-        apply_template(FRAGMENT_SHADER, storages)
+        //apply_template(FRAGMENT_SHADER, storages)
+        Default::default()
     }
 
     pub fn get_new_material(
@@ -759,32 +758,23 @@ impl Scene {
                     Default::default()
                 }
             };
-            let mut errors: BTreeMap<Either<ObjectId, ErrId>, Vec<(usize, String)>> = BTreeMap::new();
+            let mut errors: ShaderErrors = Default::default();
             for x in shader_error_parser(&error_message) {
                 match x {
                     Ok((line_no, message)) => match code.line_numbers.get_identifier(line_no) {
-                        Some((identifier, local_line_no)) => {
-                            errors
-                                .entry(Either::Right(identifier))
-                                .or_insert_with(Default::default)
-                                .push((local_line_no, message.to_owned()));
+                        Some((id, local_line_no)) => {
+                            errors.push(id, (local_line_no, message.to_owned()));
                         }
                         None => {
-                            errors
-                                .entry(Either::Right(ErrId::default()))
-                                .or_insert_with(Default::default)
-                                .push((line_no, message.to_owned()));
+                            errors.push_t((), (line_no, message.to_owned()));
                         }
                     },
                     Err(message) => {
-                        errors
-                            .entry(Either::Right(ErrId::default()))
-                            .or_insert_with(Default::default)
-                            .push((usize::MAX, message.to_owned()));
+                        errors.push_t((), (usize::MAX, message.to_owned()));
                     }
                 }
             }
-            (code.storage, error_message, ShaderErrors(errors))
+            (code.storage, error_message, errors)
         })
     }
 }

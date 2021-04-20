@@ -1,6 +1,6 @@
 use crate::gui::common::*;
-use crate::gui::storage::*;
-use crate::gui::uniform::*;
+use crate::gui::storage2::*;
+use crate::gui::unique_id::UniqueId;
 
 use egui::*;
 
@@ -12,41 +12,60 @@ pub struct MaterialCode(pub GlslCode);
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GlslCode(pub String);
 
-impl StorageElem for LibraryCode {
-    type GetType = LibraryCode;
-    type Input = ShaderErrors;
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct LibraryId(UniqueId);
 
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
-        &self,
-        _: F,
-        _: &StorageWithNames<AnyUniformComboBox>,
-        _: &FormulasCache,
-    ) -> GetEnum<Self::GetType> {
-        GetEnum::Ok(self.clone())
+impl Wrapper for LibraryId {
+    fn wrap(id: UniqueId) -> Self {
+        Self(id)
     }
+    fn un_wrap(self) -> UniqueId {
+        self.0
+    }
+}
+
+impl StorageElem2 for LibraryCode {
+    type IdWrapper = LibraryId;
+    type GetType = LibraryCode;
+
+    const SAFE_TO_RENAME: bool = true;
+
+    type Input = ShaderErrors;
 
     fn egui(
         &mut self,
         ui: &mut Ui,
-        pos: usize,
-        input: &mut Self::Input,
-        _: &[String],
+        errors: &mut Self::Input,
+        _: &mut InlineHelper<Self>,
+        _: egui::Id,
+        self_id: Self::IdWrapper,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        egui_with_red_field(ui, input.get_errors_library(self, pos).is_some(), |ui| {
+        egui_with_red_field(ui, errors.get(self_id).is_some(), |ui| {
             changed = WhatChanged::from_shader(
                 ui.add(TextEdit::multiline(&mut self.0 .0).text_style(TextStyle::Monospace))
                     .changed(),
             );
-            if let Some(local_errors) = input.get_errors_library(self, pos) {
+            if let Some(local_errors) = errors.get(self_id) {
                 egui_errors(ui, local_errors);
             }
         });
         changed
     }
 
-    fn errors_count(&self, pos: usize, input: &Self::Input, _: &[String]) -> usize {
-        if let Some(local_errors) = input.get_errors_library(self, pos) {
+    fn get(&self, _: &GetHelper<Self>, _: &Self::Input) -> Option<Self::GetType> {
+        Some(self.clone())
+    }
+
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, _: F, _: &mut Self::Input) {}
+
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
+        &self,
+        _: F,
+        errors: &Self::Input,
+        self_id: Self::IdWrapper,
+    ) -> usize {
+        if let Some(local_errors) = errors.get(self_id) {
             local_errors.len()
         } else {
             0

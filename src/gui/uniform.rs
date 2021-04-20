@@ -6,14 +6,14 @@ use crate::gui::unique_id::UniqueId;
 use core::cell::RefCell;
 use egui::*;
 use glam::*;
-use std::ops::RangeInclusive;
 use std::fmt::{self, Debug, Formatter};
+use std::ops::RangeInclusive;
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct Formula(pub String); // TODO make not public and make that this formula can be changed only by with_edit function
+pub struct Formula(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AnyUniform {
@@ -80,22 +80,36 @@ impl TVec3 {
         data_id: egui::Id,
     ) -> bool {
         let mut changed = false;
-        changed |= self.x.egui(ui, "X", 0.0, &f, uniforms, formulas_cache, data_id.with(0));
-        changed |= self.y.egui(ui, "Y", 0.0, &f, uniforms, formulas_cache, data_id.with(1));
-        changed |= self.z.egui(ui, "Z", 0.0, &f, uniforms, formulas_cache, data_id.with(2));
+        changed |= self
+            .x
+            .egui(ui, "X", 0.0, &f, uniforms, formulas_cache, data_id.with(0));
+        changed |= self
+            .y
+            .egui(ui, "Y", 0.0, &f, uniforms, formulas_cache, data_id.with(1));
+        changed |= self
+            .z
+            .egui(ui, "Z", 0.0, &f, uniforms, formulas_cache, data_id.with(2));
         changed
     }
 
-    pub fn remove_as_field(&self, uniforms: &mut Storage2<AnyUniform>, formulas_cache: &mut FormulasCache) {
+    pub fn remove_as_field(
+        &self,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+    ) {
         self.x.remove_as_field(uniforms, formulas_cache);
         self.y.remove_as_field(uniforms, formulas_cache);
         self.z.remove_as_field(uniforms, formulas_cache);
     }
 
-    pub fn errors_count(&self, uniforms: &Storage2<AnyUniform>, formulas_cache: &FormulasCache) -> usize {
-        self.x.errors_count(uniforms, formulas_cache) + 
-        self.y.errors_count(uniforms, formulas_cache) + 
-        self.z.errors_count(uniforms, formulas_cache)
+    pub fn errors_count(
+        &self,
+        uniforms: &Storage2<AnyUniform>,
+        formulas_cache: &FormulasCache,
+    ) -> usize {
+        self.x.errors_count(uniforms, formulas_cache)
+            + self.y.errors_count(uniforms, formulas_cache)
+            + self.z.errors_count(uniforms, formulas_cache)
     }
 }
 
@@ -120,7 +134,11 @@ impl ParametrizeOrNot {
                 *self = if current { Yes(None) } else { No(default) };
             }
             changed |= match self {
-                Yes(current) => uniforms.inline("", 0.0, current, ui, formulas_cache, data_id).uniform,
+                Yes(current) => {
+                    uniforms
+                        .inline("", 0.0, current, ui, formulas_cache, data_id)
+                        .uniform
+                }
                 No(float) => f(ui, float),
             };
         });
@@ -147,13 +165,21 @@ impl ParametrizeOrNot {
         }
     }
 
-    pub fn remove_as_field(&self, uniforms: &mut Storage2<AnyUniform>, formulas_cache: &mut FormulasCache) {
+    pub fn remove_as_field(
+        &self,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+    ) {
         if let ParametrizeOrNot::Yes(Some(id)) = self {
             uniforms.remove_as_field(*id, formulas_cache);
         }
     }
 
-    pub fn errors_count(&self, uniforms: &Storage2<AnyUniform>, formulas_cache: &FormulasCache) -> usize {
+    pub fn errors_count(
+        &self,
+        uniforms: &Storage2<AnyUniform>,
+        formulas_cache: &FormulasCache,
+    ) -> usize {
         use ParametrizeOrNot::*;
         match self {
             Yes(Some(id)) => uniforms.errors_inline(*id, formulas_cache),
@@ -183,7 +209,6 @@ impl Formula {
             if has_errors {
                 response.on_hover_text("Error in this formula");
             }
-            
         });
         WhatChanged::from_uniform(edit)
     }
@@ -262,7 +287,6 @@ impl Debug for FormulasCache {
         Ok(())
     }
 }
-
 
 impl FormulasCache {
     pub fn has_errors(&self, text: &str) -> bool {
@@ -512,32 +536,10 @@ impl<T: egui::emath::Numeric> ClampedValue<T> {
     }
 }
 
-impl StorageElem for AnyUniformComboBox {
-    type GetType = AnyUniformResult;
-    type Input = FormulasCache;
-
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
-        &self,
-        _: F,
-        _: &StorageWithNames<AnyUniformComboBox>,
-        _: &FormulasCache,
-    ) -> GetEnum<Self::GetType> {
-        GetEnum::NotFound
-    }
-
-    fn egui(&mut self, _: &mut Ui, _: usize, _: &mut Self::Input, _: &[String]) -> WhatChanged {
-        Default::default()
-    }
-
-    fn errors_count(&self, _: usize, _: &Self::Input, _: &[String]) -> usize {
-        0
-    }
-}
-
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct UniformId(UniqueId);
 
-impl Wrapper<UniqueId> for UniformId {
+impl Wrapper for UniformId {
     fn wrap(id: UniqueId) -> Self {
         Self(id)
     }
@@ -559,18 +561,28 @@ impl StorageElem2 for AnyUniform {
         ui: &mut Ui,
         formulas_cache: &mut Self::Input,
         _: &mut InlineHelper<Self>,
-        _: egui::Id,
+        data_id: egui::Id,
         _: Self::IdWrapper,
     ) -> WhatChanged {
-        let mut result = WhatChanged::from_uniform(egui_combo_box(ui, "Type:", 45., self));
+        let mut result = WhatChanged::from_uniform(egui_combo_box(
+            ui,
+            "Type:",
+            45.,
+            self,
+            data_id.with("combo"),
+        ));
         ui.separator();
         use AnyUniform::*;
         match self {
             Int(value) => result |= value.egui(ui, 1.0, 0..=0, -10..=10),
             Float(value) => result |= value.egui(ui, 0.01, 0..=2, -10.0..=10.0),
             Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
-            Angle(a) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a))),
-            Formula(x) => drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache))),
+            Angle(a) => {
+                drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
+            }
+            Formula(x) => {
+                drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
+            }
         }
         result
     }

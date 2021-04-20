@@ -1,5 +1,4 @@
 use crate::gui::common::*;
-use crate::gui::storage::StorageElem;
 use crate::gui::storage::StorageWithNames;
 use crate::gui::unique_id::*;
 use egui::*;
@@ -11,7 +10,6 @@ use std::collections::BTreeMap;
 enum StorageInner<T> {
     Named(T, String),
     Inline(T),
-    // TODO: store strings here in other way
 }
 
 impl<T: Default> Default for StorageInner<T> {
@@ -69,8 +67,6 @@ impl<T> StorageInner<T> {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Storage2<T> {
     ids: UniqueIds,
-
-    // TODO move this two things in some struct without egui
     storage: BTreeMap<UniqueId, StorageInner<T>>,
     storage_order: Vec<UniqueId>,
 }
@@ -162,16 +158,13 @@ impl<T: StorageElem2> Storage2<T> {
             id,
             match &element {
                 StorageInner::Named(_, name) => StorageInner::Named(t, name.clone()),
-                StorageInner::Inline(_) => StorageInner::Inline(t), // TODO: maybe panic here?
+                StorageInner::Inline(_) => StorageInner::Inline(t), // Q: maybe panic here?
             },
         );
 
-        // TODO придумать как удалять элементы, ибо обычным образом их удалять нельзя, иначе если вдруг мы удаляем тот же элемент, что и вставляем?
-        // А может тут не удалять вообще ничего, потому что будет animation stage dev?
-
         match element {
             StorageInner::Named(t, _) => t,
-            StorageInner::Inline(t) => t, // TODO: maybe panic here?
+            StorageInner::Inline(t) => t, // Q: maybe panic here?
         }
     }
 
@@ -311,7 +304,13 @@ impl<T: StorageElem2> Storage2<T> {
                             });
                         });
 
-                        changed |= elem.egui(ui, input, &mut InlineHelper(self), data_id.with(pos), T::IdWrapper::wrap(*id));
+                        changed |= elem.egui(
+                            ui,
+                            input,
+                            &mut InlineHelper(self),
+                            data_id.with(pos),
+                            T::IdWrapper::wrap(*id),
+                        );
                     });
             } else {
                 ui.label("Internal error, this is inline element, it shouldn't be here.");
@@ -499,7 +498,7 @@ impl<T: StorageElem2> Storage2<T> {
             let result = elem.as_ref().errors_count(
                 |id| self.errors_count_inner(id, visited, input, false),
                 input,
-                id
+                id,
             );
             visited.pop().unwrap();
             result
@@ -513,13 +512,24 @@ impl<T: StorageElem2> Storage2<T> {
     }
 }
 
-pub trait Wrapper<T> {
-    fn wrap(t: T) -> Self;
-    fn un_wrap(self) -> T;
+pub trait Wrapper:
+    Clone
+    + std::fmt::Debug
+    + Copy
+    + Eq
+    + PartialEq
+    + Ord
+    + PartialOrd
+    + std::hash::Hash
+    + serde::Serialize
+    + for<'a> serde::Deserialize<'a>
+{
+    fn wrap(t: UniqueId) -> Self;
+    fn un_wrap(self) -> UniqueId;
 }
 
 pub trait StorageElem2: Sized + Default {
-    type IdWrapper: Wrapper<UniqueId> + Copy;
+    type IdWrapper: Wrapper;
     type GetType;
 
     const SAFE_TO_RENAME: bool;
@@ -539,10 +549,15 @@ pub trait StorageElem2: Sized + Default {
 
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, f: F, input: &mut Self::Input);
 
-    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(&self, f: F, input: &Self::Input, self_id: Self::IdWrapper) -> usize;
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
+        &self,
+        f: F,
+        input: &Self::Input,
+        self_id: Self::IdWrapper,
+    ) -> usize;
 }
 
-impl<T: StorageElem2 + StorageElem> From<StorageWithNames<T>> for Storage2<T> {
+impl<T: StorageElem2> From<StorageWithNames<T>> for Storage2<T> {
     fn from(storage: StorageWithNames<T>) -> Storage2<T> {
         todo!()
     }

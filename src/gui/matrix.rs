@@ -1,6 +1,5 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
-use crate::gui::storage::*;
 use crate::gui::storage2::GetHelper;
 use crate::gui::storage2::InlineHelper;
 use crate::gui::storage2::Storage2;
@@ -221,7 +220,7 @@ impl Matrix {
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct MatrixId(UniqueId);
 
-impl Wrapper<UniqueId> for MatrixId {
+impl Wrapper for MatrixId {
     fn wrap(id: UniqueId) -> Self {
         Self(id)
     }
@@ -246,7 +245,13 @@ impl StorageElem2 for Matrix {
         data_id: egui::Id,
         _: Self::IdWrapper,
     ) -> WhatChanged {
-        let mut changed = WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., self));
+        let mut changed = WhatChanged::from_uniform(egui_combo_box(
+            ui,
+            "Type:",
+            45.,
+            self,
+            data_id.with("combo"),
+        ));
         ui.separator();
 
         use Matrix::*;
@@ -283,15 +288,41 @@ impl StorageElem2 for Matrix {
             } => {
                 let hpat![uniforms, formulas_cache] = input;
                 ui.label("Offset: ");
-                changed.uniform |= offset.egui(ui, |ui, x| egui_f64(ui, x), uniforms, formulas_cache, data_id.with(0));
+                changed.uniform |= offset.egui(
+                    ui,
+                    |ui, x| egui_f64(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(0),
+                );
                 ui.separator();
                 ui.label("Rotate: ");
-                changed.uniform |= rotate.egui(ui, |ui, x| egui_angle(ui, x), uniforms, formulas_cache, data_id.with(1));
+                changed.uniform |= rotate.egui(
+                    ui,
+                    |ui, x| egui_angle(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(1),
+                );
                 ui.separator();
                 ui.label("Mirror: ");
-                changed.uniform |= mirror.egui(ui, |ui, x| egui_0_1(ui, x), uniforms, formulas_cache, data_id.with(2));
+                changed.uniform |= mirror.egui(
+                    ui,
+                    |ui, x| egui_0_1(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(2),
+                );
                 ui.separator();
-                changed.uniform |= scale.egui(ui, "Scale:", 1.0, |ui, x| egui_f64_positive(ui, x), uniforms, formulas_cache, data_id.with(3));
+                changed.uniform |= scale.egui(
+                    ui,
+                    "Scale:",
+                    1.0,
+                    |ui, x| egui_f64_positive(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(3),
+                );
             }
         }
         /*
@@ -407,7 +438,12 @@ impl StorageElem2 for Matrix {
                 }
             }
             Simple { .. } => {}
-            Parametrized { offset, scale, rotate, mirror } => {
+            Parametrized {
+                offset,
+                scale,
+                rotate,
+                mirror,
+            } => {
                 let hpat![uniforms, formulas_cache] = input;
                 offset.remove_as_field(uniforms, formulas_cache);
                 rotate.remove_as_field(uniforms, formulas_cache);
@@ -443,9 +479,9 @@ impl StorageElem2 for Matrix {
                 mirror,
             } => {
                 offset.errors_count(uniforms, formulas_cache)
-                + rotate.errors_count(uniforms, formulas_cache)
-                + mirror.errors_count(uniforms, formulas_cache)
-                + scale.errors_count(uniforms, formulas_cache)
+                    + rotate.errors_count(uniforms, formulas_cache)
+                    + mirror.errors_count(uniforms, formulas_cache)
+                    + scale.errors_count(uniforms, formulas_cache)
             }
         }
         // POSTPONE
@@ -459,28 +495,5 @@ impl StorageElem2 for Matrix {
             errors_count += 1;
         }
         */
-    }
-}
-
-// TODO remove this after refactoring
-impl StorageElem for Matrix {
-    type GetType = ();
-    type Input = ();
-
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
-        &self,
-        _: F,
-        _: &StorageWithNames<AnyUniformComboBox>,
-        _: &FormulasCache,
-    ) -> GetEnum<Self::GetType> {
-        GetEnum::Ok(())
-    }
-
-    fn egui(&mut self, _: &mut Ui, _: usize, _: &mut Self::Input, _: &[String]) -> WhatChanged {
-        Default::default()
-    }
-
-    fn errors_count(&self, _: usize, _: &Self::Input, _: &[String]) -> usize {
-        0
     }
 }

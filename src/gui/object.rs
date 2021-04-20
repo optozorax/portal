@@ -1,12 +1,11 @@
-use crate::gui::unique_id::UniqueId;
-use crate::gui::matrix::Matrix;
-use crate::gui::storage2::*;
-use crate::gui::matrix::MatrixId;
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::glsl::*;
-use crate::gui::storage::*;
+use crate::gui::matrix::Matrix;
+use crate::gui::matrix::MatrixId;
+use crate::gui::storage2::*;
 use crate::gui::uniform::*;
+use crate::gui::unique_id::UniqueId;
 
 use egui::*;
 
@@ -115,54 +114,31 @@ impl ComboBoxChoosable for Object {
 }
 
 impl ObjectType {
-    pub fn egui(&mut self, ui: &mut Ui, (matrices, input): &mut hlist![Storage2<Matrix>, Storage2<AnyUniform>, FormulasCache], data_id: egui::Id) -> WhatChanged {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        (matrices, input): &mut hlist![Storage2<Matrix>, Storage2<AnyUniform>, FormulasCache],
+        data_id: egui::Id,
+    ) -> WhatChanged {
         use ObjectType::*;
         let mut changed = WhatChanged::default();
         match self {
             Simple(a) => {
-                changed |= matrices.inline("Matrix:", 45., a, ui, input, data_id.with(0));
+                changed |= matrices.inline("Matrix:", 45., a, ui, input, data_id.with("first"));
             }
             Portal(a, b) => {
-                changed |= matrices.inline("First:", 45., a, ui, input, data_id.with(0));
-                changed |= matrices.inline("Second:", 45., b, ui, input, data_id.with(1));
+                changed |= matrices.inline("First:", 45., a, ui, input, data_id.with("first"));
+                changed |= matrices.inline("Second:", 45., b, ui, input, data_id.with("second"));
             }
         }
         changed
     }
 }
 
-impl StorageElem for Object {
-    type GetType = Object;
-    type Input = hlist!(Vec<String>, ShaderErrors);
-
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
-        &self,
-        _: F,
-        _: &StorageWithNames<AnyUniformComboBox>,
-        _: &FormulasCache,
-    ) -> GetEnum<Self::GetType> {
-        GetEnum::NotFound
-    }
-
-    fn egui(
-        &mut self,
-        _: &mut Ui,
-        _: usize,
-        _: &mut Self::Input,
-        _: &[String],
-    ) -> WhatChanged {
-        Default::default()
-    }
-
-    fn errors_count(&self, _: usize, _: &Self::Input, _: &[String]) -> usize {
-        0
-    }
-}
-
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct ObjectId(UniqueId);
 
-impl Wrapper<UniqueId> for ObjectId {
+impl Wrapper for ObjectId {
     fn wrap(id: UniqueId) -> Self {
         Self(id)
     }
@@ -177,7 +153,12 @@ impl StorageElem2 for Object {
 
     const SAFE_TO_RENAME: bool = true;
 
-    type Input = hlist![ShaderErrors, Storage2<Matrix>, Storage2<AnyUniform>, FormulasCache];
+    type Input = hlist![
+        ShaderErrors,
+        Storage2<Matrix>,
+        Storage2<AnyUniform>,
+        FormulasCache
+    ];
 
     fn egui(
         &mut self,
@@ -192,7 +173,7 @@ impl StorageElem2 for Object {
 
         use Object::*;
         let (errors, input) = input;
-        let has_errors = errors.get_errors_object(self_id).is_some();
+        let has_errors = errors.get(self_id).is_some();
         match self {
             DebugMatrix(a) => {
                 let (matrices, input) = input;
@@ -203,8 +184,9 @@ impl StorageElem2 for Object {
                 changed |= kind.egui(ui, input, data_id.with(0));
                 ui.separator();
                 if matches!(kind, ObjectType::Portal { .. }) {
-                    ui.horizontal(|ui| {
+                    ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.;
+
                         ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
                         ui.add(
                             Label::new("is_inside")
@@ -245,7 +227,7 @@ impl StorageElem2 for Object {
                     changed |= is_inside.0.egui(ui);
                 });
                 ui.add(Label::new("}").monospace());
-                if let Some(local_errors) = errors.get_errors_object(self_id) {
+                if let Some(local_errors) = errors.get(self_id) {
                     egui_errors(ui, local_errors);
                 }
             }
@@ -293,7 +275,7 @@ impl StorageElem2 for Object {
                     changed |= intersect.0.egui(ui);
                 });
                 ui.add(Label::new("}").monospace());
-                if let Some(local_errors) = errors.get_errors_object(self_id) {
+                if let Some(local_errors) = errors.get(self_id) {
                     egui_errors(ui, local_errors);
                 }
             }
@@ -302,35 +284,43 @@ impl StorageElem2 for Object {
         changed
     }
 
-    fn get(
-        &self,
-        _: &GetHelper<Self>,
-        _: &Self::Input,
-    ) -> Option<Self::GetType> {
+    fn get(&self, _: &GetHelper<Self>, _: &Self::Input) -> Option<Self::GetType> {
         Some(self.clone())
     }
 
-    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, _: F, (_, (matrices, input)): &mut Self::Input) {
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(
+        &self,
+        _: F,
+        (_, (matrices, input)): &mut Self::Input,
+    ) {
         use Object::*;
         use ObjectType::*;
         match self {
-            DebugMatrix(a) |
-            Flat { kind: Simple(a), .. } |
-            Complex { kind: Simple(a), .. } => {
+            DebugMatrix(a)
+            | Flat {
+                kind: Simple(a), ..
+            }
+            | Complex {
+                kind: Simple(a), ..
+            } => {
                 if let Some(id) = a {
                     matrices.remove_as_field(*id, input);
                 }
-            },
-            Flat { kind: Portal(a, b), .. } |
-            Complex { kind: Portal(a, b), .. } => {
+            }
+            Flat {
+                kind: Portal(a, b), ..
+            }
+            | Complex {
+                kind: Portal(a, b), ..
+            } => {
                 if let Some(id) = a {
                     matrices.remove_as_field(*id, input);
                 }
                 if let Some(id) = b {
                     matrices.remove_as_field(*id, input);
                 }
-            },
-        }   
+            }
+        }
     }
 
     fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
@@ -339,7 +329,7 @@ impl StorageElem2 for Object {
         (errors, (matrices, input)): &Self::Input,
         self_id: Self::IdWrapper,
     ) -> usize {
-        let mut result = if let Some(local_errors) = errors.get_errors_object(self_id) {
+        let mut result = if let Some(local_errors) = errors.get(self_id) {
             local_errors.len()
         } else {
             0
@@ -348,14 +338,12 @@ impl StorageElem2 for Object {
         use Object::*;
         use ObjectType::*;
         result += match self {
-            DebugMatrix(a) => {
-                a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1)
-            },
-            Flat { kind, .. } |
-            Complex { kind, .. } => {
-                match kind {
-                    Simple(a) => a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1),
-                    Portal(a, b) => a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1) + b.map(|id| matrices.errors_inline(id, input)).unwrap_or(1)
+            DebugMatrix(a) => a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1),
+            Flat { kind, .. } | Complex { kind, .. } => match kind {
+                Simple(a) => a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1),
+                Portal(a, b) => {
+                    a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1)
+                        + b.map(|id| matrices.errors_inline(id, input)).unwrap_or(1)
                 }
             },
         };

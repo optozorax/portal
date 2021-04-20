@@ -1,3 +1,5 @@
+//! While we have no GAT's, there is no way to send links to trait object through associated trait type. I found a solution: move needed objects and receive them by value. So, for this there is `with_swapped` macro, which moves values into variables and returns them back when trait method is done. This shit hack can be removed at all when GAT's is finally here.
+
 #[macro_export]
 macro_rules! hlist {
     ($x:ty, $($tail:tt)+) => { ($x, hlist!($($tail)+)) };
