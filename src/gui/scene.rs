@@ -75,38 +75,6 @@ impl Drop for Scene {
 }
 
 /*
-impl Default for Scene {
-    fn default() -> Self {
-        let mut animation_stages = Storage2::<AnimationStage>::default();
-        let id = animation_stages.push("dev", Default::default());
-        Scene {
-            description_en: Default::default(),
-            description_ru: Default::default(),
-
-            cam: Default::default(),
-
-            uniforms: Default::default(),
-
-            matrices: Default::default(),
-            objects: Default::default(),
-
-            textures: Default::default(),
-
-            materials: Default::default(),
-            library: Default::default(),
-
-            user_uniforms: Default::default(),
-            animation_stages,
-
-            current_stage: id,
-
-            dev_stage: id,
-        }
-    }
-}
-*/
-
-/*
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OldScene {
     pub description_en: String,
@@ -138,7 +106,7 @@ impl From<OldScene> for Scene {
 
             cam: old.cam,
 
-            uniforms: todo!(),
+            uniforms: ,
 
             matrices: old.matrices.into(),
             objects: old.objects,
@@ -243,11 +211,7 @@ impl Scene {
         if self.current_stage.is_none() {
             let changed_uniforms = self.uniforms.egui(ui, &mut data.formulas_cache, "Uniforms");
             if changed_uniforms.uniform {
-                self.dev_stage.uniforms.0.clear();
-                for (id, _) in self.uniforms.visible_elements() {
-                    let value = self.uniforms.get_original(id).unwrap().clone();
-                    self.dev_stage.uniforms.0.insert(id, value);
-                }
+                self.dev_stage.uniforms.copy(&self.uniforms);
             }
             changed |= changed_uniforms;
 
@@ -272,11 +236,7 @@ impl Scene {
             let changed_matrices = with_swapped!(x => (self.uniforms, data.formulas_cache);
                 self.matrices.egui(ui, &mut x, "Matrices"));
             if changed_matrices.uniform {
-                self.dev_stage.matrices.0.clear();
-                for (id, _) in self.matrices.visible_elements() {
-                    let value = self.matrices.get_original(id).unwrap().clone();
-                    self.dev_stage.matrices.0.insert(id, value);
-                }
+                self.dev_stage.matrices.copy(&self.matrices);
             }
             changed |= changed_matrices;
         } else {

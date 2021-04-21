@@ -46,9 +46,8 @@ impl<T: StorageElem2> Default for StageChanging<T> {
     }
 }
 
-// TODO: remove pub
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DevStageChanging<T: StorageElem2>(pub HashMap<T::IdWrapper, T>);
+pub struct DevStageChanging<T: StorageElem2>(HashMap<T::IdWrapper, T>);
 
 impl<T: StorageElem2> Default for DevStageChanging<T> {
     fn default() -> Self {
@@ -102,10 +101,6 @@ impl<T: StorageElem2> StageChanging<T> {
             .sum::<usize>()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&T::IdWrapper, &Animation<T>)> + '_ {
-        self.0.iter()
-    }
-
     pub fn init_stage(&self, storage: &mut Storage2<T>, dev_stage: &DevStageChanging<T>) {
         for (id, uniform) in self.0.iter() {
             if let Some(new_id) = uniform.get_t() {
@@ -150,6 +145,14 @@ impl<T: StorageElem2> DevStageChanging<T> {
     pub fn init_stage(&self, storage: &mut Storage2<T>) {
         for (id, value) in self.0.iter() {
             storage.set(*id, value.clone());
+        }
+    }
+
+    pub fn copy(&mut self, storage: &Storage2<T>) {
+        self.0.clear();
+        for (id, _) in storage.visible_elements() {
+            let value = storage.get_original(id).unwrap().clone();
+            self.0.insert(id, value);
         }
     }
 }
