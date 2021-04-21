@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::glsl::*;
@@ -7,6 +6,7 @@ use crate::gui::matrix::MatrixId;
 use crate::gui::storage2::*;
 use crate::gui::uniform::*;
 use crate::gui::unique_id::UniqueId;
+use std::borrow::Cow;
 
 use egui::*;
 
@@ -149,7 +149,10 @@ impl Wrapper for ObjectId {
 impl Object {
     pub fn get_name<'a>(id: MatrixId, storage: &'a Storage2<Matrix>) -> Option<MatrixName<'a>> {
         if let Some(name) = storage.get_name(id) {
-            Some(name.map(|name| MatrixName(Cow::Borrowed(name))).unwrap_or_else(|| MatrixName(Cow::Owned(format!("id{}", id.un_wrap())))))
+            Some(
+                name.map(|name| MatrixName(Cow::Borrowed(name)))
+                    .unwrap_or_else(|| MatrixName(Cow::Owned(format!("id{}", id.un_wrap())))),
+            )
         } else {
             None
         }

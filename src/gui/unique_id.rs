@@ -19,7 +19,7 @@ pub struct UniqueIds {
 }
 
 impl Wrapper for () {
-    fn wrap(t: UniqueId) -> Self {
+    fn wrap(_: UniqueId) -> Self {
         ()
     }
     fn un_wrap(self) -> UniqueId {

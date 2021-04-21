@@ -105,6 +105,14 @@ impl<T: StorageElem2> Storage2<T> {
         self.get_inner(id, &mut visited, input)
     }
 
+    pub fn get_original(&self, id: T::IdWrapper) -> Option<&T> {
+        self.storage.get(&id.un_wrap()).map(|x| x.as_ref())
+    }
+
+    pub fn get_original_mut(&mut self, id: T::IdWrapper) -> Option<&mut T> {
+        self.storage.get_mut(&id.un_wrap()).map(|x| x.as_mut())
+    }
+
     /// First Option shows is element presented or not. Second Option is represente is element has a name
     pub fn get_name(&self, id: T::IdWrapper) -> Option<Option<&str>> {
         self.storage.get(&id.un_wrap()).map(|x| x.name())
@@ -142,7 +150,7 @@ impl<T: StorageElem2> Storage2<T> {
         result
     }
 
-    pub fn remove(&mut self, id: T::IdWrapper, input: &mut T::Input) {
+    fn remove(&mut self, id: T::IdWrapper, input: &mut T::Input) {
         let id = id.un_wrap();
         let element = self.storage.remove(&id).unwrap();
         self.ids.remove_existing(id);
@@ -156,24 +164,19 @@ impl<T: StorageElem2> Storage2<T> {
             .remove(|id, input| self.remove_as_field(id, input), input);
     }
 
-    pub fn set(&mut self, id: T::IdWrapper, t: T) -> T {
-        let id = id.un_wrap();
-        let element = self.storage.remove(&id).unwrap();
-        self.storage.insert(
-            id,
-            match &element {
-                StorageInner::Named(_, name) => StorageInner::Named(t, name.clone()),
-                StorageInner::Inline(_) => StorageInner::Inline(t), // Q: maybe panic here?
-            },
-        );
-
-        match element {
-            StorageInner::Named(t, _) => t,
-            StorageInner::Inline(t) => t, // Q: maybe panic here?
-        }
+    pub fn set(&mut self, id: T::IdWrapper, value: T) {
+        *self.storage.get_mut(&id.un_wrap()).unwrap().as_mut() = value;
     }
 
-    pub fn push_default(&mut self) {
+    pub fn set_id(&mut self, id: T::IdWrapper, from: T::IdWrapper) {
+        let id = id.un_wrap();
+        let from = from.un_wrap();
+
+        let t: T = (*self.storage.get(&from).unwrap().as_ref()).clone();
+        *self.storage.get_mut(&id).unwrap().as_mut() = t;
+    }
+
+    fn push_default(&mut self) {
         let id = self.ids.get_unique();
         self.storage_order.push(id);
         self.storage.insert(
@@ -195,7 +198,7 @@ impl<T: StorageElem2> Storage2<T> {
         }
     }
 
-    pub fn remove_by_pos(&mut self, pos: usize, input: &mut T::Input) {
+    fn remove_by_pos(&mut self, pos: usize, input: &mut T::Input) {
         let id = self.storage_order.remove(pos);
         self.remove(T::IdWrapper::wrap(id), input);
     }
@@ -533,7 +536,7 @@ pub trait Wrapper:
     fn un_wrap(self) -> UniqueId;
 }
 
-pub trait StorageElem2: Sized + Default {
+pub trait StorageElem2: Sized + Default + Clone {
     type IdWrapper: Wrapper;
     type GetType;
 
@@ -564,7 +567,7 @@ pub trait StorageElem2: Sized + Default {
 }
 
 impl<T: StorageElem2> From<StorageWithNames<T>> for Storage2<T> {
-    fn from(storage: StorageWithNames<T>) -> Storage2<T> {
+    fn from(_: StorageWithNames<T>) -> Storage2<T> {
         todo!()
     }
 }

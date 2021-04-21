@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::gui::glsl::*;
 use crate::gui::storage2::Storage2;
 
@@ -40,6 +41,12 @@ impl Default for CamSettings {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct DevStage {
+    uniforms: HashMap<UniformId, AnyUniform>,
+    matrices: HashMap<MatrixId, Matrix>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Scene {
     pub description_en: String,
     pub description_ru: String,
@@ -59,8 +66,42 @@ pub struct Scene {
     user_uniforms: GlobalUserUniforms,
     animation_stages: Storage2<AnimationStage>,
 
-    current_stage: usize,
+    current_stage: Option<AnimationId>,
+
+    dev_stage: DevStage,
 }
+
+/*
+impl Default for Scene {
+    fn default() -> Self {
+        let mut animation_stages = Storage2::<AnimationStage>::default();
+        let id = animation_stages.push("dev", Default::default());
+        Scene {
+            description_en: Default::default(),
+            description_ru: Default::default(),
+
+            cam: Default::default(),
+
+            uniforms: Default::default(),
+
+            matrices: Default::default(),
+            objects: Default::default(),
+
+            textures: Default::default(),
+
+            materials: Default::default(),
+            library: Default::default(),
+
+            user_uniforms: Default::default(),
+            animation_stages,
+
+            current_stage: id,
+
+            dev_stage: id,
+        }
+    }
+}
+*/
 
 /*
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,7 +158,7 @@ impl Scene {
     pub fn init(&mut self, data: &mut Data) {
         data.errors = Default::default();
         data.show_error_window = false;
-        drop(self.init_stage(self.current_stage, data));
+        drop(self.init_stage(self.current_stage));
     }
 
     #[allow(clippy::type_complexity)] // TODO: reduce type complexity
@@ -159,6 +200,11 @@ impl Scene {
                     }
                 }
             }
+            let response = ui.radio(self.current_stage.is_none(), "dev");
+            if response.clicked() && self.current_stage.is_some() {
+                self.current_stage = None;
+                changed |= self.init_stage(self.current_stage);
+            }
         });
 
         ui.separator();
@@ -180,28 +226,48 @@ impl Scene {
                     });
             });
 
-        changed |= self.uniforms.egui(ui, &mut data.formulas_cache, "Uniforms");
-
-        ui.collapsing("Calculated uniforms", |ui| {
-            for (id, name) in self.uniforms.visible_elements() {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 0.;
-                    ui.label(format!("{} = ", name));
-                    use AnyUniformResult::*;
-                    match self.uniforms.get(id, &data.formulas_cache) {
-                        Some(x) => match x {
-                            Bool(b) => ui.label(b.to_string()),
-                            Int(b) => ui.label(b.to_string()),
-                            Float(b) => ui.label(b.to_string()),
-                        },
-                        None => ui.label("NotFound"),
-                    }
-                });
+        if self.current_stage.is_none() {
+            let changed_uniforms = self.uniforms.egui(ui, &mut data.formulas_cache, "Uniforms");
+            if changed_uniforms.uniform {
+                self.dev_stage.uniforms.clear();
+                for (id, _) in self.uniforms.visible_elements() {
+                    let value = self.uniforms.get_original(id).unwrap().clone();
+                    self.dev_stage.uniforms.insert(id, value);
+                }
             }
-        });
+            changed |= changed_uniforms;
 
-        with_swapped!(x => (self.uniforms, data.formulas_cache);
-            changed |= self.matrices.egui(ui, &mut x, "Matrices"));
+            ui.collapsing("Calculated uniforms", |ui| {
+                for (id, name) in self.uniforms.visible_elements() {
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().item_spacing.x = 0.;
+                        ui.label(format!("{} = ", name));
+                        use AnyUniformResult::*;
+                        match self.uniforms.get(id, &data.formulas_cache) {
+                            Some(x) => match x {
+                                Bool(b) => ui.label(b.to_string()),
+                                Int(b) => ui.label(b.to_string()),
+                                Float(b) => ui.label(b.to_string()),
+                            },
+                            None => ui.label("NotFound"),
+                        }
+                    });
+                }
+            });
+
+            let changed_matrices = with_swapped!(x => (self.uniforms, data.formulas_cache);
+                self.matrices.egui(ui, &mut x, "Matrices"));
+            if changed_matrices.uniform {
+                self.dev_stage.matrices.clear();
+                for (id, _) in self.matrices.visible_elements() {
+                    let value = self.matrices.get_original(id).unwrap().clone();
+                    self.dev_stage.matrices.insert(id, value);
+                }
+            }
+            changed |= changed_matrices;
+        } else {
+            ui.label("You can edit uniforms and matrices only when `dev` stage is enabled");
+        }
 
         with_swapped!(x => (data.errors, self.matrices, self.uniforms, data.formulas_cache);
             changed |= self.objects.egui(ui, &mut x, "Objects"));
@@ -223,6 +289,29 @@ impl Scene {
                 .animation_stages
                 .egui(ui, &mut x, "Animation stages"));
 
+        ui.collapsing("Select stage", |ui| {
+            let current_selected = self.current_stage.is_none();
+            let response = ui.radio(current_selected, "dev");
+            if response.clicked() && !current_selected {
+                self.current_stage = None;
+                changed |= self.init_stage(self.current_stage);
+            }
+            ui.separator();
+            let elements = self
+                .animation_stages
+                .visible_elements()
+                .map(|(id, name)| (id, name.to_owned()))
+                .collect::<Vec<_>>();
+            for (id, name) in elements {
+                let current_selected = self.current_stage == Some(id);
+                let response = ui.radio(current_selected, name);
+                if response.clicked() && !current_selected {
+                    self.current_stage = Some(id);
+                    changed |= self.init_stage(self.current_stage);
+                }
+            }
+        });
+
         ui.separator();
 
         ui.horizontal(|ui| {
@@ -230,8 +319,7 @@ impl Scene {
                 data.show_glsl_library = true;
             }
             if ui.button("View generated GLSL code").clicked() {
-                data.show_compiled_code =
-                    self.generate_shader_code(&data).map(|x| x.storage);
+                data.show_compiled_code = self.generate_shader_code(&data).map(|x| x.storage);
             }
         });
 
@@ -355,60 +443,66 @@ impl Scene {
             .filter_map(|(id, _)| {
                 use Object::*;
                 use ObjectType::*;
-                Some(match &objects.get(id, &())? {
-                    DebugMatrix(matrix) => vec![(*matrix)?],
-                    Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
-                        Simple(matrix) => vec![(*matrix)?],
-                        Portal(a, b) => vec![(*a)?, (*b)?],
-                    },
-                }
-                .into_iter()
-                .filter_map(|id| Some((id, Object::get_name(id, &matrices)?))))
+                Some(
+                    match &objects.get(id, &())? {
+                        DebugMatrix(matrix) => vec![(*matrix)?],
+                        Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => {
+                            match kind {
+                                Simple(matrix) => vec![(*matrix)?],
+                                Portal(a, b) => vec![(*a)?, (*b)?],
+                            }
+                        }
+                    }
+                    .into_iter()
+                    .filter_map(|id| Some((id, Object::get_name(id, &matrices)?))),
+                )
             })
             .flatten()
             .chain(
-                self
-                    .matrices
+                self.matrices
                     .visible_elements()
-                    .map(|(id, name)| (id, MatrixName(std::borrow::Cow::Borrowed(name))))
+                    .map(|(id, name)| (id, MatrixName(std::borrow::Cow::Borrowed(name)))),
             );
         for (id, name) in passed_matrices {
             let matrix = with_swapped!(x => (*uniforms, data.formulas_cache); matrices.get(id, &x));
             if let Some(matrix) = matrix {
                 material.set_uniform(&name.normal_name(), matrix.as_f32());
-                material.set_uniform(&name.inverse_name(), matrix.inverse().as_f32());    
+                material.set_uniform(&name.inverse_name(), matrix.inverse().as_f32());
             } else {
                 eprintln!("matrix `{}` can't be getted", name.0);
             }
         }
 
-        let teleport_matrices = self
-            .objects
-            .visible_elements()
-            .filter_map(|(id, _)| {
-                use Object::*;
-                use ObjectType::*;
-                match &objects.get(id, &())? {
-                    DebugMatrix(_) => None,
-                    Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
-                        Simple(_) => None,
-                        Portal(a, b) => {
-                            let a = (*a)?;
-                            let b = (*b)?;
-                            let a = (a, Object::get_name(a, &matrices)?);
-                            let b = (b, Object::get_name(b, &matrices)?);
-                            Some((a, b))
-                        },
-                    },
-                }
-            });
+        let teleport_matrices = self.objects.visible_elements().filter_map(|(id, _)| {
+            use Object::*;
+            use ObjectType::*;
+            match &objects.get(id, &())? {
+                DebugMatrix(_) => None,
+                Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
+                    Simple(_) => None,
+                    Portal(a, b) => {
+                        let a = (*a)?;
+                        let b = (*b)?;
+                        let a = (a, Object::get_name(a, &matrices)?);
+                        let b = (b, Object::get_name(b, &matrices)?);
+                        Some((a, b))
+                    }
+                },
+            }
+        });
         for ((ida, namea), (idb, nameb)) in teleport_matrices {
             let a = with_swapped!(x => (*uniforms, data.formulas_cache); matrices.get(ida, &x));
             let b = with_swapped!(x => (*uniforms, data.formulas_cache); matrices.get(idb, &x));
             if let Some((ma, mb)) = a.zip(b) {
-                material.set_uniform(&namea.teleport_to_name(&nameb), (mb * ma.inverse()).as_f32());
+                material.set_uniform(
+                    &namea.teleport_to_name(&nameb),
+                    (mb * ma.inverse()).as_f32(),
+                );
                 if namea.0 != nameb.0 {
-                    material.set_uniform(&nameb.teleport_to_name(&namea), (ma * mb.inverse()).as_f32());
+                    material.set_uniform(
+                        &nameb.teleport_to_name(&namea),
+                        (ma * mb.inverse()).as_f32(),
+                    );
                 }
             }
         }
@@ -460,7 +554,10 @@ impl Scene {
     pub fn generate_shader_code(&self, data: &Data) -> Option<StringStorage> {
         let mut storages: BTreeMap<String, StringStorage> = BTreeMap::new();
 
-        storages.insert("uniforms".to_owned(), self.generate_uniforms_declarations(data)?);
+        storages.insert(
+            "uniforms".to_owned(),
+            self.generate_uniforms_declarations(data)?,
+        );
 
         storages.insert("textures".to_owned(), {
             let mut result = StringStorage::default();
@@ -529,37 +626,37 @@ impl Scene {
                     }
                 };
             }
-            for (pos, first, second) in
-                self.objects
-                    .visible_elements()
-                    .map(|(id, _)| self.objects.get(id, &()).unwrap())
-                    .enumerate()
-                    .filter_map(|(pos, x)| match x {
-                        Object::DebugMatrix { .. }
-                        | Object::Flat {
-                            kind: ObjectType::Simple { .. },
-                            ..
-                        }
-                        | Object::Complex {
-                            kind: ObjectType::Simple { .. },
-                            ..
-                        } => None,
-                        Object::Flat {
-                            kind: ObjectType::Portal(first, second),
-                            ..
-                        }
-                        | Object::Complex {
-                            kind: ObjectType::Portal(first, second),
-                            ..
-                        } => Some((pos, first, second)),
-                    })
-                    .filter_map(|(pos, first, second)| {
-                        Some((
-                            pos,
-                            Object::get_name(first?, &self.matrices)?,
-                            Object::get_name(second?, &self.matrices)?,
-                        ))
-                    })
+            for (pos, first, second) in self
+                .objects
+                .visible_elements()
+                .map(|(id, _)| self.objects.get(id, &()).unwrap())
+                .enumerate()
+                .filter_map(|(pos, x)| match x {
+                    Object::DebugMatrix { .. }
+                    | Object::Flat {
+                        kind: ObjectType::Simple { .. },
+                        ..
+                    }
+                    | Object::Complex {
+                        kind: ObjectType::Simple { .. },
+                        ..
+                    } => None,
+                    Object::Flat {
+                        kind: ObjectType::Portal(first, second),
+                        ..
+                    }
+                    | Object::Complex {
+                        kind: ObjectType::Portal(first, second),
+                        ..
+                    } => Some((pos, first, second)),
+                })
+                .filter_map(|(pos, first, second)| {
+                    Some((
+                        pos,
+                        Object::get_name(first?, &self.matrices)?,
+                        Object::get_name(second?, &self.matrices)?,
+                    ))
+                })
             {
                 let name_m_1 = format!("teleport_{}_1_M", pos);
                 let name_m_2 = format!("teleport_{}_2_M", pos);
@@ -736,7 +833,7 @@ impl Scene {
             let mut result = StringStorage::default();
             for (id, _) in self.library.visible_elements() {
                 let code = self.library.get(id, &()).unwrap();
-                result.add_identifier_string(id, code.0.0);
+                result.add_identifier_string(id, code.0 .0);
             }
             result
         });
@@ -759,189 +856,173 @@ impl Scene {
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
 
-        Some(load_material(
-            VERTEX_SHADER,
-            &code.storage,
-            MaterialParams {
-                uniforms: self.uniforms(data)?,
-                textures: self.textures(),
-                ..Default::default()
-            },
-        )
-        .map_err(|err| {
-            let error_message = match err {
-                macroquad::prelude::miniquad::graphics::ShaderError::CompilationError {
-                    error_message,
-                    ..
-                } => error_message,
-                macroquad::prelude::miniquad::graphics::ShaderError::LinkError(msg) => msg,
-                other => {
-                    println!("unknown material compilation error: {:?}", other);
-                    Default::default()
-                }
-            };
-            let mut errors: ShaderErrors = Default::default();
-            for x in shader_error_parser(&error_message) {
-                match x {
-                    Ok((line_no, message)) => match code.line_numbers.get_identifier(line_no) {
-                        Some((id, local_line_no)) => {
-                            errors.push(id, (local_line_no, message.to_owned()));
+        Some(
+            load_material(
+                VERTEX_SHADER,
+                &code.storage,
+                MaterialParams {
+                    uniforms: self.uniforms(data)?,
+                    textures: self.textures(),
+                    ..Default::default()
+                },
+            )
+            .map_err(|err| {
+                let error_message = match err {
+                    macroquad::prelude::miniquad::graphics::ShaderError::CompilationError {
+                        error_message,
+                        ..
+                    } => error_message,
+                    macroquad::prelude::miniquad::graphics::ShaderError::LinkError(msg) => msg,
+                    other => {
+                        println!("unknown material compilation error: {:?}", other);
+                        Default::default()
+                    }
+                };
+                let mut errors: ShaderErrors = Default::default();
+                for x in shader_error_parser(&error_message) {
+                    match x {
+                        Ok((line_no, message)) => match code.line_numbers.get_identifier(line_no) {
+                            Some((id, local_line_no)) => {
+                                errors.push(id, (local_line_no, message.to_owned()));
+                            }
+                            None => {
+                                errors.push_t((), (line_no, message.to_owned()));
+                            }
+                        },
+                        Err(message) => {
+                            errors.push_t((), (usize::MAX, message.to_owned()));
                         }
-                        None => {
-                            errors.push_t((), (line_no, message.to_owned()));
-                        }
-                    },
-                    Err(message) => {
-                        errors.push_t((), (usize::MAX, message.to_owned()));
                     }
                 }
-            }
-            (code.storage, error_message, errors)
-        }))
+                (code.storage, error_message, errors)
+            }),
+        )
     }
 }
 
 impl Scene {
-    fn init_stage(&mut self, stage: usize, data: &mut Data) -> WhatChanged {
-        /*
-        let mut result = WhatChanged::default();
-        if !self.animation_stages.storage.is_empty() {
-            for (id, uniform) in self.animation_stages.storage[stage]
-                .uniforms
-                .iter()
-                .enumerate()
-            {
-                use Animation::*;
-                match uniform {
-                    Changed(x) | ChangedAndToUser(x) => {
-                        let previous = self.uniforms.set(id, x.clone(), &mut data.formulas_cache);
-                        result.uniform |= previous != *x;
+    fn init_stage(&mut self, stage: Option<AnimationId>) -> WhatChanged {
+        if let Some(id) = stage {
+            let stage = self.animation_stages.get_original(id).unwrap();
+            if self.animation_stages.len() != 0 {
+                for (id, uniform) in stage.uniforms.iter() {
+                    if let Some(new_id) = uniform.get_t() {
+                        self.uniforms.set_id(*id, *new_id);
                     }
-                    ProvidedToUser | Remains => {}
+                }
+
+                // TODO избавиться от копипасты
+                for (id, matrix) in stage.matrices.iter() {
+                    if let Some(new_id) = matrix.get_t() {
+                        self.matrices.set_id(*id, *new_id);
+                    }
                 }
             }
-        }
-        if !self.animation_stages.storage.is_empty() {
-            for (pos, matrix) in self.animation_stages.storage[stage]
-                .matrices
-                .iter()
-                .enumerate()
-            {
-                use Animation::*;
-                match matrix {
-                    Changed(x) | ChangedAndToUser(x) => {
-                        /*
-                        // TODO
-                        result.uniform |= check_changed(&mut self.matrices.storage[pos], |u| {
-                            *u = x.clone();
-                        });
-                        */
-                    }
-                    ProvidedToUser | Remains => {}
-                }
+        } else {
+            for (id, value) in self.dev_stage.uniforms.iter() {
+                self.uniforms.set(*id, value.clone());
+            }
+
+            // TODO избавиться от копипасты
+            // TODO вынести это в отдельную структуру
+            for (id, value) in self.dev_stage.matrices.iter() {
+                self.matrices.set(*id, value.clone());
             }
         }
-        result
-        */
-        Default::default()
+        WhatChanged::from_uniform(true)
     }
 
     pub fn control_egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
-        // TODO
-        /*
         let mut result = WhatChanged::default();
-        if self.user_uniforms.uniforms.iter().any(|x| *x) {
-            for ((uniform, name), _) in self
-                .uniforms
-                .storage
-                .iter_mut()
-                .zip(self.uniforms.visible_elements())
-                .zip(self.user_uniforms.uniforms.iter())
-                .filter(|(_, x)| **x)
-            {
+        if self.user_uniforms.uniforms.iter().any(|x| *x.1) {
+            let user_uniforms = &self.user_uniforms;
+            let uniforms = &mut self.uniforms;
+            for id in user_uniforms.uniforms.iter().filter(|(_, has)| **has).map(|(id, _)| id) {
+                let name = uniforms.get_name(*id).unwrap().unwrap().to_owned();
+                let uniform = uniforms.get_original_mut(*id).unwrap();
                 ui.horizontal(|ui| {
                     ui.label(name);
-                    result |= uniform.0.user_egui(ui);
+                    result |= uniform.user_egui(ui);
                 });
             }
             ui.separator();
         }
-        */
 
-        /*
-        // TODO
-        if self.user_uniforms.matrices.iter().any(|x| *x) {
-            for ((matrix, name), _) in self
-                .matrices
-                .storage
-                .iter_mut()
-                .zip(self.matrices.names.iter())
-                .zip(self.user_uniforms.matrices.iter())
-                .filter(|(_, x)| **x)
-            {
-                ui.separator();
-                ui.label(name);
-                result |= matrix.user_egui(ui);
+        // TODO избавиться от копипасты
+        if self.user_uniforms.matrices.iter().any(|x| *x.1) {
+            let user_uniforms = &self.user_uniforms;
+            let matrices = &mut self.matrices;
+            for id in user_uniforms.matrices.iter().filter(|(_, has)| **has).map(|(id, _)| id) {
+                let name = matrices.get_name(*id).unwrap().unwrap().to_owned();
+                let matrix = matrices.get_original_mut(*id).unwrap();
+                ui.horizontal(|ui| {
+                    ui.label(name);
+                    result |= matrix.user_egui(ui);
+                });
             }
             ui.separator();
         }
 
-        if !self.animation_stages.storage.is_empty() {
+        if self.animation_stages.len() != 0 {
             let mut current_stage = self.current_stage;
             result.uniform |= check_changed(&mut current_stage, |stage| {
                 let previous = *stage;
-                for (pos, name) in self.animation_stages.names.clone().iter().enumerate() {
-                    ui.radio_value(stage, pos, name);
-                    if *stage != previous && *stage == pos {
+                let elements = self.animation_stages.visible_elements().map(|(id, name)| (id, name.to_owned())).collect::<Vec<_>>();
+                for (id, name) in elements {
+                    ui.radio_value(stage, Some(id), name);
+                    if *stage != previous && *stage == Some(id) {
                         result |= self.init_stage(*stage);
                     }
                 }
             });
             self.current_stage = current_stage;
-            if self.current_stage >= self.animation_stages.storage.len() {
-                self.current_stage = self.animation_stages.storage.len() - 1;
-            }
+
             ui.separator();
-            let uniforms = &mut self.uniforms;
-            for (pos, uniform) in self.animation_stages.storage[self.current_stage]
-                .uniforms
-                .iter()
-                .enumerate()
-            {
-                use Animation::*;
-                match uniform {
-                    ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
-                        ui.label(&uniforms.names[pos]);
-                        result |= uniforms.storage[pos].0.user_egui(ui)
-                    })),
-                    Remains => {}
-                    Changed(_) => {}
-                }
-            }
-            ui.separator();
-            let matrices = &mut self.matrices;
-            for (pos, matrix) in self.animation_stages.storage[self.current_stage]
-                .matrices
-                .iter()
-                .enumerate()
-            {
-                use Animation::*;
-                match matrix {
-                    ProvidedToUser | ChangedAndToUser(_) => {
-                        ui.separator();
-                        ui.label(&matrices.names[pos]);
-                        result |= matrices.storage[pos].user_egui(ui)
+
+            if let Some(stage) = self.current_stage.clone() {
+                let uniforms = &mut self.uniforms;
+                for (id, uniform) in self.animation_stages.get_original(stage).unwrap()
+                    .uniforms
+                    .iter()
+                {
+                    use Animation::*;
+                    match uniform {
+                        ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
+                            let name = uniforms.get_name(*id).unwrap().unwrap().to_owned();
+                            let uniform = uniforms.get_original_mut(*id).unwrap();
+                            ui.label(name);
+                            result |= uniform.user_egui(ui)
+                        })),
+                        Remains => {}
+                        Changed(_) => {}
                     }
-                    Remains => {}
-                    Changed(_) => {}
                 }
+                ui.separator();
+
+                // TODO избавиться от копипасты
+                let matrices = &mut self.matrices;
+                for (id, matrix) in self.animation_stages.get_original(stage).unwrap()
+                    .matrices
+                    .iter()
+                {
+                    use Animation::*;
+                    match matrix {
+                        ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
+                            let name = matrices.get_name(*id).unwrap().unwrap().to_owned();
+                            let matrix = matrices.get_original_mut(*id).unwrap();
+                            ui.label(name);
+                            result |= matrix.user_egui(ui)
+                        })),
+                        Remains => {}
+                        Changed(_) => {}
+                    }
+                }
+            } else {
+                ui.label("Select any stage");
             }
         }
 
         result
-        */
-
-        Default::default()
     }
 }
 

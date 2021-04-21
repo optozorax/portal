@@ -408,11 +408,7 @@ impl Window {
             self.data.reload_textures = false;
             self.data.texture_errors.0.clear();
             for (id, name) in self.scene.textures.visible_elements() {
-                let path = self
-                    .scene
-                    .textures
-                    .get(id, &())
-                    .unwrap();
+                let path = self.scene.textures.get(id, &()).unwrap();
                 match macroquad::file::load_file(&path.0).await {
                     Ok(bytes) => {
                         let context = unsafe { get_internal_gl().quad_context };
@@ -446,11 +442,8 @@ impl Window {
                             self.scene = serde_json::from_str(&s).unwrap();
                             self.scene.init(&mut self.data);
                             self.material.delete();
-                            self.material = self
-                                .scene
-                                .get_new_material(&self.data)
-                                .unwrap()
-                                .unwrap();
+                            self.material =
+                                self.scene.get_new_material(&self.data).unwrap().unwrap();
                             changed.uniform = true;
                             self.data.reload_textures = true;
                             self.cam.set_cam(&self.scene.cam);
@@ -637,13 +630,10 @@ First, predefined library is included, then uniforms, then user library, then in
                                             self.material.delete();
                                             self.material = material;
                                         },
-                                        Some(Err(_)) => {
+                                        Some(Err(_)) | None => {
                                             self.should_recompile = true;
                                             self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
                                         },
-                                        None => {
-                                            // TODO
-                                        }
                                     }
                                 },
                                 Err(err) => {

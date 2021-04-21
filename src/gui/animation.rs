@@ -92,6 +92,10 @@ impl<T: StorageElem2> StageChanging<T> {
             })
             .sum::<usize>()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&T::IdWrapper, &Animation<T>)> + '_ {
+        self.0.iter()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
