@@ -908,6 +908,8 @@ impl Scene {
                 for (id, uniform) in stage.uniforms.iter() {
                     if let Some(new_id) = uniform.get_t() {
                         self.uniforms.set_id(*id, *new_id);
+                    } else if let Animation::FromDev = uniform {
+                        self.uniforms.set(*id, self.dev_stage.uniforms.get(id).unwrap().clone());
                     }
                 }
 
@@ -915,6 +917,8 @@ impl Scene {
                 for (id, matrix) in stage.matrices.iter() {
                     if let Some(new_id) = matrix.get_t() {
                         self.matrices.set_id(*id, *new_id);
+                    } else if let Animation::FromDev = matrix {
+                        self.matrices.set(*id, self.dev_stage.matrices.get(id).unwrap().clone());
                     }
                 }
             }
@@ -993,7 +997,7 @@ impl Scene {
                             ui.label(name);
                             result |= uniform.user_egui(ui)
                         })),
-                        Remains => {}
+                        FromDev => {}
                         Changed(_) => {}
                     }
                 }
@@ -1013,7 +1017,7 @@ impl Scene {
                             ui.label(name);
                             result |= matrix.user_egui(ui)
                         })),
-                        Remains => {}
+                        FromDev => {}
                         Changed(_) => {}
                     }
                 }

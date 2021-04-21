@@ -17,7 +17,7 @@ use crate::hlist;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Animation<T: StorageElem2> {
     ProvidedToUser,
-    Remains,
+    FromDev,
     Changed(Option<T::IdWrapper>),
     ChangedAndToUser(Option<T::IdWrapper>),
 }
@@ -34,7 +34,7 @@ impl<T: StorageElem2> Animation<T> {
 
 impl<T: StorageElem2> Default for Animation<T> {
     fn default() -> Self {
-        Animation::Remains
+        Animation::FromDev
     }
 }
 
@@ -112,14 +112,14 @@ pub struct GlobalUserUniforms {
 
 impl<T: StorageElem2> ComboBoxChoosable for Animation<T> {
     fn variants() -> &'static [&'static str] {
-        &["To user", "Remains", "Changed", "Changed + To user"]
+        &["To user", "From dev", "Changed", "Changed + To user"]
     }
 
     fn get_number(&self) -> usize {
         use Animation::*;
         match self {
             ProvidedToUser => 0,
-            Remains => 1,
+            FromDev => 1,
             Changed { .. } => 2,
             ChangedAndToUser { .. } => 3,
         }
@@ -129,7 +129,7 @@ impl<T: StorageElem2> ComboBoxChoosable for Animation<T> {
         use Animation::*;
         *self = match number {
             0 => ProvidedToUser,
-            1 => Remains,
+            1 => FromDev,
             2 => Changed(None),
             3 => ChangedAndToUser(None),
             _ => unreachable!(),
