@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::gui::glsl::*;
 use crate::gui::storage2::Storage2;
 
@@ -41,12 +40,6 @@ impl Default for CamSettings {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-struct DevStage {
-    uniforms: HashMap<UniformId, AnyUniform>,
-    matrices: HashMap<MatrixId, Matrix>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Scene {
     pub description_en: String,
     pub description_ru: String,
@@ -69,6 +62,16 @@ pub struct Scene {
     current_stage: Option<AnimationId>,
 
     dev_stage: DevStage,
+}
+
+// In case of panic
+impl Drop for Scene {
+    fn drop(&mut self) {
+        match serde_json::to_string(self) {
+            Ok(result) => eprintln!("scene:\n\n{}", result),
+            Err(err) => eprintln!("errors while serializing scene: {:?}", err),
+        }
+    }
 }
 
 /*
@@ -161,6 +164,17 @@ impl Scene {
         drop(self.init_stage(self.current_stage));
     }
 
+    pub fn dev_stage_button(&mut self, ui: &mut Ui) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        let current_selected = self.current_stage.is_none();
+        let response = ui.radio(current_selected, "dev");
+        if response.clicked() && !current_selected {
+            self.current_stage = None;
+            changed |= self.init_stage(self.current_stage);
+        }
+        changed
+    }
+
     #[allow(clippy::type_complexity)] // TODO: reduce type complexity
     pub fn egui(
         &mut self,
@@ -229,10 +243,10 @@ impl Scene {
         if self.current_stage.is_none() {
             let changed_uniforms = self.uniforms.egui(ui, &mut data.formulas_cache, "Uniforms");
             if changed_uniforms.uniform {
-                self.dev_stage.uniforms.clear();
+                self.dev_stage.uniforms.0.clear();
                 for (id, _) in self.uniforms.visible_elements() {
                     let value = self.uniforms.get_original(id).unwrap().clone();
-                    self.dev_stage.uniforms.insert(id, value);
+                    self.dev_stage.uniforms.0.insert(id, value);
                 }
             }
             changed |= changed_uniforms;
@@ -258,10 +272,10 @@ impl Scene {
             let changed_matrices = with_swapped!(x => (self.uniforms, data.formulas_cache);
                 self.matrices.egui(ui, &mut x, "Matrices"));
             if changed_matrices.uniform {
-                self.dev_stage.matrices.clear();
+                self.dev_stage.matrices.0.clear();
                 for (id, _) in self.matrices.visible_elements() {
                     let value = self.matrices.get_original(id).unwrap().clone();
-                    self.dev_stage.matrices.insert(id, value);
+                    self.dev_stage.matrices.0.insert(id, value);
                 }
             }
             changed |= changed_matrices;
@@ -290,26 +304,9 @@ impl Scene {
                 .egui(ui, &mut x, "Animation stages"));
 
         ui.collapsing("Select stage", |ui| {
-            let current_selected = self.current_stage.is_none();
-            let response = ui.radio(current_selected, "dev");
-            if response.clicked() && !current_selected {
-                self.current_stage = None;
-                changed |= self.init_stage(self.current_stage);
-            }
+            changed |= self.dev_stage_button(ui);
             ui.separator();
-            let elements = self
-                .animation_stages
-                .visible_elements()
-                .map(|(id, name)| (id, name.to_owned()))
-                .collect::<Vec<_>>();
-            for (id, name) in elements {
-                let current_selected = self.current_stage == Some(id);
-                let response = ui.radio(current_selected, name);
-                if response.clicked() && !current_selected {
-                    self.current_stage = Some(id);
-                    changed |= self.init_stage(self.current_stage);
-                }
-            }
+            changed |= self.select_stage_ui(ui);
         });
 
         ui.separator();
@@ -904,123 +901,63 @@ impl Scene {
     fn init_stage(&mut self, stage: Option<AnimationId>) -> WhatChanged {
         if let Some(id) = stage {
             let stage = self.animation_stages.get_original(id).unwrap();
-            if self.animation_stages.len() != 0 {
-                for (id, uniform) in stage.uniforms.iter() {
-                    if let Some(new_id) = uniform.get_t() {
-                        self.uniforms.set_id(*id, *new_id);
-                    } else if let Animation::FromDev = uniform {
-                        self.uniforms.set(*id, self.dev_stage.uniforms.get(id).unwrap().clone());
-                    }
-                }
-
-                // TODO избавиться от копипасты
-                for (id, matrix) in stage.matrices.iter() {
-                    if let Some(new_id) = matrix.get_t() {
-                        self.matrices.set_id(*id, *new_id);
-                    } else if let Animation::FromDev = matrix {
-                        self.matrices.set(*id, self.dev_stage.matrices.get(id).unwrap().clone());
-                    }
-                }
-            }
+            stage
+                .uniforms
+                .init_stage(&mut self.uniforms, &self.dev_stage.uniforms);
+            stage
+                .matrices
+                .init_stage(&mut self.matrices, &self.dev_stage.matrices);
         } else {
-            for (id, value) in self.dev_stage.uniforms.iter() {
-                self.uniforms.set(*id, value.clone());
-            }
-
-            // TODO избавиться от копипасты
-            // TODO вынести это в отдельную структуру
-            for (id, value) in self.dev_stage.matrices.iter() {
-                self.matrices.set(*id, value.clone());
-            }
+            self.dev_stage.uniforms.init_stage(&mut self.uniforms);
+            self.dev_stage.matrices.init_stage(&mut self.matrices);
         }
         WhatChanged::from_uniform(true)
     }
 
+    pub fn select_stage_ui(&mut self, ui: &mut Ui) -> WhatChanged {
+        let mut result = WhatChanged::default();
+        let mut current_stage = self.current_stage;
+        result.uniform |= check_changed(&mut current_stage, |stage| {
+            let previous = *stage;
+            let elements = self
+                .animation_stages
+                .visible_elements()
+                .map(|(id, name)| (id, name.to_owned()))
+                .collect::<Vec<_>>();
+            for (id, name) in elements {
+                ui.radio_value(stage, Some(id), name);
+                if *stage != previous && *stage == Some(id) {
+                    result |= self.init_stage(*stage);
+                }
+            }
+        });
+        self.current_stage = current_stage;
+        result
+    }
+
     pub fn control_egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
         let mut result = WhatChanged::default();
-        if self.user_uniforms.uniforms.iter().any(|x| *x.1) {
-            let user_uniforms = &self.user_uniforms;
-            let uniforms = &mut self.uniforms;
-            for id in user_uniforms.uniforms.iter().filter(|(_, has)| **has).map(|(id, _)| id) {
-                let name = uniforms.get_name(*id).unwrap().unwrap().to_owned();
-                let uniform = uniforms.get_original_mut(*id).unwrap();
-                ui.horizontal(|ui| {
-                    ui.label(name);
-                    result |= uniform.user_egui(ui);
-                });
-            }
-            ui.separator();
-        }
-
-        // TODO избавиться от копипасты
-        if self.user_uniforms.matrices.iter().any(|x| *x.1) {
-            let user_uniforms = &self.user_uniforms;
-            let matrices = &mut self.matrices;
-            for id in user_uniforms.matrices.iter().filter(|(_, has)| **has).map(|(id, _)| id) {
-                let name = matrices.get_name(*id).unwrap().unwrap().to_owned();
-                let matrix = matrices.get_original_mut(*id).unwrap();
-                ui.horizontal(|ui| {
-                    ui.label(name);
-                    result |= matrix.user_egui(ui);
-                });
-            }
-            ui.separator();
-        }
+        result |= self
+            .user_uniforms
+            .uniforms
+            .user_egui(ui, &mut self.uniforms, |elem, ui| elem.user_egui(ui));
+        result |= self
+            .user_uniforms
+            .matrices
+            .user_egui(ui, &mut self.matrices, |elem, ui| elem.user_egui(ui));
 
         if self.animation_stages.len() != 0 {
-            let mut current_stage = self.current_stage;
-            result.uniform |= check_changed(&mut current_stage, |stage| {
-                let previous = *stage;
-                let elements = self.animation_stages.visible_elements().map(|(id, name)| (id, name.to_owned())).collect::<Vec<_>>();
-                for (id, name) in elements {
-                    ui.radio_value(stage, Some(id), name);
-                    if *stage != previous && *stage == Some(id) {
-                        result |= self.init_stage(*stage);
-                    }
-                }
-            });
-            self.current_stage = current_stage;
-
+            result |= self.select_stage_ui(ui);
             ui.separator();
-
             if let Some(stage) = self.current_stage.clone() {
-                let uniforms = &mut self.uniforms;
-                for (id, uniform) in self.animation_stages.get_original(stage).unwrap()
+                let stage = self.animation_stages.get_original(stage).unwrap();
+                result |= stage
                     .uniforms
-                    .iter()
-                {
-                    use Animation::*;
-                    match uniform {
-                        ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
-                            let name = uniforms.get_name(*id).unwrap().unwrap().to_owned();
-                            let uniform = uniforms.get_original_mut(*id).unwrap();
-                            ui.label(name);
-                            result |= uniform.user_egui(ui)
-                        })),
-                        FromDev => {}
-                        Changed(_) => {}
-                    }
-                }
+                    .user_egui(ui, &mut self.uniforms, |elem, ui| elem.user_egui(ui));
                 ui.separator();
-
-                // TODO избавиться от копипасты
-                let matrices = &mut self.matrices;
-                for (id, matrix) in self.animation_stages.get_original(stage).unwrap()
+                result |= stage
                     .matrices
-                    .iter()
-                {
-                    use Animation::*;
-                    match matrix {
-                        ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
-                            let name = matrices.get_name(*id).unwrap().unwrap().to_owned();
-                            let matrix = matrices.get_original_mut(*id).unwrap();
-                            ui.label(name);
-                            result |= matrix.user_egui(ui)
-                        })),
-                        FromDev => {}
-                        Changed(_) => {}
-                    }
-                }
+                    .user_egui(ui, &mut self.matrices, |elem, ui| elem.user_egui(ui));
             } else {
                 ui.label("Select any stage");
             }

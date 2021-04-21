@@ -1,7 +1,6 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::matrix::Matrix;
-use crate::gui::matrix::MatrixId;
 use crate::gui::storage2::GetHelper;
 use crate::gui::storage2::*;
 use crate::gui::uniform::*;
@@ -47,13 +46,23 @@ impl<T: StorageElem2> Default for StageChanging<T> {
     }
 }
 
+// TODO: remove pub
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevStageChanging<T: StorageElem2>(pub HashMap<T::IdWrapper, T>);
+
+impl<T: StorageElem2> Default for DevStageChanging<T> {
+    fn default() -> Self {
+        DevStageChanging(HashMap::new())
+    }
+}
+
 impl<T: StorageElem2> StageChanging<T> {
     pub fn egui(
         &mut self,
         ui: &mut Ui,
         storage: &mut Storage2<T>,
         input: &mut T::Input,
-        global: &mut HashMap<T::IdWrapper, bool>,
+        global: &mut GlobalStage<T>,
         data_id: egui::Id,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
@@ -62,7 +71,7 @@ impl<T: StorageElem2> StageChanging<T> {
             .map(|(id, name)| (id, name.to_owned()))
             .collect::<Vec<_>>();
         for (id, name) in visible_elements {
-            let global = global.entry(id).or_default();
+            let global = global.0.entry(id).or_default();
             let anim = self.0.entry(id).or_default();
             if *global {
                 ui.horizontal(|ui| {
@@ -96,6 +105,107 @@ impl<T: StorageElem2> StageChanging<T> {
     pub fn iter(&self) -> impl Iterator<Item = (&T::IdWrapper, &Animation<T>)> + '_ {
         self.0.iter()
     }
+
+    pub fn init_stage(&self, storage: &mut Storage2<T>, dev_stage: &DevStageChanging<T>) {
+        for (id, uniform) in self.0.iter() {
+            if let Some(new_id) = uniform.get_t() {
+                storage.set_id(*id, *new_id);
+            } else if let Animation::FromDev = uniform {
+                storage.set(*id, dev_stage.0.get(id).unwrap().clone());
+            }
+        }
+    }
+
+    pub fn user_egui(
+        &self,
+        ui: &mut Ui,
+        storage: &mut Storage2<T>,
+        user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        for (id, element) in self.0.iter() {
+            use Animation::*;
+            match element {
+                ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
+                    let name = storage.get_name(*id).unwrap().unwrap().to_owned();
+                    let element = storage.get_original_mut(*id).unwrap();
+                    ui.label(name);
+                    changed |= user_egui(element, ui);
+                })),
+                FromDev => {}
+                Changed(_) => {}
+            }
+        }
+        changed
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DevStage {
+    pub uniforms: DevStageChanging<AnyUniform>,
+    pub matrices: DevStageChanging<Matrix>,
+}
+
+impl<T: StorageElem2> DevStageChanging<T> {
+    pub fn init_stage(&self, storage: &mut Storage2<T>) {
+        for (id, value) in self.0.iter() {
+            storage.set(*id, value.clone());
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GlobalStage<T: StorageElem2>(HashMap<T::IdWrapper, bool>);
+
+impl<T: StorageElem2> Default for GlobalStage<T> {
+    fn default() -> Self {
+        Self(HashMap::new())
+    }
+}
+
+impl<T: StorageElem2> GlobalStage<T> {
+    pub fn egui(&mut self, ui: &mut Ui, storage: &mut Storage2<T>) -> bool {
+        let mut changed = false;
+        for (id, name) in storage.visible_elements() {
+            let enabled = self.0.entry(id).or_default();
+            changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
+        }
+        changed
+    }
+
+    pub fn user_egui(
+        &mut self,
+        ui: &mut Ui,
+        storage: &mut Storage2<T>,
+        user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
+    ) -> WhatChanged {
+        let mut result = WhatChanged::default();
+        if self.0.iter().any(|x| *x.1) {
+            for id in self
+                .0
+                .iter()
+                .filter(|(_, has)| **has)
+                .map(|(id, _)| *id)
+                .collect::<Vec<_>>()
+            {
+                if let Some((name, element)) = storage
+                    .get_name(id)
+                    .flatten()
+                    .map(|x| x.to_owned())
+                    .zip(storage.get_original_mut(id))
+                {
+                    ui.horizontal(|ui| {
+                        ui.label(name);
+                        result |= user_egui(element, ui);
+                    });
+                } else {
+                    self.0.remove(&id);
+                }
+            }
+            ui.separator();
+        }
+        result
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -106,8 +216,8 @@ pub struct AnimationStage {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GlobalUserUniforms {
-    pub uniforms: HashMap<UniformId, bool>,
-    pub matrices: HashMap<MatrixId, bool>,
+    pub uniforms: GlobalStage<AnyUniform>,
+    pub matrices: GlobalStage<Matrix>,
 }
 
 impl<T: StorageElem2> ComboBoxChoosable for Animation<T> {
@@ -145,15 +255,9 @@ impl GlobalUserUniforms {
         matrices: &mut Storage2<Matrix>,
     ) -> WhatChanged {
         let mut changed = false;
-        for (id, name) in uniforms.visible_elements() {
-            let enabled = self.uniforms.entry(id).or_default();
-            changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
-        }
+        changed |= self.uniforms.egui(ui, uniforms);
         ui.separator();
-        for (id, name) in matrices.visible_elements() {
-            let enabled = self.matrices.entry(id).or_default();
-            changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
-        }
+        changed |= self.matrices.egui(ui, matrices);
         WhatChanged::from_uniform(changed)
     }
 }
