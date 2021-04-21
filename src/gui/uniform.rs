@@ -20,6 +20,7 @@ pub enum AnyUniform {
     Int(ClampedValue<i32>),
     Float(ClampedValue<f64>),
     Angle(f64),
+    Progress(f64),
     Formula(Formula),
 }
 
@@ -314,7 +315,7 @@ impl FormulasCache {
 
 impl ComboBoxChoosable for AnyUniform {
     fn variants() -> &'static [&'static str] {
-        &["bool", "int", "float", "angle", "formula"]
+        &["bool", "int", "float", "angle", "progress", "formula"]
     }
     fn get_number(&self) -> usize {
         use AnyUniform::*;
@@ -323,7 +324,8 @@ impl ComboBoxChoosable for AnyUniform {
             Int { .. } => 1,
             Float { .. } => 2,
             Angle { .. } => 3,
-            Formula { .. } => 4,
+            Progress  { .. } => 4,
+            Formula { .. } => 5,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -334,7 +336,8 @@ impl ComboBoxChoosable for AnyUniform {
                 Bool(b) => *b,
                 Int(value) => value.get_value() >= 1,
                 Float(value) => value.get_value() >= 1.0,
-                Angle(a) => a >= &mut 1.0,
+                Angle(a) => *a >= 1.0,
+                Progress(a) => *a >= 1.0,
                 Formula { .. } => false,
             }),
             1 => match self {
@@ -342,12 +345,14 @@ impl ComboBoxChoosable for AnyUniform {
                 Int { .. } => self.clone(),
                 Float(value) => AnyUniform::int(value.get_value() as i32),
                 Angle(a) => AnyUniform::int(rad2deg(*a as f64) as i32),
+                Progress(a) => AnyUniform::int(*a as i32),
                 Formula { .. } => AnyUniform::int(0),
             },
             2 => match self {
                 Bool(b) => AnyUniform::float(*b as i32 as f64),
                 Int(value) => AnyUniform::float(value.get_value() as f64),
                 Angle(a) => AnyUniform::float(*a),
+                Progress(a) => AnyUniform::float(*a),
                 Float { .. } => self.clone(),
                 Formula { .. } => AnyUniform::float(0.0),
             },
@@ -359,15 +364,18 @@ impl ComboBoxChoosable for AnyUniform {
                     std::f64::consts::TAU,
                 ) as f64,
                 Angle(a) => *a,
+                Progress(a) => *a * std::f64::consts::TAU,
                 Float(value) => {
                     macroquad::math::clamp(value.get_value(), 0., std::f64::consts::TAU)
                 }
                 Formula { .. } => 0.0,
             }),
-            4 => Formula(match self {
+            4 => Progress(0.5),
+            5 => Formula(match self {
                 Bool(b) => F((*b as i32).to_string()),
                 Int(value) => F(value.get_value().to_string()),
                 Angle(a) => F(a.to_string()),
+                Progress(a) => F(a.to_string()),
                 Float(value) => F(value.get_value().to_string()),
                 Formula(f) => f.clone(),
             }),
@@ -580,6 +588,9 @@ impl StorageElem2 for AnyUniform {
             Angle(a) => {
                 drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
             }
+            Progress(a) => {
+                drop(ui.centered_and_justified(|ui| result.uniform |= egui_0_1(ui, a)))
+            }
             Formula(x) => {
                 drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
             }
@@ -636,6 +647,7 @@ impl StorageElem2 for AnyUniform {
             AnyUniform::Bool(b) => AnyUniformResult::Bool(*b),
             AnyUniform::Int(value) => AnyUniformResult::Int(value.get_value()),
             AnyUniform::Angle(a) => AnyUniformResult::Float(*a),
+            AnyUniform::Progress(a) => AnyUniformResult::Float(*a),
             AnyUniform::Float(value) => AnyUniformResult::Float(value.get_value()),
             AnyUniform::Formula(f) => {
                 AnyUniformResult::Float(formulas_cache.eval(&f.0, &mut cb)?.ok()?)

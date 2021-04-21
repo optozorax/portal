@@ -7,6 +7,7 @@ use macroquad::prelude::{
     mouse_position_local, mouse_wheel, next_frame, screen_height, screen_width, set_default_camera,
     Conf, DrawTextureParams, MouseButton, Texture2D, BLACK, WHITE,
 };
+use portal::gui::scenes::Scenes;
 use portal::gui::{common::*, scene::*, texture::*};
 
 use egui::{DragValue, Ui};
@@ -266,95 +267,31 @@ struct Window {
     offset_after_material: f64,
     render_depth: i32,
 
-    available_scenes: Vec<(String, String, String)>,
+    available_scenes: Scenes,
 }
 
 impl Window {
     async fn new() -> Self {
-        let available_scenes: Vec<(String, String, String)> = vec![
-            ("Empty", "empty", include_str!("../scenes/empty.json")),
-            ("Room", "room", include_str!("../scenes/room.json")),
-            (
-                "Portal in portal",
-                "portal_in_portal",
-                include_str!("../scenes/portal_in_portal.json"),
-            ),
-            (
-                "Monoportal",
-                "monoportal",
-                include_str!("../scenes/monoportal.json"),
-            ),
-            (
-                "Monoportal offset",
-                "monoportal_offset",
-                include_str!("../scenes/monoportal_offset.json"),
-            ),
-            (
-                "Mobius portal",
-                "mobius",
-                include_str!("../scenes/mobius.json"),
-            ),
-            (
-                "Mobius monoportal",
-                "mobius_monoportal",
-                include_str!("../scenes/mobius_monoportal.json"),
-            ),
-            ("Misc", "misc", include_str!("../scenes/misc.json")),
-            (
-                "Triple portal",
-                "triple_portal",
-                include_str!("../scenes/triple_portal.json"),
-            ),
-            (
-                "Hopf Link portal",
-                "hopf_link",
-                include_str!("../scenes/hopf_link.json"),
-            ),
-            (
-                "Trefoil knot portal, order 1",
-                "trefoil_knot",
-                include_str!("../scenes/trefoil_knot_monoportal.json"),
-            ),
-            (
-                "Trefoil knot self-hiding portal, order 1",
-                "trefoil_knot",
-                include_str!("../scenes/trefoil_knot_monoportal_self_hiding.json"),
-            ),
-            (
-                "Trefoil knot portal, order 2",
-                "trefoil_knot",
-                include_str!("../scenes/trefoil_knot.json"),
-            ),
-            (
-                "Trefoil knot portal, order 3",
-                "trefoil_knot_3",
-                include_str!("../scenes/trefoil_knot_3.json"),
-            ),
-        ]
-        .into_iter()
-        .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
-        .collect();
+        let available_scenes: Scenes = Default::default();
 
-        let default_scene = quad_url::get_program_parameters()
+        let required_scene = quad_url::get_program_parameters()
             .iter()
             .filter_map(|x| {
                 let x = quad_url::easy_parse(x)?;
                 Some((x.0, x.1?))
             })
             .find(|(name, _)| *name == "scene")
-            .and_then(|(_, value)| {
-                available_scenes
-                    .iter()
-                    .position(|(_, path, _)| value == path)
-            })
-            .unwrap_or(0);
+            .and_then(|(_, value)| available_scenes.get_by_link(value));
+
+        let mut scene = if let Some(scene) = required_scene {
+            serde_json::from_str(&scene).unwrap()
+            // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2)  .unwrap() .into();
+        } else {
+            Scene::default()
+        };
 
         let mut data = Default::default();
 
-        let mut scene = Scene::default();
-
-        // let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].2).unwrap();
-        // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2) .unwrap() .into();
         scene.init(&mut data);
 
         data.reload_textures = true;
@@ -434,22 +371,19 @@ impl Window {
             use egui::menu;
             menu::bar(ui, |ui| {
                 menu::menu(ui, "🗋 Load", |ui| {
-                    for (name, path, text) in &self.available_scenes {
-                        if ui.button(name).clicked() {
-                            let s = text;
-                            // let old: OldScene = serde_json::from_str(&s).unwrap();
-                            // *self = old.into();
-                            self.scene = serde_json::from_str(&s).unwrap();
-                            self.scene.init(&mut self.data);
-                            self.material.delete();
-                            self.material =
-                                self.scene.get_new_material(&self.data).unwrap().unwrap();
-                            changed.uniform = true;
-                            self.data.reload_textures = true;
-                            self.cam.set_cam(&self.scene.cam);
-                            self.offset_after_material = self.scene.cam.offset_after_material;
-                            quad_url::set_program_parameter("scene", path);
-                        }
+                    if let Some((content, link)) = self.available_scenes.egui(ui) {
+                        let s = content;
+                        // let old: OldScene = serde_json::from_str(&s).unwrap();
+                        // *self = old.into();
+                        self.scene = serde_json::from_str(s).unwrap();
+                        self.scene.init(&mut self.data);
+                        self.material.delete();
+                        self.material = self.scene.get_new_material(&self.data).unwrap().unwrap();
+                        changed.uniform = true;
+                        self.data.reload_textures = true;
+                        self.cam.set_cam(&self.scene.cam);
+                        self.offset_after_material = self.scene.cam.offset_after_material;
+                        quad_url::set_program_parameter("scene", link);
                     }
                     ui.separator();
                     if ui.button("Import...").clicked() {
@@ -664,15 +598,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 .scroll(true)
                 .show(ctx, |ui| {
                     ui.collapsing("Description", |ui| {
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(&mut self.data.read_ru, false, "Eng");
-                            ui.selectable_value(&mut self.data.read_ru, true, "Rus");
-                        });
-                        if self.data.read_ru {
-                            egui::experimental::easy_mark(ui, &self.scene.description_ru);
-                        } else {
-                            egui::experimental::easy_mark(ui, &self.scene.description_en);
-                        }
+                        eng_rus(ui, &self.scene.description_en, &self.scene.description_ru);
                     });
                     changed |= self.scene.control_egui(ui, &mut self.data);
                 });

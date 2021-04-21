@@ -76,8 +76,6 @@ pub struct Data {
     pub reload_textures: bool,
     pub texture_errors: TextureErrors,
 
-    pub read_ru: bool,
-
     pub generated_code_show_text: bool,
 }
 
@@ -335,6 +333,44 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
             }
             State::Edit => {
                 ui.add(TextEdit::multiline(text).text_style(TextStyle::Monospace));
+            }
+        }
+    })
+    .response
+}
+
+pub fn eng_rus(ui: &mut Ui, eng: &str, rus: &str) -> egui::Response {
+    #[derive(Clone, Copy, Eq, PartialEq, Debug)]
+    #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
+    enum State {
+        Eng,
+        Rus,
+    }
+
+    impl Default for State {
+        fn default() -> Self {
+            State::Eng
+        }
+    }
+
+    ui.vertical(|ui| {
+        let id = ui.make_persistent_id("rus_eng");
+
+        let mut state = *ui.memory().id_data.get_or_default::<State>(id);
+
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut state, State::Eng, "Eng");
+            ui.selectable_value(&mut state, State::Rus, "Rus");
+        });
+
+        ui.memory().id_data.insert(id, state);
+
+        match state {
+            State::Eng => {
+                egui::experimental::easy_mark(ui, &eng);
+            }
+            State::Rus => {
+                egui::experimental::easy_mark(ui, &rus);
             }
         }
     })

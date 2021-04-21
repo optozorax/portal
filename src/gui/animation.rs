@@ -381,6 +381,9 @@ impl AnyUniform {
             Angle(a) => {
                 drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
             }
+            Progress(a) => {
+                drop(ui.centered_and_justified(|ui| result.uniform |= egui_0_1(ui, a)))
+            }
             Float(value) => {
                 ui.centered_and_justified(|ui| {
                     result |= value.user_egui(ui, 0.01, 0..=2);
