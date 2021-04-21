@@ -1,6 +1,5 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
-use crate::gui::storage::*;
 use crate::gui::storage2::*;
 use crate::gui::unique_id::UniqueId;
 use core::cell::RefCell;
@@ -555,6 +554,7 @@ impl StorageElem2 for AnyUniform {
     const SAFE_TO_RENAME: bool = false;
 
     type Input = FormulasCache;
+    type GetInput = Self::Input;
 
     fn egui(
         &mut self,
@@ -590,7 +590,7 @@ impl StorageElem2 for AnyUniform {
     fn get(
         &self,
         get_helper: &GetHelper<Self>,
-        formulas_cache: &Self::Input,
+        formulas_cache: &Self::GetInput,
     ) -> Option<Self::GetType> {
         let mut cb = |name: &str, args: Vec<f64>| -> Option<f64> {
             Some(match name {

@@ -360,7 +360,8 @@ impl Window {
         data.reload_textures = true;
 
         let material = scene
-            .get_new_material(&data.formulas_cache)
+            .get_new_material(&data)
+            .unwrap()
             .unwrap_or_else(|err| {
                 println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
                 dbg!(&err);
@@ -396,7 +397,7 @@ impl Window {
 
             available_scenes,
         };
-        result.cam.set_cam(&result.scene.cam);
+        // result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
         result.reload_textures().await;
         result
@@ -410,7 +411,7 @@ impl Window {
                 let path = self
                     .scene
                     .textures
-                    .get(id, &self.data.texture_errors)
+                    .get(id, &())
                     .unwrap();
                 match macroquad::file::load_file(&path.0).await {
                     Ok(bytes) => {
@@ -447,7 +448,8 @@ impl Window {
                             self.material.delete();
                             self.material = self
                                 .scene
-                                .get_new_material(&self.data.formulas_cache)
+                                .get_new_material(&self.data)
+                                .unwrap()
                                 .unwrap();
                             changed.uniform = true;
                             self.data.reload_textures = true;
@@ -630,14 +632,17 @@ First, predefined library is included, then uniforms, then user library, then in
                                     self.offset_after_material = self.scene.cam.offset_after_material;
                                     changed.uniform = true;
                                     self.data.reload_textures = true;
-                                    match self.scene.get_new_material(&self.data.formulas_cache) {
-                                        Ok(material) => {
+                                    match self.scene.get_new_material(&self.data) {
+                                        Some(Ok(material)) => {
                                             self.material.delete();
                                             self.material = material;
                                         },
-                                        Err(_) => {
+                                        Some(Err(_)) => {
                                             self.should_recompile = true;
                                             self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
+                                        },
+                                        None => {
+                                            // TODO
                                         }
                                     }
                                 },

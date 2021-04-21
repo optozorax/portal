@@ -31,6 +31,7 @@ impl StorageElem2 for LibraryCode {
     const SAFE_TO_RENAME: bool = true;
 
     type Input = ShaderErrors;
+    type GetInput = ();
 
     fn egui(
         &mut self,
@@ -53,7 +54,7 @@ impl StorageElem2 for LibraryCode {
         changed
     }
 
-    fn get(&self, _: &GetHelper<Self>, _: &Self::Input) -> Option<Self::GetType> {
+    fn get(&self, _: &GetHelper<Self>, _: &Self::GetInput) -> Option<Self::GetType> {
         Some(self.clone())
     }
 

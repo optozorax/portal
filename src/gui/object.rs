@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::glsl::*;
@@ -13,11 +14,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::hlist;
 
-/*
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Ord, PartialOrd)]
-pub struct MatrixName<'a>(&'a str);
+pub struct MatrixName<'a>(pub Cow<'a, str>);
 
-impl MatrixName {
+impl<'a> MatrixName<'a> {
     pub fn normal_name(&self) -> String {
         format!("{}_mat", self.0)
     }
@@ -30,7 +30,6 @@ impl MatrixName {
         format!("{}_to_{}_mat_teleport", self.0, to.0)
     }
 }
-*/
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ObjectType {
@@ -147,6 +146,16 @@ impl Wrapper for ObjectId {
     }
 }
 
+impl Object {
+    pub fn get_name<'a>(id: MatrixId, storage: &'a Storage2<Matrix>) -> Option<MatrixName<'a>> {
+        if let Some(name) = storage.get_name(id) {
+            Some(name.map(|name| MatrixName(Cow::Borrowed(name))).unwrap_or_else(|| MatrixName(Cow::Owned(format!("id{}", id.un_wrap())))))
+        } else {
+            None
+        }
+    }
+}
+
 impl StorageElem2 for Object {
     type IdWrapper = ObjectId;
     type GetType = Object;
@@ -159,6 +168,7 @@ impl StorageElem2 for Object {
         Storage2<AnyUniform>,
         FormulasCache
     ];
+    type GetInput = ();
 
     fn egui(
         &mut self,
@@ -284,7 +294,7 @@ impl StorageElem2 for Object {
         changed
     }
 
-    fn get(&self, _: &GetHelper<Self>, _: &Self::Input) -> Option<Self::GetType> {
+    fn get(&self, _: &GetHelper<Self>, _: &Self::GetInput) -> Option<Self::GetType> {
         Some(self.clone())
     }
 

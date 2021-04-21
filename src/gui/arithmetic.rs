@@ -61,6 +61,7 @@ impl StorageElem2 for Arithmetic {
     const SAFE_TO_RENAME: bool = true;
 
     type Input = ();
+    type GetInput = ();
 
     fn egui(
         &mut self,
@@ -93,7 +94,7 @@ impl StorageElem2 for Arithmetic {
         }
     }
 
-    fn get(&self, get_helper: &GetHelper<Self>, (): &Self::Input) -> Option<Self::GetType> {
+    fn get(&self, get_helper: &GetHelper<Self>, (): &Self::GetInput) -> Option<Self::GetType> {
         use Arithmetic::*;
         match self {
             Float(f) => Some(*f),
@@ -198,6 +199,7 @@ impl StorageElem2 for MoreArithmetic {
     const SAFE_TO_RENAME: bool = true;
 
     type Input = Storage2<Arithmetic>;
+    type GetInput = Self::Input;
 
     fn egui(
         &mut self,
@@ -217,7 +219,7 @@ impl StorageElem2 for MoreArithmetic {
         }
     }
 
-    fn get(&self, _: &GetHelper<Self>, storage: &Self::Input) -> Option<Self::GetType> {
+    fn get(&self, _: &GetHelper<Self>, storage: &Self::GetInput) -> Option<Self::GetType> {
         use MoreArithmetic::*;
         match self {
             Sin(a) => Some((storage.get((*a)?, &())?).sin()),

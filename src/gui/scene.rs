@@ -142,8 +142,8 @@ impl Scene {
                 .add(Button::new("Recompile").enabled(*should_recompile))
                 .clicked()
             {
-                match self.get_new_material(&data.formulas_cache) {
-                    Ok(m) => {
+                match self.get_new_material(&data) {
+                    Some(Ok(m)) => {
                         data.reload_textures = true;
                         material = Some(Ok(m));
                         *should_recompile = false;
@@ -151,8 +151,11 @@ impl Scene {
                         data.errors = Default::default();
                         data.show_error_window = false;
                     }
-                    Err(err) => {
+                    Some(Err(err)) => {
                         material = Some(Err(err));
+                    }
+                    None => {
+                        material = None;
                     }
                 }
             }
@@ -228,7 +231,7 @@ impl Scene {
             }
             if ui.button("View generated GLSL code").clicked() {
                 data.show_compiled_code =
-                    Some(self.generate_shader_code(&data.formulas_cache).storage);
+                    self.generate_shader_code(&data).map(|x| x.storage);
             }
         });
 
@@ -272,44 +275,45 @@ pub trait UniformStruct {
 
 impl Scene {
     pub fn textures(&self) -> Vec<String> {
-        // TODO
         self.textures
             .visible_elements()
             .map(|(_, name)| TextureName::name(name))
             .collect()
     }
 
-    pub fn uniforms(&self, formulas_cache: &FormulasCache) -> Vec<(String, UniformType)> {
+    pub fn uniforms(&self, data: &Data) -> Option<Vec<(String, UniformType)>> {
         let mut result = Vec::new();
-        // TODO
-        /*
         use Object::*;
         use ObjectType::*;
-        for (_, object) in self.objects.iter() {
-            match &object.0 {
+        for (id, _) in self.objects.visible_elements() {
+            let object = self.objects.get(id, &()).unwrap();
+            match &object {
                 DebugMatrix(matrix) => {
+                    let matrix = Object::get_name((*matrix)?, &self.matrices).unwrap();
                     result.push(matrix.normal_name());
                     result.push(matrix.inverse_name());
                 }
                 Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
                     Simple(matrix) => {
+                        let matrix = Object::get_name((*matrix)?, &self.matrices)?;
                         result.push(matrix.normal_name());
                         result.push(matrix.inverse_name());
                     }
                     Portal(a, b) => {
+                        let a = Object::get_name((*a)?, &self.matrices)?;
+                        let b = Object::get_name((*b)?, &self.matrices)?;
                         result.push(a.normal_name());
                         result.push(a.inverse_name());
                         result.push(b.normal_name());
                         result.push(b.inverse_name());
-                        result.push(a.teleport_to_name(b));
-                        if *b != *a {
-                            result.push(b.teleport_to_name(a));
+                        result.push(a.teleport_to_name(&b));
+                        if *b.0 != *a.0 {
+                            result.push(b.teleport_to_name(&a));
                         }
                     }
                 },
             }
         }
-        */
 
         let mut result = result
             .into_iter()
@@ -320,7 +324,7 @@ impl Scene {
 
         for (id, name) in self.uniforms.visible_elements() {
             let name = format!("{}_u", name);
-            match self.uniforms.get(id, formulas_cache) {
+            match self.uniforms.get(id, &data.formulas_cache) {
                 Some(AnyUniformResult::Bool(_)) => result.push((name, UniformType::Int1)),
                 Some(AnyUniformResult::Int { .. }) => result.push((name, UniformType::Int1)),
                 Some(AnyUniformResult::Float { .. }) => result.push((name, UniformType::Float1)),
@@ -338,66 +342,75 @@ impl Scene {
             ("_panini_param".to_owned(), UniformType::Float1),
         ]);
 
-        result
+        Some(result)
     }
 
-    pub fn set_uniforms(&self, material: macroquad::material::Material, data: &mut Data) {
-        // TODO
-        /*
-        macro_rules! local_try {
-            ($a:expr, $c:ident, $b: expr) => {
-                match self.matrices.get($a.0, (uniforms, (&data.formulas_cache, ()))) {
-                    Some($c) => {
-                        *data
-                            .matrix_recursion_error
-                            .0
-                            .entry($a.clone())
-                            .or_insert(false) = false;
-                        $b
-                    }
-                    _ => {}
+    pub fn set_uniforms(&mut self, material: macroquad::material::Material, data: &mut Data) {
+        let objects = &self.objects;
+        let uniforms = &mut self.uniforms;
+        let matrices = &self.matrices;
+        let passed_matrices = self
+            .objects
+            .visible_elements()
+            .filter_map(|(id, _)| {
+                use Object::*;
+                use ObjectType::*;
+                Some(match &objects.get(id, &())? {
+                    DebugMatrix(matrix) => vec![(*matrix)?],
+                    Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
+                        Simple(matrix) => vec![(*matrix)?],
+                        Portal(a, b) => vec![(*a)?, (*b)?],
+                    },
                 }
-            };
-        }
-        use Object::*;
-        use ObjectType::*;
-        */
-        for (id, name) in self.objects.visible_elements() {
-            // TODO
-            /*
-            let object = self.objects.get(id, ).unwrap();
-            match &object {
-                DebugMatrix(matrix) => {
-                    // let id = self.matrices.find_by_name()
-                    // local_try!(matrix, m, {
-                    //     material.set_uniform(&matrix.normal_name(), m.as_f32());
-                    //     material.set_uniform(&matrix.inverse_name(), m.inverse().as_f32());
-                    // })
-                }
-                Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
-                    Simple(matrix) => {
-                        // local_try!(matrix, m, {
-                        //     material.set_uniform(&matrix.normal_name(), m.as_f32());
-                        //     material.set_uniform(&matrix.inverse_name(), m.inverse().as_f32());
-                        // })
-                    }
-                    Portal(a, b) => {
-                        // local_try!(a, ma, {
-                            // local_try!(b, mb, {
-                            //     material.set_uniform(&a.normal_name(), ma.as_f32());
-                            //     material.set_uniform(&a.inverse_name(), ma.inverse().as_f32());
-                            //     material.set_uniform(&b.normal_name(), mb.as_f32());
-                            //     material.set_uniform(&b.inverse_name(), mb.inverse().as_f32());
-                            //     material.set_uniform(&a.teleport_to_name(b), (mb * ma.inverse()).as_f32());
-                            //     if a != b {
-                            //         material.set_uniform(&b.teleport_to_name(a), (ma * mb.inverse()).as_f32());
-                            //     }
-                            // })
-                        // })
-                    }
-                },
+                .into_iter()
+                .filter_map(|id| Some((id, Object::get_name(id, &matrices)?))))
+            })
+            .flatten()
+            .chain(
+                self
+                    .matrices
+                    .visible_elements()
+                    .map(|(id, name)| (id, MatrixName(std::borrow::Cow::Borrowed(name))))
+            );
+        for (id, name) in passed_matrices {
+            let matrix = with_swapped!(x => (*uniforms, data.formulas_cache); matrices.get(id, &x));
+            if let Some(matrix) = matrix {
+                material.set_uniform(&name.normal_name(), matrix.as_f32());
+                material.set_uniform(&name.inverse_name(), matrix.inverse().as_f32());    
+            } else {
+                eprintln!("matrix `{}` can't be getted", name.0);
             }
-            */
+        }
+
+        let teleport_matrices = self
+            .objects
+            .visible_elements()
+            .filter_map(|(id, _)| {
+                use Object::*;
+                use ObjectType::*;
+                match &objects.get(id, &())? {
+                    DebugMatrix(_) => None,
+                    Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
+                        Simple(_) => None,
+                        Portal(a, b) => {
+                            let a = (*a)?;
+                            let b = (*b)?;
+                            let a = (a, Object::get_name(a, &matrices)?);
+                            let b = (b, Object::get_name(b, &matrices)?);
+                            Some((a, b))
+                        },
+                    },
+                }
+            });
+        for ((ida, namea), (idb, nameb)) in teleport_matrices {
+            let a = with_swapped!(x => (*uniforms, data.formulas_cache); matrices.get(ida, &x));
+            let b = with_swapped!(x => (*uniforms, data.formulas_cache); matrices.get(idb, &x));
+            if let Some((ma, mb)) = a.zip(b) {
+                material.set_uniform(&namea.teleport_to_name(&nameb), (mb * ma.inverse()).as_f32());
+                if namea.0 != nameb.0 {
+                    material.set_uniform(&nameb.teleport_to_name(&namea), (ma * mb.inverse()).as_f32());
+                }
+            }
         }
 
         for (id, name) in self.uniforms.visible_elements() {
@@ -417,35 +430,37 @@ impl Scene {
 }
 
 impl Scene {
-    pub fn generate_shader_code(&self, formulas_cache: &FormulasCache) -> StringStorage {
+    pub fn generate_uniforms_declarations(&self, data: &Data) -> Option<StringStorage> {
+        let mut result = StringStorage::default();
+        for (name, kind) in self
+            .uniforms(data)?
+            .into_iter()
+            .filter(|(name, _)| !name.starts_with("_"))
+        {
+            result.add_string(format!(
+                "uniform {} {};\n",
+                match kind {
+                    UniformType::Mat4 => "mat4",
+                    UniformType::Float1 => "float",
+                    UniformType::Int1 => "int",
+
+                    UniformType::Float2 => unreachable!(),
+                    UniformType::Float3 => unreachable!(),
+                    UniformType::Float4 => unreachable!(),
+                    UniformType::Int2 => unreachable!(),
+                    UniformType::Int3 => unreachable!(),
+                    UniformType::Int4 => unreachable!(),
+                },
+                name
+            ))
+        }
+        Some(result)
+    }
+
+    pub fn generate_shader_code(&self, data: &Data) -> Option<StringStorage> {
         let mut storages: BTreeMap<String, StringStorage> = BTreeMap::new();
 
-        storages.insert("uniforms".to_owned(), {
-            let mut result = StringStorage::default();
-            for (name, kind) in self
-                .uniforms(formulas_cache)
-                .into_iter()
-                .filter(|(name, _)| !name.starts_with('_'))
-            {
-                result.add_string(format!(
-                    "uniform {} {};\n",
-                    match kind {
-                        UniformType::Mat4 => "mat4",
-                        UniformType::Float1 => "float",
-                        UniformType::Int1 => "int",
-
-                        UniformType::Float2 => unreachable!(),
-                        UniformType::Float3 => unreachable!(),
-                        UniformType::Float4 => unreachable!(),
-                        UniformType::Int2 => unreachable!(),
-                        UniformType::Int3 => unreachable!(),
-                        UniformType::Int4 => unreachable!(),
-                    },
-                    name
-                ))
-            }
-            result
-        });
+        storages.insert("uniforms".to_owned(), self.generate_uniforms_declarations(data)?);
 
         storages.insert("textures".to_owned(), {
             let mut result = StringStorage::default();
@@ -455,15 +470,14 @@ impl Scene {
             result
         });
 
-        // TODO
-        /*
         let (material_processing, material_defines) = {
             let mut material_processing = StringStorage::default();
             let mut material_defines = StringStorage::default();
             let mut counter = 0;
 
             use Material::*;
-            for (pos, (name, material)) in self.materials.iter().enumerate() {
+            for (id, name) in self.materials.visible_elements() {
+                let material = self.materials.get(id, &()).unwrap();
                 let name_m = format!("{}_M", name);
 
                 material_defines.add_string(format!(
@@ -475,7 +489,7 @@ impl Scene {
                 material_processing
                     .add_string(format!("}} else if (i.material == {}) {{\n", name_m));
 
-                match &material.0 {
+                match &material {
                     Simple {
                         color,
                         normal_coef,
@@ -510,16 +524,17 @@ impl Scene {
                             Complex { code } => code,
                             _ => unreachable!(),
                         };
-                        material_processing.add_identifier_string(x.identifier(pos), &code.0 .0);
+                        material_processing.add_identifier_string(id, &code.0 .0);
                         material_processing.add_string("\n");
                     }
                 };
             }
             for (pos, first, second) in
                 self.objects
-                    .iter()
+                    .visible_elements()
+                    .map(|(id, _)| self.objects.get(id, &()).unwrap())
                     .enumerate()
-                    .filter_map(|(pos, (_, x))| match &x.0 {
+                    .filter_map(|(pos, x)| match x {
                         Object::DebugMatrix { .. }
                         | Object::Flat {
                             kind: ObjectType::Simple { .. },
@@ -537,6 +552,13 @@ impl Scene {
                             kind: ObjectType::Portal(first, second),
                             ..
                         } => Some((pos, first, second)),
+                    })
+                    .filter_map(|(pos, first, second)| {
+                        Some((
+                            pos,
+                            Object::get_name(first?, &self.matrices)?,
+                            Object::get_name(second?, &self.matrices)?,
+                        ))
                     })
             {
                 let name_m_1 = format!("teleport_{}_1_M", pos);
@@ -557,14 +579,14 @@ impl Scene {
                     .add_string(format!("}} else if (i.material == {}) {{\n", name_m_1));
                 material_processing.add_string(format!(
                     "return material_teleport(hit, r, {});",
-                    first.teleport_to_name(second)
+                    first.teleport_to_name(&second)
                 ));
 
                 material_processing
                     .add_string(format!("}} else if (i.material == {}) {{\n", name_m_2));
                 material_processing.add_string(format!(
                     "return material_teleport(hit, r, {});",
-                    second.teleport_to_name(first)
+                    second.teleport_to_name(&first)
                 ));
             }
             (material_processing, material_defines)
@@ -572,17 +594,15 @@ impl Scene {
 
         storages.insert("material_processing".to_owned(), material_processing);
         storages.insert("materials_defines".to_owned(), material_defines);
-        */
 
         storages.insert("intersection_functions".to_owned(), {
             use Object::*;
             use ObjectType::*;
             let mut result = StringStorage::default();
 
-            for (pos, (id, name)) in self.objects.visible_elements().enumerate() {
-                // TODO
-                /*
-                match &i {
+            for (pos, (id, _)) in self.objects.visible_elements().enumerate() {
+                let object = self.objects.get(id, &()).unwrap();
+                match object {
                     DebugMatrix(_) => {}
                     Flat { kind, is_inside } => {
                         if matches!(kind, Portal { .. }) {
@@ -593,7 +613,7 @@ impl Scene {
                         } else {
                             result.add_string(format!("int is_inside_{}(vec4 pos, float x, float y) {{\n", pos));
                         }
-                        result.add_identifier_string(i.identifier(pos), &is_inside.0.0);
+                        result.add_identifier_string(id, &is_inside.0.0);
                         result.add_string("\n}\n");
                     }
                     Complex { kind, intersect } => {
@@ -605,25 +625,24 @@ impl Scene {
                         } else {
                             result.add_string(format!("SceneIntersection intersect_{}(Ray r) {{\n", pos));
                         }
-                        result.add_identifier_string(i.identifier(pos), &intersect.0.0);
+                        result.add_identifier_string(id, &intersect.0.0);
                         result.add_string("\n}\n");
                     }
                 }
-                */
             }
             result
         });
 
-        // TODO
-        /*
         storages.insert("intersections".to_owned(), {
             use Object::*;
             use ObjectType::*;
             let mut result = StringStorage::default();
 
-            for (pos, (_, i)) in self.objects.iter().enumerate() {
-                match &i.0 {
+            for (pos, (id, _)) in self.objects.visible_elements().enumerate() {
+                let object = self.objects.get(id, &()).unwrap();
+                match object {
                     DebugMatrix(matrix) => {
+                        let matrix = Object::get_name(matrix?, &self.matrices)?;
                         result.add_string(format!(
                             "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);",
                             matrix.inverse_name()
@@ -636,6 +655,7 @@ impl Scene {
                     }
                     Flat { kind, is_inside: _ } => match kind {
                         Simple(matrix) => {
+                            let matrix = Object::get_name(matrix?, &self.matrices)?;
                             result.add_string(format!(
                                 "hit = plane_intersect(r, {}, get_normal({}));\n",
                                 matrix.inverse_name(),
@@ -662,12 +682,15 @@ impl Scene {
                                     pos, first, material
                                 ));
                             };
-                            add(a, true, format!("teleport_{}_1_M", pos));
-                            add(b, false, format!("teleport_{}_2_M", pos));
+                            let a = Object::get_name(a?, &self.matrices)?;
+                            let b = Object::get_name(b?, &self.matrices)?;
+                            add(&a, true, format!("teleport_{}_1_M", pos));
+                            add(&b, false, format!("teleport_{}_2_M", pos));
                         }
                     },
                     Complex { kind, intersect: _ } => match kind {
                         Simple(matrix) => {
+                            let matrix = Object::get_name(matrix?, &self.matrices)?;
                             result.add_string(format!(
                                 "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);",
                                 matrix.inverse_name()
@@ -697,8 +720,10 @@ impl Scene {
                                     matrix.normal_name()
                                 ));
                             };
-                            add(a, true, format!("teleport_{}_1_M", pos));
-                            add(b, false, format!("teleport_{}_2_M", pos));
+                            let a = Object::get_name(a?, &self.matrices)?;
+                            let b = Object::get_name(b?, &self.matrices)?;
+                            add(&a, true, format!("teleport_{}_1_M", pos));
+                            add(&b, false, format!("teleport_{}_2_M", pos));
                         }
                     },
                 }
@@ -706,13 +731,12 @@ impl Scene {
             }
             result
         });
-        */
 
-        /*
         storages.insert("library".to_owned(), {
             let mut result = StringStorage::default();
-            for (pos, (_, i)) in self.library.iter().enumerate() {
-                result.add_identifier_string(i.identifier(pos), &i.0 .0);
+            for (id, _) in self.library.visible_elements() {
+                let code = self.library.get(id, &()).unwrap();
+                result.add_identifier_string(id, code.0.0);
             }
             result
         });
@@ -722,26 +746,24 @@ impl Scene {
             result.add_string(LIBRARY);
             result
         });
-        */
 
-        //apply_template(FRAGMENT_SHADER, storages)
-        Default::default()
+        Some(apply_template(FRAGMENT_SHADER, storages))
     }
 
     pub fn get_new_material(
         &self,
-        formulas_cache: &FormulasCache,
-    ) -> Result<macroquad::prelude::Material, (String, String, ShaderErrors)> {
-        let code = self.generate_shader_code(formulas_cache);
+        data: &Data,
+    ) -> Option<Result<macroquad::prelude::Material, (String, String, ShaderErrors)>> {
+        let code = self.generate_shader_code(data)?;
 
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
 
-        load_material(
+        Some(load_material(
             VERTEX_SHADER,
             &code.storage,
             MaterialParams {
-                uniforms: self.uniforms(formulas_cache),
+                uniforms: self.uniforms(data)?,
                 textures: self.textures(),
                 ..Default::default()
             },
@@ -775,7 +797,7 @@ impl Scene {
                 }
             }
             (code.storage, error_message, errors)
-        })
+        }))
     }
 }
 

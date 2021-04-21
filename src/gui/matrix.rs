@@ -236,6 +236,7 @@ impl StorageElem2 for Matrix {
     const SAFE_TO_RENAME: bool = false;
 
     type Input = hlist![Storage2<AnyUniform>, FormulasCache];
+    type GetInput = Self::Input;
 
     fn egui(
         &mut self,

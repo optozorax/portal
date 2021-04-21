@@ -198,6 +198,7 @@ impl StorageElem2 for AnimationStage {
         Storage2<AnyUniform>,
         FormulasCache
     ];
+    type GetInput = ();
 
     fn egui(
         &mut self,
@@ -228,7 +229,7 @@ impl StorageElem2 for AnimationStage {
         changed
     }
 
-    fn get(&self, _: &GetHelper<Self>, _: &Self::Input) -> Option<Self::GetType> {
+    fn get(&self, _: &GetHelper<Self>, _: &Self::GetInput) -> Option<Self::GetType> {
         Some(self.clone())
     }
 

@@ -1,7 +1,5 @@
 use crate::gui::common::*;
-use crate::gui::storage::*;
 use crate::gui::storage2::*;
-use crate::gui::uniform::*;
 use crate::gui::unique_id::UniqueId;
 
 use egui::*;
@@ -42,6 +40,7 @@ impl StorageElem2 for TextureName {
     const SAFE_TO_RENAME: bool = true;
 
     type Input = TextureErrors;
+    type GetInput = ();
 
     fn egui(
         &mut self,
@@ -61,7 +60,7 @@ impl StorageElem2 for TextureName {
         }))
     }
 
-    fn get(&self, _: &GetHelper<Self>, _: &Self::Input) -> Option<Self::GetType> {
+    fn get(&self, _: &GetHelper<Self>, _: &Self::GetInput) -> Option<Self::GetType> {
         Some(self.clone())
     }
 

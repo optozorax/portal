@@ -71,7 +71,7 @@ pub struct Storage2<T> {
     storage_order: Vec<UniqueId>,
 }
 
-pub struct GetHelper<'a, T: StorageElem2>(&'a Storage2<T>, &'a T::Input);
+pub struct GetHelper<'a, T: StorageElem2>(&'a Storage2<T>, &'a T::GetInput);
 
 impl<'a, T: StorageElem2> GetHelper<'a, T> {
     pub fn get(&self, id: T::IdWrapper) -> Option<T::GetType> {
@@ -100,9 +100,14 @@ impl<'a, T: StorageElem2> InlineHelper<'a, T> {
 }
 
 impl<T: StorageElem2> Storage2<T> {
-    pub fn get(&self, id: T::IdWrapper, input: &T::Input) -> Option<T::GetType> {
+    pub fn get(&self, id: T::IdWrapper, input: &T::GetInput) -> Option<T::GetType> {
         let mut visited = vec![];
         self.get_inner(id, &mut visited, input)
+    }
+
+    /// First Option shows is element presented or not. Second Option is represente is element has a name
+    pub fn get_name(&self, id: T::IdWrapper) -> Option<Option<&str>> {
+        self.storage.get(&id.un_wrap()).map(|x| x.name())
     }
 
     pub fn find_id(&self, name: &str) -> Option<T::IdWrapper> {
@@ -121,7 +126,7 @@ impl<T: StorageElem2> Storage2<T> {
         &self,
         id: T::IdWrapper,
         visited: &mut Vec<T::IdWrapper>,
-        input: &T::Input,
+        input: &T::GetInput,
     ) -> Option<T::GetType> {
         if visited.iter().any(|x| x.un_wrap() == id.un_wrap()) {
             return None;
@@ -173,7 +178,7 @@ impl<T: StorageElem2> Storage2<T> {
         self.storage_order.push(id);
         self.storage.insert(
             id,
-            StorageInner::Named(Default::default(), format!("_{}", id)),
+            StorageInner::Named(Default::default(), format!("id{}", id)),
         );
     }
 
@@ -535,6 +540,7 @@ pub trait StorageElem2: Sized + Default {
     const SAFE_TO_RENAME: bool;
 
     type Input;
+    type GetInput;
 
     fn egui(
         &mut self,
@@ -545,7 +551,7 @@ pub trait StorageElem2: Sized + Default {
         self_id: Self::IdWrapper,
     ) -> WhatChanged;
 
-    fn get(&self, get_helper: &GetHelper<Self>, input: &Self::Input) -> Option<Self::GetType>;
+    fn get(&self, get_helper: &GetHelper<Self>, input: &Self::GetInput) -> Option<Self::GetType>;
 
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, f: F, input: &mut Self::Input);
 
