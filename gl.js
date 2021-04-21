@@ -575,7 +575,7 @@ function mouse_relative_position(clientX, clientY) {
     var y = (clientY - targetRect.top) * dpi_scale();
 
     return { x, y };
-
+}
 
 var emscripten_shaders_hack = false;
 
