@@ -1163,7 +1163,7 @@ var importObject = {
                 event.preventDefault();
 
                 for (const touch of event.changedTouches) {
-                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_MOVED, touch.identifier, Math.floor(touch.clientX) * dpi_scale(), Math.floor(touch.clientY)i * dpi_scale());
+                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_MOVED, touch.identifier, Math.floor(touch.clientX) * dpi_scale(), Math.floor(touch.clientY) * dpi_scale());
                 }
             });
 
