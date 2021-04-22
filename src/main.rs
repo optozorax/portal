@@ -1,4 +1,6 @@
 use glam::{DMat4, DVec2, DVec3, DVec4};
+use portal::gui::eng_rus::EngRusSettings;
+use portal::gui::eng_rus::EngRusText;
 use std::f64::consts::PI;
 
 use macroquad::prelude::{
@@ -268,6 +270,8 @@ struct Window {
     render_depth: i32,
 
     available_scenes: Scenes,
+
+    about: EngRusText,
 }
 
 impl Window {
@@ -333,6 +337,11 @@ impl Window {
             render_depth: 100,
 
             available_scenes,
+
+            about: EngRusText {
+                eng: include_str!("description.easymarkup.en").to_string(),
+                rus: include_str!("description.easymarkup.ru").to_string(),
+            },
         };
         // result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
@@ -407,6 +416,7 @@ impl Window {
                 if ui.button("❓ About").clicked() {
                     self.about_opened = true;
                 }
+                EngRusSettings::egui(ui);
             });
         });
         let mut edit_scene_opened = self.edit_scene_opened;
@@ -598,7 +608,8 @@ First, predefined library is included, then uniforms, then user library, then in
                 .scroll(true)
                 .show(ctx, |ui| {
                     ui.collapsing("Description", |ui| {
-                        eng_rus(ui, &self.scene.description_en, &self.scene.description_ru);
+                        let text = self.scene.desc.text(ui);
+                        egui::experimental::easy_mark(ui, text);
                     });
                     changed |= self.scene.control_egui(ui, &mut self.data);
                 });
@@ -660,7 +671,8 @@ First, predefined library is included, then uniforms, then user library, then in
             egui::Window::new("Portal Explorer")
                 .open(&mut about_opened)
                 .show(ctx, |ui| {
-                    egui::experimental::easy_mark(ui, include_str!("description.easymarkup"));
+                    let text = self.about.text(ui);
+                    egui::experimental::easy_mark(ui, text);
                 });
             self.about_opened = about_opened;
         }

@@ -145,7 +145,13 @@ impl Scenes {
                 ui.separator();
             }
             ui.add(egui::Label::new(*name).strong().underline().monospace());
-            for Scene { name, content, hidden, link } in inner {
+            for Scene {
+                name,
+                content,
+                hidden,
+                link,
+            } in inner
+            {
                 if !hidden && ui.button(*name).clicked() {
                     result = Some((*content, *link))
                 }

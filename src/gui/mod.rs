@@ -12,5 +12,6 @@ pub mod storage2;
 pub mod texture;
 pub mod uniform;
 
+pub mod eng_rus;
 pub mod scenes;
 pub mod unique_id;

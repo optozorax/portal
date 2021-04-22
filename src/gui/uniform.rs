@@ -324,7 +324,7 @@ impl ComboBoxChoosable for AnyUniform {
             Int { .. } => 1,
             Float { .. } => 2,
             Angle { .. } => 3,
-            Progress  { .. } => 4,
+            Progress { .. } => 4,
             Formula { .. } => 5,
         }
     }
@@ -588,9 +588,7 @@ impl StorageElem2 for AnyUniform {
             Angle(a) => {
                 drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
             }
-            Progress(a) => {
-                drop(ui.centered_and_justified(|ui| result.uniform |= egui_0_1(ui, a)))
-            }
+            Progress(a) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_0_1(ui, a))),
             Formula(x) => {
                 drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
             }

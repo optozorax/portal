@@ -339,44 +339,6 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
     .response
 }
 
-pub fn eng_rus(ui: &mut Ui, eng: &str, rus: &str) -> egui::Response {
-    #[derive(Clone, Copy, Eq, PartialEq, Debug)]
-    #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
-    enum State {
-        Eng,
-        Rus,
-    }
-
-    impl Default for State {
-        fn default() -> Self {
-            State::Eng
-        }
-    }
-
-    ui.vertical(|ui| {
-        let id = ui.make_persistent_id("rus_eng");
-
-        let mut state = *ui.memory().id_data.get_or_default::<State>(id);
-
-        ui.horizontal(|ui| {
-            ui.selectable_value(&mut state, State::Eng, "Eng");
-            ui.selectable_value(&mut state, State::Rus, "Rus");
-        });
-
-        ui.memory().id_data.insert(id, state);
-
-        match state {
-            State::Eng => {
-                egui::experimental::easy_mark(ui, &eng);
-            }
-            State::Rus => {
-                egui::experimental::easy_mark(ui, &rus);
-            }
-        }
-    })
-    .response
-}
-
 pub fn egui_color_f64(ui: &mut Ui, color: &mut [f64; 3]) -> bool {
     let [r, g, b] = color;
     let mut temp: [f32; 3] = [*r as _, *g as _, *b as _];
@@ -389,3 +351,26 @@ pub fn egui_color_f64(ui: &mut Ui, color: &mut [f64; 3]) -> bool {
 pub const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);
 pub const COLOR_FUNCTION: Color32 = Color32::from_rgb(0x2B, 0xAB, 0x63);
 pub const COLOR_ERROR: Color32 = Color32::RED;
+
+pub fn egui_option<T>(
+    ui: &mut Ui,
+    value: &mut Option<T>,
+    text: &str,
+    set_value: impl FnOnce() -> T,
+    egui_t: impl FnOnce(&mut Ui, &mut T) -> bool,
+) -> bool {
+    let mut changed = false;
+    let mut checked = value.is_some();
+    ui.checkbox(&mut checked, text);
+    if checked && value.is_none() {
+        *value = Some(set_value());
+        changed = true;
+    } else if !checked && value.is_some() {
+        *value = None;
+        changed = true;
+    }
+    if let Some(t) = value {
+        changed |= egui_t(ui, t);
+    }
+    changed
+}

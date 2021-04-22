@@ -4,6 +4,7 @@ use crate::gui::storage2::Storage2;
 use crate::code_generation::*;
 use crate::gui::animation::*;
 use crate::gui::common::*;
+use crate::gui::eng_rus::EngRusText;
 use crate::gui::material::*;
 use crate::gui::matrix::*;
 use crate::gui::object::*;
@@ -41,8 +42,7 @@ impl Default for CamSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Scene {
-    pub description_en: String,
-    pub description_ru: String,
+    pub desc: EngRusText,
 
     pub cam: CamSettings,
 
@@ -196,16 +196,7 @@ impl Scene {
         CollapsingHeader::new("Description")
             .default_open(false)
             .show(ui, |ui| {
-                CollapsingHeader::new("English")
-                    .default_open(false)
-                    .show(ui, |ui| {
-                        view_edit(ui, &mut self.description_en, "english");
-                    });
-                CollapsingHeader::new("Russian")
-                    .default_open(false)
-                    .show(ui, |ui| {
-                        view_edit(ui, &mut self.description_ru, "russian");
-                    });
+                self.desc.egui_view_edit(ui, egui::Id::new("description"));
             });
 
         if self.current_stage.is_none() {
@@ -882,10 +873,12 @@ impl Scene {
             let elements = self
                 .animation_stages
                 .visible_elements()
-                .map(|(id, name)| (id, name.to_owned()))
+                .map(|(id, _)| id)
                 .collect::<Vec<_>>();
-            for (id, name) in elements {
-                ui.radio_value(stage, Some(id), name);
+            for id in elements {
+                let stage_value = self.animation_stages.get_original(id).unwrap();
+                let text = stage_value.name.text(ui);
+                ui.radio_value(stage, Some(id), text);
                 if *stage != previous && *stage == Some(id) {
                     result |= self.init_stage(*stage);
                 }
@@ -911,6 +904,11 @@ impl Scene {
             ui.separator();
             if let Some(stage) = self.current_stage.clone() {
                 let stage = self.animation_stages.get_original(stage).unwrap();
+                if let Some(description) = &stage.description {
+                    let text = description.text(ui);
+                    egui::experimental::easy_mark(ui, text);
+                    ui.separator();
+                }
                 result |= stage
                     .uniforms
                     .user_egui(ui, &mut self.uniforms, |elem, ui| elem.user_egui(ui));
