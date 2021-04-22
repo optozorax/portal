@@ -67,7 +67,7 @@ pub struct Scene {
 // In case of panic
 impl Drop for Scene {
     fn drop(&mut self) {
-        match serde_json::to_string(self) {
+        match ron::to_string(self) {
             Ok(result) => eprintln!("scene:\n\n{}", result),
             Err(err) => eprintln!("errors while serializing scene: {:?}", err),
         }
@@ -158,7 +158,7 @@ impl Scene {
 
         ui.horizontal(|ui| {
             if ui.button("Export").clicked() {
-                let s = serde_json::to_string(self).unwrap();
+                let s = ron::to_string(self).unwrap();
                 data.to_export = Some(s);
             }
             if ui

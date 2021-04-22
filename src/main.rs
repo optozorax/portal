@@ -288,7 +288,7 @@ impl Window {
             .and_then(|(_, value)| available_scenes.get_by_link(value));
 
         let mut scene = if let Some(scene) = required_scene {
-            serde_json::from_str(&scene).unwrap()
+            ron::from_str(&scene).unwrap()
             // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2)  .unwrap() .into();
         } else {
             Scene::default()
@@ -384,7 +384,7 @@ impl Window {
                         let s = content;
                         // let old: OldScene = serde_json::from_str(&s).unwrap();
                         // *self = old.into();
-                        self.scene = serde_json::from_str(s).unwrap();
+                        self.scene = ron::from_str(s).unwrap();
                         self.scene.init(&mut self.data);
                         self.material.delete();
                         self.material = self.scene.get_new_material(&self.data).unwrap().unwrap();
@@ -561,7 +561,7 @@ First, predefined library is included, then uniforms, then user library, then in
                                 .text_style(egui::TextStyle::Monospace),
                         );
                         if ui.button("Recompile").clicked() {
-                            match serde_json::from_str::<Scene>(content) {
+                            match ron::from_str::<Scene>(content) {
                                 Ok(scene) => {
                                     self.scene = scene;
                                     self.scene.init(&mut self.data);

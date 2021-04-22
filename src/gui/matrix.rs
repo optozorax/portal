@@ -259,8 +259,8 @@ impl StorageElem2 for Matrix {
 
         match self {
             Mul { to, what } => {
-                changed |= inline_helper.inline("Mul to:", 45., to, ui, input, data_id.with(0));
-                changed |= inline_helper.inline("What:", 45., what, ui, input, data_id.with(1));
+                changed |= inline_helper.inline("First:", 45., what, ui, input, data_id.with(1));
+                changed |= inline_helper.inline("Then:", 45., to, ui, input, data_id.with(0));
             }
             Teleport {
                 first_portal,
