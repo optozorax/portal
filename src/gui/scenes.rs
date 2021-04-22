@@ -41,7 +41,7 @@ impl Default for Scenes {
                     Scene {
                         name: "Monoportal",
                         link: "monoportal",
-                        content: include_str!("../../scenes/monoportal.json"),
+                        content: include_str!("../../scenes/monoportal.ron"),
                         hidden: false,
                     },
                     Scene {

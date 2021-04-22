@@ -56,6 +56,11 @@ pub struct Scene {
     materials: Storage2<Material>,
     library: Storage2<LibraryCode>,
 
+    animations_filters: AnimationFilters,
+
+    #[serde(default)]
+    elements_descriptions: ElementsDescriptions,
+
     user_uniforms: GlobalUserUniforms,
     animation_stages: Storage2<AnimationStage>,
 
@@ -243,13 +248,23 @@ impl Scene {
 
         changed |= self.library.egui(ui, &mut data.errors, "User GLSL code");
 
+        ui.collapsing("Filter to animation stages", |ui| {
+            self.animations_filters
+                .egui(ui, &self.uniforms, &self.matrices);
+        });
+
+        ui.collapsing("Elements descriptions", |ui| {
+            self.elements_descriptions
+                .egui(ui, &self.uniforms, &self.matrices, &mut self.animations_filters);
+        });
+
         ui.collapsing("Global user uniforms", |ui| {
             changed |= self
                 .user_uniforms
-                .egui(ui, &mut self.uniforms, &mut self.matrices);
+                .egui(ui, &mut self.uniforms, &mut self.matrices, &mut self.animations_filters);
         });
 
-        with_swapped!(x => (self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
+        with_swapped!(x => (self.animations_filters, self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
             changed |= self
                 .animation_stages
                 .egui(ui, &mut x, "Animation stages"));
@@ -872,9 +887,9 @@ impl Scene {
     }
 
     pub fn select_stage_ui(&mut self, ui: &mut Ui) -> WhatChanged {
-        let mut result = WhatChanged::default();
+        let mut changed = WhatChanged::default();
         let mut current_stage = self.current_stage;
-        result.uniform |= check_changed(&mut current_stage, |stage| {
+        changed.uniform |= check_changed(&mut current_stage, |stage| {
             let previous = *stage;
             let elements = self
                 .animation_stages
@@ -886,48 +901,33 @@ impl Scene {
                 let text = stage_value.name.text(ui);
                 ui.radio_value(stage, Some(id), text);
                 if *stage != previous && *stage == Some(id) {
-                    result |= self.init_stage(*stage);
+                    changed |= self.init_stage(*stage);
                 }
             }
         });
         self.current_stage = current_stage;
-        result
+        changed
     }
 
     pub fn control_egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
-        let mut result = WhatChanged::default();
-        result |= self
-            .user_uniforms
-            .uniforms
-            .user_egui(ui, &mut self.uniforms, |elem, ui| elem.user_egui(ui));
-        result |= self
-            .user_uniforms
-            .matrices
-            .user_egui(ui, &mut self.matrices, |elem, ui| elem.user_egui(ui));
+        let mut changed = WhatChanged::default();
+        changed |= self.user_uniforms.user_egui(ui, &mut self.uniforms, &mut self.matrices, &mut self.elements_descriptions);
 
         if self.animation_stages.len() != 0 {
-            result |= self.select_stage_ui(ui);
+            changed |= self.select_stage_ui(ui);
             ui.separator();
             if let Some(stage) = self.current_stage.clone() {
-                let stage = self.animation_stages.get_original(stage).unwrap();
-                if let Some(description) = &stage.description {
-                    let text = description.text(ui);
-                    egui::experimental::easy_mark(ui, text);
-                    ui.separator();
+                if let Some(stage) = self.animation_stages.get_original(stage) {
+                    changed |= stage.user_egui(ui, &mut self.uniforms, &mut self.matrices, &mut self.elements_descriptions);
+                } else {
+                    self.current_stage = None;
                 }
-                result |= stage
-                    .uniforms
-                    .user_egui(ui, &mut self.uniforms, |elem, ui| elem.user_egui(ui));
-                ui.separator();
-                result |= stage
-                    .matrices
-                    .user_egui(ui, &mut self.matrices, |elem, ui| elem.user_egui(ui));
             } else {
                 ui.label("Select any stage");
             }
         }
 
-        result
+        changed
     }
 }
 

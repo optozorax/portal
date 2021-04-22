@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::hlist;
 
+const ANIMATION_STAGE_NAME_SIZE: f64 = 100.0;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ValueToUser {
     help_description: Option<EngRusText>,
@@ -22,15 +24,15 @@ pub struct ValueToUser {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Animation<T: StorageElem2> {
-    ProvidedToUser(ValueToUser),
+    ProvidedToUser,
     FromDev,
     Changed(Option<T::IdWrapper>),
-    ChangedAndToUser(Option<T::IdWrapper>, ValueToUser),
+    ChangedAndToUser(Option<T::IdWrapper>),
 }
 
 impl<T: StorageElem2> Animation<T> {
     pub fn get_t(&self) -> Option<&T::IdWrapper> {
-        if let Animation::Changed(Some(t)) | Animation::ChangedAndToUser(Some(t), _) = self {
+        if let Animation::Changed(Some(t)) | Animation::ChangedAndToUser(Some(t)) = self {
             Some(t)
         } else {
             None
@@ -59,6 +61,15 @@ pub struct DevStageChanging<T: StorageElem2>(HashMap<T::IdWrapper, T>);
 impl<T: StorageElem2> Default for DevStageChanging<T> {
     fn default() -> Self {
         DevStageChanging(HashMap::new())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnimationFilter<T: StorageElem2>(HashMap<T::IdWrapper, bool>);
+
+impl<T: StorageElem2> Default for AnimationFilter<T> {
+    fn default() -> Self {
+        Self(HashMap::new())
     }
 }
 
@@ -105,6 +116,7 @@ impl<T: StorageElem2> StageChanging<T> {
         storage: &mut Storage2<T>,
         input: &mut T::Input,
         global: &mut GlobalStage<T>,
+        filter: &mut AnimationFilter<T>,
         data_id: egui::Id,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
@@ -113,14 +125,10 @@ impl<T: StorageElem2> StageChanging<T> {
             .map(|(id, name)| (id, name.to_owned()))
             .collect::<Vec<_>>();
         for (id, name) in visible_elements {
-            let global = global.0.entry(id).or_default();
+            let global = *global.0.entry(id).or_default();
+            let enabled = *filter.0.entry(id).or_default();
             let anim = self.0.entry(id).or_default();
-            if global.0 {
-                ui.horizontal(|ui| {
-                    egui_label(ui, &name, 60.);
-                    ui.label("Global parameter");
-                });
-            } else {
+            if !global && enabled {
                 changed |= anim.egui(ui, storage, input, &name, data_id.with(id));
             }
         }
@@ -158,11 +166,12 @@ impl<T: StorageElem2> StageChanging<T> {
         &self,
         ui: &mut Ui,
         storage: &mut Storage2<T>,
+        names: &mut ElementsDescription<T>,
         user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         for (id, element) in self.0.iter() {
-            changed |= element.user_egui(ui, storage, &user_egui, *id);
+            changed |= element.user_egui(ui, storage, &user_egui, names, *id);
         }
         changed
     }
@@ -191,7 +200,7 @@ impl<T: StorageElem2> DevStageChanging<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlobalStage<T: StorageElem2>(HashMap<T::IdWrapper, (bool, ValueToUser)>);
+pub struct GlobalStage<T: StorageElem2>(HashMap<T::IdWrapper, bool>);
 
 impl<T: StorageElem2> Default for GlobalStage<T> {
     fn default() -> Self {
@@ -200,12 +209,17 @@ impl<T: StorageElem2> Default for GlobalStage<T> {
 }
 
 impl<T: StorageElem2> GlobalStage<T> {
-    pub fn egui(&mut self, ui: &mut Ui, storage: &mut Storage2<T>) -> bool {
+    pub fn egui(&mut self, ui: &mut Ui, storage: &mut Storage2<T>, filter: &mut AnimationFilter<T>) -> bool {
         let mut changed = false;
-        for (id, name) in storage.visible_elements() {
-            let (enabled, to_user) = self.0.entry(id).or_default();
-            changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
-            to_user.egui(ui);
+        for (pos, (id, name)) in storage.visible_elements().enumerate() {
+            let enabled = *filter.0.entry(id).or_default();
+            if enabled {
+                if pos != 0 {
+                    ui.separator();
+                }
+                let enabled = self.0.entry(id).or_default();
+                changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
+            }
         }
         changed
     }
@@ -214,16 +228,17 @@ impl<T: StorageElem2> GlobalStage<T> {
         &mut self,
         ui: &mut Ui,
         storage: &mut Storage2<T>,
+        names: &mut ElementsDescription<T>,
         user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
     ) -> WhatChanged {
         let mut result = WhatChanged::default();
-        if self.0.iter().any(|x| x.1 .0) {
+        if self.0.iter().any(|x| *x.1) {
             for (id, name) in self
                 .0
                 .iter()
-                .filter_map(|(id, (has, name))| {
+                .filter_map(|(id, has)| {
                     if *has {
-                        Some((*id, name.clone()))
+                        Some((*id, names.0.entry(*id).or_default().clone()))
                     } else {
                         None
                     }
@@ -242,6 +257,77 @@ impl<T: StorageElem2> GlobalStage<T> {
             ui.separator();
         }
         result
+    }
+}
+
+impl<T: StorageElem2> AnimationFilter<T> {
+    pub fn egui(&mut self, ui: &mut Ui, storage: &Storage2<T>) {
+        for (id, name) in storage.visible_elements() {
+            let enabled = self.0.entry(id).or_default();
+            ui.checkbox(enabled, name);
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementsDescription<T: StorageElem2>(HashMap<T::IdWrapper, ValueToUser>);
+
+impl<T: StorageElem2> Default for ElementsDescription<T> {
+    fn default() -> Self {
+        Self(HashMap::new())
+    }
+}
+
+impl<T: StorageElem2> ElementsDescription<T> {
+    pub fn egui(&mut self, ui: &mut Ui, storage: &Storage2<T>, filter: &mut AnimationFilter<T>) {
+        for (id, name) in storage.visible_elements() {
+                let enabled = *filter.0.entry(id).or_default();
+                if enabled {
+            ui.group(|ui| {
+                    ui.label(name);
+                    self.0.entry(id).or_default().egui(ui);
+            });
+                }    
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ElementsDescriptions {
+    uniforms: ElementsDescription<AnyUniform>,
+    matrices: ElementsDescription<Matrix>,
+}
+
+impl ElementsDescriptions {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        uniforms: &Storage2<AnyUniform>,
+        matrices: &Storage2<Matrix>,
+        filter: &mut AnimationFilters,
+    ) {
+        self.uniforms.egui(ui, uniforms, &mut filter.uniforms);
+        ui.separator();
+        self.matrices.egui(ui, matrices, &mut filter.matrices);
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AnimationFilters {
+    uniforms: AnimationFilter<AnyUniform>,
+    matrices: AnimationFilter<Matrix>,
+}
+
+impl AnimationFilters {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        uniforms: &Storage2<AnyUniform>,
+        matrices: &Storage2<Matrix>,
+    ) {
+        self.uniforms.egui(ui, uniforms);
+        ui.separator();
+        self.matrices.egui(ui, matrices);
     }
 }
 
@@ -277,10 +363,10 @@ impl<T: StorageElem2> ComboBoxChoosable for Animation<T> {
     fn set_number(&mut self, number: usize) {
         use Animation::*;
         *self = match number {
-            0 => ProvidedToUser(Default::default()),
+            0 => ProvidedToUser,
             1 => FromDev,
             2 => Changed(None),
-            3 => ChangedAndToUser(None, Default::default()),
+            3 => ChangedAndToUser(None),
             _ => unreachable!(),
         };
     }
@@ -292,12 +378,30 @@ impl GlobalUserUniforms {
         ui: &mut Ui,
         uniforms: &mut Storage2<AnyUniform>,
         matrices: &mut Storage2<Matrix>,
+        animation_filters: &mut AnimationFilters,
     ) -> WhatChanged {
         let mut changed = false;
-        changed |= self.uniforms.egui(ui, uniforms);
+        changed |= self.uniforms.egui(ui, uniforms, &mut animation_filters.uniforms);
         ui.separator();
-        changed |= self.matrices.egui(ui, matrices);
+        changed |= self.matrices.egui(ui, matrices, &mut animation_filters.matrices);
         WhatChanged::from_uniform(changed)
+    }
+
+    pub fn user_egui(
+        &mut self, 
+        ui: &mut Ui, 
+        uniforms: &mut Storage2<AnyUniform>,
+        matrices: &mut Storage2<Matrix>,
+        elements_descriptions: &mut ElementsDescriptions
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        changed |= self
+            .uniforms
+            .user_egui(ui, uniforms, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui));
+        changed |= self
+            .matrices
+            .user_egui(ui, matrices, &mut elements_descriptions.matrices, |elem, ui| elem.user_egui(ui));
+        changed
     }
 }
 
@@ -324,14 +428,18 @@ impl<T: StorageElem2> Animation<T> {
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         ui.horizontal(|ui| {
-            changed.uniform |= egui_combo_box(ui, &name, 60., self, data_id.with("combo"));
-            if let Animation::Changed(x) | Animation::ChangedAndToUser(x, _) = self {
-                changed |= storage.inline(&name, 60.0, x, ui, input, data_id);
-            }
-            if let Animation::ProvidedToUser(x) | Animation::ChangedAndToUser(_, x) = self {
-                x.egui(ui);
+            changed.uniform |= egui_combo_box(
+                ui,
+                &name,
+                ANIMATION_STAGE_NAME_SIZE,
+                self,
+                data_id.with("combo"),
+            );
+            if let Animation::Changed(x) | Animation::ChangedAndToUser(x) = self {
+                changed |= storage.inline("", 0.0, x, ui, input, data_id);
             }
         });
+
         changed
     }
 
@@ -340,19 +448,46 @@ impl<T: StorageElem2> Animation<T> {
         ui: &mut Ui,
         storage: &mut Storage2<T>,
         user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
+        names: &mut ElementsDescription<T>,
         id: T::IdWrapper,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         use Animation::*;
         match self {
-            ProvidedToUser(name) | ChangedAndToUser(_, name) => drop(ui.horizontal(|ui| {
+            ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
                 let element = storage.get_original_mut(id).unwrap();
+                let name = names.0.entry(id).or_default();
                 name.user_egui(ui);
                 changed |= user_egui(element, ui);
             })),
             FromDev => {}
             Changed(_) => {}
         }
+        changed
+    }
+}
+
+impl AnimationStage {
+    pub fn user_egui(
+        &self,
+        ui: &mut Ui,
+        uniforms: &mut Storage2<AnyUniform>,
+        matrices: &mut Storage2<Matrix>,
+        elements_descriptions: &mut ElementsDescriptions
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        if let Some(description) = &self.description {
+            let text = description.text(ui);
+            egui::experimental::easy_mark(ui, text);
+            ui.separator();
+        }
+        changed |= self
+            .uniforms
+            .user_egui(ui, uniforms, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui));
+        ui.separator();
+        changed |= self
+            .matrices
+            .user_egui(ui, matrices, &mut elements_descriptions.matrices, |elem, ui| elem.user_egui(ui));
         changed
     }
 }
@@ -364,6 +499,7 @@ impl StorageElem2 for AnimationStage {
     const SAFE_TO_RENAME: bool = true;
 
     type Input = hlist![
+        AnimationFilters,
         GlobalUserUniforms,
         Storage2<Matrix>,
         Storage2<AnyUniform>,
@@ -374,7 +510,7 @@ impl StorageElem2 for AnimationStage {
     fn egui(
         &mut self,
         ui: &mut Ui,
-        (global, (matrices, input)): &mut Self::Input,
+        (filters, (global, (matrices, input))): &mut Self::Input,
         _: &mut InlineHelper<Self>,
         mut data_id: egui::Id,
         _: Self::IdWrapper,
@@ -401,6 +537,7 @@ impl StorageElem2 for AnimationStage {
             matrices,
             input,
             &mut global.matrices,
+            &mut filters.matrices,
             data_id.with("uniforms"),
         );
         data_id = data_id.with("matrices");
@@ -411,6 +548,7 @@ impl StorageElem2 for AnimationStage {
             uniforms,
             formulas_cache,
             &mut global.uniforms,
+            &mut filters.uniforms,
             data_id.with("uniforms"),
         );
         changed
@@ -423,7 +561,7 @@ impl StorageElem2 for AnimationStage {
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(
         &self,
         _: F,
-        (_, (matrices, input)): &mut Self::Input,
+        (_, (_, (matrices, input))): &mut Self::Input,
     ) {
         self.matrices.remove(matrices, input);
         let hpat![uniforms, formulas_cache] = input;
@@ -433,7 +571,7 @@ impl StorageElem2 for AnimationStage {
     fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
         &self,
         _: F,
-        (_, (matrices, input)): &Self::Input,
+        (_, (_, (matrices, input))): &Self::Input,
         _: Self::IdWrapper,
     ) -> usize {
         self.matrices.errors_count(matrices, input) + {
