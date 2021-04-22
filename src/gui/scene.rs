@@ -34,7 +34,7 @@ impl Default for CamSettings {
             look_at: DVec3::default(),
             alpha: 0.,
             beta: 0.,
-            r: 0.,
+            r: 3.5,
             offset_after_material: 0.000025,
         }
     }

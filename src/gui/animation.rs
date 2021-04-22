@@ -170,8 +170,12 @@ impl<T: StorageElem2> StageChanging<T> {
         user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        for (id, element) in self.0.iter() {
-            changed |= element.user_egui(ui, storage, &user_egui, names, *id);
+        for id in storage.visible_elements().map(|(id, _)| id).collect::<Vec<_>>() {
+            if let Some(element) = self.0.get(&id) {
+                changed |= element.user_egui(ui, storage, &user_egui, names, id);
+            } else {
+                eprintln!("error at {}:{}", file!(), line!());
+            }
         }
         changed
     }
@@ -211,12 +215,9 @@ impl<T: StorageElem2> Default for GlobalStage<T> {
 impl<T: StorageElem2> GlobalStage<T> {
     pub fn egui(&mut self, ui: &mut Ui, storage: &mut Storage2<T>, filter: &mut AnimationFilter<T>) -> bool {
         let mut changed = false;
-        for (pos, (id, name)) in storage.visible_elements().enumerate() {
+        for (id, name) in storage.visible_elements() {
             let enabled = *filter.0.entry(id).or_default();
             if enabled {
-                if pos != 0 {
-                    ui.separator();
-                }
                 let enabled = self.0.entry(id).or_default();
                 changed |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
             }
@@ -233,25 +234,21 @@ impl<T: StorageElem2> GlobalStage<T> {
     ) -> WhatChanged {
         let mut result = WhatChanged::default();
         if self.0.iter().any(|x| *x.1) {
-            for (id, name) in self
-                .0
-                .iter()
-                .filter_map(|(id, has)| {
+            for id in storage.visible_elements().map(|(id, _)| id).collect::<Vec<_>>() {
+                if let Some(has) = self.0.get(&id) {
                     if *has {
-                        Some((*id, names.0.entry(*id).or_default().clone()))
-                    } else {
-                        None
+                        let name = names.0.entry(id).or_default().clone();
+                        if let Some(element) = storage.get_original_mut(id) {
+                            ui.horizontal(|ui| {
+                                name.user_egui(ui);
+                                result |= user_egui(element, ui);
+                            });
+                        } else {
+                            self.0.remove(&id);
+                        }
                     }
-                })
-                .collect::<Vec<_>>()
-            {
-                if let Some(element) = storage.get_original_mut(id) {
-                    ui.horizontal(|ui| {
-                        name.user_egui(ui);
-                        result |= user_egui(element, ui);
-                    });
                 } else {
-                    self.0.remove(&id);
+                    eprintln!("error at {}:{}", file!(), line!());
                 }
             }
             ui.separator();

@@ -343,7 +343,7 @@ impl Window {
                 rus: include_str!("description.easymarkup.ru").to_string(),
             },
         };
-        // result.cam.set_cam(&result.scene.cam);
+        result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
         result.reload_textures().await;
         result
