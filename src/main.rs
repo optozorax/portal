@@ -4,10 +4,10 @@ use portal::gui::eng_rus::EngRusText;
 use std::f64::consts::PI;
 
 use macroquad::prelude::{
-    clamp, clear_background, draw_rectangle, draw_texture_ex, get_internal_gl, get_screen_data,
-    gl_use_default_material, gl_use_material, is_mouse_button_down, load_texture_from_image,
-    mouse_position_local, mouse_wheel, next_frame, screen_height, screen_width, set_default_camera,
-    Conf, DrawTextureParams, MouseButton, Texture2D, BLACK, WHITE,
+    clamp, clear_background, draw_rectangle, draw_texture_ex, get_screen_data,
+    gl_use_default_material, gl_use_material, is_mouse_button_down, mouse_position_local,
+    mouse_wheel, next_frame, screen_height, screen_width, set_default_camera, Conf,
+    DrawTextureParams, MouseButton, Texture2D, BLACK, WHITE,
 };
 use portal::gui::scenes::Scenes;
 use portal::gui::{common::*, scene::*, texture::*};
@@ -357,9 +357,7 @@ impl Window {
                 let path = self.scene.textures.get(id, &()).unwrap();
                 match macroquad::file::load_file(&path.0).await {
                     Ok(bytes) => {
-                        let context = unsafe { get_internal_gl().quad_context };
-
-                        let texture = Texture2D::from_file_with_format(context, &bytes[..], None);
+                        let texture = Texture2D::from_file_with_format(&bytes[..], None);
 
                         self.material.set_texture(&TextureName::name(name), texture);
                     }
@@ -734,17 +732,12 @@ async fn main() {
 
     let mut window = Window::new().await;
 
-    let mut texture = load_texture_from_image(&get_screen_data());
+    let mut texture = Texture2D::from_image(&get_screen_data());
     let mut w = screen_width();
     let mut h = screen_height();
     let mut image_size_changed = true;
 
     let mut ui_changed_image = true;
-
-    // let mut storage2 =
-    //     portal::gui::storage2::Storage2::<portal::gui::arithmetic::Arithmetic>::default();
-    // let mut storage3 =
-    //     portal::gui::storage2::Storage2::<portal::gui::arithmetic::MoreArithmetic>::default();
 
     loop {
         clear_background(BLACK);
@@ -758,7 +751,7 @@ async fn main() {
             image_size_changed = true;
         }
         if image_size_changed {
-            texture = load_texture_from_image(&get_screen_data());
+            texture = Texture2D::from_image(&get_screen_data());
         }
 
         if image_size_changed || ui_changed_image {
@@ -785,19 +778,6 @@ async fn main() {
         }
 
         egui_macroquad::ui(|ctx| {
-            // egui::Window::new("Test storage2")
-            //     .scroll(true)
-            //     .show(ctx, |ui| {
-            //         drop(storage2.egui(ui, &mut (), "Arithmetic"));
-            //         for (id, name) in storage2.visible_elements() {
-            //             ui.monospace(format!("{}: {:?}", name, storage2.get(id, &())));
-            //         }
-            //         ui.separator();
-            //         drop(storage3.egui(ui, &mut storage2, "MoreArithmetic"));
-            //         for (id, name) in storage3.visible_elements() {
-            //             ui.monospace(format!("{}: {:?}", name, storage3.get(id, &storage2)));
-            //         }
-            //     });
             ui_changed_image = window.process_mouse_and_keys(ctx);
         });
         egui_macroquad::draw();

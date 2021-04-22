@@ -351,6 +351,12 @@ impl Scene {
             }
         }
 
+        for (_, name) in self.matrices.visible_elements() {
+            let matrix = MatrixName(std::borrow::Cow::Borrowed(name));
+            result.push(matrix.normal_name());
+            result.push(matrix.inverse_name());
+        }
+
         let mut result = result
             .into_iter()
             .collect::<BTreeSet<_>>()

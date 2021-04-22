@@ -24,7 +24,7 @@ impl Default for Scenes {
                     Scene {
                         name: "Room",
                         link: "room",
-                        content: include_str!("../../scenes/room.json"),
+                        content: include_str!("../../scenes/room.ron"),
                         hidden: false,
                     },
                     Scene {
@@ -139,6 +139,7 @@ impl Scenes {
     }
 
     pub fn egui(&self, ui: &mut Ui) -> Option<(&'static str, &'static str)> {
+        ui.set_width(140.);
         let mut result = None;
         for (pos, (name, inner)) in self.0.iter().enumerate() {
             if pos != 0 {
