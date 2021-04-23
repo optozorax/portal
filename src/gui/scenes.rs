@@ -64,7 +64,7 @@ impl Default for Scenes {
                     Scene {
                         name: "Portal",
                         link: "mobius",
-                        content: include_str!("../../scenes/mobius.json"),
+                        content: include_str!("../../scenes/mobius.ron"),
                         hidden: false,
                     },
                     Scene {

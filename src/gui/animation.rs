@@ -100,15 +100,17 @@ impl ValueToUser {
     }
 
     pub fn user_egui(&self, ui: &mut Ui) {
-        let previous = ui.spacing().item_spacing.x;
-        ui.spacing_mut().item_spacing.x = 0.;
-        ui.label(format!("{}", self.overrided_name));
-        if let Some(help) = &self.help_description {
-            let response = ui.add(egui::Label::new("(?)").small_raised());
-            response.on_hover_text(help.text(ui));
-        }
-        ui.label(": ");
-        ui.spacing_mut().item_spacing.x = previous;
+        ui.horizontal(|ui| {
+            let previous = ui.spacing().item_spacing.x;
+            ui.spacing_mut().item_spacing.x = 0.;
+            ui.label(format!("{}", self.overrided_name));
+            if let Some(help) = &self.help_description {
+                let response = ui.add(egui::Label::new("(?)").small_raised());
+                response.on_hover_text(help.text(ui));
+            }
+            ui.label(": ");
+            ui.spacing_mut().item_spacing.x = previous;    
+        });
     }
 
     pub fn description(&self, ui: &mut Ui) {
@@ -181,11 +183,12 @@ impl<T: StorageElem2> StageChanging<T> {
         storage: &mut Storage2<T>,
         names: &mut ElementsDescription<T>,
         user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
+        vertical: bool,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         for id in storage.visible_elements().map(|(id, _)| id).collect::<Vec<_>>() {
             if let Some(element) = self.0.get(&id) {
-                changed |= element.user_egui(ui, storage, &user_egui, names, id);
+                changed |= element.user_egui(ui, storage, &user_egui, names, id, vertical);
             } else {
                 eprintln!("error at {}:{}", file!(), line!());
             }
@@ -476,6 +479,7 @@ impl<T: StorageElem2> Animation<T> {
         user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
         names: &mut ElementsDescription<T>,
         id: T::IdWrapper,
+        vertical: bool,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         use Animation::*;
@@ -483,8 +487,18 @@ impl<T: StorageElem2> Animation<T> {
             ProvidedToUser | ChangedAndToUser(_) => drop(ui.horizontal(|ui| {
                 let element = storage.get_original_mut(id).unwrap();
                 let name = names.0.entry(id).or_default();
-                name.user_egui(ui);
-                changed |= user_egui(element, ui);
+                if vertical {
+                    ui.vertical(|ui| {
+                            name.user_egui(ui);
+                        changed |= user_egui(element, ui);        
+                    });
+                } else {
+                    ui.horizontal(|ui| {
+                            name.user_egui(ui);
+                        changed |= user_egui(element, ui);        
+                    });
+                }
+                
             })),
             FromDev => {}
             Changed(_) => {}
@@ -530,11 +544,11 @@ impl AnimationStage {
 
         changed |= self
             .uniforms
-            .user_egui(ui, &mut input.0, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui));
+            .user_egui(ui, &mut input.0, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui), false);
         ui.separator();
         changed |= self
             .matrices
-            .user_egui(ui, matrices, &mut elements_descriptions.matrices, |elem, ui| elem.user_egui(ui));
+            .user_egui(ui, matrices, &mut elements_descriptions.matrices, |elem, ui| elem.user_egui(ui), true);
         changed
     }
 }
