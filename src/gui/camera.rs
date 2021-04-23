@@ -47,7 +47,6 @@ pub struct CalculatedCam {
 	pub alpha: f64,
 	pub beta: f64,
 	pub r: f64,
-	pub id: Option<CameraId>,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -69,7 +68,6 @@ impl Default for CalculatedCam {
 			alpha: deg2rad(81.),
 			beta: deg2rad(64.),
 			r: 3.5,
-			id: None,
 		}
 	}
 }
@@ -117,25 +115,6 @@ impl Wrapper for CameraId {
     }
 }
 
-pub fn update_cam_center(
-	memory: &mut egui::Memory, 
-	cameras: &Storage2<Cam>,
-	matrices: &Storage2<Matrix>, 
-	input: &hlist![Storage2<AnyUniform>, FormulasCache],
-) {
-	if let Some(id) = memory.data.get_or_default::<CalculatedCam>().id {
-		if let Some(cam) = cameras.get_original(id) {
-			if let Some(pos) = cam.get_pos(matrices, input) {
-				memory.data.get_mut_or_default::<CalculatedCam>().look_at = pos;
-			} else {
-				eprintln!("error on line {}:{}", file!(), line!());	
-			}
-		} else {
-			eprintln!("error on line {}:{}", file!(), line!());
-		}
-	}
-}
-
 impl Cam {
 	pub fn get_pos(
 		&self, 
@@ -149,8 +128,7 @@ impl Cam {
 	}
 
 	pub fn get(
-		&mut self, 
-		self_id: CameraId,
+		&self, 
 		matrices: &Storage2<Matrix>, 
 		input: &hlist![Storage2<AnyUniform>, FormulasCache],
 	) -> Option<CalculatedCam> {
@@ -159,35 +137,15 @@ impl Cam {
 			alpha: self.alpha,
 			beta: self.beta,
 			r: self.r,
-			id: Some(self_id),
 		})
 	}
 
-	pub fn set_this_cam(
-		&mut self, 
-		ui: &mut Ui, 
-		self_id: CameraId,
-		matrices: &Storage2<Matrix>, 
-		input: &hlist![Storage2<AnyUniform>, FormulasCache],
-	) {
-		let id = ui.memory().data.get_or_default::<CalculatedCam>().id;
-		if let Some(cam) = self.get(self_id, matrices, input) {
-			if id.is_none() {
-				let original = ui.memory().data.get_or_default::<CalculatedCam>().clone();
-				ui.memory().data.insert(OriginalCam(original));
-			}
-
-			ui.memory().data.insert(cam);
-		} else {
-			eprintln!("Can't get camera");
-		}
+	pub fn set_this_cam(&mut self, ui: &mut Ui, self_id: CameraId) {
+		ui.memory().data.insert(CurrentCam(Some(self_id)));
 	}
 
 	pub fn set_original_cam(ui: &mut Ui) {
-		if ui.memory().data.get_or_default::<CalculatedCam>().id.is_some() {
-			let original_cam = ui.memory().data.get_or_default::<OriginalCam>().clone();
-			ui.memory().data.insert(original_cam.0);
-		}
+		ui.memory().data.insert(CurrentCam(None));
 	}
 
 	pub fn user_egui(
@@ -195,19 +153,17 @@ impl Cam {
 		ui: &mut Ui, 
 		names: &mut ElementsDescription<Cam>,
 		self_id: CameraId,
-		matrices: &Storage2<Matrix>, 
-		input: &hlist![Storage2<AnyUniform>, FormulasCache],
 	) -> WhatChanged {
 		let mut changed = WhatChanged::default();
-		let id = ui.memory().data.get_or_default::<CalculatedCam>().id;
+		let id = ui.memory().data.get_or_default::<CurrentCam>().0;
 		let selected = id == Some(self_id);
 		let name = names.get(self_id).clone();
 		ui.horizontal(|ui| {
-			if ui.radio(selected, String::new()).clicked() && !selected {
+			if ui.radio(selected, name.overrided_name.clone()).clicked() && !selected {
 				changed.uniform = true;
-				self.set_this_cam(ui, self_id, matrices, input);
+				self.set_this_cam(ui, self_id);
 			}
-			name.user_egui(ui);
+			name.description(ui);
 		});
 		changed
 	}
@@ -219,13 +175,13 @@ impl StorageElem2 for Cam {
 
     const SAFE_TO_RENAME: bool = true;
 
-    type Input = hlist![Storage2<Matrix>, Storage2<AnyUniform>, FormulasCache];
+    type Input = Storage2<Matrix>;
     type GetInput = ();
 
     fn egui(
         &mut self,
         ui: &mut Ui,
-        (matrices, input): &mut Self::Input,
+        matrices: &mut Self::Input,
         _: &mut InlineHelper<Self>,
         data_id: egui::Id,
         self_id: Self::IdWrapper,
@@ -252,13 +208,13 @@ impl StorageElem2 for Cam {
     	ui.monospace(format!("α: {:.1}, β: {:.1}, r: {:.1}", rad2deg(self.alpha), rad2deg(self.beta), self.r));
     	ui.separator();
 
-	    let id = ui.memory().data.get_or_default::<CalculatedCam>().id;
+	    let id = ui.memory().data.get_or_default::<CurrentCam>().0;
 	    if ui.add(Button::new("Set this cam as current").enabled(id != Some(self_id))).clicked() {
-	    	self.set_this_cam(ui, self_id, matrices, input);
+	    	self.set_this_cam(ui, self_id);
 	    	changed.uniform = true;
 	    }
 
-	    let id = ui.memory().data.get_or_default::<CalculatedCam>().id;
+	    let id = ui.memory().data.get_or_default::<CurrentCam>().0;
 	    if ui.add(Button::new("Return original camera").enabled(id.is_some())).clicked() {
 	    	Self::set_original_cam(ui);
 	    	changed.uniform = true;
@@ -274,7 +230,7 @@ impl StorageElem2 for Cam {
 	    	changed.uniform = true;
 	    }
 
-	    let id = ui.memory().data.get_or_default::<CalculatedCam>().id;
+	    let id = ui.memory().data.get_or_default::<CurrentCam>().0;
 	    if ui.add(Button::new("Set center from current camera").enabled(id.is_none())).clicked() {
 	    	let current_cam = ui.memory().data.get_or_default::<CalculatedCam>().clone();
 	    	self.look_at = CamLookAt::Coordinate(current_cam.look_at);

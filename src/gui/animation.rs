@@ -1,4 +1,3 @@
-use crate::gui::camera::CalculatedCam;
 use crate::gui::camera::CurrentCam;
 use crate::gui::camera::CameraId;
 use crate::gui::camera::Cam;
@@ -23,7 +22,7 @@ const ANIMATION_STAGE_NAME_SIZE: f64 = 100.0;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ValueToUser {
     help_description: Option<EngRusText>,
-    overrided_name: String,
+    pub overrided_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,6 +108,16 @@ impl ValueToUser {
             response.on_hover_text(help.text(ui));
         }
         ui.label(": ");
+        ui.spacing_mut().item_spacing.x = previous;
+    }
+
+    pub fn description(&self, ui: &mut Ui) {
+        let previous = ui.spacing().item_spacing.x;
+        ui.spacing_mut().item_spacing.x = 0.;
+        if let Some(help) = &self.help_description {
+            let response = ui.add(egui::Label::new("(?)"));
+            response.on_hover_text(help.text(ui));
+        }
         ui.spacing_mut().item_spacing.x = previous;
     }
 }
@@ -301,8 +310,6 @@ impl<T: StorageElem2> ElementsDescription<T> {
 pub struct ElementsDescriptions {
     uniforms: ElementsDescription<AnyUniform>,
     matrices: ElementsDescription<Matrix>,
-
-    #[serde(default)]
     cameras: ElementsDescription<Cam>,
 }
 
@@ -327,8 +334,6 @@ impl ElementsDescriptions {
 pub struct AnimationFilters {
     uniforms: AnimationFilter<AnyUniform>,
     matrices: AnimationFilter<Matrix>,
-
-    #[serde(default)]
     cameras: AnimationFilter<Cam>,
 }
 
@@ -355,11 +360,8 @@ pub struct AnimationStage {
     pub uniforms: StageChanging<AnyUniform>,
     pub matrices: StageChanging<Matrix>,
 
-    #[serde(default)]
     original_cam_button: bool,
-    #[serde(default)]
     pub set_cam: Option<Option<CameraId>>,
-    #[serde(default)]
     cams: HashMap<CameraId, bool>,
 }
 
@@ -508,7 +510,7 @@ impl AnimationStage {
         }
 
         if self.original_cam_button {
-            let id = ui.memory().data.get_or_default::<CalculatedCam>().id;
+            let id = ui.memory().data.get_or_default::<CurrentCam>().0;
             let selected = id.is_none();
             if ui.radio(selected, "Original camera").clicked() && !selected {
                 Cam::set_original_cam(ui);
@@ -519,7 +521,7 @@ impl AnimationStage {
         for id in self.cams.iter().filter(|(_, enabled)| **enabled).map(|(id, _)| *id) {
             if let Some(element) = cameras.get_original_mut(id) {
                 ui.horizontal(|ui| {
-                    changed |= element.user_egui(ui, &mut elements_descriptions.cameras, id, matrices, input);
+                    changed |= element.user_egui(ui, &mut elements_descriptions.cameras, id);
                 });
             }
         }
@@ -556,7 +558,7 @@ impl StorageElem2 for AnimationStage {
     fn egui(
         &mut self,
         ui: &mut Ui,
-        (cams, (filters, (global, matrices_input))): &mut Self::Input,
+        (cams, (filters, (global, (matrices, input)))): &mut Self::Input,
         _: &mut InlineHelper<Self>,
         mut data_id: egui::Id,
         _: Self::IdWrapper,
@@ -573,7 +575,7 @@ impl StorageElem2 for AnimationStage {
             "Set cam",
             || None,
             |ui, cam| {
-                changed |= cams.inline("", 0.0, cam, ui, matrices_input, data_id.with("cam"));
+                changed |= cams.inline("", 0.0, cam, ui, matrices, data_id.with("cam"));
                 false
             },
         );
@@ -587,7 +589,7 @@ impl StorageElem2 for AnimationStage {
         }
 
         ui.separator();
-        let (matrices, input) = matrices_input;
+
         egui_option(
             ui,
             &mut self.description,

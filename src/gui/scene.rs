@@ -1,3 +1,4 @@
+use crate::gui::camera::CurrentCam;
 use crate::gui::glsl::*;
 use crate::gui::storage2::Storage2;
 
@@ -52,7 +53,6 @@ pub struct Scene {
     pub matrices: Storage2<Matrix>,
     objects: Storage2<Object>,
 
-    #[serde(default)]
     pub cameras: Storage2<Cam>,
 
     pub textures: Storage2<TextureName>,
@@ -134,10 +134,10 @@ impl From<OldScene> for Scene {
 */
 
 impl Scene {
-    pub fn init(&mut self, data: &mut Data) {
+    pub fn init(&mut self, data: &mut Data, memory: &mut egui::Memory) {
         data.errors = Default::default();
         data.show_error_window = false;
-        drop(self.init_stage(self.current_stage));
+        drop(self.init_stage(self.current_stage, memory));
     }
 
     pub fn dev_stage_button(&mut self, ui: &mut Ui) -> WhatChanged {
@@ -146,7 +146,7 @@ impl Scene {
         let response = ui.radio(current_selected, "dev");
         if response.clicked() && !current_selected {
             self.current_stage = None;
-            changed |= self.init_stage(self.current_stage);
+            changed |= self.init_stage(self.current_stage, &mut ui.memory());
         }
         changed
     }
@@ -193,7 +193,7 @@ impl Scene {
             let response = ui.radio(self.current_stage.is_none(), "dev");
             if response.clicked() && self.current_stage.is_some() {
                 self.current_stage = None;
-                changed |= self.init_stage(self.current_stage);
+                changed |= self.init_stage(self.current_stage, &mut ui.memory());
             }
         });
 
@@ -245,8 +245,7 @@ impl Scene {
         with_swapped!(x => (data.errors, self.matrices, self.uniforms, data.formulas_cache);
             changed |= self.objects.egui(ui, &mut x, "Objects"));
 
-        with_swapped!(x => (self.matrices, self.uniforms, data.formulas_cache);
-            changed |= self.cameras.egui(ui, &mut x, "Cameras"));
+        changed |= self.cameras.egui(ui, &mut self.matrices, "Cameras");
 
         changed |= self.materials.egui(ui, &mut data.errors, "Materials");
 
@@ -876,7 +875,7 @@ impl Scene {
 }
 
 impl Scene {
-    fn init_stage(&mut self, stage: Option<AnimationId>) -> WhatChanged {
+    fn init_stage(&mut self, stage: Option<AnimationId>, memory: &mut egui::Memory) -> WhatChanged {
         if let Some(id) = stage {
             let stage = self.animation_stages.get_original(id).unwrap();
             stage
@@ -887,11 +886,14 @@ impl Scene {
                 .init_stage(&mut self.matrices, &self.dev_stage.matrices);
 
             if let Some(cam) = stage.set_cam {
-                // TODO
+                memory.data.insert(CurrentCam(cam));
+            } else {
+                memory.data.insert(CurrentCam(None));
             }
         } else {
             self.dev_stage.uniforms.init_stage(&mut self.uniforms);
             self.dev_stage.matrices.init_stage(&mut self.matrices);
+            memory.data.insert(CurrentCam(None));
         }
         WhatChanged::from_uniform(true)
     }
@@ -911,7 +913,7 @@ impl Scene {
                 let text = stage_value.name.text(ui);
                 ui.radio_value(stage, Some(id), text);
                 if *stage != previous && *stage == Some(id) {
-                    changed |= self.init_stage(*stage);
+                    changed |= self.init_stage(*stage, &mut ui.memory());
                 }
             }
         });

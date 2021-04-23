@@ -47,7 +47,7 @@ impl Default for Scenes {
                     Scene {
                         name: "Monoportal offset",
                         link: "monoportal_offset",
-                        content: include_str!("../../scenes/monoportal_offset.json"),
+                        content: include_str!("../../scenes/monoportal_test.ron"),
                         hidden: false,
                     },
                     Scene {

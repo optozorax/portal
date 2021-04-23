@@ -1,4 +1,5 @@
-use portal::gui::camera::update_cam_center;
+use portal::gui::camera::OriginalCam;
+use portal::gui::camera::CurrentCam;
 use portal::gui::camera::CameraId;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use portal::gui::eng_rus::EngRusSettings;
@@ -63,12 +64,19 @@ impl RotateAroundCam {
         }
     }
 
+    fn get_calculated_cam(&self) -> CalculatedCam {
+        CalculatedCam {
+            look_at: self.look_at,
+            alpha: self.alpha,
+            beta: self.beta,
+            r: self.r,
+        }
+    }
+
     fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool, memory: &mut egui::Memory) -> bool {
         let mut is_something_changed = false;
 
         let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
-
-        let current_cam = memory.data.get_mut_or_default::<CalculatedCam>();
 
         if is_mouse_button_down(MouseButton::Left) && mouse_over_canvas {
             let size = mymax(screen_width().into(), screen_height().into());
@@ -87,9 +95,6 @@ impl RotateAroundCam {
             self.alpha += dalpha;
             self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
 
-            current_cam.alpha = self.alpha;
-            current_cam.beta = self.beta;
-
             is_something_changed = true;
         }
 
@@ -98,15 +103,17 @@ impl RotateAroundCam {
             if wheel_value > 0. {
                 self.r *= 1.0 / self.scale_factor;
                 is_something_changed = true;
-                current_cam.r = self.r;
             } else if wheel_value < 0. {
                 self.r *= self.scale_factor;
                 is_something_changed = true;
-                current_cam.r = self.r;
             }
             if self.r > 100. {
                 self.r = 100.;
             }
+        }
+
+        if is_something_changed {
+            memory.data.insert(self.get_calculated_cam());
         }
 
         self.previous_mouse = mouse_pos;
@@ -287,6 +294,8 @@ struct Window {
     available_scenes: Scenes,
 
     about: EngRusText,
+
+    scene_initted: bool,
 }
 
 impl Window {
@@ -309,9 +318,9 @@ impl Window {
             Scene::default()
         };
 
-        let mut data = Default::default();
+        let mut data: Data = Default::default();
 
-        scene.init(&mut data);
+        // scene.init(&mut data);
 
         data.reload_textures = true;
 
@@ -357,6 +366,8 @@ impl Window {
                 eng: include_str!("description.easymarkup.en").to_string(),
                 rus: include_str!("description.easymarkup.ru").to_string(),
             },
+
+            scene_initted: false,
         };
         result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
@@ -387,6 +398,12 @@ impl Window {
     fn process_mouse_and_keys(&mut self, ctx: &egui::CtxRef) -> bool {
         let mut is_something_changed = false;
 
+        if !self.scene_initted {
+            self.scene_initted = true;
+            self.scene.init(&mut self.data, &mut ctx.memory());
+            ctx.memory().data.insert(OriginalCam(self.cam.get_calculated_cam()));
+        }
+
         let mut changed = WhatChanged::default();
 
         egui::TopPanel::top("my top").show(ctx, |ui| {
@@ -398,7 +415,7 @@ impl Window {
                         // let old: OldScene = serde_json::from_str(&s).unwrap();
                         // *self = old.into();
                         self.scene = ron::from_str(s).unwrap();
-                        self.scene.init(&mut self.data);
+                        self.scene.init(&mut self.data, &mut ctx.memory());
                         self.material.delete();
                         self.material = self.scene.get_new_material(&self.data).unwrap().unwrap();
                         changed.uniform = true;
@@ -577,7 +594,7 @@ First, predefined library is included, then uniforms, then user library, then in
                             match ron::from_str::<Scene>(content) {
                                 Ok(scene) => {
                                     self.scene = scene;
-                                    self.scene.init(&mut self.data);
+                                    self.scene.init(&mut self.data, &mut ui.memory());
                                     self.cam.set_cam(&self.scene.cam);
                                     self.offset_after_material = self.scene.cam.offset_after_material;
                                     changed.uniform = true;
@@ -698,19 +715,33 @@ First, predefined library is included, then uniforms, then user library, then in
             self.scene.set_uniforms(self.material, &mut self.data);
             self.set_uniforms();
 
-            with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache); 
-                update_cam_center(memory, &self.scene.cameras, &self.scene.matrices, &x));
+            let current_cam = memory.data.get_or_default::<CurrentCam>().0;
+            if self.cam.from != current_cam {
+                let calculated_cam = if let Some(id) = current_cam {
+                    // set getted camera
 
-            let current_cam = memory.data.get_or_default::<CalculatedCam>();
-            if self.cam.from != current_cam.id {
-                self.cam.alpha = current_cam.alpha;
-                self.cam.beta = current_cam.beta;
-                self.cam.r = current_cam.r;
-                self.cam.look_at = current_cam.look_at;
-                self.cam.from = current_cam.id;
+                    if self.cam.from.is_none() {
+                        let calculated_cam = memory.data.get_or_default::<CalculatedCam>().clone();
+                        memory.data.insert(OriginalCam(calculated_cam));
+                    }
+
+                    with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
+                        self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap())
+                } else {
+                    // set original camera
+                    memory.data.get_or_default::<OriginalCam>().clone().0
+                };
+
+                self.cam.from = current_cam;
+                self.cam.alpha = calculated_cam.alpha;
+                self.cam.beta = calculated_cam.beta;
+                self.cam.r = calculated_cam.r;
+                self.cam.look_at = calculated_cam.look_at;    
             } else {
-                if current_cam.id.is_some() {
-                    self.cam.look_at = current_cam.look_at;
+                if let Some(id) = current_cam {
+                    let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
+                        self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
+                    self.cam.look_at = calculated_cam.look_at;
                 }
             }
 
