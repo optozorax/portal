@@ -10,6 +10,7 @@ use crate::gui::matrix::*;
 use crate::gui::object::*;
 use crate::gui::texture::*;
 use crate::gui::uniform::*;
+use crate::gui::camera::Cam;
 use crate::shader_error_parser::*;
 
 use egui::*;
@@ -51,6 +52,9 @@ pub struct Scene {
     pub matrices: Storage2<Matrix>,
     objects: Storage2<Object>,
 
+    #[serde(default)]
+    pub cameras: Storage2<Cam>,
+
     pub textures: Storage2<TextureName>,
 
     materials: Storage2<Material>,
@@ -58,7 +62,6 @@ pub struct Scene {
 
     animations_filters: AnimationFilters,
 
-    #[serde(default)]
     elements_descriptions: ElementsDescriptions,
 
     user_uniforms: GlobalUserUniforms,
@@ -242,6 +245,9 @@ impl Scene {
         with_swapped!(x => (data.errors, self.matrices, self.uniforms, data.formulas_cache);
             changed |= self.objects.egui(ui, &mut x, "Objects"));
 
+        with_swapped!(x => (self.matrices, self.uniforms, data.formulas_cache);
+            changed |= self.cameras.egui(ui, &mut x, "Cameras"));
+
         changed |= self.materials.egui(ui, &mut data.errors, "Materials");
 
         changed |= self.textures.egui(ui, &mut data.texture_errors, "Textures");
@@ -250,12 +256,12 @@ impl Scene {
 
         ui.collapsing("Filter to animation stages", |ui| {
             self.animations_filters
-                .egui(ui, &self.uniforms, &self.matrices);
+                .egui(ui, &self.uniforms, &self.matrices, &self.cameras);
         });
 
         ui.collapsing("Elements descriptions", |ui| {
             self.elements_descriptions
-                .egui(ui, &self.uniforms, &self.matrices, &mut self.animations_filters);
+                .egui(ui, &self.uniforms, &self.matrices, &self.cameras, &mut self.animations_filters);
         });
 
         ui.collapsing("Global user uniforms", |ui| {
@@ -264,7 +270,7 @@ impl Scene {
                 .egui(ui, &mut self.uniforms, &mut self.matrices, &mut self.animations_filters);
         });
 
-        with_swapped!(x => (self.animations_filters, self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
+        with_swapped!(x => (self.cameras, self.animations_filters, self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
             changed |= self
                 .animation_stages
                 .egui(ui, &mut x, "Animation stages"));
@@ -879,6 +885,10 @@ impl Scene {
             stage
                 .matrices
                 .init_stage(&mut self.matrices, &self.dev_stage.matrices);
+
+            if let Some(cam) = stage.set_cam {
+                // TODO
+            }
         } else {
             self.dev_stage.uniforms.init_stage(&mut self.uniforms);
             self.dev_stage.matrices.init_stage(&mut self.matrices);
@@ -909,7 +919,7 @@ impl Scene {
         changed
     }
 
-    pub fn control_egui(&mut self, ui: &mut Ui, _: &mut Data) -> WhatChanged {
+    pub fn control_egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         let mut changed = WhatChanged::default();
         changed |= self.user_uniforms.user_egui(ui, &mut self.uniforms, &mut self.matrices, &mut self.elements_descriptions);
 
@@ -918,7 +928,9 @@ impl Scene {
             ui.separator();
             if let Some(stage) = self.current_stage.clone() {
                 if let Some(stage) = self.animation_stages.get_original(stage) {
-                    changed |= stage.user_egui(ui, &mut self.uniforms, &mut self.matrices, &mut self.elements_descriptions);
+                    with_swapped!(x => (self.uniforms, data.formulas_cache);
+                        changed |= stage.user_egui(ui, &mut x, &mut self.matrices, &mut self.cameras, &mut self.elements_descriptions));
+
                 } else {
                     self.current_stage = None;
                 }

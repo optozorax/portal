@@ -15,3 +15,4 @@ pub mod uniform;
 pub mod eng_rus;
 pub mod scenes;
 pub mod unique_id;
+pub mod camera;

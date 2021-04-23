@@ -1,3 +1,7 @@
+use crate::gui::camera::CalculatedCam;
+use crate::gui::camera::CurrentCam;
+use crate::gui::camera::CameraId;
+use crate::gui::camera::Cam;
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::eng_rus::EngRusText;
@@ -276,6 +280,10 @@ impl<T: StorageElem2> Default for ElementsDescription<T> {
 }
 
 impl<T: StorageElem2> ElementsDescription<T> {
+    pub fn get(&mut self, id: T::IdWrapper) -> &ValueToUser {
+        self.0.entry(id).or_default()
+    }
+
     pub fn egui(&mut self, ui: &mut Ui, storage: &Storage2<T>, filter: &mut AnimationFilter<T>) {
         for (id, name) in storage.visible_elements() {
                 let enabled = *filter.0.entry(id).or_default();
@@ -293,6 +301,9 @@ impl<T: StorageElem2> ElementsDescription<T> {
 pub struct ElementsDescriptions {
     uniforms: ElementsDescription<AnyUniform>,
     matrices: ElementsDescription<Matrix>,
+
+    #[serde(default)]
+    cameras: ElementsDescription<Cam>,
 }
 
 impl ElementsDescriptions {
@@ -301,11 +312,14 @@ impl ElementsDescriptions {
         ui: &mut Ui,
         uniforms: &Storage2<AnyUniform>,
         matrices: &Storage2<Matrix>,
+        cameras: &Storage2<Cam>,
         filter: &mut AnimationFilters,
     ) {
         self.uniforms.egui(ui, uniforms, &mut filter.uniforms);
         ui.separator();
         self.matrices.egui(ui, matrices, &mut filter.matrices);
+        ui.separator();
+        self.cameras.egui(ui, cameras, &mut filter.cameras);
     }
 }
 
@@ -313,6 +327,9 @@ impl ElementsDescriptions {
 pub struct AnimationFilters {
     uniforms: AnimationFilter<AnyUniform>,
     matrices: AnimationFilter<Matrix>,
+
+    #[serde(default)]
+    cameras: AnimationFilter<Cam>,
 }
 
 impl AnimationFilters {
@@ -321,10 +338,13 @@ impl AnimationFilters {
         ui: &mut Ui,
         uniforms: &Storage2<AnyUniform>,
         matrices: &Storage2<Matrix>,
+        cameras: &Storage2<Cam>,
     ) {
         self.uniforms.egui(ui, uniforms);
         ui.separator();
         self.matrices.egui(ui, matrices);
+        ui.separator();
+        self.cameras.egui(ui, cameras);
     }
 }
 
@@ -334,6 +354,13 @@ pub struct AnimationStage {
     pub description: Option<EngRusText>,
     pub uniforms: StageChanging<AnyUniform>,
     pub matrices: StageChanging<Matrix>,
+
+    #[serde(default)]
+    original_cam_button: bool,
+    #[serde(default)]
+    pub set_cam: Option<Option<CameraId>>,
+    #[serde(default)]
+    cams: HashMap<CameraId, bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -468,8 +495,9 @@ impl AnimationStage {
     pub fn user_egui(
         &self,
         ui: &mut Ui,
-        uniforms: &mut Storage2<AnyUniform>,
+        input: &mut hlist![Storage2<AnyUniform>, FormulasCache],
         matrices: &mut Storage2<Matrix>,
+        cameras: &mut Storage2<Cam>,
         elements_descriptions: &mut ElementsDescriptions
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
@@ -478,9 +506,29 @@ impl AnimationStage {
             egui::experimental::easy_mark(ui, text);
             ui.separator();
         }
+
+        if self.original_cam_button {
+            let id = ui.memory().data.get_or_default::<CalculatedCam>().id;
+            let selected = id.is_none();
+            if ui.radio(selected, "Original camera").clicked() && !selected {
+                Cam::set_original_cam(ui);
+                changed.uniform = true;
+            }
+        }
+
+        for id in self.cams.iter().filter(|(_, enabled)| **enabled).map(|(id, _)| *id) {
+            if let Some(element) = cameras.get_original_mut(id) {
+                ui.horizontal(|ui| {
+                    changed |= element.user_egui(ui, &mut elements_descriptions.cameras, id, matrices, input);
+                });
+            }
+        }
+
+        ui.separator();
+
         changed |= self
             .uniforms
-            .user_egui(ui, uniforms, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui));
+            .user_egui(ui, &mut input.0, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui));
         ui.separator();
         changed |= self
             .matrices
@@ -496,6 +544,7 @@ impl StorageElem2 for AnimationStage {
     const SAFE_TO_RENAME: bool = true;
 
     type Input = hlist![
+        Storage2<Cam>,
         AnimationFilters,
         GlobalUserUniforms,
         Storage2<Matrix>,
@@ -507,7 +556,7 @@ impl StorageElem2 for AnimationStage {
     fn egui(
         &mut self,
         ui: &mut Ui,
-        (filters, (global, (matrices, input))): &mut Self::Input,
+        (cams, (filters, (global, matrices_input))): &mut Self::Input,
         _: &mut InlineHelper<Self>,
         mut data_id: egui::Id,
         _: Self::IdWrapper,
@@ -515,6 +564,30 @@ impl StorageElem2 for AnimationStage {
         let mut changed = WhatChanged::default();
         self.name.egui_singleline(ui);
         ui.separator();
+
+        ui.checkbox(&mut self.original_cam_button, "Original cam button");
+
+        egui_option(
+            ui,
+            &mut self.set_cam,
+            "Set cam",
+            || None,
+            |ui, cam| {
+                changed |= cams.inline("", 0.0, cam, ui, matrices_input, data_id.with("cam"));
+                false
+            },
+        );
+
+        for (id, name) in cams.visible_elements() {
+            let enabled = *filters.cameras.0.entry(id).or_default();
+            if enabled {
+                let enabled = self.cams.entry(id).or_default();
+                changed.uniform |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
+            }
+        }
+
+        ui.separator();
+        let (matrices, input) = matrices_input;
         egui_option(
             ui,
             &mut self.description,
@@ -558,7 +631,7 @@ impl StorageElem2 for AnimationStage {
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(
         &self,
         _: F,
-        (_, (_, (matrices, input))): &mut Self::Input,
+        (_, (_, (_, (matrices, input)))): &mut Self::Input,
     ) {
         self.matrices.remove(matrices, input);
         let hpat![uniforms, formulas_cache] = input;
@@ -568,7 +641,7 @@ impl StorageElem2 for AnimationStage {
     fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
         &self,
         _: F,
-        (_, (_, (matrices, input))): &Self::Input,
+        (_, (_, (_, (matrices, input)))): &Self::Input,
         _: Self::IdWrapper,
     ) -> usize {
         self.matrices.errors_count(matrices, input) + {

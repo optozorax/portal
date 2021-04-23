@@ -1,7 +1,11 @@
+use portal::gui::camera::update_cam_center;
+use portal::gui::camera::CameraId;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use portal::gui::eng_rus::EngRusSettings;
 use portal::gui::eng_rus::EngRusText;
+use portal::with_swapped;
 use std::f64::consts::PI;
+use portal::gui::camera::CalculatedCam;
 
 use macroquad::prelude::{
     clamp, clear_background, draw_rectangle, draw_texture_ex, get_screen_data,
@@ -20,6 +24,8 @@ struct RotateAroundCam {
     beta: f64,
     r: f64,
     previous_mouse: DVec2,
+
+    from: Option<CameraId>,
 
     mouse_sensitivity: f64,
     scale_factor: f64,
@@ -43,6 +49,8 @@ impl RotateAroundCam {
             r: 3.5,
             previous_mouse: DVec2::default(),
 
+            from: None,
+
             mouse_sensitivity: 1.4,
             scale_factor: 1.1,
             view_angle: deg2rad(90.),
@@ -55,10 +63,12 @@ impl RotateAroundCam {
         }
     }
 
-    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool) -> bool {
+    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool, memory: &mut egui::Memory) -> bool {
         let mut is_something_changed = false;
 
         let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
+
+        let current_cam = memory.data.get_mut_or_default::<CalculatedCam>();
 
         if is_mouse_button_down(MouseButton::Left) && mouse_over_canvas {
             let size = mymax(screen_width().into(), screen_height().into());
@@ -77,6 +87,9 @@ impl RotateAroundCam {
             self.alpha += dalpha;
             self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
 
+            current_cam.alpha = self.alpha;
+            current_cam.beta = self.beta;
+
             is_something_changed = true;
         }
 
@@ -85,9 +98,11 @@ impl RotateAroundCam {
             if wheel_value > 0. {
                 self.r *= 1.0 / self.scale_factor;
                 is_something_changed = true;
+                current_cam.r = self.r;
             } else if wheel_value < 0. {
                 self.r *= self.scale_factor;
                 is_something_changed = true;
+                current_cam.r = self.r;
             }
             if self.r > 100. {
                 self.r = 100.;
@@ -354,7 +369,7 @@ impl Window {
             self.data.reload_textures = false;
             self.data.texture_errors.0.clear();
             for (id, name) in self.scene.textures.visible_elements() {
-                let path = self.scene.textures.get(id, &()).unwrap();
+                let path = self.scene.textures.get_original(id).unwrap();
                 match macroquad::file::load_file(&path.0).await {
                     Ok(bytes) => {
                         let texture = Texture2D::from_file_with_format(&bytes[..], None);
@@ -677,13 +692,32 @@ First, predefined library is included, then uniforms, then user library, then in
 
         let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
 
+        let memory = &mut ctx.memory();
+
         if changed.uniform {
             self.scene.set_uniforms(self.material, &mut self.data);
             self.set_uniforms();
+
+            with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache); 
+                update_cam_center(memory, &self.scene.cameras, &self.scene.matrices, &x));
+
+            let current_cam = memory.data.get_or_default::<CalculatedCam>();
+            if self.cam.from != current_cam.id {
+                self.cam.alpha = current_cam.alpha;
+                self.cam.beta = current_cam.beta;
+                self.cam.r = current_cam.r;
+                self.cam.look_at = current_cam.look_at;
+                self.cam.from = current_cam.id;
+            } else {
+                if current_cam.id.is_some() {
+                    self.cam.look_at = current_cam.look_at;
+                }
+            }
+
             is_something_changed = true;
         }
 
-        is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas);
+        is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
 
         return is_something_changed;
     }

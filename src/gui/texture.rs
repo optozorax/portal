@@ -35,7 +35,7 @@ impl Wrapper for TextureId {
 
 impl StorageElem2 for TextureName {
     type IdWrapper = TextureId;
-    type GetType = TextureName;
+    type GetType = ();
 
     const SAFE_TO_RENAME: bool = true;
 
@@ -61,7 +61,7 @@ impl StorageElem2 for TextureName {
     }
 
     fn get(&self, _: &GetHelper<Self>, _: &Self::GetInput) -> Option<Self::GetType> {
-        Some(self.clone())
+        Some(())
     }
 
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, _: F, _: &mut Self::Input) {}

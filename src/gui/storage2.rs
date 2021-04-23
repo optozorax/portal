@@ -411,45 +411,7 @@ impl<T: StorageElem2> Storage2<T> {
                         ui.label("inline");
                     } else {
                         // Named
-                        let mut current_name = if let Some(id_inner) = id {
-                            self.storage
-                                .get(&id_inner.un_wrap())
-                                .unwrap()
-                                .name()
-                                .unwrap()
-                                .to_owned()
-                        } else {
-                            ui.memory()
-                                .id_data
-                                .get_or_default::<String>(data_id)
-                                .clone()
-                        };
-
-                        let changed = ui
-                            .horizontal(|ui| {
-                                let mut response = egui_with_red_field(ui, id.is_none(), |ui| {
-                                    ui.text_edit_singleline(&mut current_name)
-                                });
-                                if id.is_none() {
-                                    response = response.on_hover_text("This name is not found");
-                                }
-
-                                response.changed()
-                            })
-                            .inner;
-                        if changed {
-                            if let Some((new_id, _)) = self
-                                .storage
-                                .iter()
-                                .find(|(_, elem)| elem.is_named_as(&current_name))
-                            {
-                                *id = Some(T::IdWrapper::wrap(*new_id));
-                                ui.memory().id_data.remove(&data_id);
-                            } else {
-                                *id = None;
-                                ui.memory().id_data.insert(data_id, current_name);
-                            }
-                        }
+                        changed.uniform |= self.find_named_id(id, ui, data_id);
                     }
                 });
             });
@@ -462,6 +424,77 @@ impl<T: StorageElem2> Storage2<T> {
                     });
                 });
             }
+        });
+
+        changed
+    }
+
+    fn find_named_id(&self, id: &mut Option<T::IdWrapper>, ui: &mut Ui, data_id: egui::Id) -> bool {
+        let mut current_name = if let Some(id_inner) = id {
+            self.storage
+                .get(&id_inner.un_wrap())
+                .unwrap()
+                .name()
+                .unwrap()
+                .to_owned()
+        } else {
+            ui.memory()
+                .id_data
+                .get_or_default::<String>(data_id)
+                .clone()
+        };
+
+        let changed = ui
+            .horizontal(|ui| {
+                let mut response = egui_with_red_field(ui, id.is_none(), |ui| {
+                    ui.text_edit_singleline(&mut current_name)
+                });
+                if id.is_none() {
+                    response = response.on_hover_text("This name is not found");
+                }
+
+                response.changed()
+            })
+            .inner;
+        if changed {
+            if let Some((new_id, _)) = self
+                .storage
+                .iter()
+                .find(|(_, elem)| elem.is_named_as(&current_name))
+            {
+                *id = Some(T::IdWrapper::wrap(*new_id));
+                ui.memory().id_data.remove(&data_id);
+            } else {
+                *id = None;
+                ui.memory().id_data.insert(data_id, current_name);
+            }
+        }
+
+        changed
+    }
+
+    pub fn inline_only_name(
+        &mut self,
+        label: &str,
+        label_size: f64,
+        id: &mut Option<T::IdWrapper>,
+        ui: &mut Ui,
+        data_id: egui::Id,
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        ui.vertical(|ui| {
+            if let Some(id_inner) = id {
+                if self.storage.get(&id_inner.un_wrap()).is_none() {
+                    eprintln!("id {:?} transformed to `None`", id_inner.un_wrap());
+                    *id = None;
+                    changed.uniform = true;
+                }
+            }
+
+            ui.horizontal(|ui| {
+                egui_label(ui, label, label_size);
+                changed.uniform |= self.find_named_id(id, ui, data_id);                
+            });
         });
 
         changed
