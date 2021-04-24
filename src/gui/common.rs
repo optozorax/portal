@@ -342,9 +342,22 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
 pub fn egui_color_f64(ui: &mut Ui, color: &mut [f64; 3]) -> bool {
     let [r, g, b] = color;
     let mut temp: [f32; 3] = [*r as _, *g as _, *b as _];
-    let result = check_changed(&mut temp, |temp| drop(ui.color_edit_button_rgb(temp)));
+    let mut result = check_changed(&mut temp, |temp| drop(ui.color_edit_button_rgb(temp)));
     let [r, g, b] = temp;
     *color = [r.into(), g.into(), b.into()];
+
+    let [r, g, b] = color;
+    let mul = 255.0 + 1.0 / 260.0;
+    // TODO сделать чтобы нормализовывалось
+    let mut temp: [u8; 3] = [(*r * mul) as u8, (*g * mul) as u8, (*b * mul) as u8];
+    result |= check_changed(&mut temp, |temp| {
+        ui.add(DragValue::new(&mut temp[0]));
+        ui.add(DragValue::new(&mut temp[1]));
+        ui.add(DragValue::new(&mut temp[2]));
+    });
+    let [r, g, b] = temp;
+    *color = [r as f64 / 255.0, g as f64 / 255.0, b as f64 / 255.0];
+
     result
 }
 

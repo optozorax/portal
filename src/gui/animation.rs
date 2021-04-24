@@ -124,7 +124,7 @@ impl ValueToUser {
     }
 }
 
-impl<T: StorageElem2> StageChanging<T> {
+impl<T: StorageElem2 + std::fmt::Debug> StageChanging<T> {
     pub fn egui(
         &mut self,
         ui: &mut Ui,
@@ -172,7 +172,11 @@ impl<T: StorageElem2> StageChanging<T> {
             if let Some(new_id) = uniform.get_t() {
                 storage.set_id(*id, *new_id);
             } else if let Animation::FromDev = uniform {
-                storage.set(*id, dev_stage.0.get(id).unwrap().clone());
+                if let Some(value) = dev_stage.0.get(id).cloned() {
+                    storage.set(*id, value);
+                } else {
+                    eprintln!("error at {}:{}, context: {:?}, {:?}", file!(), line!(), id, uniform);
+                }
             }
         }
     }

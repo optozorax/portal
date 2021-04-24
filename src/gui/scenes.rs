@@ -18,7 +18,7 @@ impl Default for Scenes {
                     Scene {
                         name: "Empty",
                         link: "empty",
-                        content: include_str!("../../scenes/empty.json"),
+                        content: include_str!("../../scenes/empty.ron"),
                         hidden: false,
                     },
                     Scene {
@@ -27,12 +27,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/room.ron"),
                         hidden: false,
                     },
-                    Scene {
-                        name: "Misc",
-                        link: "misc",
-                        content: include_str!("../../scenes/misc.json"),
-                        hidden: false,
-                    },
+                    // Scene {
+                    //     name: "Misc",
+                    //     link: "misc",
+                    //     content: include_str!("../../scenes/misc.json"),
+                    //     hidden: true,
+                    // },
                 ],
             ),
             (
@@ -44,18 +44,24 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/monoportal.ron"),
                         hidden: false,
                     },
+                    // Scene {
+                    //     name: "Monoportal offset",
+                    //     link: "monoportal_offset",
+                    //     content: include_str!("../../scenes/monoportal_offset.json"),
+                    //     hidden: false,
+                    // },
                     Scene {
-                        name: "Monoportal offset",
+                        name: "Monoportal scale",
                         link: "monoportal_offset",
-                        content: include_str!("../../scenes/monoportal_test.ron"),
-                        hidden: false,
+                        content: include_str!("../../scenes/monoportal_scale.ron"),
+                        hidden: true,
                     },
-                    Scene {
-                        name: "Triple portal",
-                        link: "triple_portal",
-                        content: include_str!("../../scenes/triple_portal.json"),
-                        hidden: false,
-                    },
+                    // Scene {
+                    //     name: "Triple portal",
+                    //     link: "triple_portal",
+                    //     content: include_str!("../../scenes/triple_portal.json"),
+                    //     hidden: false,
+                    // },
                 ],
             ),
             (
@@ -70,59 +76,63 @@ impl Default for Scenes {
                     Scene {
                         name: "Monoportal",
                         link: "mobius_monoportal",
-                        content: include_str!("../../scenes/mobius_monoportal.json"),
+                        content: include_str!("../../scenes/mobius_monoportal.ron"),
                         hidden: false,
                     },
                 ],
             ),
             (
                 "Links",
-                vec![Scene {
-                    name: "Hopf Link portal",
-                    link: "hopf_link",
-                    content: include_str!("../../scenes/hopf_link.json"),
-                    hidden: false,
-                }],
+                vec![
+                    // Scene {
+                    //     name: "Hopf Link portal",
+                    //     link: "hopf_link",
+                    //     content: include_str!("../../scenes/hopf_link.json"),
+                    //     hidden: false,
+                    // }
+                ],
             ),
             (
                 "Trefoil",
                 vec![
-                    Scene {
-                        name: "Self-hiding order 1",
-                        link: "trefoil_knot",
-                        content: include_str!(
-                            "../../scenes/trefoil_knot_monoportal_self_hiding.json"
-                        ),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Order 1",
-                        link: "trefoil_knot",
-                        content: include_str!("../../scenes/trefoil_knot_monoportal.json"),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Order 2",
-                        link: "trefoil_knot",
-                        content: include_str!("../../scenes/trefoil_knot.json"),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Order 3",
-                        link: "trefoil_knot_3",
-                        content: include_str!("../../scenes/trefoil_knot_3.json"),
-                        hidden: false,
-                    },
+                    // Scene {
+                    //     name: "Self-hiding order 1",
+                    //     link: "trefoil_knot",
+                    //     content: include_str!(
+                    //         "../../scenes/trefoil_knot_monoportal_self_hiding.json"
+                    //     ),
+                    //     hidden: false,
+                    // },
+                    // Scene {
+                    //     name: "Order 1",
+                    //     link: "trefoil_knot",
+                    //     content: include_str!("../../scenes/trefoil_knot_monoportal.json"),
+                    //     hidden: false,
+                    // },
+                    // Scene {
+                    //     name: "Order 2",
+                    //     link: "trefoil_knot",
+                    //     content: include_str!("../../scenes/trefoil_knot.json"),
+                    //     hidden: false,
+                    // },
+                    // Scene {
+                    //     name: "Order 3",
+                    //     link: "trefoil_knot_3",
+                    //     content: include_str!("../../scenes/trefoil_knot_3.json"),
+                    //     hidden: false,
+                    // },
                 ],
             ),
             (
                 "Portal in portal",
-                vec![Scene {
-                    name: "Ellipse portals",
-                    link: "portal_in_portal",
-                    content: include_str!("../../scenes/portal_in_portal.json"),
-                    hidden: false,
-                }],
+                vec![
+                    // Scene {
+                    //     name: "Ellipse portals",
+                    //     link: "portal_in_portal",
+                    //     content: include_str!("../../scenes/portal_in_portal.json"),
+                    //     hidden: false,
+                    // }
+                ],
             ),
         ])
     }
