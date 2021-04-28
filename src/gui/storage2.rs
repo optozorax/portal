@@ -362,7 +362,7 @@ impl<T: StorageElem2> Storage2<T> {
         ui.vertical(|ui| {
             if let Some(id_inner) = id {
                 if self.storage.get(&id_inner.un_wrap()).is_none() {
-                    eprintln!("id {:?} transformed to `None`", id_inner.un_wrap());
+                    crate::error!(format, "id {:?} transformed to `None`", id_inner);
                     *id = None;
                     changed.uniform = true;
                 }
@@ -485,7 +485,7 @@ impl<T: StorageElem2> Storage2<T> {
         ui.vertical(|ui| {
             if let Some(id_inner) = id {
                 if self.storage.get(&id_inner.un_wrap()).is_none() {
-                    eprintln!("id {:?} transformed to `None`", id_inner.un_wrap());
+                    crate::error!(format, "id {:?} transformed to `None`", id_inner);
                     *id = None;
                     changed.uniform = true;
                 }

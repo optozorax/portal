@@ -328,13 +328,7 @@ impl Window {
             .get_new_material(&data)
             .unwrap()
             .unwrap_or_else(|err| {
-                println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
-                dbg!(&err);
-                macroquad::prelude::miniquad::error!(
-                    "code:\n{}\n\nmessage:\n{}",
-                    add_line_numbers(&err.0),
-                    err.1
-                );
+                portal::error!(format, "code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
                 std::process::exit(1)
             });
         scene.set_uniforms(material, &mut data);

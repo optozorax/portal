@@ -171,11 +171,11 @@ impl<T: StorageElem2 + std::fmt::Debug> StageChanging<T> {
         for (id, uniform) in self.0.iter() {
             if let Some(new_id) = uniform.get_t() {
                 storage.set_id(*id, *new_id);
-            } else if let Animation::FromDev = uniform {
+            } else if let Animation::FromDev | Animation::ProvidedToUser = uniform {
                 if let Some(value) = dev_stage.0.get(id).cloned() {
                     storage.set(*id, value);
                 } else {
-                    eprintln!("error at {}:{}, context: {:?}, {:?}", file!(), line!(), id, uniform);
+                    crate::error!(debug, (id, uniform));
                 }
             }
         }
@@ -194,7 +194,7 @@ impl<T: StorageElem2 + std::fmt::Debug> StageChanging<T> {
             if let Some(element) = self.0.get(&id) {
                 changed |= element.user_egui(ui, storage, &user_egui, names, id, vertical);
             } else {
-                eprintln!("error at {}:{}", file!(), line!());
+                crate::error!();
             }
         }
         changed
@@ -268,7 +268,7 @@ impl<T: StorageElem2> GlobalStage<T> {
                         }
                     }
                 } else {
-                    eprintln!("error at {}:{}", file!(), line!());
+                    crate::error!();
                 }
             }
             ui.separator();

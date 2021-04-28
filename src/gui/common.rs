@@ -340,25 +340,22 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
 }
 
 pub fn egui_color_f64(ui: &mut Ui, color: &mut [f64; 3]) -> bool {
-    let [r, g, b] = color;
-    let mut temp: [f32; 3] = [*r as _, *g as _, *b as _];
-    let mut result = check_changed(&mut temp, |temp| drop(ui.color_edit_button_rgb(temp)));
-    let [r, g, b] = temp;
-    *color = [r.into(), g.into(), b.into()];
+    check_changed(color, |color| {
+        let mul = 255.0 + 1.0 / 260.;
+        let mut color32 = egui::Color32::from_rgb((color[0] * mul) as _, (color[1] * mul) as _, (color[2] * mul) as _);
 
-    let [r, g, b] = color;
-    let mul = 255.0 + 1.0 / 260.0;
-    // TODO сделать чтобы нормализовывалось
-    let mut temp: [u8; 3] = [(*r * mul) as u8, (*g * mul) as u8, (*b * mul) as u8];
-    result |= check_changed(&mut temp, |temp| {
-        ui.add(DragValue::new(&mut temp[0]));
-        ui.add(DragValue::new(&mut temp[1]));
-        ui.add(DragValue::new(&mut temp[2]));
-    });
-    let [r, g, b] = temp;
-    *color = [r as f64 / 255.0, g as f64 / 255.0, b as f64 / 255.0];
+        egui::color_picker::color_edit_button_srgba(ui, &mut color32, egui::color_picker::Alpha::Opaque);
 
-    result
+        let [mut r, mut g, mut b] = [color32.r(), color32.g(), color32.b()];
+        ui.add(DragValue::new(&mut r));
+        ui.add(DragValue::new(&mut g));
+        ui.add(DragValue::new(&mut b));
+        color32 = egui::Color32::from_rgb(r, g, b);
+
+        color[0] = color32.r() as f64 / 255.0;
+        color[1] = color32.g() as f64 / 255.0;
+        color[2] = color32.b() as f64 / 255.0;
+    })
 }
 
 pub const COLOR_TYPE: Color32 = Color32::from_rgb(0x2d, 0xbf, 0xb8);

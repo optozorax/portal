@@ -76,8 +76,8 @@ pub struct Scene {
 impl Drop for Scene {
     fn drop(&mut self) {
         match ron::to_string(self) {
-            Ok(result) => eprintln!("scene:\n\n{}", result),
-            Err(err) => eprintln!("errors while serializing scene: {:?}", err),
+            Ok(result) => crate::error!(format, "scene:\n\n{}", result),
+            Err(err) => crate::error!(format, "errors while serializing scene: {:?}", err),
         }
     }
 }
@@ -443,7 +443,7 @@ impl Scene {
                 material.set_uniform(&name.normal_name(), matrix.as_f32());
                 material.set_uniform(&name.inverse_name(), matrix.inverse().as_f32());
             } else {
-                eprintln!("matrix `{}` can't be getted", name.0);
+                crate::error!(format, "matrix `{}` can't be getted", name.0);
             }
         }
 
@@ -490,7 +490,7 @@ impl Scene {
                     AnyUniformResult::Float(f) => material.set_uniform(&name_u, f as f32),
                 },
                 _ => {
-                    println!("Error getting `{}` uniform", name);
+                    crate::error!(format, "Error getting `{}` uniform", name);
                 }
             }
         }
@@ -848,7 +848,7 @@ impl Scene {
                     } => error_message,
                     macroquad::prelude::miniquad::graphics::ShaderError::LinkError(msg) => msg,
                     other => {
-                        println!("unknown material compilation error: {:?}", other);
+                        crate::error!(format, "unknown material compilation error: {:?}", other);
                         Default::default()
                     }
                 };
