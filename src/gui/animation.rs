@@ -251,6 +251,7 @@ impl<T: StorageElem2> GlobalStage<T> {
         storage: &mut Storage2<T>,
         names: &mut ElementsDescription<T>,
         user_egui: impl Fn(&mut T, &mut Ui) -> WhatChanged,
+        vertical: bool,
     ) -> WhatChanged {
         let mut result = WhatChanged::default();
         if self.0.iter().any(|x| *x.1) {
@@ -259,10 +260,17 @@ impl<T: StorageElem2> GlobalStage<T> {
                     if *has {
                         let name = names.0.entry(id).or_default().clone();
                         if let Some(element) = storage.get_original_mut(id) {
+                            if vertical {
+                                ui.vertical(|ui| {
+                                name.user_egui(ui);
+                                result |= user_egui(element, ui);
+                            });
+                            } else {
                             ui.horizontal(|ui| {
                                 name.user_egui(ui);
                                 result |= user_egui(element, ui);
                             });
+                        }
                         } else {
                             self.0.remove(&id);
                         }
@@ -430,10 +438,10 @@ impl GlobalUserUniforms {
         let mut changed = WhatChanged::default();
         changed |= self
             .uniforms
-            .user_egui(ui, uniforms, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui));
+            .user_egui(ui, uniforms, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui), false);
         changed |= self
             .matrices
-            .user_egui(ui, matrices, &mut elements_descriptions.matrices, |elem, ui| elem.user_egui(ui));
+            .user_egui(ui, matrices, &mut elements_descriptions.matrices, |elem, ui| elem.user_egui(ui), true);
         changed
     }
 }

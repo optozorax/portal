@@ -84,12 +84,12 @@ impl Default for Scenes {
             (
                 "Links",
                 vec![
-                    // Scene {
-                    //     name: "Hopf Link portal",
-                    //     link: "hopf_link",
-                    //     content: include_str!("../../scenes/hopf_link.json"),
-                    //     hidden: false,
-                    // }
+                    Scene {
+                        name: "Hopf Link portal",
+                        link: "hopf_link",
+                        content: include_str!("../../scenes/hopf_link.ron"),
+                        hidden: false,
+                    }
                 ],
             ),
             (
