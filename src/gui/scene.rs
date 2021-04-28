@@ -304,6 +304,11 @@ impl Scene {
             egui_errors(ui, &local_errors);
         }
 
+        match ron::to_string(self) {
+            Ok(result) => std::fs::write("scene_dump.ron", result).unwrap(),
+            Err(err) => crate::error!(format, "errors while serializing scene: {:?}", err),
+        }
+
         (changed, material)
     }
 }

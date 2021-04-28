@@ -309,7 +309,7 @@ impl FormulasCache {
         text: &str,
         ns: &mut impl FnMut(&str, Vec<f64>) -> Option<f64>,
     ) -> Option<Result<f64, fasteval::Error>> {
-        self.0.borrow_mut().eval(text, ns)
+        self.0.borrow_mut().eval(text, ns).clone()
     }
 }
 

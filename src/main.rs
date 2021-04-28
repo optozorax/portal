@@ -411,7 +411,12 @@ impl Window {
                         self.scene = ron::from_str(s).unwrap();
                         self.scene.init(&mut self.data, &mut ctx.memory());
                         self.material.delete();
-                        self.material = self.scene.get_new_material(&self.data).unwrap().unwrap();
+                        self.material = self.scene.get_new_material(&self.data)
+                            .unwrap()
+                            .unwrap_or_else(|err| {
+                                portal::error!(format, "code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+                                std::process::exit(1)
+                            });
                         changed.uniform = true;
                         self.data.reload_textures = true;
                         self.cam.set_cam(&self.scene.cam);
@@ -715,7 +720,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     // set getted camera
 
                     if self.cam.from.is_none() {
-                        let calculated_cam = memory.data.get_or_default::<CalculatedCam>().clone();
+                        let calculated_cam = self.cam.get_calculated_cam();
                         memory.data.insert(OriginalCam(calculated_cam));
                     }
 
@@ -732,7 +737,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 self.cam.r = calculated_cam.r;
                 self.cam.look_at = calculated_cam.look_at;    
             } else {
-                if let Some(id) = current_cam {
+                if let Some(id) = self.cam.from {
                     let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
                         self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
                     self.cam.look_at = calculated_cam.look_at;

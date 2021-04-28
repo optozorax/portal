@@ -65,7 +65,7 @@ impl<T> StorageInner<T> {
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct Storage2<T> {
+pub struct Storage2<T: StorageElem2> {
     ids: UniqueIds,
     storage: BTreeMap<UniqueId, StorageInner<T>>,
     storage_order: Vec<UniqueId>,
@@ -83,7 +83,7 @@ impl<'a, T: StorageElem2> GetHelper<'a, T> {
     }
 }
 
-pub struct InlineHelper<'a, T>(&'a mut Storage2<T>);
+pub struct InlineHelper<'a, T: StorageElem2>(&'a mut Storage2<T>);
 
 impl<'a, T: StorageElem2> InlineHelper<'a, T> {
     pub fn inline(
@@ -165,15 +165,22 @@ impl<T: StorageElem2> Storage2<T> {
     }
 
     pub fn set(&mut self, id: T::IdWrapper, value: T) {
-        *self.storage.get_mut(&id.un_wrap()).unwrap().as_mut() = value;
+        if let Some(t) = self.storage.get_mut(&id.un_wrap()) {
+            *t.as_mut() = value;
+        } else {
+            crate::error!()
+        }
     }
 
     pub fn set_id(&mut self, id: T::IdWrapper, from: T::IdWrapper) {
         let id = id.un_wrap();
         let from = from.un_wrap();
 
-        let t: T = (*self.storage.get(&from).unwrap().as_ref()).clone();
-        *self.storage.get_mut(&id).unwrap().as_mut() = t;
+        if let Some(t) = self.storage.get(&from).map(|x| (*x).as_ref().clone()) {
+            *self.storage.get_mut(&id).unwrap().as_mut() = t;    
+        } else {
+            crate::error!();
+        }
     }
 
     fn push_default(&mut self) {
@@ -569,7 +576,7 @@ pub trait Wrapper:
     fn un_wrap(self) -> UniqueId;
 }
 
-pub trait StorageElem2: Sized + Default + Clone {
+pub trait StorageElem2: Sized + Default + Clone + Serialize {
     type IdWrapper: Wrapper;
     type GetType;
 

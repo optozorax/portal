@@ -56,12 +56,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/monoportal_scale.ron"),
                         hidden: true,
                     },
-                    // Scene {
-                    //     name: "Triple portal",
-                    //     link: "triple_portal",
-                    //     content: include_str!("../../scenes/triple_portal.json"),
-                    //     hidden: false,
-                    // },
+                    Scene {
+                        name: "Triple portal",
+                        link: "triple_portal",
+                        content: include_str!("../../scenes/triple_portal.ron"),
+                        hidden: false,
+                    },
                 ],
             ),
             (
