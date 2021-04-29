@@ -28,6 +28,13 @@ register_plugin = function (importObject) {
         js_objects[js_object][field] = data;
     }
 
+    importObject.env.js_set_field_string = function (js_object, buf, max_len, data_buf, data_len) {
+        var field = UTF8ToString(buf, max_len);
+        var data = UTF8ToString(data_buf, data_len);
+
+        js_objects[js_object][field] = data;
+    }
+
     importObject.env.js_unwrap_to_str = function (js_object, buf, max_len) {
         var str = js_objects[js_object];
         var utf8array = toUTF8Array(str);
@@ -91,7 +98,7 @@ register_plugin = function (importObject) {
         return id;
     }
 }
-miniquad_add_plugin({ register_plugin, version: "0.1.4", name: "sapp_jsutils" });
+miniquad_add_plugin({ register_plugin, version: "0.1.5", name: "sapp_jsutils" });
 
 // Its like https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder, 
 // but works on more browsers

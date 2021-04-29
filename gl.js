@@ -8,7 +8,7 @@
 
 "use strict";
 
-const version = "0.1.23";
+const version = "0.1.25";
 
 const canvas = document.querySelector("#glcanvas");
 const gl = canvas.getContext("webgl");
@@ -26,9 +26,14 @@ var high_dpi = false;
 canvas.focus();
 
 canvas.requestPointerLock = canvas.requestPointerLock ||
-    canvas.mozRequestPointerLock;
+    canvas.mozRequestPointerLock ||
+    // pointer lock in any form is not supported on iOS safari 
+    // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API#browser_compatibility
+    (function () {});
 document.exitPointerLock = document.exitPointerLock ||
-    document.mozExitPointerLock;
+    document.mozExitPointerLock ||
+    // pointer lock in any form is not supported on iOS safari
+    (function () {});
 
 function assert(flag, message) {
     if (flag == false) {
@@ -1019,40 +1024,40 @@ var importObject = {
                 GL.textures[id] = null;
             }
         },
-        glGenQueries: function (n, ids) {
-            _glGenObject(n, ids, 'createQuery', GL.timerQueries, 'glGenQueries');
-        },
-        glDeleteQueries: function (n, ids) {
+		glGenQueries: function (n, ids) {
+			_glGenObject(n, ids, 'createQuery', GL.timerQueries, 'glGenQueries');
+		},
+		glDeleteQueries: function (n, ids) {
             for (var i = 0; i < n; i++) {
                 var id = getArray(textures + i * 4, Uint32Array, 1)[0];
                 var query = GL.timerQueries[id];
                 if (!query) {
-                    continue;
-                }
+					continue;
+				}
                 gl.deleteQuery(query);
                 query.name = 0;
                 GL.timerQueries[id] = null;
             }
-        },
-        glBeginQuery: function (target, id) {
-            GL.validateGLObjectID(GL.timerQueries, id, 'glBeginQuery', 'id');
-            gl.beginQuery(target, GL.timerQueries[id]);
-        },
-        glEndQuery: function (target) {
-            gl.endQuery(target);
-        },
-        glGetQueryObjectiv: function (id, pname, ptr) {
-            GL.validateGLObjectID(GL.timerQueries, id, 'glGetQueryObjectiv', 'id');
-            let result = gl.getQueryObject(GL.timerQueries[id], pname);
-            getArray(ptr, Uint32Array, 1)[0] = result;
-        },
-        glGetQueryObjectui64v: function (id, pname, ptr) {
-            GL.validateGLObjectID(GL.timerQueries, id, 'glGetQueryObjectui64v', 'id');
-            let result = gl.getQueryObject(GL.timerQueries[id], pname);
-            let heap = getArray(ptr, Uint32Array, 2);
-            heap[0] = result;
-            heap[1] = (result - heap[0])/4294967296;
-        },
+		},
+		glBeginQuery: function (target, id) {
+			GL.validateGLObjectID(GL.timerQueries, id, 'glBeginQuery', 'id');
+			gl.beginQuery(target, GL.timerQueries[id]);
+		},
+		glEndQuery: function (target) {
+			gl.endQuery(target);
+		},
+		glGetQueryObjectiv: function (id, pname, ptr) {
+			GL.validateGLObjectID(GL.timerQueries, id, 'glGetQueryObjectiv', 'id');
+			let result = gl.getQueryObject(GL.timerQueries[id], pname);
+			getArray(ptr, Uint32Array, 1)[0] = result;
+		},
+		glGetQueryObjectui64v: function (id, pname, ptr) {
+			GL.validateGLObjectID(GL.timerQueries, id, 'glGetQueryObjectui64v', 'id');
+			let result = gl.getQueryObject(GL.timerQueries[id], pname);
+			let heap = getArray(ptr, Uint32Array, 2);
+			heap[0] = result;
+			heap[1] = (result - heap[0])/4294967296;
+		},
         setup_canvas_size: function(high_dpi) {
             window.high_dpi = high_dpi;
             resize(canvas);
@@ -1102,6 +1107,8 @@ var importObject = {
                     case 290: case 291: case 292: case 293: case 294: case 295: case 296: case 297: case 298: case 299:
                     // backspace is Back on Firefox/Windows
                     case 259:
+                    // tab - for UI
+                    case 258:
                         event.preventDefault();
                         break;
                 }
@@ -1308,7 +1315,7 @@ function init_plugins(plugins) {
             var version_func = plugins[i].name + "_crate_version";
 
             if (wasm_exports[version_func] == undefined) {
-                console.error("Plugin " + plugins[i].name + " miss version function: " + version_func + ". Probably invalid crate version.");
+                console.log("Plugin " + plugins[i].name + " is present in JS bundle, but is not used in the rust code.");
             } else {
                 var crate_version = u32_to_semver(wasm_exports[version_func]());
 
