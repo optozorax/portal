@@ -342,9 +342,17 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
 pub fn egui_color_f64(ui: &mut Ui, color: &mut [f64; 3]) -> bool {
     check_changed(color, |color| {
         let mul = 255.0 + 1.0 / 260.;
-        let mut color32 = egui::Color32::from_rgb((color[0] * mul) as _, (color[1] * mul) as _, (color[2] * mul) as _);
+        let mut color32 = egui::Color32::from_rgb(
+            (color[0] * mul) as _,
+            (color[1] * mul) as _,
+            (color[2] * mul) as _,
+        );
 
-        egui::color_picker::color_edit_button_srgba(ui, &mut color32, egui::color_picker::Alpha::Opaque);
+        egui::color_picker::color_edit_button_srgba(
+            ui,
+            &mut color32,
+            egui::color_picker::Alpha::Opaque,
+        );
 
         let [mut r, mut g, mut b] = [color32.r(), color32.g(), color32.b()];
         ui.add(DragValue::new(&mut r));

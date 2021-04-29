@@ -15,6 +15,9 @@ fasteval = "0.2.4"
 quad-url = "0.1.0"
 # color-backtrace = "0.5.0"
 
+[patch.crates-io]
+miniquad = { path = '../../testing/miniquad' }
+
 ## cargo clean; cargo build --release; strip target/release/portal; upx --best --lzma target/release/portal; ll target/release
 ## result native size is ~1MB
 ## cargo build --release --target wasm32-unknown-unknown; wasm-strip target/wasm32-unknown-unknown/release/portal.wasm; ll target/wasm32-unknown-unknown/release/

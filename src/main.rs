@@ -1,12 +1,13 @@
-use portal::gui::camera::OriginalCam;
-use portal::gui::camera::CurrentCam;
-use portal::gui::camera::CameraId;
 use glam::{DMat4, DVec2, DVec3, DVec4};
+use portal::gui::camera::CalculatedCam;
+use portal::gui::camera::CameraId;
+use portal::gui::camera::CurrentCam;
+use portal::gui::camera::OriginalCam;
 use portal::gui::eng_rus::EngRusSettings;
 use portal::gui::eng_rus::EngRusText;
+use portal::gui::scenes::ShowHiddenScenes;
 use portal::with_swapped;
 use std::f64::consts::PI;
-use portal::gui::camera::CalculatedCam;
 
 use macroquad::prelude::{
     clamp, clear_background, draw_rectangle, draw_texture_ex, get_screen_data,
@@ -73,7 +74,11 @@ impl RotateAroundCam {
         }
     }
 
-    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool, memory: &mut egui::Memory) -> bool {
+    fn process_mouse_and_keys(
+        &mut self,
+        mouse_over_canvas: bool,
+        memory: &mut egui::Memory,
+    ) -> bool {
         let mut is_something_changed = false;
 
         let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
@@ -328,7 +333,12 @@ impl Window {
             .get_new_material(&data)
             .unwrap()
             .unwrap_or_else(|err| {
-                portal::error!(format, "code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+                portal::error!(
+                    format,
+                    "code:\n{}\n\nmessage:\n{}",
+                    add_line_numbers(&err.0),
+                    err.1
+                );
                 std::process::exit(1)
             });
         scene.set_uniforms(material, &mut data);
@@ -395,7 +405,9 @@ impl Window {
         if !self.scene_initted {
             self.scene_initted = true;
             self.scene.init(&mut self.data, &mut ctx.memory());
-            ctx.memory().data.insert(OriginalCam(self.cam.get_calculated_cam()));
+            ctx.memory()
+                .data
+                .insert(OriginalCam(self.cam.get_calculated_cam()));
         }
 
         let mut changed = WhatChanged::default();
@@ -411,10 +423,17 @@ impl Window {
                         self.scene = ron::from_str(s).unwrap();
                         self.scene.init(&mut self.data, &mut ctx.memory());
                         self.material.delete();
-                        self.material = self.scene.get_new_material(&self.data)
+                        self.material = self
+                            .scene
+                            .get_new_material(&self.data)
                             .unwrap()
                             .unwrap_or_else(|err| {
-                                portal::error!(format, "code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
+                                portal::error!(
+                                    format,
+                                    "code:\n{}\n\nmessage:\n{}",
+                                    add_line_numbers(&err.0),
+                                    err.1
+                                );
                                 std::process::exit(1)
                             });
                         changed.uniform = true;
@@ -702,6 +721,15 @@ First, predefined library is included, then uniforms, then user library, then in
                 .show(ctx, |ui| {
                     let text = self.about.text(ui);
                     egui::experimental::easy_mark(ui, text);
+                    ui.separator();
+
+                    let mut checked = ui
+                        .memory()
+                        .data
+                        .get_or_default::<ShowHiddenScenes>()
+                        .clone();
+                    ui.checkbox(&mut checked.0, "Show hidden scenes :P");
+                    ui.memory().data.insert(checked);
                 });
             self.about_opened = about_opened;
         }
@@ -735,7 +763,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 self.cam.alpha = calculated_cam.alpha;
                 self.cam.beta = calculated_cam.beta;
                 self.cam.r = calculated_cam.r;
-                self.cam.look_at = calculated_cam.look_at;    
+                self.cam.look_at = calculated_cam.look_at;
             } else {
                 if let Some(id) = self.cam.from {
                     let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);

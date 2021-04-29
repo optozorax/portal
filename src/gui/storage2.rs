@@ -177,7 +177,7 @@ impl<T: StorageElem2> Storage2<T> {
         let from = from.un_wrap();
 
         if let Some(t) = self.storage.get(&from).map(|x| (*x).as_ref().clone()) {
-            *self.storage.get_mut(&id).unwrap().as_mut() = t;    
+            *self.storage.get_mut(&id).unwrap().as_mut() = t;
         } else {
             crate::error!();
         }
@@ -500,7 +500,7 @@ impl<T: StorageElem2> Storage2<T> {
 
             ui.horizontal(|ui| {
                 egui_label(ui, label, label_size);
-                changed.uniform |= self.find_named_id(id, ui, data_id);                
+                changed.uniform |= self.find_named_id(id, ui, data_id);
             });
         });
 

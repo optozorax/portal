@@ -7,19 +7,29 @@ struct Scene {
     hidden: bool,
 }
 
-pub struct Scenes(Vec<(&'static str, Vec<Scene>)>);
+pub struct Scenes(Vec<SceneSection>);
+
+struct SceneSection {
+    name: &'static str,
+    hidden: bool,
+    scenes: Vec<Scene>,
+}
+
+#[derive(Clone, Copy, Default)]
+pub struct ShowHiddenScenes(pub bool);
 
 impl Default for Scenes {
     fn default() -> Self {
         Self(vec![
-            (
-                "Technical",
-                vec![
+            SceneSection {
+                name: "Technical",
+                hidden: true,
+                scenes: vec![
                     Scene {
                         name: "Empty",
                         link: "empty",
                         content: include_str!("../../scenes/empty.ron"),
-                        hidden: false,
+                        hidden: true,
                     },
                     Scene {
                         name: "Room",
@@ -34,10 +44,11 @@ impl Default for Scenes {
                     //     hidden: true,
                     // },
                 ],
-            ),
-            (
-                "Not 2 parts",
-                vec![
+            },
+            SceneSection {
+                name: "Not 2 parts",
+                hidden: false,
+                scenes: vec![
                     Scene {
                         name: "Monoportal",
                         link: "monoportal",
@@ -63,38 +74,39 @@ impl Default for Scenes {
                         hidden: false,
                     },
                 ],
-            ),
-            (
-                "Mobius",
-                vec![
+            },
+            SceneSection {
+                name: "Mobius",
+                hidden: false,
+                scenes: vec![
                     Scene {
-                        name: "Portal",
+                        name: "Mobius Portal",
                         link: "mobius",
                         content: include_str!("../../scenes/mobius.ron"),
                         hidden: false,
                     },
                     Scene {
-                        name: "Monoportal",
+                        name: "Mobius Monoportal",
                         link: "mobius_monoportal",
                         content: include_str!("../../scenes/mobius_monoportal.ron"),
                         hidden: false,
                     },
                 ],
-            ),
-            (
-                "Links",
-                vec![
-                    Scene {
-                        name: "Hopf Link portal",
-                        link: "hopf_link",
-                        content: include_str!("../../scenes/hopf_link.ron"),
-                        hidden: false,
-                    }
-                ],
-            ),
-            (
-                "Trefoil",
-                vec![
+            },
+            SceneSection {
+                name: "Links",
+                hidden: false,
+                scenes: vec![Scene {
+                    name: "Hopf Link portal",
+                    link: "hopf_link",
+                    content: include_str!("../../scenes/hopf_link.ron"),
+                    hidden: false,
+                }],
+            },
+            SceneSection {
+                name: "Trefoil",
+                hidden: true,
+                scenes: vec![
                     // Scene {
                     //     name: "Self-hiding order 1",
                     //     link: "trefoil_knot",
@@ -122,25 +134,24 @@ impl Default for Scenes {
                     //     hidden: false,
                     // },
                 ],
-            ),
-            (
-                "Portal in portal",
-                vec![
-                    // Scene {
-                    //     name: "Ellipse portals",
-                    //     link: "portal_in_portal",
-                    //     content: include_str!("../../scenes/portal_in_portal.json"),
-                    //     hidden: false,
-                    // }
-                ],
-            ),
+            },
+            SceneSection {
+                name: "Portal in portal",
+                hidden: false,
+                scenes: vec![Scene {
+                    name: "Ellipse portal in portal",
+                    link: "portal_in_portal",
+                    content: include_str!("../../scenes/portal_in_portal.ron"),
+                    hidden: false,
+                }],
+            },
         ])
     }
 }
 
 impl Scenes {
     pub fn get_by_link(&self, need_link: &str) -> Option<&'static str> {
-        for Scene { content, link, .. } in self.0.iter().map(|x| x.1.iter()).flatten() {
+        for Scene { content, link, .. } in self.0.iter().map(|x| x.scenes.iter()).flatten() {
             if *link == need_link {
                 return Some(content);
             }
@@ -149,22 +160,33 @@ impl Scenes {
     }
 
     pub fn egui(&self, ui: &mut Ui) -> Option<(&'static str, &'static str)> {
+        let show_hidden = ui.memory().data.get_or_default::<ShowHiddenScenes>().0;
         ui.set_width(140.);
         let mut result = None;
-        for (pos, (name, inner)) in self.0.iter().enumerate() {
-            if pos != 0 {
-                ui.separator();
-            }
-            ui.add(egui::Label::new(*name).strong().underline().monospace());
-            for Scene {
+        for (
+            pos,
+            SceneSection {
                 name,
-                content,
                 hidden,
-                link,
-            } in inner
-            {
-                if !hidden && ui.button(*name).clicked() {
-                    result = Some((*content, *link))
+                scenes: inner,
+            },
+        ) in self.0.iter().enumerate()
+        {
+            if show_hidden || !hidden {
+                if pos != 0 {
+                    ui.separator();
+                }
+                ui.add(egui::Label::new(*name).strong().underline().monospace());
+                for Scene {
+                    name,
+                    content,
+                    hidden,
+                    link,
+                } in inner
+                {
+                    if (show_hidden || !hidden) && ui.button(*name).clicked() {
+                        result = Some((*content, *link))
+                    }
                 }
             }
         }

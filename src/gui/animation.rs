@@ -1,6 +1,6 @@
-use crate::gui::camera::CurrentCam;
-use crate::gui::camera::CameraId;
 use crate::gui::camera::Cam;
+use crate::gui::camera::CameraId;
+use crate::gui::camera::CurrentCam;
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::eng_rus::EngRusText;
@@ -109,7 +109,7 @@ impl ValueToUser {
                 response.on_hover_text(help.text(ui));
             }
             ui.label(": ");
-            ui.spacing_mut().item_spacing.x = previous;    
+            ui.spacing_mut().item_spacing.x = previous;
         });
     }
 
@@ -190,7 +190,11 @@ impl<T: StorageElem2 + std::fmt::Debug> StageChanging<T> {
         vertical: bool,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        for id in storage.visible_elements().map(|(id, _)| id).collect::<Vec<_>>() {
+        for id in storage
+            .visible_elements()
+            .map(|(id, _)| id)
+            .collect::<Vec<_>>()
+        {
             if let Some(element) = self.0.get(&id) {
                 changed |= element.user_egui(ui, storage, &user_egui, names, id, vertical);
             } else {
@@ -233,7 +237,12 @@ impl<T: StorageElem2> Default for GlobalStage<T> {
 }
 
 impl<T: StorageElem2> GlobalStage<T> {
-    pub fn egui(&mut self, ui: &mut Ui, storage: &mut Storage2<T>, filter: &mut AnimationFilter<T>) -> bool {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        storage: &mut Storage2<T>,
+        filter: &mut AnimationFilter<T>,
+    ) -> bool {
         let mut changed = false;
         for (id, name) in storage.visible_elements() {
             let enabled = *filter.0.entry(id).or_default();
@@ -255,22 +264,26 @@ impl<T: StorageElem2> GlobalStage<T> {
     ) -> WhatChanged {
         let mut result = WhatChanged::default();
         if self.0.iter().any(|x| *x.1) {
-            for id in storage.visible_elements().map(|(id, _)| id).collect::<Vec<_>>() {
+            for id in storage
+                .visible_elements()
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>()
+            {
                 if let Some(has) = self.0.get(&id) {
                     if *has {
                         let name = names.0.entry(id).or_default().clone();
                         if let Some(element) = storage.get_original_mut(id) {
                             if vertical {
                                 ui.vertical(|ui| {
-                                name.user_egui(ui);
-                                result |= user_egui(element, ui);
-                            });
+                                    name.user_egui(ui);
+                                    result |= user_egui(element, ui);
+                                });
                             } else {
-                            ui.horizontal(|ui| {
-                                name.user_egui(ui);
-                                result |= user_egui(element, ui);
-                            });
-                        }
+                                ui.horizontal(|ui| {
+                                    name.user_egui(ui);
+                                    result |= user_egui(element, ui);
+                                });
+                            }
                         } else {
                             self.0.remove(&id);
                         }
@@ -310,13 +323,13 @@ impl<T: StorageElem2> ElementsDescription<T> {
 
     pub fn egui(&mut self, ui: &mut Ui, storage: &Storage2<T>, filter: &mut AnimationFilter<T>) {
         for (id, name) in storage.visible_elements() {
-                let enabled = *filter.0.entry(id).or_default();
-                if enabled {
-            ui.group(|ui| {
+            let enabled = *filter.0.entry(id).or_default();
+            if enabled {
+                ui.group(|ui| {
                     ui.label(name);
                     self.0.entry(id).or_default().egui(ui);
-            });
-                }    
+                });
+            }
         }
     }
 }
@@ -422,26 +435,38 @@ impl GlobalUserUniforms {
         animation_filters: &mut AnimationFilters,
     ) -> WhatChanged {
         let mut changed = false;
-        changed |= self.uniforms.egui(ui, uniforms, &mut animation_filters.uniforms);
+        changed |= self
+            .uniforms
+            .egui(ui, uniforms, &mut animation_filters.uniforms);
         ui.separator();
-        changed |= self.matrices.egui(ui, matrices, &mut animation_filters.matrices);
+        changed |= self
+            .matrices
+            .egui(ui, matrices, &mut animation_filters.matrices);
         WhatChanged::from_uniform(changed)
     }
 
     pub fn user_egui(
-        &mut self, 
-        ui: &mut Ui, 
+        &mut self,
+        ui: &mut Ui,
         uniforms: &mut Storage2<AnyUniform>,
         matrices: &mut Storage2<Matrix>,
-        elements_descriptions: &mut ElementsDescriptions
+        elements_descriptions: &mut ElementsDescriptions,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        changed |= self
-            .uniforms
-            .user_egui(ui, uniforms, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui), false);
-        changed |= self
-            .matrices
-            .user_egui(ui, matrices, &mut elements_descriptions.matrices, |elem, ui| elem.user_egui(ui), true);
+        changed |= self.uniforms.user_egui(
+            ui,
+            uniforms,
+            &mut elements_descriptions.uniforms,
+            |elem, ui| elem.user_egui(ui),
+            false,
+        );
+        changed |= self.matrices.user_egui(
+            ui,
+            matrices,
+            &mut elements_descriptions.matrices,
+            |elem, ui| elem.user_egui(ui),
+            true,
+        );
         changed
     }
 }
@@ -501,16 +526,15 @@ impl<T: StorageElem2> Animation<T> {
                 let name = names.0.entry(id).or_default();
                 if vertical {
                     ui.vertical(|ui| {
-                            name.user_egui(ui);
-                        changed |= user_egui(element, ui);        
+                        name.user_egui(ui);
+                        changed |= user_egui(element, ui);
                     });
                 } else {
                     ui.horizontal(|ui| {
-                            name.user_egui(ui);
-                        changed |= user_egui(element, ui);        
+                        name.user_egui(ui);
+                        changed |= user_egui(element, ui);
                     });
                 }
-                
             })),
             FromDev => {}
             Changed(_) => {}
@@ -526,7 +550,7 @@ impl AnimationStage {
         input: &mut hlist![Storage2<AnyUniform>, FormulasCache],
         matrices: &mut Storage2<Matrix>,
         cameras: &mut Storage2<Cam>,
-        elements_descriptions: &mut ElementsDescriptions
+        elements_descriptions: &mut ElementsDescriptions,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         if let Some(description) = &self.description {
@@ -544,7 +568,13 @@ impl AnimationStage {
             }
         }
 
-        for id in self.cams.iter().filter(|(_, enabled)| **enabled).map(|(id, _)| *id) {
+        for id in cameras
+            .visible_elements()
+            .filter_map(|(id, _)| Some((id, self.cams.get(&id)?)))
+            .filter(|(_, enabled)| **enabled)
+            .map(|(id, _)| id)
+            .collect::<Vec<_>>()
+        {
             if let Some(element) = cameras.get_original_mut(id) {
                 ui.horizontal(|ui| {
                     changed |= element.user_egui(ui, &mut elements_descriptions.cameras, id);
@@ -554,13 +584,21 @@ impl AnimationStage {
 
         ui.separator();
 
-        changed |= self
-            .uniforms
-            .user_egui(ui, &mut input.0, &mut elements_descriptions.uniforms, |elem, ui| elem.user_egui(ui), false);
+        changed |= self.uniforms.user_egui(
+            ui,
+            &mut input.0,
+            &mut elements_descriptions.uniforms,
+            |elem, ui| elem.user_egui(ui),
+            false,
+        );
         ui.separator();
-        changed |= self
-            .matrices
-            .user_egui(ui, matrices, &mut elements_descriptions.matrices, |elem, ui| elem.user_egui(ui), true);
+        changed |= self.matrices.user_egui(
+            ui,
+            matrices,
+            &mut elements_descriptions.matrices,
+            |elem, ui| elem.user_egui(ui),
+            true,
+        );
         changed
     }
 }
@@ -610,7 +648,8 @@ impl StorageElem2 for AnimationStage {
             let enabled = *filters.cameras.0.entry(id).or_default();
             if enabled {
                 let enabled = self.cams.entry(id).or_default();
-                changed.uniform |= check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
+                changed.uniform |=
+                    check_changed(enabled, |enabled| drop(ui.checkbox(enabled, name)));
             }
         }
 

@@ -4,6 +4,7 @@ use crate::gui::storage2::Storage2;
 
 use crate::code_generation::*;
 use crate::gui::animation::*;
+use crate::gui::camera::Cam;
 use crate::gui::common::*;
 use crate::gui::eng_rus::EngRusText;
 use crate::gui::material::*;
@@ -11,7 +12,6 @@ use crate::gui::matrix::*;
 use crate::gui::object::*;
 use crate::gui::texture::*;
 use crate::gui::uniform::*;
-use crate::gui::camera::Cam;
 use crate::shader_error_parser::*;
 
 use egui::*;
@@ -259,14 +259,22 @@ impl Scene {
         });
 
         ui.collapsing("Elements descriptions", |ui| {
-            self.elements_descriptions
-                .egui(ui, &self.uniforms, &self.matrices, &self.cameras, &mut self.animations_filters);
+            self.elements_descriptions.egui(
+                ui,
+                &self.uniforms,
+                &self.matrices,
+                &self.cameras,
+                &mut self.animations_filters,
+            );
         });
 
         ui.collapsing("Global user uniforms", |ui| {
-            changed |= self
-                .user_uniforms
-                .egui(ui, &mut self.uniforms, &mut self.matrices, &mut self.animations_filters);
+            changed |= self.user_uniforms.egui(
+                ui,
+                &mut self.uniforms,
+                &mut self.matrices,
+                &mut self.animations_filters,
+            );
         });
 
         with_swapped!(x => (self.cameras, self.animations_filters, self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
@@ -304,6 +312,7 @@ impl Scene {
             egui_errors(ui, &local_errors);
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
         match ron::to_string(self) {
             Ok(result) => std::fs::write("scene_dump.ron", result).unwrap(),
             Err(err) => crate::error!(format, "errors while serializing scene: {:?}", err),
@@ -928,7 +937,12 @@ impl Scene {
 
     pub fn control_egui(&mut self, ui: &mut Ui, data: &mut Data) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        changed |= self.user_uniforms.user_egui(ui, &mut self.uniforms, &mut self.matrices, &mut self.elements_descriptions);
+        changed |= self.user_uniforms.user_egui(
+            ui,
+            &mut self.uniforms,
+            &mut self.matrices,
+            &mut self.elements_descriptions,
+        );
 
         if self.animation_stages.len() != 0 {
             changed |= self.select_stage_ui(ui);
@@ -937,7 +951,6 @@ impl Scene {
                 if let Some(stage) = self.animation_stages.get_original(stage) {
                     with_swapped!(x => (self.uniforms, data.formulas_cache);
                         changed |= stage.user_egui(ui, &mut x, &mut self.matrices, &mut self.cameras, &mut self.elements_descriptions));
-
                 } else {
                     self.current_stage = None;
                 }
