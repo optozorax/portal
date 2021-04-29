@@ -1,16 +1,36 @@
 [package]
 name = "portal"
-version = "0.1.4"
+version = "0.2.0"
 authors = ["ilya sheprut <optozorax@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-macroquad = "0.3.0-alpha.16"
-egui-macroquad = "0.1.0"
+macroquad = "0.3.0"
+egui-macroquad = { path = "../egui-macroquad" }
 glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
-serde_json = "1.0"
-egui = "0.10.0"
+ron = "0.6.4"
+egui = { git = "https://github.com/emilk/egui" }
 fasteval = "0.2.4"
 quad-url = "0.1.0"
 # color-backtrace = "0.5.0"
+
+[patch.crates-io]
+miniquad = { path = '../../testing/miniquad' }
+
+## cargo clean; cargo build --release; strip target/release/portal; upx --best --lzma target/release/portal; ll target/release
+## result native size is ~1MB
+## cargo build --release --target wasm32-unknown-unknown; wasm-strip target/wasm32-unknown-unknown/release/portal.wasm; ll target/wasm32-unknown-unknown/release/
+## result wasm size is ~3.5MB, so, not recommend to use this for wasm
+# [profile.release]
+# opt-level = 'z'
+# panic = 'abort'
+# lto = true
+
+## cargo build --release; strip target/release/portal; upx --best --lzma target/release/portal; ll target/release
+## result native size is ~3.5MB
+## cargo build --release --target wasm32-unknown-unknown; wasm-strip target/wasm32-unknown-unknown/release/portal.wasm; ll target/wasm32-unknown-unknown/release/
+## result wasm size is ~3.5MB
+# [profile.release]
+# opt-level = 2
+# lto = true

@@ -1,12 +1,20 @@
+//! While we have no GAT's, there is no way to send links to trait object through associated trait type. I found a solution: move needed objects and receive them by value. So, for this there is `with_swapped` macro, which moves values into variables and returns them back when trait method is done. This shit hack can be removed at all when GAT's is finally here.
+
 #[macro_export]
-macro_rules! megatuple {
-    ($x:ty, $($tail:tt)+) => { ($x, megatuple!($($tail)+)) };
+macro_rules! hlist {
+    ($x:ty, $($tail:tt)+) => { ($x, hlist!($($tail)+)) };
     ($x:ty) => { ($x, ()) };
 }
 
 #[macro_export]
-macro_rules! megapattern {
-    ($x:pat, $($tail:tt)+) => { ($x, megapattern!($($tail)+)) };
+macro_rules! hval {
+    ($x:expr, $($tail:tt)+) => { ($x, hval!($($tail)+)) };
+    ($x:expr) => { ($x, ()) };
+}
+
+#[macro_export]
+macro_rules! hpat {
+    ($x:pat, $($tail:tt)+) => { ($x, hpat!($($tail)+)) };
     ($x:pat) => { ($x, ()) };
 }
 
@@ -40,12 +48,12 @@ macro_rules! with_swapped {
 mod test {
     #[test]
     fn test() {
-        fn a(megapattern!(a, b): &mut megatuple!(Vec<String>, Vec<String>)) {
+        fn a(hpat!(a, b): &mut hlist!(Vec<String>, Vec<String>)) {
             a.push("aoeu".to_string());
             b.push("stnh".to_string());
         }
 
-        fn b(megapattern!(a, b, c): &mut megatuple!(Vec<String>, i64, i8)) {
+        fn b(hpat!(a, b, c): &mut hlist!(Vec<String>, i64, i8)) {
             a.push("lcrg".to_string());
             *b = 10000;
             *c = 125;

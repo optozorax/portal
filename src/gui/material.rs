@@ -1,8 +1,8 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::glsl::*;
-use crate::gui::storage::*;
-use crate::gui::uniform::*;
+use crate::gui::storage2::*;
+use crate::gui::unique_id::UniqueId;
 
 use crate::gui::common::ShaderErrors;
 use egui::*;
@@ -13,18 +13,18 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Material {
     Simple {
-        color: [f32; 3],
-        normal_coef: f32, // 0..1
+        color: [f64; 3],
+        normal_coef: f64, // 0..1
         grid: bool,
-        grid_scale: f32,
-        grid_coef: f32, // 0..1
+        grid_scale: f64,
+        grid_coef: f64, // 0..1
     },
     Reflect {
-        add_to_color: [f32; 3],
+        add_to_color: [f64; 3],
     },
     Refract {
-        refractive_index: f32,
-        add_to_color: [f32; 3],
+        refractive_index: f64,
+        add_to_color: [f64; 3],
     },
     Complex {
         code: MaterialCode, // gets (SphereIntersection hit, Ray r) -> MaterialProcessing, must use material_next or material_final
@@ -43,85 +43,40 @@ impl Default for Material {
     }
 }
 
-impl Material {
-    pub fn errors_count(&self, pos: usize, errors: &ShaderErrors) -> usize {
-        if let Some(local_errors) = errors.get_errors(self, pos) {
-            local_errors.len()
-        } else {
-            0
-        }
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct MaterialId(UniqueId);
+
+impl Wrapper for MaterialId {
+    fn wrap(id: UniqueId) -> Self {
+        Self(id)
+    }
+    fn un_wrap(self) -> UniqueId {
+        self.0
     }
 }
 
-impl StorageElem for MaterialComboBox {
+impl StorageElem2 for Material {
+    type IdWrapper = MaterialId;
     type GetType = Material;
-    type Input = ShaderErrors;
 
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
-        &self,
-        _: F,
-        _: &StorageWithNames<AnyUniformComboBox>,
-        _: &FormulasCache,
-    ) -> GetEnum<Self::GetType> {
-        GetEnum::Ok(self.0.clone())
-    }
+    const SAFE_TO_RENAME: bool = false;
+
+    type Input = ShaderErrors;
+    type GetInput = ();
 
     fn egui(
         &mut self,
         ui: &mut Ui,
-        pos: usize,
-        input: &mut Self::Input,
-        _: &[String],
+        errors: &mut Self::Input,
+        _: &mut InlineHelper<Self>,
+        data_id: egui::Id,
+        self_id: Self::IdWrapper,
     ) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_shader(egui_combo_box(ui, "Type:", 45., &mut self.0));
+        let mut changed = egui_combo_box(ui, "Type:", 45., self, data_id);
         ui.separator();
-        changed |= self.0.egui(ui, pos, input);
-        changed
-    }
 
-    fn errors_count(&self, pos: usize, input: &Self::Input, _: &[String]) -> usize {
-        self.0.errors_count(pos, &input)
-    }
-}
-
-impl ComboBoxChoosable for Material {
-    fn variants() -> &'static [&'static str] {
-        &["Simple", "Reflect", "Refract", "Complex"]
-    }
-    fn get_number(&self) -> usize {
         use Material::*;
-        match self {
-            Simple { .. } => 0,
-            Reflect { .. } => 1,
-            Refract { .. } => 2,
-            Complex { .. } => 3,
-        }
-    }
-    fn set_number(&mut self, number: usize) {
-        use Material::*;
-        *self = match number {
-            0 => Default::default(),
-            1 => Reflect {
-                add_to_color: [1.0, 1.0, 1.0],
-            },
-            2 => Refract {
-                add_to_color: [1.0, 1.0, 1.0],
-                refractive_index: 1.5,
-            },
-            3 => Complex {
-                code: Default::default(),
-            },
-            _ => unreachable!(),
-        };
-    }
-}
-
-impl Material {
-    fn egui(&mut self, ui: &mut Ui, pos: usize, errors: &mut ShaderErrors) -> WhatChanged {
-        use Material::*;
-        let mut changed = false;
-        let has_errors = errors.get_errors(&*self, pos).is_some();
+        let has_errors = errors.get(self_id).is_some();
         match self {
             Simple {
                 color,
@@ -132,7 +87,7 @@ impl Material {
             } => {
                 ui.horizontal(|ui| {
                     ui.label("Color");
-                    changed |= check_changed(color, |color| drop(ui.color_edit_button_rgb(color)));
+                    changed |= egui_color_f64(ui, color);
                     ui.separator();
                     ui.label("Normal coef");
                     changed |= check_changed(normal_coef, |normal_coef| {
@@ -182,8 +137,7 @@ impl Material {
             Reflect { add_to_color } => {
                 ui.horizontal(|ui| {
                     ui.label("Add to color");
-                    changed |=
-                        check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
+                    changed |= egui_color_f64(ui, add_to_color);
                 });
             }
             Refract {
@@ -192,8 +146,7 @@ impl Material {
             } => {
                 ui.horizontal(|ui| {
                     ui.label("Add to color");
-                    changed |=
-                        check_changed(add_to_color, |color| drop(ui.color_edit_button_rgb(color)));
+                    changed |= egui_color_f64(ui, add_to_color);
                 });
                 ui.horizontal(|ui| {
                     ui.label("Refractive index");
@@ -239,14 +192,59 @@ impl Material {
                 });
                 ui.add(Label::new("}").monospace());
 
-                if let Some(local_errors) = errors.get_errors(self, pos) {
+                if let Some(local_errors) = errors.get(self_id) {
                     egui_errors(ui, local_errors);
                 }
             }
         }
+
         WhatChanged::from_shader(changed)
+    }
+
+    fn get(&self, _: &GetHelper<Self>, _: &Self::GetInput) -> Option<Self::GetType> {
+        Some(self.clone())
+    }
+
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, _: F, _: &mut Self::Input) {}
+
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
+        &self,
+        _: F,
+        errors: &Self::Input,
+        self_id: Self::IdWrapper,
+    ) -> usize {
+        errors.get(self_id).map(|x| x.len()).unwrap_or(0)
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct MaterialComboBox(pub Material);
+impl ComboBoxChoosable for Material {
+    fn variants() -> &'static [&'static str] {
+        &["Simple", "Reflect", "Refract", "Complex"]
+    }
+    fn get_number(&self) -> usize {
+        use Material::*;
+        match self {
+            Simple { .. } => 0,
+            Reflect { .. } => 1,
+            Refract { .. } => 2,
+            Complex { .. } => 3,
+        }
+    }
+    fn set_number(&mut self, number: usize) {
+        use Material::*;
+        *self = match number {
+            0 => Default::default(),
+            1 => Reflect {
+                add_to_color: [1.0, 1.0, 1.0],
+            },
+            2 => Refract {
+                add_to_color: [1.0, 1.0, 1.0],
+                refractive_index: 1.5,
+            },
+            3 => Complex {
+                code: Default::default(),
+            },
+            _ => unreachable!(),
+        };
+    }
+}

@@ -1,46 +1,14 @@
-use crate::gui::glsl::LibraryCode;
-use crate::gui::material::Material;
-use crate::gui::matrix::Matrix;
-use crate::gui::object::Object;
+use crate::gui::storage2::Wrapper;
+use crate::gui::unique_id::*;
+use std::any::Any;
+use std::any::TypeId;
 
 use std::collections::BTreeMap;
 
 use std::ops::Range;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
-pub struct ErrId(pub usize);
-
-// Used to find errors source
-pub trait ErrorId {
-    fn identifier(&self, pos: usize) -> ErrId;
-}
-
-impl ErrorId for Material {
-    fn identifier(&self, pos: usize) -> ErrId {
-        ErrId(1000 + pos)
-    }
-}
-
-impl ErrorId for Object {
-    fn identifier(&self, pos: usize) -> ErrId {
-        ErrId(2000 + pos)
-    }
-}
-
-impl ErrorId for LibraryCode {
-    fn identifier(&self, pos: usize) -> ErrId {
-        ErrId(3000 + pos)
-    }
-}
-
-impl ErrorId for Matrix {
-    fn identifier(&self, pos: usize) -> ErrId {
-        ErrId(4000 + pos)
-    }
-}
-
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
-pub struct LineNumbersByKey(pub BTreeMap<ErrId, Range<usize>>);
+pub struct LineNumbersByKey(pub BTreeMap<(TypeId, UniqueId), Range<usize>>);
 
 impl LineNumbersByKey {
     pub fn offset(&mut self, lines: usize) {
@@ -49,19 +17,23 @@ impl LineNumbersByKey {
             .for_each(|(_, line)| *line = line.start + lines..line.end + lines);
     }
 
-    pub fn add(&mut self, identifier: ErrId, lines: Range<usize>) {
-        assert!(self.0.get(&identifier).is_none());
-        self.0.insert(identifier, lines);
+    pub fn add<T: Any + Wrapper>(&mut self, id: T, lines: Range<usize>) {
+        self.add_inner((id.type_id(), id.un_wrap()), lines);
+    }
+
+    fn add_inner(&mut self, key: (TypeId, UniqueId), lines: Range<usize>) {
+        assert!(self.0.get(&key).is_none());
+        self.0.insert(key, lines);
     }
 
     pub fn extend(&mut self, other: LineNumbersByKey) {
         for (k, v) in other.0 {
-            self.add(k, v);
+            self.add_inner(k, v);
         }
     }
 
     // Returns identifier and local line position
-    pub fn get_identifier(&self, line_no: usize) -> Option<(ErrId, usize)> {
+    pub fn get_identifier(&self, line_no: usize) -> Option<((TypeId, UniqueId), usize)> {
         self.0
             .iter()
             .find(|(_, range)| range.contains(&line_no))
@@ -92,11 +64,11 @@ impl StringStorage {
         self.storage += s.as_ref();
     }
 
-    pub fn add_identifier_string<T: AsRef<str>>(&mut self, identifier: ErrId, s: T) {
+    pub fn add_identifier_string<T: AsRef<str>, I: Any + Wrapper>(&mut self, id: I, s: T) {
         let start = self.current_line_no;
         self.add_string(s);
         let end = self.current_line_no;
-        self.line_numbers.add(identifier, start..end + 1);
+        self.line_numbers.add(id, start..end + 1);
     }
 
     pub fn add_string_storage(&mut self, mut other: StringStorage) {
@@ -128,32 +100,67 @@ pub fn apply_template(
 #[cfg(test)]
 mod tests_string_storage {
     use super::*;
+    use serde::{Deserialize, Serialize};
 
     #[test]
     fn test() {
+        #[derive(
+            Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+        )]
+        pub struct CustomId1(UniqueId);
+
+        impl Wrapper for CustomId1 {
+            fn wrap(id: UniqueId) -> Self {
+                Self(id)
+            }
+            fn un_wrap(self) -> UniqueId {
+                self.0
+            }
+        }
+
+        #[derive(
+            Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+        )]
+        pub struct CustomId2(UniqueId);
+
+        impl Wrapper for CustomId2 {
+            fn wrap(id: UniqueId) -> Self {
+                Self(id)
+            }
+            fn un_wrap(self) -> UniqueId {
+                self.0
+            }
+        }
+
+        let mut ids = UniqueIds::default();
+
         let mut s1 = StringStorage::default();
         s1.add_string("1\n2\n3\n");
-        s1.add_identifier_string(ErrId(1), "\n4\n5\n");
+        let id1 = CustomId1(ids.get_unique());
+        s1.add_identifier_string(id1, "\n4\n5\n");
+        let id1 = (TypeId::of::<CustomId1>(), id1.un_wrap());
 
         assert_eq!(
             s1,
             StringStorage {
                 storage: "1\n2\n3\n\n4\n5\n".to_owned(),
                 current_line_no: 7,
-                line_numbers: LineNumbersByKey(vec![(ErrId(1), 4..8)].into_iter().collect()),
+                line_numbers: LineNumbersByKey(vec![(id1, 4..8)].into_iter().collect()),
             }
         );
 
         let mut s2 = StringStorage::default();
         s2.add_string("a\nb");
-        s2.add_identifier_string(ErrId(2), "c\nd");
+        let id2 = CustomId2(ids.get_unique());
+        s2.add_identifier_string(id2, "c\nd");
+        let id2 = (TypeId::of::<CustomId2>(), id2.un_wrap());
 
         assert_eq!(
             s2,
             StringStorage {
                 storage: "a\nbc\nd".to_owned(),
                 current_line_no: 3,
-                line_numbers: LineNumbersByKey(vec![(ErrId(2), 2..4)].into_iter().collect()),
+                line_numbers: LineNumbersByKey(vec![(id2, 2..4)].into_iter().collect()),
             }
         );
 
@@ -169,9 +176,7 @@ mod tests_string_storage {
                 storage: "abc\na\nbc\nd\n\ne\nf\n1\n2\n3\n\n4\n5\n\n9".to_owned(),
                 current_line_no: 15,
                 line_numbers: LineNumbersByKey(
-                    vec![(ErrId(1), 11..15), (ErrId(2), 3..5)]
-                        .into_iter()
-                        .collect()
+                    vec![(id1, 11..15), (id2, 3..5)].into_iter().collect()
                 ),
             }
         );

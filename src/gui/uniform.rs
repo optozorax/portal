@@ -1,8 +1,12 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
-use crate::gui::storage::*;
+use crate::gui::storage2::*;
+use crate::gui::unique_id::UniqueId;
+use core::cell::RefCell;
 use egui::*;
 use glam::*;
+use std::fmt::{self, Debug, Formatter};
+use std::ops::RangeInclusive;
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -11,40 +15,22 @@ use std::collections::BTreeMap;
 pub struct Formula(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct FormulaName(pub String);
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AnyUniform {
     Bool(bool),
-    Int {
-        min: Option<i32>,
-        max: Option<i32>,
-        value: i32,
-    },
-    Float {
-        min: Option<f64>,
-        max: Option<f64>,
-        value: f64,
-    },
+    Int(ClampedValue<i32>),
+    Float(ClampedValue<f64>),
     Angle(f64),
+    Progress(f64),
     Formula(Formula),
 }
 
 impl AnyUniform {
     pub fn int(int: i32) -> AnyUniform {
-        AnyUniform::Int {
-            min: None,
-            max: None,
-            value: int,
-        }
+        AnyUniform::Int(ClampedValue::new(int))
     }
 
     pub fn float(float: f64) -> AnyUniform {
-        AnyUniform::Float {
-            min: None,
-            max: None,
-            value: float,
-        }
+        AnyUniform::Float(ClampedValue::new(float))
     }
 }
 
@@ -72,24 +58,58 @@ impl From<AnyUniformResult> for f64 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TVec3<T> {
-    pub x: T,
-    pub y: T,
-    pub z: T,
+pub struct TVec3 {
+    pub x: ParametrizeOrNot,
+    pub y: ParametrizeOrNot,
+    pub z: ParametrizeOrNot,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ParametrizeOrNot {
-    Yes(FormulaName),
-    No(f32),
+    Yes(Option<UniformId>),
+    No(f64),
 }
 
-impl ParametrizeOrNot {
-    pub fn errors_count(&self, formulas_names: &[String]) -> usize {
-        match self {
-            ParametrizeOrNot::Yes(name) => !formulas_names.contains(&name.0) as usize,
-            ParametrizeOrNot::No { .. } => 0,
-        }
+impl TVec3 {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        f: impl Fn(&mut Ui, &mut f64) -> bool,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+        data_id: egui::Id,
+    ) -> bool {
+        let mut changed = false;
+        changed |= self
+            .x
+            .egui(ui, "X", 0.0, &f, uniforms, formulas_cache, data_id.with(0));
+        changed |= self
+            .y
+            .egui(ui, "Y", 0.0, &f, uniforms, formulas_cache, data_id.with(1));
+        changed |= self
+            .z
+            .egui(ui, "Z", 0.0, &f, uniforms, formulas_cache, data_id.with(2));
+        changed
+    }
+
+    pub fn remove_as_field(
+        &self,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+    ) {
+        self.x.remove_as_field(uniforms, formulas_cache);
+        self.y.remove_as_field(uniforms, formulas_cache);
+        self.z.remove_as_field(uniforms, formulas_cache);
+    }
+
+    pub fn errors_count(
+        &self,
+        uniforms: &Storage2<AnyUniform>,
+        formulas_cache: &FormulasCache,
+    ) -> usize {
+        self.x.errors_count(uniforms, formulas_cache)
+            + self.y.errors_count(uniforms, formulas_cache)
+            + self.z.errors_count(uniforms, formulas_cache)
     }
 }
 
@@ -97,66 +117,74 @@ impl ParametrizeOrNot {
     pub fn egui(
         &mut self,
         ui: &mut Ui,
-        formulas_names: &[String],
         label: &str,
-        default: f32,
-        f: impl FnOnce(&mut Ui, &mut f32) -> bool,
+        default: f64,
+        f: impl FnOnce(&mut Ui, &mut f64) -> bool,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+        data_id: egui::Id,
     ) -> bool {
         use ParametrizeOrNot::*;
-        let mut not_found = false;
         let mut changed = false;
         ui.horizontal(|ui| {
             ui.label(label);
             let mut current = matches!(self, Yes { .. });
             changed |= egui_bool(ui, &mut current);
             if changed {
-                *self = if current {
-                    Yes(FormulaName("a".to_owned()))
-                } else {
-                    No(default)
-                };
+                *self = if current { Yes(None) } else { No(default) };
             }
             changed |= match self {
                 Yes(current) => {
-                    not_found = !formulas_names.contains(&current.0);
-                    check_changed(&mut current.0, |text| drop(ui.text_edit_singleline(text)))
+                    uniforms
+                        .inline("", 0.0, current, ui, formulas_cache, data_id)
+                        .uniform
                 }
                 No(float) => f(ui, float),
             };
         });
-        if not_found {
-            ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = 0.;
-                ui.add(Label::new("Error: ").text_color(Color32::RED));
-                ui.label("uniform with this name is not found");
-            });
-        }
         changed
     }
 
     pub fn get(
         &self,
-        uniforms: &StorageWithNames<AnyUniformComboBox>,
+        uniforms: &Storage2<AnyUniform>,
         formulas_cache: &FormulasCache,
-    ) -> f64 {
+    ) -> Option<f64> {
         use ParametrizeOrNot::*;
-        match self {
-            Yes(f) => match uniforms.get(&f.0, uniforms, formulas_cache) {
-                GetEnum::Ok(x) => x.into(),
-                _ => {
-                    eprintln!("can't find uniform {}", f.0);
-                    0.0
-                }
-            },
+        Some(match self {
+            Yes(f) => uniforms.get((*f)?, formulas_cache)?.into(),
             No(f) => (*f).into(),
-        }
+        })
     }
 
-    pub fn freeget(&self) -> Option<f32> {
+    pub fn freeget(&self) -> Option<f64> {
         use ParametrizeOrNot::*;
         match self {
             Yes(_) => None,
             No(f) => Some(*f),
+        }
+    }
+
+    pub fn remove_as_field(
+        &self,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+    ) {
+        if let ParametrizeOrNot::Yes(Some(id)) = self {
+            uniforms.remove_as_field(*id, formulas_cache);
+        }
+    }
+
+    pub fn errors_count(
+        &self,
+        uniforms: &Storage2<AnyUniform>,
+        formulas_cache: &FormulasCache,
+    ) -> usize {
+        use ParametrizeOrNot::*;
+        match self {
+            Yes(Some(id)) => uniforms.errors_inline(*id, formulas_cache),
+            Yes(None) => 1,
+            No(_) => 0,
         }
     }
 }
@@ -169,42 +197,90 @@ impl Default for Formula {
 
 impl Formula {
     pub fn egui(&mut self, ui: &mut Ui, formulas_cache: &mut FormulasCache) -> WhatChanged {
+        let has_errors = formulas_cache.has_errors(&self.0);
         let edit = formulas_cache.with_edit(&mut self.0, |text| {
-            ui.add(
-                TextEdit::multiline(text)
-                    .text_style(TextStyle::Monospace)
-                    .desired_rows(1),
-            );
-        });
-        if edit.has_errors {
-            ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = 0.;
-                ui.add(Label::new("Error with this formula").text_color(Color32::RED));
+            let response = egui_with_red_field(ui, has_errors, |ui| {
+                ui.add(
+                    TextEdit::multiline(text)
+                        .text_style(TextStyle::Monospace)
+                        .desired_rows(1),
+                )
             });
-        }
-        WhatChanged::from_uniform(edit.changed)
+            if has_errors {
+                response.on_hover_text("Error in this formula");
+            }
+        });
+        WhatChanged::from_uniform(edit)
     }
 }
 
-pub struct FormulasCache {
+struct FormulasCacheInner {
     parser: fasteval::Parser,
     slab: fasteval::Slab,
     cache: BTreeMap<String, Option<fasteval::Instruction>>,
 }
 
-impl Default for FormulasCache {
+impl Default for FormulasCacheInner {
     fn default() -> Self {
-        let mut result = FormulasCache {
+        Self {
             parser: fasteval::Parser::new(),
             slab: fasteval::Slab::new(),
             cache: Default::default(),
-        };
-        result.compile("0");
-        result
+        }
     }
 }
 
-use std::fmt::{self, Debug, Formatter};
+impl FormulasCacheInner {
+    pub fn get<'a, 'b>(&'a mut self, text: &'b str) -> Option<&'a fasteval::Instruction> {
+        self.compile(text)?;
+        Some(self.get_unsafe(text))
+    }
+
+    /// You must call `self.compile(text)?;` before
+    fn get_unsafe<'a, 'b>(&'a self, text: &'b str) -> &'a fasteval::Instruction {
+        self.cache.get(text).unwrap().as_ref().unwrap()
+    }
+
+    /// Returns `None` when text is wrong formula
+    #[must_use]
+    pub fn compile(&mut self, text: &str) -> Option<()> {
+        let FormulasCacheInner {
+            parser,
+            slab,
+            cache,
+        } = self;
+        if let Some(result) = cache.get(text) {
+            result.as_ref().map(|_| ())
+        } else {
+            use fasteval::*;
+            let compiled = || -> Option<_> {
+                Some(
+                    parser
+                        .parse(text, &mut slab.ps)
+                        .ok()?
+                        .from(&slab.ps)
+                        .compile(&slab.ps, &mut slab.cs),
+                )
+            }();
+            let result = compiled.as_ref().map(|_| ());
+            cache.insert(text.to_owned(), compiled);
+            result
+        }
+    }
+
+    pub fn eval(
+        &mut self,
+        text: &str,
+        ns: &mut impl FnMut(&str, Vec<f64>) -> Option<f64>,
+    ) -> Option<Result<f64, fasteval::Error>> {
+        use fasteval::*;
+        self.compile(text)?;
+        Some(self.get_unsafe(text).eval(&self.slab, ns))
+    }
+}
+
+#[derive(Default)]
+pub struct FormulasCache(RefCell<FormulasCacheInner>);
 
 impl Debug for FormulasCache {
     fn fmt(&self, _: &mut Formatter<'_>) -> fmt::Result {
@@ -212,62 +288,34 @@ impl Debug for FormulasCache {
     }
 }
 
-#[derive(Default)]
-pub struct EditResult {
-    changed: bool,
-    has_errors: bool,
-}
-
 impl FormulasCache {
     pub fn has_errors(&self, text: &str) -> bool {
-        self.cache.get(text).map(|x| x.is_none()).unwrap_or(false)
+        self.0.borrow_mut().get(text).is_none()
     }
 
-    pub fn compile(&mut self, text: &str) -> bool {
-        use fasteval::*;
-
-        let compiled = || -> Option<_> {
-            Some(
-                self.parser
-                    .parse(text, &mut self.slab.ps)
-                    .ok()?
-                    .from(&self.slab.ps)
-                    .compile(&self.slab.ps, &mut self.slab.cs),
-            )
-        }();
-
-        let is_compiled = compiled.is_some();
-
-        self.cache.insert(text.to_owned(), compiled);
-
-        is_compiled
-    }
-
-    pub fn with_edit(&mut self, text: &mut String, f: impl FnOnce(&mut String)) -> EditResult {
+    pub fn with_edit(&self, text: &mut String, f: impl FnOnce(&mut String)) -> bool {
         let previous = text.clone();
         f(text);
-        if previous == *text && self.cache.get(text).is_some() {
-            EditResult {
-                changed: false,
-                has_errors: self.cache.get(text).unwrap().is_none(),
-            }
+        if previous == *text {
+            false
         } else {
-            self.cache.remove(&previous);
-            EditResult {
-                changed: true,
-                has_errors: !self.compile(text),
-            }
+            self.0.borrow_mut().cache.remove(&previous);
+            true
         }
     }
 
-    pub fn get<'a, 'b>(&'a self, text: &'b str) -> Option<&'a fasteval::Instruction> {
-        self.cache.get(text).and_then(|x| x.as_ref())
+    pub fn eval(
+        &self,
+        text: &str,
+        ns: &mut impl FnMut(&str, Vec<f64>) -> Option<f64>,
+    ) -> Option<Result<f64, fasteval::Error>> {
+        self.0.borrow_mut().eval(text, ns).clone()
     }
 }
 
 impl ComboBoxChoosable for AnyUniform {
     fn variants() -> &'static [&'static str] {
-        &["bool", "int", "float", "angle", "formula"]
+        &["bool", "int", "float", "angle", "progress", "formula"]
     }
     fn get_number(&self) -> usize {
         use AnyUniform::*;
@@ -276,7 +324,8 @@ impl ComboBoxChoosable for AnyUniform {
             Int { .. } => 1,
             Float { .. } => 2,
             Angle { .. } => 3,
-            Formula { .. } => 4,
+            Progress { .. } => 4,
+            Formula { .. } => 5,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -285,39 +334,49 @@ impl ComboBoxChoosable for AnyUniform {
         *self = match number {
             0 => Bool(match self {
                 Bool(b) => *b,
-                Int { value, .. } => value >= &mut 1,
-                Float { value, .. } => value >= &mut 1.0,
-                Angle(a) => a >= &mut 1.0,
+                Int(value) => value.get_value() >= 1,
+                Float(value) => value.get_value() >= 1.0,
+                Angle(a) => *a >= 1.0,
+                Progress(a) => *a >= 1.0,
                 Formula { .. } => false,
             }),
             1 => match self {
                 Bool(b) => AnyUniform::int(*b as i32),
                 Int { .. } => self.clone(),
-                Float { value, .. } => AnyUniform::int(*value as i32),
-                Angle(a) => AnyUniform::int(rad2deg(*a as f32) as i32),
+                Float(value) => AnyUniform::int(value.get_value() as i32),
+                Angle(a) => AnyUniform::int(rad2deg(*a as f64) as i32),
+                Progress(a) => AnyUniform::int(*a as i32),
                 Formula { .. } => AnyUniform::int(0),
             },
             2 => match self {
                 Bool(b) => AnyUniform::float(*b as i32 as f64),
-                Int { value, .. } => AnyUniform::float(*value as f64),
+                Int(value) => AnyUniform::float(value.get_value() as f64),
                 Angle(a) => AnyUniform::float(*a),
+                Progress(a) => AnyUniform::float(*a),
                 Float { .. } => self.clone(),
                 Formula { .. } => AnyUniform::float(0.0),
             },
             3 => Angle(match self {
                 Bool(b) => (*b as i32 as f64) * std::f64::consts::PI,
-                Int { value, .. } => {
-                    macroquad::math::clamp(deg2rad(*value as f32), 0., std::f32::consts::TAU) as f64
-                }
+                Int(value) => macroquad::math::clamp(
+                    deg2rad(value.get_value() as f64),
+                    0.,
+                    std::f64::consts::TAU,
+                ) as f64,
                 Angle(a) => *a,
-                Float { value, .. } => macroquad::math::clamp(*value, 0., std::f64::consts::TAU),
+                Progress(a) => *a * std::f64::consts::TAU,
+                Float(value) => {
+                    macroquad::math::clamp(value.get_value(), 0., std::f64::consts::TAU)
+                }
                 Formula { .. } => 0.0,
             }),
-            4 => Formula(match self {
+            4 => Progress(0.5),
+            5 => Formula(match self {
                 Bool(b) => F((*b as i32).to_string()),
-                Int { value, .. } => F(value.to_string()),
+                Int(value) => F(value.get_value().to_string()),
                 Angle(a) => F(a.to_string()),
-                Float { value, .. } => F(value.to_string()),
+                Progress(a) => F(a.to_string()),
+                Float(value) => F(value.get_value().to_string()),
                 Formula(f) => f.clone(),
             }),
             _ => unreachable!(),
@@ -334,233 +393,214 @@ impl Default for AnyUniform {
     }
 }
 
-impl AnyUniform {
-    pub fn egui(&mut self, ui: &mut Ui, formulas_cache: &mut FormulasCache) -> WhatChanged {
-        use AnyUniform::*;
-        let mut result = WhatChanged::default();
-        match self {
-            Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
-            Int { min, max, value } => {
-                ui.horizontal(|ui| {
-                    let mut current = min.is_some();
-                    if let Some(min) = min {
-                        ui.checkbox(&mut current, "min");
-                        result.uniform |= check_changed(min, |min| {
-                            ui.add(
-                                DragValue::from_get_set(|v| {
-                                    if let Some(v) = v {
-                                        if v as i32 > *value {
-                                            *min = *value;
-                                        } else {
-                                            *min = v as i32;
-                                        }
-                                    }
-                                    *min as f64
-                                })
-                                .speed(1),
-                            );
-                        });
-                    } else {
-                        ui.checkbox(&mut current, "min");
-                        ui.label("-inf");
-                    }
-                    if current && min.is_none() {
-                        result.uniform = true;
-                        let min_i = -100;
-                        *min = Some(if *value < min_i { *value } else { min_i });
-                    }
-                    if !current && min.is_some() {
-                        result.uniform = true;
-                        *min = None;
-                    }
-                    ui.separator();
-                    let mut current = max.is_some();
-                    if let Some(max) = max {
-                        ui.checkbox(&mut current, "max");
-                        result.uniform |= check_changed(max, |max| {
-                            ui.add(
-                                DragValue::from_get_set(|v| {
-                                    if let Some(v) = v {
-                                        if (v as i32) < *value {
-                                            *max = *value;
-                                        } else {
-                                            *max = v as i32;
-                                        }
-                                    }
-                                    *max as f64
-                                })
-                                .speed(1),
-                            );
-                        });
-                    } else {
-                        ui.checkbox(&mut current, "max");
-                        ui.label("+inf");
-                    }
-                    if current && max.is_none() {
-                        result.uniform = true;
-                        let max_i = 100;
-                        *max = Some(if *value > max_i { *value } else { max_i });
-                    }
-                    if !current && max.is_some() {
-                        result.uniform = true;
-                        *max = None;
-                    }
-                    ui.separator();
-                    ui.centered_and_justified(|ui| {
-                        if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
-                            result.uniform |= check_changed(value, |value| {
-                                ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
-                            })
-                        } else {
-                            result.uniform |= check_changed(value, |value| {
-                                ui.add(
-                                    DragValue::from_get_set(|v| {
-                                        if let Some(v) = v {
-                                            *value = v as i32;
-                                            if let Some(min) = min {
-                                                if value < min {
-                                                    *value = *min;
-                                                }
-                                            }
-                                            if let Some(max) = max {
-                                                if value > max {
-                                                    *value = *max;
-                                                }
-                                            }
-                                        }
-                                        (*value).into()
-                                    })
-                                    .speed(1),
-                                );
-                            });
-                        }
-                    });
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ClampedValue<T> {
+    min: Option<T>,
+    max: Option<T>,
+    value: T,
+}
+
+impl<T: egui::emath::Numeric> ClampedValue<T> {
+    pub fn new(value: T) -> Self {
+        ClampedValue {
+            min: None,
+            max: None,
+            value,
+        }
+    }
+
+    pub fn get_value(&self) -> T {
+        self.value
+    }
+
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        speed: f64,
+        decimals: RangeInclusive<usize>,
+        default_range: RangeInclusive<T>,
+    ) -> WhatChanged {
+        fn egui_edge<T: egui::emath::Numeric>(
+            ui: &mut Ui,
+            edge: &mut Option<T>,
+            value: T,
+            is_min: bool,
+            default_value: T,
+            speed: f64,
+            decimals: RangeInclusive<usize>,
+        ) -> bool {
+            let mut changed = false;
+            let mut current = edge.is_some();
+            ui.checkbox(&mut current, if is_min { "min" } else { "max" });
+            if let Some(edge) = edge {
+                changed |= check_changed(edge, |edge| {
+                    ui.add(
+                        DragValue::from_get_set(|v| {
+                            if let Some(v) = v {
+                                let condition = if is_min {
+                                    v > value.to_f64()
+                                } else {
+                                    v < value.to_f64()
+                                };
+                                if condition {
+                                    *edge = value;
+                                } else {
+                                    *edge = T::from_f64(v);
+                                }
+                            }
+                            edge.to_f64()
+                        })
+                        .speed(speed)
+                        .min_decimals(*decimals.start())
+                        .max_decimals(*decimals.end()),
+                    );
                 });
+            } else {
+                ui.label(if is_min { "-inf" } else { "+inf" });
             }
+            if current && edge.is_none() {
+                changed = true;
+                let condition = if is_min {
+                    value < default_value
+                } else {
+                    value > default_value
+                };
+                *edge = Some(if condition { value } else { default_value });
+            }
+            if !current && edge.is_some() {
+                changed = true;
+                *edge = None;
+            }
+            changed
+        }
+
+        let mut result = WhatChanged::default();
+        ui.horizontal(|ui| {
+            let ClampedValue { min, max, value } = self;
+            result.uniform |= egui_edge(
+                ui,
+                min,
+                *value,
+                true,
+                *default_range.start(),
+                speed,
+                decimals.clone(),
+            );
+            ui.separator();
+            result.uniform |= egui_edge(
+                ui,
+                max,
+                *value,
+                false,
+                *default_range.end(),
+                speed,
+                decimals.clone(),
+            );
+            ui.separator();
+            ui.centered_and_justified(|ui| result |= self.user_egui(ui, speed, decimals));
+        });
+        result
+    }
+
+    pub fn user_egui(
+        &mut self,
+        ui: &mut Ui,
+        speed: f64,
+        decimals: RangeInclusive<usize>,
+    ) -> WhatChanged {
+        let mut result = WhatChanged::default();
+        let ClampedValue { min, max, value } = self;
+        if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
+            result.uniform |= check_changed(value, |value| {
+                ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
+            });
+        } else {
+            result.uniform |= check_changed(value, |value| {
+                ui.add(
+                    DragValue::from_get_set(|v| {
+                        if let Some(v) = v {
+                            *value = T::from_f64(v);
+                            if let Some(min) = min {
+                                if *value < *min {
+                                    *value = *min;
+                                }
+                            }
+                            if let Some(max) = max {
+                                if *value > *max {
+                                    *value = *max;
+                                }
+                            }
+                        }
+                        value.to_f64()
+                    })
+                    .speed(speed)
+                    .min_decimals(*decimals.start())
+                    .max_decimals(*decimals.end()),
+                );
+            });
+        }
+        result
+    }
+}
+
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct UniformId(UniqueId);
+
+impl Wrapper for UniformId {
+    fn wrap(id: UniqueId) -> Self {
+        Self(id)
+    }
+    fn un_wrap(self) -> UniqueId {
+        self.0
+    }
+}
+
+impl StorageElem2 for AnyUniform {
+    type IdWrapper = UniformId;
+    type GetType = AnyUniformResult;
+
+    const SAFE_TO_RENAME: bool = false;
+
+    type Input = FormulasCache;
+    type GetInput = Self::Input;
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        formulas_cache: &mut Self::Input,
+        _: &mut InlineHelper<Self>,
+        data_id: egui::Id,
+        _: Self::IdWrapper,
+    ) -> WhatChanged {
+        let mut result = WhatChanged::from_uniform(egui_combo_box(
+            ui,
+            "Type:",
+            45.,
+            self,
+            data_id.with("combo"),
+        ));
+        ui.separator();
+        use AnyUniform::*;
+        match self {
+            Int(value) => result |= value.egui(ui, 1.0, 0..=0, -10..=10),
+            Float(value) => result |= value.egui(ui, 0.01, 0..=2, -10.0..=10.0),
+            Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
             Angle(a) => {
                 drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
             }
-            Float { min, max, value } => {
-                ui.horizontal(|ui| {
-                    let mut current = min.is_some();
-                    if let Some(min) = min {
-                        ui.checkbox(&mut current, "min");
-                        result.uniform |= check_changed(min, |min| {
-                            ui.add(
-                                DragValue::from_get_set(|v| {
-                                    if let Some(v) = v {
-                                        if v > *value {
-                                            *min = *value;
-                                        } else {
-                                            *min = v;
-                                        }
-                                    }
-                                    *min as f64
-                                })
-                                .speed(0.01)
-                                .min_decimals(0)
-                                .max_decimals(2),
-                            );
-                        });
-                    } else {
-                        ui.checkbox(&mut current, "min");
-                        ui.label("-inf");
-                    }
-                    if current && min.is_none() {
-                        result.uniform = true;
-                        let min_i = -10.0;
-                        *min = Some(if *value < min_i { *value } else { min_i });
-                    }
-                    if !current && min.is_some() {
-                        result.uniform = true;
-                        *min = None;
-                    }
-                    ui.separator();
-                    let mut current = max.is_some();
-                    if let Some(max) = max {
-                        ui.checkbox(&mut current, "max");
-                        result.uniform |= check_changed(max, |max| {
-                            ui.add(
-                                DragValue::from_get_set(|v| {
-                                    if let Some(v) = v {
-                                        if v < *value {
-                                            *max = *value;
-                                        } else {
-                                            *max = v;
-                                        }
-                                    }
-                                    *max
-                                })
-                                .speed(0.01)
-                                .min_decimals(0)
-                                .max_decimals(2),
-                            );
-                        });
-                    } else {
-                        ui.checkbox(&mut current, "max");
-                        ui.label("+inf");
-                    }
-                    if current && max.is_none() {
-                        result.uniform = true;
-                        let max_i = 10.0;
-                        *max = Some(if *value > max_i { *value } else { max_i });
-                    }
-                    if !current && max.is_some() {
-                        result.uniform = true;
-                        *max = None;
-                    }
-                    ui.separator();
-                    ui.centered_and_justified(|ui| {
-                        if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
-                            result.uniform |= check_changed(value, |value| {
-                                ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
-                            });
-                        } else {
-                            result.uniform |= check_changed(value, |value| {
-                                ui.add(
-                                    DragValue::from_get_set(|v| {
-                                        if let Some(v) = v {
-                                            *value = v;
-                                            if let Some(min) = min {
-                                                if value < min {
-                                                    *value = *min;
-                                                }
-                                            }
-                                            if let Some(max) = max {
-                                                if value > max {
-                                                    *value = *max;
-                                                }
-                                            }
-                                        }
-                                        *value
-                                    })
-                                    .speed(0.01)
-                                    .min_decimals(0)
-                                    .max_decimals(2),
-                                );
-                            });
-                        }
-                    });
-                });
-            }
+            Progress(a) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_0_1(ui, a))),
             Formula(x) => {
                 drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
             }
         }
         result
     }
-}
 
-impl StorageElem for AnyUniformComboBox {
-    type GetType = AnyUniformResult;
-    type Input = FormulasCache;
-
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
+    fn get(
         &self,
-        mut f: F,
-        _: &StorageWithNames<AnyUniformComboBox>,
-        formulas_cache: &FormulasCache,
-    ) -> GetEnum<Self::GetType> {
+        get_helper: &GetHelper<Self>,
+        formulas_cache: &Self::GetInput,
+    ) -> Option<Self::GetType> {
         let mut cb = |name: &str, args: Vec<f64>| -> Option<f64> {
             Some(match name {
                 // Custom functions
@@ -597,42 +637,34 @@ impl StorageElem for AnyUniformComboBox {
                 "switch" => *args.get(*args.get(0)? as usize)?,
 
                 // Free variables
-                _ => match f(name) {
-                    GetEnum::Ok(x) => x.into(),
-                    _ => None?,
-                },
+                _ => get_helper.get(get_helper.find_id(name)?)?.into(),
             })
         };
 
-        use fasteval::*;
-
-        match &self.0 {
-            AnyUniform::Bool(b) => GetEnum::Ok(AnyUniformResult::Bool(*b)),
-            AnyUniform::Int { value, .. } => GetEnum::Ok(AnyUniformResult::Int(*value)),
-            AnyUniform::Angle(a) => GetEnum::Ok(AnyUniformResult::Float(*a)),
-            AnyUniform::Float { value, .. } => GetEnum::Ok(AnyUniformResult::Float(*value)),
-            AnyUniform::Formula(f) => match formulas_cache.get(&f.0) {
-                Some(x) => match x.eval(&formulas_cache.slab, &mut cb) {
-                    Ok(x) => GetEnum::Ok(AnyUniformResult::Float(x)),
-                    Err(_) => GetEnum::NotFound,
-                },
-                None => GetEnum::NotFound,
-            },
-        }
+        Some(match &self {
+            AnyUniform::Bool(b) => AnyUniformResult::Bool(*b),
+            AnyUniform::Int(value) => AnyUniformResult::Int(value.get_value()),
+            AnyUniform::Angle(a) => AnyUniformResult::Float(*a),
+            AnyUniform::Progress(a) => AnyUniformResult::Float(*a),
+            AnyUniform::Float(value) => AnyUniformResult::Float(value.get_value()),
+            AnyUniform::Formula(f) => {
+                AnyUniformResult::Float(formulas_cache.eval(&f.0, &mut cb)?.ok()?)
+            }
+        })
     }
 
-    fn egui(&mut self, ui: &mut Ui, _: usize, data: &mut Self::Input, _: &[String]) -> WhatChanged {
-        let mut changed =
-            WhatChanged::from_uniform(egui_combo_label(ui, "Type:", 45., &mut self.0));
-        ui.separator();
-        changed |= self.0.egui(ui, data);
-        changed
-    }
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(&self, _: F, _: &mut Self::Input) {}
 
-    fn errors_count(&self, _: usize, formulas_cache: &Self::Input, _: &[String]) -> usize {
-        match &self.0 {
-            AnyUniform::Formula(text) => formulas_cache.has_errors(&text.0) as usize,
-            _ => 0,
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
+        &self,
+        _: F,
+        formulas_cache: &Self::Input,
+        _: Self::IdWrapper,
+    ) -> usize {
+        if let AnyUniform::Formula(formula) = self {
+            formulas_cache.has_errors(&formula.0) as usize
+        } else {
+            0
         }
     }
 }

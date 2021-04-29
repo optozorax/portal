@@ -1,19 +1,23 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
 use crate::gui::glsl::*;
-use crate::gui::storage::*;
+use crate::gui::matrix::Matrix;
+use crate::gui::matrix::MatrixId;
+use crate::gui::storage2::*;
 use crate::gui::uniform::*;
+use crate::gui::unique_id::UniqueId;
+use std::borrow::Cow;
 
 use egui::*;
 
 use serde::{Deserialize, Serialize};
 
-use crate::megatuple;
+use crate::hlist;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Ord, PartialOrd)]
-pub struct MatrixName(pub String);
+pub struct MatrixName<'a>(pub Cow<'a, str>);
 
-impl MatrixName {
+impl<'a> MatrixName<'a> {
     pub fn normal_name(&self) -> String {
         format!("{}_mat", self.0)
     }
@@ -29,13 +33,13 @@ impl MatrixName {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ObjectType {
-    Simple(MatrixName),
-    Portal(MatrixName, MatrixName),
+    Simple(Option<MatrixId>),
+    Portal(Option<MatrixId>, Option<MatrixId>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
-    DebugMatrix(MatrixName),
+    DebugMatrix(Option<MatrixId>),
     Flat {
         kind: ObjectType,
         is_inside: IsInsideCode, // gets current position (vec4), surface x y, must return material number. if this is portal, then additionally gets `first`, `back`
@@ -46,21 +50,15 @@ pub enum Object {
     },
 }
 
-impl Default for MatrixName {
-    fn default() -> Self {
-        Self("id".into())
-    }
-}
-
 impl Default for ObjectType {
     fn default() -> Self {
-        Self::Simple(Default::default())
+        Self::Simple(None)
     }
 }
 
 impl Default for Object {
     fn default() -> Self {
-        Object::DebugMatrix(Default::default())
+        Object::DebugMatrix(None)
     }
 }
 
@@ -78,8 +76,8 @@ impl ComboBoxChoosable for ObjectType {
     fn set_number(&mut self, number: usize) {
         use ObjectType::*;
         *self = match number {
-            0 => Simple(Default::default()),
-            1 => Portal(Default::default(), Default::default()),
+            0 => Simple(None),
+            1 => Portal(None, None),
             _ => unreachable!(),
         };
     }
@@ -100,7 +98,7 @@ impl ComboBoxChoosable for Object {
     fn set_number(&mut self, number: usize) {
         use Object::*;
         *self = match number {
-            0 => DebugMatrix(Default::default()),
+            0 => DebugMatrix(None),
             1 => Flat {
                 kind: Default::default(),
                 is_inside: Default::default(),
@@ -115,50 +113,93 @@ impl ComboBoxChoosable for Object {
 }
 
 impl ObjectType {
-    pub fn egui(&mut self, ui: &mut Ui, names: &mut Vec<String>) -> WhatChanged {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        (matrices, input): &mut hlist![Storage2<Matrix>, Storage2<AnyUniform>, FormulasCache],
+        data_id: egui::Id,
+    ) -> WhatChanged {
         use ObjectType::*;
-        let mut is_changed = false;
-        let mut errors_count = 0;
+        let mut changed = WhatChanged::default();
         match self {
             Simple(a) => {
-                is_changed |=
-                    egui_existing_name(ui, "Matrix:", 45., &mut a.0, names, &mut errors_count)
+                changed |= matrices.inline("Matrix:", 45., a, ui, input, data_id.with("first"));
             }
             Portal(a, b) => {
-                is_changed |=
-                    egui_existing_name(ui, "First:", 45., &mut a.0, names, &mut errors_count);
-                is_changed |=
-                    egui_existing_name(ui, "Second:", 45., &mut b.0, names, &mut errors_count);
+                changed |= matrices.inline("First:", 45., a, ui, input, data_id.with("first"));
+                changed |= matrices.inline("Second:", 45., b, ui, input, data_id.with("second"));
             }
         }
-        WhatChanged::from_shader(is_changed)
+        changed
+    }
+}
+
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct ObjectId(UniqueId);
+
+impl Wrapper for ObjectId {
+    fn wrap(id: UniqueId) -> Self {
+        Self(id)
+    }
+    fn un_wrap(self) -> UniqueId {
+        self.0
     }
 }
 
 impl Object {
-    pub fn egui(
+    pub fn get_name<'a>(id: MatrixId, storage: &'a Storage2<Matrix>) -> Option<MatrixName<'a>> {
+        if let Some(name) = storage.get_name(id) {
+            Some(
+                name.map(|name| MatrixName(Cow::Borrowed(name)))
+                    .unwrap_or_else(|| MatrixName(Cow::Owned(format!("id{}", id.un_wrap())))),
+            )
+        } else {
+            None
+        }
+    }
+}
+
+impl StorageElem2 for Object {
+    type IdWrapper = ObjectId;
+    type GetType = Object;
+
+    const SAFE_TO_RENAME: bool = true;
+
+    type Input = hlist![
+        ShaderErrors,
+        Storage2<Matrix>,
+        Storage2<AnyUniform>,
+        FormulasCache
+    ];
+    type GetInput = ();
+
+    fn egui(
         &mut self,
         ui: &mut Ui,
-        pos: usize,
-        input: &mut megatuple!(Vec<String>, ShaderErrors),
+        input: &mut Self::Input,
+        _: &mut InlineHelper<Self>,
+        data_id: egui::Id,
+        self_id: Self::IdWrapper,
     ) -> WhatChanged {
+        let mut changed = WhatChanged::from_shader(egui_combo_label(ui, "Type:", 45., self));
+        ui.separator();
+
         use Object::*;
-        let megapattern!(names, errors) = input;
-        let mut is_changed = WhatChanged::default();
-        let has_errors = errors.get_errors(self, pos).is_some();
-        let mut errors_count = 0;
+        let (errors, input) = input;
+        let has_errors = errors.get(self_id).is_some();
         match self {
             DebugMatrix(a) => {
-                is_changed.shader |=
-                    egui_existing_name(ui, "Matrix:", 45., &mut a.0, names, &mut errors_count);
+                let (matrices, input) = input;
+                changed |= matrices.inline("Matrix:", 45., a, ui, input, data_id.with(0));
             }
             Flat { kind, is_inside } => {
-                is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
-                is_changed |= kind.egui(ui, names);
+                changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
+                changed |= kind.egui(ui, input, data_id.with(0));
                 ui.separator();
                 if matches!(kind, ObjectType::Portal { .. }) {
-                    ui.horizontal(|ui| {
+                    ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.;
+
                         ui.add(Label::new("int ").text_color(COLOR_TYPE).monospace());
                         ui.add(
                             Label::new("is_inside")
@@ -196,16 +237,16 @@ impl Object {
                     });
                 }
                 egui_with_red_field(ui, has_errors, |ui| {
-                    is_changed |= is_inside.0.egui(ui);
+                    changed |= is_inside.0.egui(ui);
                 });
                 ui.add(Label::new("}").monospace());
-                if let Some(local_errors) = errors.get_errors(self, pos) {
+                if let Some(local_errors) = errors.get(self_id) {
                     egui_errors(ui, local_errors);
                 }
             }
             Complex { kind, intersect } => {
-                is_changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
-                is_changed |= kind.egui(ui, names);
+                changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
+                changed |= kind.egui(ui, input, data_id.with(0));
                 ui.separator();
 
                 ui.horizontal_wrapped(|ui| {
@@ -244,104 +285,82 @@ impl Object {
                     }
                 });
                 egui_with_red_field(ui, has_errors, |ui| {
-                    is_changed |= intersect.0.egui(ui);
+                    changed |= intersect.0.egui(ui);
                 });
                 ui.add(Label::new("}").monospace());
-                if let Some(local_errors) = errors.get_errors(self, pos) {
+                if let Some(local_errors) = errors.get(self_id) {
                     egui_errors(ui, local_errors);
                 }
             }
         }
-        is_changed
+
+        changed
     }
-}
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct ObjectComboBox(pub Object);
+    fn get(&self, _: &GetHelper<Self>, _: &Self::GetInput) -> Option<Self::GetType> {
+        Some(self.clone())
+    }
 
-impl ObjectType {
-    pub fn errors_count(&self, names: &[String]) -> usize {
-        let mut result = 0;
-
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(
+        &self,
+        _: F,
+        (_, (matrices, input)): &mut Self::Input,
+    ) {
+        use Object::*;
         use ObjectType::*;
         match self {
-            Simple(a) => {
-                if !names.contains(&a.0) {
-                    result += 1;
+            DebugMatrix(a)
+            | Flat {
+                kind: Simple(a), ..
+            }
+            | Complex {
+                kind: Simple(a), ..
+            } => {
+                if let Some(id) = a {
+                    matrices.remove_as_field(*id, input);
                 }
             }
-            Portal(a, b) => {
-                if !names.contains(&a.0) {
-                    result += 1;
+            Flat {
+                kind: Portal(a, b), ..
+            }
+            | Complex {
+                kind: Portal(a, b), ..
+            } => {
+                if let Some(id) = a {
+                    matrices.remove_as_field(*id, input);
                 }
-                if !names.contains(&b.0) {
-                    result += 1;
+                if let Some(id) = b {
+                    matrices.remove_as_field(*id, input);
                 }
             }
         }
-
-        result
     }
-}
 
-impl Object {
-    pub fn errors_count(
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
         &self,
-        pos: usize,
-        megapattern!(names, errors): &megatuple!(Vec<String>, ShaderErrors),
+        _: F,
+        (errors, (matrices, input)): &Self::Input,
+        self_id: Self::IdWrapper,
     ) -> usize {
-        let mut result = if let Some(local_errors) = errors.get_errors(self, pos) {
+        let mut result = if let Some(local_errors) = errors.get(self_id) {
             local_errors.len()
         } else {
             0
         };
 
         use Object::*;
-        match self {
-            DebugMatrix(a) => {
-                if !names.contains(&a.0) {
-                    result += 1;
+        use ObjectType::*;
+        result += match self {
+            DebugMatrix(a) => a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1),
+            Flat { kind, .. } | Complex { kind, .. } => match kind {
+                Simple(a) => a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1),
+                Portal(a, b) => {
+                    a.map(|id| matrices.errors_inline(id, input)).unwrap_or(1)
+                        + b.map(|id| matrices.errors_inline(id, input)).unwrap_or(1)
                 }
-            }
-            Flat { kind, is_inside: _ } => {
-                result += kind.errors_count(names);
-            }
-            Complex { kind, intersect: _ } => {
-                result += kind.errors_count(names);
-            }
-        }
+            },
+        };
 
         result
-    }
-}
-
-impl StorageElem for ObjectComboBox {
-    type GetType = Object;
-    type Input = megatuple!(Vec<String>, ShaderErrors);
-
-    fn get<F: FnMut(&str) -> GetEnum<Self::GetType>>(
-        &self,
-        _: F,
-        _: &StorageWithNames<AnyUniformComboBox>,
-        _: &FormulasCache,
-    ) -> GetEnum<Self::GetType> {
-        GetEnum::Ok(self.0.clone())
-    }
-
-    fn egui(
-        &mut self,
-        ui: &mut Ui,
-        pos: usize,
-        input: &mut Self::Input,
-        _: &[String],
-    ) -> WhatChanged {
-        let mut changed = WhatChanged::from_shader(egui_combo_label(ui, "Type:", 45., &mut self.0));
-        ui.separator();
-        changed |= self.0.egui(ui, pos, input);
-        changed
-    }
-
-    fn errors_count(&self, pos: usize, data: &Self::Input, _: &[String]) -> usize {
-        self.0.errors_count(pos, data)
     }
 }

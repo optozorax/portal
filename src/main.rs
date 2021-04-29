@@ -1,38 +1,57 @@
-use std::f32::consts::PI;
+use glam::{DMat4, DVec2, DVec3, DVec4};
+use portal::gui::camera::CalculatedCam;
+use portal::gui::camera::CameraId;
+use portal::gui::camera::CurrentCam;
+use portal::gui::camera::OriginalCam;
+use portal::gui::eng_rus::EngRusSettings;
+use portal::gui::eng_rus::EngRusText;
+use portal::gui::scenes::ShowHiddenScenes;
+use portal::with_swapped;
+use std::f64::consts::PI;
 
-use macroquad::prelude::*;
+use macroquad::prelude::{
+    clamp, clear_background, draw_rectangle, draw_texture_ex, get_screen_data,
+    gl_use_default_material, gl_use_material, is_mouse_button_down, mouse_position_local,
+    mouse_wheel, next_frame, screen_height, screen_width, set_default_camera, Conf,
+    DrawTextureParams, MouseButton, Texture2D, BLACK, WHITE,
+};
+use portal::gui::scenes::Scenes;
 use portal::gui::{common::*, scene::*, texture::*};
 
 use egui::{DragValue, Ui};
 
 struct RotateAroundCam {
-    look_at: Vec3,
-    alpha: f32,
-    beta: f32,
-    r: f32,
-    previous_mouse: Vec2,
+    look_at: DVec3,
+    alpha: f64,
+    beta: f64,
+    r: f64,
+    previous_mouse: DVec2,
 
-    mouse_sensitivity: f32,
-    scale_factor: f32,
-    view_angle: f32,
+    from: Option<CameraId>,
+
+    mouse_sensitivity: f64,
+    scale_factor: f64,
+    view_angle: f64,
     use_panini_projection: bool,
-    panini_param: f32,
+    panini_param: f64,
 
     inverse_x: bool,
     inverse_y: bool,
 }
 
 impl RotateAroundCam {
-    const BETA_MIN: f32 = 0.01;
-    const BETA_MAX: f32 = PI - 0.01;
+    const BETA_MIN: f64 = 0.01;
+    const BETA_MAX: f64 = PI - 0.01;
 
     fn new() -> Self {
         Self {
-            look_at: Vec3::new(0., 0., 0.),
+            look_at: DVec3::new(0., 0., 0.),
             alpha: deg2rad(81.),
             beta: deg2rad(64.),
             r: 3.5,
-            previous_mouse: Vec2::default(),
+            previous_mouse: DVec2::default(),
+
+            from: None,
 
             mouse_sensitivity: 1.4,
             scale_factor: 1.1,
@@ -46,13 +65,26 @@ impl RotateAroundCam {
         }
     }
 
-    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool) -> bool {
+    fn get_calculated_cam(&self) -> CalculatedCam {
+        CalculatedCam {
+            look_at: self.look_at,
+            alpha: self.alpha,
+            beta: self.beta,
+            r: self.r,
+        }
+    }
+
+    fn process_mouse_and_keys(
+        &mut self,
+        mouse_over_canvas: bool,
+        memory: &mut egui::Memory,
+    ) -> bool {
         let mut is_something_changed = false;
 
-        let mouse_pos: Vec2 = mouse_position_local();
+        let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
 
         if is_mouse_button_down(MouseButton::Left) && mouse_over_canvas {
-            let size = mymax(screen_width(), screen_height());
+            let size = mymax(screen_width().into(), screen_height().into());
             let mut dalpha =
                 (mouse_pos.x - self.previous_mouse.x) * self.mouse_sensitivity * size / 800.;
             let mut dbeta =
@@ -85,13 +117,17 @@ impl RotateAroundCam {
             }
         }
 
+        if is_something_changed {
+            memory.data.insert(self.get_calculated_cam());
+        }
+
         self.previous_mouse = mouse_pos;
 
         return is_something_changed;
     }
 
-    fn get_matrix(&self) -> Mat4 {
-        let pos = Vec3::new(
+    fn get_matrix(&self) -> DMat4 {
+        let pos = DVec3::new(
             self.beta.sin() * self.alpha.cos(),
             self.beta.cos(),
             self.beta.sin() * self.alpha.sin(),
@@ -99,26 +135,26 @@ impl RotateAroundCam {
             + self.look_at;
 
         let k = (self.look_at - pos).normalize();
-        let i = k.cross(Vec3::new(0., 1., 0.)).normalize();
+        let i = k.cross(DVec3::new(0., 1., 0.)).normalize();
         let j = k.cross(i).normalize();
 
-        Mat4::from_cols(
-            Vec4::new(i.x, i.y, i.z, 0.),
-            Vec4::new(j.x, j.y, j.z, 0.),
-            Vec4::new(k.x, k.y, k.z, 0.),
-            Vec4::new(pos.x, pos.y, pos.z, 1.),
+        DMat4::from_cols(
+            DVec4::new(i.x, i.y, i.z, 0.),
+            DVec4::new(j.x, j.y, j.z, 0.),
+            DVec4::new(k.x, k.y, k.z, 0.),
+            DVec4::new(pos.x, pos.y, pos.z, 1.),
         )
     }
 
     fn set_cam(&mut self, s: &CamSettings) {
-        self.look_at = Vec3::new(s.look_at.x, s.look_at.y, s.look_at.z);
+        self.look_at = DVec3::new(s.look_at.x, s.look_at.y, s.look_at.z);
         self.alpha = s.alpha;
         self.beta = s.beta;
         self.r = s.r;
     }
 
     fn get_cam(&mut self, cam_settings: &mut CamSettings) {
-        cam_settings.look_at = ::glam::Vec3::new(self.look_at.x, self.look_at.y, self.look_at.z);
+        cam_settings.look_at = DVec3::new(self.look_at.x, self.look_at.y, self.look_at.z);
         cam_settings.alpha = self.alpha;
         cam_settings.beta = self.beta;
         cam_settings.r = self.r;
@@ -131,13 +167,13 @@ impl RotateAroundCam {
         ui.horizontal(|ui| {
             ui.label("Look at: ");
             ui.label("X");
-            changed |= egui_f32(ui, &mut self.look_at.x);
+            changed |= egui_f64(ui, &mut self.look_at.x);
             ui.separator();
             ui.label("Y");
-            changed |= egui_f32(ui, &mut self.look_at.y);
+            changed |= egui_f64(ui, &mut self.look_at.y);
             ui.separator();
             ui.label("Z");
-            changed |= egui_f32(ui, &mut self.look_at.z);
+            changed |= egui_f64(ui, &mut self.look_at.z);
             ui.separator();
         });
         ui.separator();
@@ -146,7 +182,7 @@ impl RotateAroundCam {
             changed |= check_changed(&mut self.alpha, |alpha| {
                 let mut current = rad2deg(*alpha);
                 ui.add(
-                    DragValue::f32(&mut current)
+                    DragValue::new(&mut current)
                         .speed(1.0)
                         .suffix("°")
                         .min_decimals(0)
@@ -159,7 +195,7 @@ impl RotateAroundCam {
             changed |= check_changed(&mut self.beta, |beta| {
                 let mut current = rad2deg(*beta);
                 ui.add(
-                    DragValue::f32(&mut current)
+                    DragValue::new(&mut current)
                         .speed(1.0)
                         .clamp_range(rad2deg(Self::BETA_MIN)..=rad2deg(Self::BETA_MAX))
                         .suffix("°")
@@ -172,7 +208,7 @@ impl RotateAroundCam {
             ui.label("R");
             changed |= check_changed(&mut self.r, |r| {
                 ui.add(
-                    DragValue::f32(r)
+                    DragValue::new(r)
                         .speed(0.01)
                         .clamp_range(0.01..=1000.0)
                         .min_decimals(0)
@@ -197,7 +233,7 @@ impl RotateAroundCam {
             ui.label("Panini parameter:");
             changed |= check_changed(&mut self.panini_param, |param| {
                 egui_with_enabled_by(ui, is_use, |ui| {
-                    ui.add(egui::Slider::f32(param, 0.0..=1.0));
+                    ui.add(egui::Slider::new(param, 0.0..=1.0));
                 });
             });
         });
@@ -206,7 +242,7 @@ impl RotateAroundCam {
         changed |= check_changed(&mut self.view_angle, |m| {
             let mut current = rad2deg(*m);
             ui.add(
-                egui::Slider::f32(&mut current, if is_use { 2.0..=250.0 } else { 2.0..=140.0 })
+                egui::Slider::new(&mut current, if is_use { 2.0..=250.0 } else { 2.0..=140.0 })
                     .text("View angle")
                     .suffix("°")
                     .clamp_to_range(true),
@@ -217,10 +253,10 @@ impl RotateAroundCam {
         ui.separator();
 
         changed |= check_changed(&mut self.mouse_sensitivity, |m| {
-            ui.add(egui::Slider::f32(m, 0.0..=3.0).text("Mouse sensivity"));
+            ui.add(egui::Slider::new(m, 0.0..=3.0).text("Mouse sensivity"));
         });
         changed |= check_changed(&mut self.scale_factor, |m| {
-            ui.add(egui::Slider::f32(m, 1.0..=2.0).text("Wheel R multiplier"));
+            ui.add(egui::Slider::new(m, 1.0..=2.0).text("Wheel R multiplier"));
         });
 
         ui.separator();
@@ -257,107 +293,57 @@ struct Window {
 
     data: Data,
 
-    offset_after_material: f32,
+    offset_after_material: f64,
     render_depth: i32,
 
-    available_scenes: Vec<(String, String, String)>,
+    available_scenes: Scenes,
+
+    about: EngRusText,
+
+    scene_initted: bool,
+
+    scene_name: &'static str,
 }
 
 impl Window {
     async fn new() -> Self {
-        let available_scenes: Vec<(String, String, String)> = vec![
-            ("Empty", "empty", include_str!("../scenes/empty.json")),
-            ("Room", "room", include_str!("../scenes/room.json")),
-            (
-                "Portal in portal",
-                "portal_in_portal",
-                include_str!("../scenes/portal_in_portal.json"),
-            ),
-            (
-                "Monoportal",
-                "monoportal",
-                include_str!("../scenes/monoportal.json"),
-            ),
-            // (
-            //     "Monoportal offset",
-            //     "monoportal_offset",
-            //     include_str!("../scenes/monoportal_offset.json"),
-            // ),
-            (
-                "Mobius portal",
-                "mobius",
-                include_str!("../scenes/mobius.json"),
-            ),
-            (
-                "Mobius monoportal",
-                "mobius_monoportal",
-                include_str!("../scenes/mobius_monoportal.json"),
-            ),
-            // ("Misc", "misc", include_str!("../scenes/misc.json")),
-            (
-                "Triple portal",
-                "triple_portal",
-                include_str!("../scenes/triple_portal.json"),
-            ),
-            (
-                "Hopf Link portal",
-                "hopf_link",
-                include_str!("../scenes/hopf_link.json"),
-            ),
-            // (
-            //     "Trefoil knot portal, order 1",
-            //     "trefoil_knot",
-            //     include_str!("../scenes/trefoil_knot_monoportal.json"),
-            // ),
-            // (
-            //     "Trefoil knot self-hiding portal, order 1",
-            //     "trefoil_knot",
-            //     include_str!("../scenes/trefoil_knot_monoportal_self_hiding.json"),
-            // ),
-            // (
-            //     "Trefoil knot portal, order 2",
-            //     "trefoil_knot",
-            //     include_str!("../scenes/trefoil_knot.json"),
-            // ),
-            // (
-            //     "Trefoil knot portal, order 3",
-            //     "trefoil_knot_3",
-            //     include_str!("../scenes/trefoil_knot_3.json"),
-            // ),
-        ]
-        .into_iter()
-        .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
-        .collect();
+        let available_scenes: Scenes = Default::default();
 
-        let default_scene = quad_url::get_program_parameters()
+        let required_scene = quad_url::get_program_parameters()
             .iter()
             .filter_map(|x| {
                 let x = quad_url::easy_parse(x)?;
                 Some((x.0, x.1?))
             })
             .find(|(name, _)| *name == "scene")
-            .and_then(|(_, value)| {
-                available_scenes
-                    .iter()
-                    .position(|(_, path, _)| value == path)
-            })
-            .unwrap_or(0);
+            .and_then(|(_, value)| available_scenes.get_by_link(value));
 
-        let mut data = Default::default();
+        let mut scene = if let Some((scene, _)) = required_scene {
+            ron::from_str(&scene).unwrap()
+            // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2)  .unwrap() .into();
+        } else {
+            Scene::default()
+        };
 
-        let mut scene: Scene = serde_json::from_str(&available_scenes[default_scene].2).unwrap();
-        // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2) .unwrap() .into();
-        scene.init(&mut data);
+        let mut data: Data = Default::default();
+
+        // scene.init(&mut data);
 
         data.reload_textures = true;
 
-        let material = scene.get_new_material().unwrap_or_else(|err| {
-            println!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
-            dbg!(&err);
-            crate::miniquad::error!("code:\n{}\n\nmessage:\n{}", add_line_numbers(&err.0), err.1);
-            std::process::exit(1)
-        });
-        scene.set_uniforms(material, &mut data, &scene.uniforms);
+        let material = scene
+            .get_new_material(&data)
+            .unwrap()
+            .unwrap_or_else(|err| {
+                portal::error!(
+                    format,
+                    "code:\n{}\n\nmessage:\n{}",
+                    add_line_numbers(&err.0),
+                    err.1
+                );
+                std::process::exit(1)
+            });
+        scene.set_uniforms(material, &mut data);
         let mut result = Window {
             should_recompile: false,
             scene,
@@ -381,6 +367,15 @@ impl Window {
             render_depth: 100,
 
             available_scenes,
+
+            about: EngRusText {
+                eng: include_str!("description.easymarkup.en").to_string(),
+                rus: include_str!("description.easymarkup.ru").to_string(),
+            },
+
+            scene_initted: false,
+
+            scene_name: required_scene.map(|(_, name)| name).unwrap_or(""),
         };
         result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
@@ -392,12 +387,11 @@ impl Window {
         if self.data.reload_textures {
             self.data.reload_textures = false;
             self.data.texture_errors.0.clear();
-            for (name, path) in self.scene.textures.iter() {
+            for (id, name) in self.scene.textures.visible_elements() {
+                let path = self.scene.textures.get_original(id).unwrap();
                 match macroquad::file::load_file(&path.0).await {
                     Ok(bytes) => {
-                        let context = unsafe { get_internal_gl().quad_context };
-
-                        let texture = Texture2D::from_file_with_format(context, &bytes[..], None);
+                        let texture = Texture2D::from_file_with_format(&bytes[..], None);
 
                         self.material.set_texture(&TextureName::name(name), texture);
                     }
@@ -412,27 +406,46 @@ impl Window {
     fn process_mouse_and_keys(&mut self, ctx: &egui::CtxRef) -> bool {
         let mut is_something_changed = false;
 
+        if !self.scene_initted {
+            self.scene_initted = true;
+            self.scene.init(&mut self.data, &mut ctx.memory());
+            ctx.memory()
+                .data
+                .insert(OriginalCam(self.cam.get_calculated_cam()));
+        }
+
         let mut changed = WhatChanged::default();
 
         egui::TopPanel::top("my top").show(ctx, |ui| {
             use egui::menu;
             menu::bar(ui, |ui| {
                 menu::menu(ui, "🗋 Load", |ui| {
-                    for (name, path, text) in &self.available_scenes {
-                        if ui.button(name).clicked() {
-                            let s = text;
-                            // let old: OldScene = serde_json::from_str(&s).unwrap();
-                            // *self = old.into();
-                            self.scene = serde_json::from_str(&s).unwrap();
-                            self.scene.init(&mut self.data);
-                            self.material.delete();
-                            self.material = self.scene.get_new_material().unwrap();
-                            changed.uniform = true;
-                            self.data.reload_textures = true;
-                            self.cam.set_cam(&self.scene.cam);
-                            self.offset_after_material = self.scene.cam.offset_after_material;
-                            quad_url::set_program_parameter("scene", path);
-                        }
+                    if let Some((content, link, name)) = self.available_scenes.egui(ui) {
+                        let s = content;
+                        // let old: OldScene = serde_json::from_str(&s).unwrap();
+                        // *self = old.into();
+                        self.scene = ron::from_str(s).unwrap();
+                        self.scene.init(&mut self.data, &mut ctx.memory());
+                        self.material.delete();
+                        self.material = self
+                            .scene
+                            .get_new_material(&self.data)
+                            .unwrap()
+                            .unwrap_or_else(|err| {
+                                portal::error!(
+                                    format,
+                                    "code:\n{}\n\nmessage:\n{}",
+                                    add_line_numbers(&err.0),
+                                    err.1
+                                );
+                                std::process::exit(1)
+                            });
+                        changed.uniform = true;
+                        self.data.reload_textures = true;
+                        self.cam.set_cam(&self.scene.cam);
+                        self.offset_after_material = self.scene.cam.offset_after_material;
+                        quad_url::set_program_parameter("scene", link);
+                        self.scene_name = name;
                     }
                     ui.separator();
                     if ui.button("Import...").clicked() {
@@ -456,6 +469,7 @@ impl Window {
                 if ui.button("❓ About").clicked() {
                     self.about_opened = true;
                 }
+                EngRusSettings::egui(ui);
             });
         });
         let mut edit_scene_opened = self.edit_scene_opened;
@@ -600,23 +614,23 @@ First, predefined library is included, then uniforms, then user library, then in
                                 .text_style(egui::TextStyle::Monospace),
                         );
                         if ui.button("Recompile").clicked() {
-                            match serde_json::from_str::<Scene>(content) {
+                            match ron::from_str::<Scene>(content) {
                                 Ok(scene) => {
                                     self.scene = scene;
-                                    self.scene.init(&mut self.data);
+                                    self.scene.init(&mut self.data, &mut ui.memory());
                                     self.cam.set_cam(&self.scene.cam);
                                     self.offset_after_material = self.scene.cam.offset_after_material;
                                     changed.uniform = true;
                                     self.data.reload_textures = true;
-                                    match self.scene.get_new_material() {
-                                        Ok(material) => {
+                                    match self.scene.get_new_material(&self.data) {
+                                        Some(Ok(material)) => {
                                             self.material.delete();
                                             self.material = material;
                                         },
-                                        Err(_) => {
+                                        Some(Err(_)) | None => {
                                             self.should_recompile = true;
                                             self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
-                                        }
+                                        },
                                     }
                                 },
                                 Err(err) => {
@@ -626,7 +640,8 @@ First, predefined library is included, then uniforms, then user library, then in
                         }
 
                         if let Some(err) = &self.import_window_errors {
-                            ui.horizontal_wrapped_for_text(egui::TextStyle::Body, |ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                ui.spacing_mut().item_spacing.x = 0.;
                                 ui.add(egui::Label::new("Error: ").text_color(egui::Color32::RED));
                                 ui.label(err);
                             });
@@ -645,16 +660,13 @@ First, predefined library is included, then uniforms, then user library, then in
                 .open(&mut control_scene_opened)
                 .scroll(true)
                 .show(ctx, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.heading(self.scene_name);
+                    });
+                    ui.separator();
                     ui.collapsing("Description", |ui| {
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(&mut self.data.read_ru, false, "Eng");
-                            ui.selectable_value(&mut self.data.read_ru, true, "Rus");
-                        });
-                        if self.data.read_ru {
-                            egui::experimental::easy_mark(ui, &self.scene.description_ru);
-                        } else {
-                            egui::experimental::easy_mark(ui, &self.scene.description_en);
-                        }
+                        let text = self.scene.desc.text(ui);
+                        egui::experimental::easy_mark(ui, text);
                     });
                     changed |= self.scene.control_egui(ui, &mut self.data);
                 });
@@ -690,10 +702,10 @@ First, predefined library is included, then uniforms, then user library, then in
                 .show(ctx, |ui| {
                     ui.label("Offset after material:");
                     changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
-                        const MIN: f32 = 0.0000001;
-                        const MAX: f32 = 0.1;
+                        const MIN: f64 = 0.0000001;
+                        const MAX: f64 = 0.1;
                         ui.add(
-                            egui::Slider::f32(offset, MIN..=MAX)
+                            egui::Slider::new(offset, MIN..=MAX)
                                 .logarithmic(true)
                                 .clamp_to_range(true)
                                 .largest_finite(MAX.into())
@@ -704,7 +716,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.separator();
                     ui.label("Render depth:");
                     changed.uniform |= check_changed(&mut self.render_depth, |depth| {
-                        ui.add(egui::Slider::i32(depth, 0..=10000).clamp_to_range(true));
+                        ui.add(egui::Slider::new(depth, 0..=10000).clamp_to_range(true));
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
                 });
@@ -716,21 +728,63 @@ First, predefined library is included, then uniforms, then user library, then in
             egui::Window::new("Portal Explorer")
                 .open(&mut about_opened)
                 .show(ctx, |ui| {
-                    egui::experimental::easy_mark(ui, include_str!("description.easymarkup"));
+                    let text = self.about.text(ui);
+                    egui::experimental::easy_mark(ui, text);
+                    ui.separator();
+
+                    let mut checked = ui
+                        .memory()
+                        .data
+                        .get_or_default::<ShowHiddenScenes>()
+                        .clone();
+                    ui.checkbox(&mut checked.0, "Show hidden scenes :P");
+                    ui.memory().data.insert(checked);
                 });
             self.about_opened = about_opened;
         }
 
         let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
 
+        let memory = &mut ctx.memory();
+
         if changed.uniform {
-            self.scene
-                .set_uniforms(self.material, &mut self.data, &self.scene.uniforms);
+            self.scene.set_uniforms(self.material, &mut self.data);
             self.set_uniforms();
+
+            let current_cam = memory.data.get_or_default::<CurrentCam>().0;
+            if self.cam.from != current_cam {
+                let calculated_cam = if let Some(id) = current_cam {
+                    // set getted camera
+
+                    if self.cam.from.is_none() {
+                        let calculated_cam = self.cam.get_calculated_cam();
+                        memory.data.insert(OriginalCam(calculated_cam));
+                    }
+
+                    with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
+                        self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap())
+                } else {
+                    // set original camera
+                    memory.data.get_or_default::<OriginalCam>().clone().0
+                };
+
+                self.cam.from = current_cam;
+                self.cam.alpha = calculated_cam.alpha;
+                self.cam.beta = calculated_cam.beta;
+                self.cam.r = calculated_cam.r;
+                self.cam.look_at = calculated_cam.look_at;
+            } else {
+                if let Some(id) = self.cam.from {
+                    let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
+                        self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
+                    self.cam.look_at = calculated_cam.look_at;
+                }
+            }
+
             is_something_changed = true;
         }
 
-        is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas);
+        is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
 
         return is_something_changed;
     }
@@ -740,11 +794,12 @@ First, predefined library is included, then uniforms, then user library, then in
         self.scene.cam.offset_after_material = self.offset_after_material;
         self.material
             .set_uniform("_resolution", (screen_width(), screen_height()));
-        self.material.set_uniform("_camera", self.cam.get_matrix());
         self.material
-            .set_uniform("_view_angle", self.cam.view_angle);
+            .set_uniform("_camera", self.cam.get_matrix().as_f32());
         self.material
-            .set_uniform("_panini_param", self.cam.panini_param);
+            .set_uniform("_view_angle", self.cam.view_angle as f32);
+        self.material
+            .set_uniform("_panini_param", self.cam.panini_param as f32);
         self.material.set_uniform(
             "_use_panini_projection",
             self.cam.use_panini_projection as i32,
@@ -752,7 +807,7 @@ First, predefined library is included, then uniforms, then user library, then in
         self.material
             .set_uniform("_ray_tracing_depth", self.render_depth);
         self.material
-            .set_uniform("_offset_after_material", self.offset_after_material);
+            .set_uniform("_offset_after_material", self.offset_after_material as f32);
     }
 
     fn draw(&mut self) {
@@ -778,7 +833,7 @@ async fn main() {
 
     let mut window = Window::new().await;
 
-    let mut texture = load_texture_from_image(&get_screen_data());
+    let mut texture = Texture2D::from_image(&get_screen_data());
     let mut w = screen_width();
     let mut h = screen_height();
     let mut image_size_changed = true;
@@ -797,7 +852,7 @@ async fn main() {
             image_size_changed = true;
         }
         if image_size_changed {
-            texture = load_texture_from_image(&get_screen_data());
+            texture = Texture2D::from_image(&get_screen_data());
         }
 
         if image_size_changed || ui_changed_image {
@@ -813,7 +868,10 @@ async fn main() {
                 0.,
                 WHITE,
                 DrawTextureParams {
-                    dest_size: Some(Vec2::new(screen_width(), screen_height())),
+                    dest_size: Some(macroquad::prelude::Vec2::new(
+                        screen_width(),
+                        screen_height(),
+                    )),
                     flip_y: true,
                     ..Default::default()
                 },

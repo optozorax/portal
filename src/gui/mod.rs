@@ -8,5 +8,11 @@ pub mod object;
 pub mod scene;
 #[macro_use]
 pub mod storage;
+pub mod storage2;
 pub mod texture;
 pub mod uniform;
+
+pub mod camera;
+pub mod eng_rus;
+pub mod scenes;
+pub mod unique_id;

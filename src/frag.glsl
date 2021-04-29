@@ -104,7 +104,7 @@ vec3 PaniniProjection(vec2 tc, float fov, float d)
         float fo = Pi05 - fov * 0.5;
 
         // There was * 2, because image should be 2×1 with coords [-1,1]², but in my version, image should be 1×1 with coords [-1,1]².
-        float f = cos(fo)/sin(fo) /* * 2.0 */;
+        float f = cos(fo)/sin(fo); // * 2.0
         float f2 = f*f;
 
         float b = (sqrt(max(0.0, Pow2(d+d2)*(f2+f2*f2))) - (d*f+f)) / (d2+d2*f2-1.0);
@@ -112,7 +112,7 @@ vec3 PaniniProjection(vec2 tc, float fov, float d)
         tc *= b;
     }
     
-    /* http://tksharpless.net/vedutismo/Pannini/panini.pdf */
+    // http://tksharpless.net/vedutismo/Pannini/panini.pdf
     float h = tc.x;
     float v = tc.y;
     
