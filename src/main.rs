@@ -301,6 +301,8 @@ struct Window {
     about: EngRusText,
 
     scene_initted: bool,
+
+    scene_name: &'static str,
 }
 
 impl Window {
@@ -316,7 +318,7 @@ impl Window {
             .find(|(name, _)| *name == "scene")
             .and_then(|(_, value)| available_scenes.get_by_link(value));
 
-        let mut scene = if let Some(scene) = required_scene {
+        let mut scene = if let Some((scene, _)) = required_scene {
             ron::from_str(&scene).unwrap()
             // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2)  .unwrap() .into();
         } else {
@@ -372,6 +374,8 @@ impl Window {
             },
 
             scene_initted: false,
+
+            scene_name: required_scene.map(|(_, name)| name).unwrap_or(""),
         };
         result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
@@ -416,7 +420,7 @@ impl Window {
             use egui::menu;
             menu::bar(ui, |ui| {
                 menu::menu(ui, "🗋 Load", |ui| {
-                    if let Some((content, link)) = self.available_scenes.egui(ui) {
+                    if let Some((content, link, name)) = self.available_scenes.egui(ui) {
                         let s = content;
                         // let old: OldScene = serde_json::from_str(&s).unwrap();
                         // *self = old.into();
@@ -441,6 +445,7 @@ impl Window {
                         self.cam.set_cam(&self.scene.cam);
                         self.offset_after_material = self.scene.cam.offset_after_material;
                         quad_url::set_program_parameter("scene", link);
+                        self.scene_name = name;
                     }
                     ui.separator();
                     if ui.button("Import...").clicked() {
@@ -655,6 +660,10 @@ First, predefined library is included, then uniforms, then user library, then in
                 .open(&mut control_scene_opened)
                 .scroll(true)
                 .show(ctx, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.heading(self.scene_name);
+                    });
+                    ui.separator();
                     ui.collapsing("Description", |ui| {
                         let text = self.scene.desc.text(ui);
                         egui::experimental::easy_mark(ui, text);

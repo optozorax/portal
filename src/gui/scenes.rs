@@ -150,16 +150,22 @@ impl Default for Scenes {
 }
 
 impl Scenes {
-    pub fn get_by_link(&self, need_link: &str) -> Option<&'static str> {
-        for Scene { content, link, .. } in self.0.iter().map(|x| x.scenes.iter()).flatten() {
+    pub fn get_by_link(&self, need_link: &str) -> Option<(&'static str, &'static str)> {
+        for Scene {
+            content,
+            link,
+            name,
+            ..
+        } in self.0.iter().map(|x| x.scenes.iter()).flatten()
+        {
             if *link == need_link {
-                return Some(content);
+                return Some((content, name));
             }
         }
         None
     }
 
-    pub fn egui(&self, ui: &mut Ui) -> Option<(&'static str, &'static str)> {
+    pub fn egui(&self, ui: &mut Ui) -> Option<(&'static str, &'static str, &'static str)> {
         let show_hidden = ui.memory().data.get_or_default::<ShowHiddenScenes>().0;
         ui.set_width(140.);
         let mut result = None;
@@ -185,7 +191,7 @@ impl Scenes {
                 } in inner
                 {
                     if (show_hidden || !hidden) && ui.button(*name).clicked() {
-                        result = Some((*content, *link))
+                        result = Some((*content, *link, *name))
                     }
                 }
             }
