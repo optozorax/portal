@@ -289,7 +289,7 @@ impl<T: StorageElem2> GlobalStage<T> {
                         }
                     }
                 } else {
-                    crate::error!();
+                    // crate::error!();
                 }
             }
             ui.separator();
