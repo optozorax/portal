@@ -55,6 +55,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/monoportal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "N-monoportal",
+                        link: "monoportal_n",
+                        content: include_str!("../../scenes/monoportal_n.ron"),
+                        hidden: false,
+                    },
                     // Scene {
                     //     name: "Monoportal offset",
                     //     link: "monoportal_offset",
