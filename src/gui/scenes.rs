@@ -56,6 +56,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Rotating monoportal",
+                        link: "monoportal_rotating",
+                        content: include_str!("../../scenes/monoportal_rotating.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "N-monoportal",
                         link: "monoportal_n",
                         content: include_str!("../../scenes/monoportal_n.ron"),
