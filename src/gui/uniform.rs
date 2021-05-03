@@ -268,13 +268,12 @@ impl FormulasCacheInner {
         }
     }
 
-    pub fn eval(
-        &mut self,
+    pub fn eval_unsafe(
+        &self,
         text: &str,
         ns: &mut impl FnMut(&str, Vec<f64>) -> Option<f64>,
     ) -> Option<Result<f64, fasteval::Error>> {
         use fasteval::*;
-        self.compile(text)?;
         Some(self.get_unsafe(text).eval(&self.slab, ns))
     }
 }
@@ -304,12 +303,16 @@ impl FormulasCache {
         }
     }
 
-    pub fn eval(
+    pub fn compile(&self, text: &str) {
+        drop(self.0.borrow_mut().compile(text));
+    }
+
+    pub fn eval_unsafe(
         &self,
         text: &str,
         ns: &mut impl FnMut(&str, Vec<f64>) -> Option<f64>,
     ) -> Option<Result<f64, fasteval::Error>> {
-        self.0.borrow_mut().eval(text, ns).clone()
+        self.0.borrow().eval_unsafe(text, ns)
     }
 }
 
@@ -636,6 +639,22 @@ impl StorageElem2 for AnyUniform {
                 "rad2deg" => args.get(0)? * 180. / std::f64::consts::PI,
                 "switch" => *args.get(*args.get(0)? as usize)?,
 
+                "on" => {
+                    let v = *args.get(0)?;
+                    let a = *args.get(1)?;
+                    let b = *args.get(2)?;
+
+                    if v < a {
+                        0.
+                    } else if v > b {
+                        1.
+                    } else {
+                        (v - a) / (b - a)
+                    }
+                }
+
+                "inv" => 1.0 - args.get(0)?,
+
                 // Free variables
                 _ => get_helper.get(get_helper.find_id(name)?)?.into(),
             })
@@ -648,7 +667,7 @@ impl StorageElem2 for AnyUniform {
             AnyUniform::Progress(a) => AnyUniformResult::Float(*a),
             AnyUniform::Float(value) => AnyUniformResult::Float(value.get_value()),
             AnyUniform::Formula(f) => {
-                AnyUniformResult::Float(formulas_cache.eval(&f.0, &mut cb)?.ok()?)
+                AnyUniformResult::Float(formulas_cache.eval_unsafe(&f.0, &mut cb)?.ok()?)
             }
         })
     }

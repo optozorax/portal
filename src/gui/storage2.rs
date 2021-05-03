@@ -130,6 +130,10 @@ impl<T: StorageElem2> Storage2<T> {
             .map(|id| T::IdWrapper::wrap(*id))
     }
 
+    pub fn all_ids(&self) -> impl Iterator<Item = T::IdWrapper> + '_ {
+        self.storage.iter().map(|(key, _)| T::IdWrapper::wrap(*key))
+    }
+
     fn get_inner(
         &self,
         id: T::IdWrapper,

@@ -351,7 +351,17 @@ impl Scene {
             .collect()
     }
 
+    pub fn compile_all_formulas(&self, cache: &FormulasCache) {
+        for id in self.uniforms.all_ids() {
+            if let AnyUniform::Formula(f) = self.uniforms.get_original(id).unwrap() {
+                cache.compile(&f.0);
+            }
+        }
+    }
+
     pub fn uniforms(&self, data: &Data) -> Option<Vec<(String, UniformType)>> {
+        self.compile_all_formulas(&data.formulas_cache);
+
         let mut result = Vec::new();
         use Object::*;
         use ObjectType::*;
@@ -422,6 +432,8 @@ impl Scene {
     }
 
     pub fn set_uniforms(&mut self, material: macroquad::material::Material, data: &mut Data) {
+        self.compile_all_formulas(&data.formulas_cache);
+
         let objects = &self.objects;
         let uniforms = &mut self.uniforms;
         let matrices = &self.matrices;

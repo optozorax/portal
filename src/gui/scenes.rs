@@ -46,7 +46,7 @@ impl Default for Scenes {
                 ],
             },
             SceneSection {
-                name: "Not 2 parts",
+                name: "Monoportals",
                 hidden: false,
                 scenes: vec![
                     Scene {
@@ -67,12 +67,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/monoportal_n.ron"),
                         hidden: false,
                     },
-                    // Scene {
-                    //     name: "Monoportal offset",
-                    //     link: "monoportal_offset",
-                    //     content: include_str!("../../scenes/monoportal_offset.json"),
-                    //     hidden: false,
-                    // },
+                    Scene {
+                        name: "Monoportal offset",
+                        link: "monoportal_offset",
+                        content: include_str!("../../scenes/monoportal_offset.ron"),
+                        hidden: false,
+                    },
                     Scene {
                         name: "Monoportal scale",
                         link: "monoportal_scale",
@@ -81,17 +81,21 @@ impl Default for Scenes {
                     },
                     Scene {
                         name: "Monoportal scale 2",
-                        link: "monoportal_offset 2",
+                        link: "monoportal_scale_2",
                         content: include_str!("../../scenes/monoportal_scale2.ron"),
                         hidden: true,
                     },
-                    Scene {
-                        name: "Triple portal",
-                        link: "triple_portal",
-                        content: include_str!("../../scenes/triple_portal.ron"),
-                        hidden: false,
-                    },
                 ],
+            },
+            SceneSection {
+                name: "Triple portal",
+                hidden: false,
+                scenes: vec![Scene {
+                    name: "Triple portal",
+                    link: "triple_portal",
+                    content: include_str!("../../scenes/triple_portal.ron"),
+                    hidden: false,
+                }],
             },
             SceneSection {
                 name: "Mobius",
