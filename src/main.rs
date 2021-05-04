@@ -829,7 +829,8 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    // color_backtrace::install();
+    #[cfg(not(target_arch = "wasm32"))]
+    color_backtrace::install();
 
     let mut window = Window::new().await;
 

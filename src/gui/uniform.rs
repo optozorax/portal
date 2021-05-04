@@ -233,12 +233,12 @@ impl Default for FormulasCacheInner {
 impl FormulasCacheInner {
     pub fn get<'a, 'b>(&'a mut self, text: &'b str) -> Option<&'a fasteval::Instruction> {
         self.compile(text)?;
-        Some(self.get_unsafe(text))
+        self.get_unsafe(text)
     }
 
     /// You must call `self.compile(text)?;` before
-    fn get_unsafe<'a, 'b>(&'a self, text: &'b str) -> &'a fasteval::Instruction {
-        self.cache.get(text).unwrap().as_ref().unwrap()
+    fn get_unsafe<'a, 'b>(&'a self, text: &'b str) -> Option<&'a fasteval::Instruction> {
+        self.cache.get(text).unwrap().as_ref()
     }
 
     /// Returns `None` when text is wrong formula
@@ -274,7 +274,7 @@ impl FormulasCacheInner {
         ns: &mut impl FnMut(&str, Vec<f64>) -> Option<f64>,
     ) -> Option<Result<f64, fasteval::Error>> {
         use fasteval::*;
-        Some(self.get_unsafe(text).eval(&self.slab, ns))
+        Some(self.get_unsafe(text)?.eval(&self.slab, ns))
     }
 }
 

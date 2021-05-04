@@ -13,7 +13,9 @@ ron = "0.6.4"
 egui = { git = "https://github.com/emilk/egui" }
 fasteval = "0.2.4"
 quad-url = "0.1.0"
-# color-backtrace = "0.5.0"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+color-backtrace = "0.5.0"
 
 [patch.crates-io]
 miniquad = { path = '../../testing/miniquad' }

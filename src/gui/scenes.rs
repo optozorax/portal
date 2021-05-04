@@ -74,6 +74,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Monoportal offset 2",
+                        link: "monoportal_offset2",
+                        content: include_str!("../../scenes/monoportal_offset2.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Monoportal scale",
                         link: "monoportal_scale",
                         content: include_str!("../../scenes/monoportal_scale.ron"),
