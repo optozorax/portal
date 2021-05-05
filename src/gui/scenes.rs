@@ -68,26 +68,26 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "Monoportal offset",
+                        name: "Offsetting monoportal",
                         link: "monoportal_offset",
                         content: include_str!("../../scenes/monoportal_offset.ron"),
                         hidden: false,
                     },
                     Scene {
-                        name: "Monoportal offset 2",
+                        name: "Offsetting monoportal 2",
                         link: "monoportal_offset2",
                         content: include_str!("../../scenes/monoportal_offset2.ron"),
                         hidden: false,
                     },
                     Scene {
-                        name: "Monoportal scale",
+                        name: "Scaling monoportal",
                         link: "monoportal_scale",
                         content: include_str!("../../scenes/monoportal_scale.ron"),
                         hidden: false,
                     },
                     Scene {
-                        name: "Monoportal scale 2",
-                        link: "monoportal_scale_2",
+                        name: "Scaling monoportal 2",
+                        link: "monoportal_scale2",
                         content: include_str!("../../scenes/monoportal_scale2.ron"),
                         hidden: false,
                     },
@@ -195,7 +195,7 @@ impl Scenes {
 
     pub fn egui(&self, ui: &mut Ui) -> Option<(&'static str, &'static str, &'static str)> {
         let show_hidden = ui.memory().data.get_or_default::<ShowHiddenScenes>().0;
-        ui.set_width(140.);
+        ui.set_width(170.);
         let mut result = None;
         for (
             pos,
