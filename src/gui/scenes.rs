@@ -83,7 +83,7 @@ impl Default for Scenes {
                         name: "Monoportal scale",
                         link: "monoportal_scale",
                         content: include_str!("../../scenes/monoportal_scale.ron"),
-                        hidden: true,
+                        hidden: false,
                     },
                     Scene {
                         name: "Monoportal scale 2",
