@@ -92,8 +92,8 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "Logarithmic spiral monoporta",
-                        link: "monoportal_scale2",
+                        name: "Logarithmic spiral monoportal",
+                        link: "monoportal_log",
                         content: include_str!("../../scenes/monoportal_log.ron"),
                         hidden: false,
                     },
