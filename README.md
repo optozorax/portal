@@ -6,12 +6,21 @@ In Portal Explorer you can view how interesting portals are constructed, and vis
 
 # Scenes
 
-* [Monoportal](https://optozorax.github.io/portal/?scene=monoportal)
-* [Mobius portal](https://optozorax.github.io/portal/?scene=mobius)
-* [Mobius monoportal](https://optozorax.github.io/portal/?scene=mobius_monoportal)
+* Monoportals
+	* [Monoportal](https://optozorax.github.io/portal/?scene=monoportal)
+	* [Rotating monoportal](https://optozorax.github.io/portal/?scene=monoportal_rotating)
+	* [N-monoportal](https://optozorax.github.io/portal/?scene=monoportal_n)
+	* [Offsetting monoportal](https://optozorax.github.io/portal/?scene=monoportal_offset)
+	* [Offsetting monoportal 2](https://optozorax.github.io/portal/?scene=monoportal_offset2)
+	* [Scaling monoportal](https://optozorax.github.io/portal/?scene=monoportal_scale)
+	* [Scaling monoportal](https://optozorax.github.io/portal/?scene=monoportal_scale2)
+	* [Logarithmic spiral portal](https://optozorax.github.io/portal/?scene=monoportal_log)
 * [Triple portal](https://optozorax.github.io/portal/?scene=triple_portal)
-* [Portal in portal](https://optozorax.github.io/portal/?scene=portal_in_portal)
+* Mobius band
+	* [Mobius portal](https://optozorax.github.io/portal/?scene=mobius)
+	* [Mobius monoportal](https://optozorax.github.io/portal/?scene=mobius_monoportal)
 * [Hopl Link portal](https://optozorax.github.io/portal/?scene=hopf_link)
+* [Portal in portal](https://optozorax.github.io/portal/?scene=portal_in_portal)
 
 # Screenshots
 
