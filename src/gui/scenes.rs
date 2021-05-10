@@ -61,6 +61,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/speed_model.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Same shape",
+                        link: "same_shape",
+                        content: include_str!("../../scenes/same_shape.ron"),
+                        hidden: false,
+                    },
                 ],
             },
             SceneSection {
