@@ -408,6 +408,10 @@ impl Window {
     fn process_mouse_and_keys(&mut self, ctx: &egui::CtxRef) -> bool {
         let mut is_something_changed = false;
 
+        self.data
+            .formulas_cache
+            .set_time(macroquad::miniquad::date::now());
+
         if !self.scene_initted {
             self.scene_initted = true;
             self.scene.init(&mut self.data, &mut ctx.memory());

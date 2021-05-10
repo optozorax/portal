@@ -279,7 +279,7 @@ impl FormulasCacheInner {
 }
 
 #[derive(Default)]
-pub struct FormulasCache(RefCell<FormulasCacheInner>);
+pub struct FormulasCache(RefCell<FormulasCacheInner>, f64);
 
 impl Debug for FormulasCache {
     fn fmt(&self, _: &mut Formatter<'_>) -> fmt::Result {
@@ -313,6 +313,14 @@ impl FormulasCache {
         ns: &mut impl FnMut(&str, Vec<f64>) -> Option<f64>,
     ) -> Option<Result<f64, fasteval::Error>> {
         self.0.borrow().eval_unsafe(text, ns)
+    }
+
+    pub fn get_time(&self) -> f64 {
+        self.1
+    }
+
+    pub fn set_time(&mut self, time: f64) {
+        self.1 = time;
     }
 }
 
@@ -655,7 +663,7 @@ impl StorageElem2 for AnyUniform {
 
                 "inv" => 1.0 - args.get(0)?,
 
-                "time" => macroquad::miniquad::date::now(),
+                "time" => formulas_cache.get_time(),
 
                 // Free variables
                 _ => get_helper
