@@ -103,7 +103,7 @@ impl ValueToUser {
         ui.horizontal(|ui| {
             let previous = ui.spacing().item_spacing.x;
             ui.spacing_mut().item_spacing.x = 0.;
-            ui.label(format!("{}", self.overrided_name));
+            ui.label(self.overrided_name.to_string());
             if let Some(help) = &self.help_description {
                 let response = ui.add(egui::Label::new("(?)").small_raised());
                 response.on_hover_text(help.text(ui));

@@ -123,7 +123,7 @@ impl RotateAroundCam {
 
         self.previous_mouse = mouse_pos;
 
-        return is_something_changed;
+        is_something_changed
     }
 
     fn get_matrix(&self) -> DMat4 {
@@ -318,18 +318,20 @@ impl Window {
             .find(|(name, _)| *name == "scene")
             .and_then(|(_, value)| available_scenes.get_by_link(value));
 
-        let mut scene = if let Some((scene, _)) = required_scene {
-            ron::from_str(&scene).unwrap()
-            // let mut scene: Scene = serde_json::from_str::<OldScene>(&available_scenes[default_scene].2)  .unwrap() .into();
+        let default_scene = "portal_in_portal";
+
+        let (scene_content, scene_name) = if let Some(result) = required_scene {
+            result
         } else {
-            Scene::default()
+            available_scenes.get_by_link(default_scene).unwrap()
         };
 
-        let mut data: Data = Default::default();
+        let mut scene: Scene = ron::from_str(&scene_content).unwrap();
 
-        // scene.init(&mut data);
-
-        data.reload_textures = true;
+        let mut data: Data = Data {
+            reload_textures: true,
+            ..Default::default()
+        };
 
         let material = scene
             .get_new_material(&data)
@@ -375,7 +377,7 @@ impl Window {
 
             scene_initted: false,
 
-            scene_name: required_scene.map(|(_, name)| name).unwrap_or(""),
+            scene_name,
         };
         result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
@@ -448,10 +450,8 @@ impl Window {
                         self.scene_name = name;
                     }
                     ui.separator();
-                    if ui.button("Import...").clicked() {
-                        if self.import_window.is_none() {
-                            self.import_window = Some("".to_owned());
-                        }
+                    if ui.button("Import...").clicked() && self.import_window.is_none() {
+                        self.import_window = Some("".to_owned());
                     }
                 });
                 if ui.button("↔ Control scene").clicked() {
@@ -708,8 +708,8 @@ First, predefined library is included, then uniforms, then user library, then in
                             egui::Slider::new(offset, MIN..=MAX)
                                 .logarithmic(true)
                                 .clamp_to_range(true)
-                                .largest_finite(MAX.into())
-                                .smallest_positive(MIN.into()),
+                                .largest_finite(MAX)
+                                .smallest_positive(MIN),
                         );
                     });
                     ui.label("(Ofsetting after ray being teleported, reflected, refracted)");
@@ -732,11 +732,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     egui::experimental::easy_mark(ui, text);
                     ui.separator();
 
-                    let mut checked = ui
-                        .memory()
-                        .data
-                        .get_or_default::<ShowHiddenScenes>()
-                        .clone();
+                    let mut checked = *ui.memory().data.get_or_default::<ShowHiddenScenes>();
                     ui.checkbox(&mut checked.0, "Show hidden scenes :P");
                     ui.memory().data.insert(checked);
                 });
@@ -765,7 +761,7 @@ First, predefined library is included, then uniforms, then user library, then in
                         self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap())
                 } else {
                     // set original camera
-                    memory.data.get_or_default::<OriginalCam>().clone().0
+                    memory.data.get_or_default::<OriginalCam>().0
                 };
 
                 self.cam.from = current_cam;
@@ -773,12 +769,10 @@ First, predefined library is included, then uniforms, then user library, then in
                 self.cam.beta = calculated_cam.beta;
                 self.cam.r = calculated_cam.r;
                 self.cam.look_at = calculated_cam.look_at;
-            } else {
-                if let Some(id) = self.cam.from {
-                    let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
-                        self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
-                    self.cam.look_at = calculated_cam.look_at;
-                }
+            } else if let Some(id) = self.cam.from {
+                let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
+                    self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
+                self.cam.look_at = calculated_cam.look_at;
             }
 
             is_something_changed = true;
@@ -786,7 +780,7 @@ First, predefined library is included, then uniforms, then user library, then in
 
         is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
 
-        return is_something_changed;
+        is_something_changed
     }
 
     fn set_uniforms(&mut self) {

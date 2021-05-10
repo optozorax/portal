@@ -113,6 +113,7 @@ impl ComboBoxChoosable for Object {
 }
 
 impl ObjectType {
+    #[allow(clippy::type_complexity)]
     pub fn egui(
         &mut self,
         ui: &mut Ui,
@@ -147,15 +148,11 @@ impl Wrapper for ObjectId {
 }
 
 impl Object {
-    pub fn get_name<'a>(id: MatrixId, storage: &'a Storage2<Matrix>) -> Option<MatrixName<'a>> {
-        if let Some(name) = storage.get_name(id) {
-            Some(
-                name.map(|name| MatrixName(Cow::Borrowed(name)))
-                    .unwrap_or_else(|| MatrixName(Cow::Owned(format!("id{}", id.un_wrap())))),
-            )
-        } else {
-            None
-        }
+    pub fn get_name(id: MatrixId, storage: &Storage2<Matrix>) -> Option<MatrixName> {
+        storage.get_name(id).map(|name| {
+            name.map(|name| MatrixName(Cow::Borrowed(name)))
+                .unwrap_or_else(|| MatrixName(Cow::Owned(format!("id{}", id.un_wrap()))))
+        })
     }
 }
 

@@ -214,7 +214,7 @@ impl<T: StorageElem2> Storage2<T> {
         self.remove(T::IdWrapper::wrap(id), input);
     }
 
-    pub fn visible_elements<'a>(&'a self) -> impl Iterator<Item = (T::IdWrapper, &'a str)> + 'a {
+    pub fn visible_elements(&self) -> impl Iterator<Item = (T::IdWrapper, &str)> + '_ {
         let storage = &self.storage;
         self.storage_order.iter().map(move |id| {
             (
@@ -559,6 +559,7 @@ impl<T: StorageElem2> Storage2<T> {
         }
     }
 
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.storage_order.len()
     }

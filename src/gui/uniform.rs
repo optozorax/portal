@@ -114,6 +114,7 @@ impl TVec3 {
 }
 
 impl ParametrizeOrNot {
+    #[allow(clippy::too_many_arguments)]
     pub fn egui(
         &mut self,
         ui: &mut Ui,
@@ -153,7 +154,7 @@ impl ParametrizeOrNot {
         use ParametrizeOrNot::*;
         Some(match self {
             Yes(f) => uniforms.get((*f)?, formulas_cache)?.into(),
-            No(f) => (*f).into(),
+            No(f) => (*f),
         })
     }
 
@@ -242,7 +243,6 @@ impl FormulasCacheInner {
     }
 
     /// Returns `None` when text is wrong formula
-    #[must_use]
     pub fn compile(&mut self, text: &str) -> Option<()> {
         let FormulasCacheInner {
             parser,
@@ -304,7 +304,7 @@ impl FormulasCache {
     }
 
     pub fn compile(&self, text: &str) {
-        drop(self.0.borrow_mut().compile(text));
+        self.0.borrow_mut().compile(text);
     }
 
     pub fn eval_unsafe(
@@ -656,7 +656,14 @@ impl StorageElem2 for AnyUniform {
                 "inv" => 1.0 - args.get(0)?,
 
                 // Free variables
-                _ => get_helper.get(get_helper.find_id(name)?)?.into(),
+                _ => get_helper
+                    .get(if let Some(id) = get_helper.find_id(name) {
+                        id
+                    } else {
+                        crate::error!(format, "cannot find variable `{}`", name);
+                        return None;
+                    })?
+                    .into(),
             })
         };
 

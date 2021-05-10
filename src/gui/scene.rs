@@ -529,7 +529,7 @@ impl Scene {
         for (name, kind) in self
             .uniforms(data)?
             .into_iter()
-            .filter(|(name, _)| !name.starts_with("_"))
+            .filter(|(name, _)| !name.starts_with('_'))
         {
             result.add_string(format!(
                 "uniform {} {};\n",
@@ -959,7 +959,7 @@ impl Scene {
         if self.animation_stages.len() != 0 {
             changed |= self.select_stage_ui(ui);
             ui.separator();
-            if let Some(stage) = self.current_stage.clone() {
+            if let Some(stage) = self.current_stage {
                 if let Some(stage) = self.animation_stages.get_original(stage) {
                     with_swapped!(x => (self.uniforms, data.formulas_cache);
                         changed |= stage.user_egui(ui, &mut x, &mut self.matrices, &mut self.cameras, &mut self.elements_descriptions));

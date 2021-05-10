@@ -211,7 +211,7 @@ impl StorageElem2 for Cam {
             .add(Button::new("Set angles from current camera"))
             .clicked()
         {
-            let current_cam = ui.memory().data.get_or_default::<CalculatedCam>().clone();
+            let current_cam = *ui.memory().data.get_or_default::<CalculatedCam>();
             self.alpha = current_cam.alpha;
             self.beta = current_cam.beta;
             self.r = current_cam.r;
@@ -223,7 +223,7 @@ impl StorageElem2 for Cam {
             .add(Button::new("Set center from current camera").enabled(id.is_none()))
             .clicked()
         {
-            let current_cam = ui.memory().data.get_or_default::<CalculatedCam>().clone();
+            let current_cam = *ui.memory().data.get_or_default::<CalculatedCam>();
             self.look_at = CamLookAt::Coordinate(current_cam.look_at);
             changed.uniform = true;
         }

@@ -48,14 +48,12 @@ impl Default for Scenes {
             SceneSection {
                 name: "Basics",
                 hidden: false,
-                scenes: vec![
-                    Scene {
-                        name: "Basics",
-                        link: "basics",
-                        content: include_str!("../../scenes/basics.ron"),
-                        hidden: false,
-                    },
-                ],
+                scenes: vec![Scene {
+                    name: "Basics",
+                    link: "basics",
+                    content: include_str!("../../scenes/basics.ron"),
+                    hidden: false,
+                }],
             },
             SceneSection {
                 name: "Monoportals",

@@ -141,7 +141,7 @@ pub fn egui_angle(ui: &mut Ui, angle: &mut f64) -> bool {
                     current = v as f64;
                 }
             }
-            current.into()
+            current
         })
         .speed(1)
         .suffix("°"),
