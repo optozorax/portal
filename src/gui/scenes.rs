@@ -46,6 +46,18 @@ impl Default for Scenes {
                 ],
             },
             SceneSection {
+                name: "Basics",
+                hidden: false,
+                scenes: vec![
+                    Scene {
+                        name: "Basics",
+                        link: "basics",
+                        content: include_str!("../../scenes/basics.ron"),
+                        hidden: false,
+                    },
+                ],
+            },
+            SceneSection {
                 name: "Monoportals",
                 hidden: false,
                 scenes: vec![
@@ -110,7 +122,7 @@ impl Default for Scenes {
                 }],
             },
             SceneSection {
-                name: "Mobius",
+                name: "Mobius band",
                 hidden: false,
                 scenes: vec![
                     Scene {
