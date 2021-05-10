@@ -743,7 +743,7 @@ First, predefined library is included, then uniforms, then user library, then in
 
         let memory = &mut ctx.memory();
 
-        if changed.uniform {
+        if changed.uniform || self.scene.use_time {
             self.scene.set_uniforms(self.material, &mut self.data);
             self.set_uniforms();
 

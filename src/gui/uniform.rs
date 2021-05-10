@@ -655,6 +655,8 @@ impl StorageElem2 for AnyUniform {
 
                 "inv" => 1.0 - args.get(0)?,
 
+                "time" => macroquad::miniquad::date::now(),
+
                 // Free variables
                 _ => get_helper
                     .get(if let Some(id) = get_helper.find_id(name) {

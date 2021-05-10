@@ -70,6 +70,9 @@ pub struct Scene {
     current_stage: Option<AnimationId>,
 
     dev_stage: DevStage,
+
+    #[serde(default)]
+    pub use_time: bool,
 }
 
 // In case of panic
@@ -195,6 +198,8 @@ impl Scene {
                 self.current_stage = None;
                 changed |= self.init_stage(self.current_stage, &mut ui.memory());
             }
+
+            ui.checkbox(&mut self.use_time, "Use time");
         });
 
         ui.separator();
