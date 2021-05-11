@@ -5,20 +5,18 @@ authors = ["ilya sheprut <optozorax@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-macroquad = "0.3.0"
-egui-macroquad = { path = "../egui-macroquad" }
+macroquad = "0.3.3"
+egui-macroquad = "0.4.0"
 glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
 ron = "0.6.4"
-egui = { git = "https://github.com/emilk/egui" }
+egui = "0.12.0"
 fasteval = "0.2.4"
 quad-url = "0.1.0"
+egui_demo_lib = "0.12.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 color-backtrace = "0.5.0"
-
-[patch.crates-io]
-miniquad = { path = '../../testing/miniquad' }
 
 ## cargo clean; cargo build --release; strip target/release/portal; upx --best --lzma target/release/portal; ll target/release
 ## result native size is ~1MB

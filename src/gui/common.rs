@@ -329,7 +329,7 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
 
         match state {
             State::View => {
-                egui::experimental::easy_mark(ui, &text);
+                egui_demo_lib::easy_mark::easy_mark(ui, text);
             }
             State::Edit => {
                 ui.add(TextEdit::multiline(text).text_style(TextStyle::Monospace));

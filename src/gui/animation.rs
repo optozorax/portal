@@ -555,7 +555,7 @@ impl AnimationStage {
         let mut changed = WhatChanged::default();
         if let Some(description) = &self.description {
             let text = description.text(ui);
-            egui::experimental::easy_mark(ui, text);
+            egui_demo_lib::easy_mark::easy_mark(ui, text);
             ui.separator();
         }
 

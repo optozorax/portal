@@ -551,7 +551,7 @@ impl Window {
                     .open(&mut not_close)
                     .default_width(700.)
                     .show(ctx, |ui| {
-                        egui::experimental::easy_mark(ui, r#"# What is this
+                        egui_demo_lib::easy_mark::easy_mark(ui, r#"# What is this
 
 This code is generated automatically based on:
 - Uniforms
@@ -670,7 +670,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.separator();
                     ui.collapsing("Description", |ui| {
                         let text = self.scene.desc.text(ui);
-                        egui::experimental::easy_mark(ui, text);
+                        egui_demo_lib::easy_mark::easy_mark(ui, text);
                     });
                     changed |= self.scene.control_egui(ui, &mut self.data);
                 });
@@ -683,7 +683,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 .scroll(true)
                 .default_width(600.)
                 .show(ctx, |ui| {
-                    egui::experimental::easy_mark(ui, "# What is this\n\nThis is predefined library GLSL code, it included before user code, so you can use functions and etc. from this.\n\n---\n\n# Code\n\n");
+                    egui_demo_lib::easy_mark::easy_mark(ui, "# What is this\n\nThis is predefined library GLSL code, it included before user code, so you can use functions and etc. from this.\n\n---\n\n# Code\n\n");
                     ui.separator();
                     ui.monospace(LIBRARY);
                 });
@@ -733,7 +733,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 .open(&mut about_opened)
                 .show(ctx, |ui| {
                     let text = self.about.text(ui);
-                    egui::experimental::easy_mark(ui, text);
+                    egui_demo_lib::easy_mark::easy_mark(ui, text);
                     ui.separator();
 
                     let mut checked = *ui.memory().data.get_or_default::<ShowHiddenScenes>();
