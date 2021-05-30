@@ -298,6 +298,61 @@ SurfaceIntersection cap(Ray r, vec3 pa, vec3 pb, float radius) {
     return intersection_none;
 }
 
+// Get intersection with cylinder, thanks iq: https://www.shadertoy.com/view/4lcSRn
+SurfaceIntersection cylinder(Ray r, vec3 pa, vec3 pb, float ra) {
+    vec3 ro = r.o.xyz;
+    vec3 rd = r.d.xyz;
+
+    vec3 ba = pb-pa;
+
+    vec3  oc = ro - pa;
+
+    float baba = dot(ba,ba);
+    float bard = dot(ba,rd);
+    float baoc = dot(ba,oc);
+    
+    float k2 = baba            - bard*bard;
+    float k1 = baba*dot(oc,rd) - baoc*bard;
+    float k0 = baba*dot(oc,oc) - baoc*baoc - ra*ra*baba;
+    
+    float h = k1*k1 - k2*k0;
+    if( h<0.0 ) return intersection_none;
+    h = sqrt(h);
+
+    // near side
+    float t = (-k1-h)/k2;
+    float y = baoc + t*bard;
+    if( y>0.0 && y<baba ) return SurfaceIntersection(true, t, 0., 0., (oc+t*rd - ba*y/baba)/ra);
+    
+    // far side
+    t = (-k1+h)/k2;
+    y = baoc + t*bard;
+    if( y>0.0 && y<baba ) return SurfaceIntersection(true, t, 0., 0., (oc+t*rd - ba*y/baba)/ra);
+   
+    return intersection_none;
+}
+
+// Triangle intersection. Returns { t, u, v }
+SurfaceIntersection triangle(Ray r, vec3 v0, vec3 v1, vec3 v2) {
+    vec3 ro = r.o.xyz;
+    vec3 rd = r.d.xyz;
+
+    vec3 v1v0 = v1 - v0;
+    vec3 v2v0 = v2 - v0;
+    vec3 rov0 = ro - v0;
+
+    vec3  n = cross( v1v0, v2v0 );
+    vec3  q = cross( rov0, rd );
+    float d = 1.0/dot( rd, n );
+    float u = d*dot( -q, v2v0 );
+    float v = d*dot(  q, v1v0 );
+    float t = d*dot( -n, rov0 );
+
+    if( u<0.0 || v<0.0 || (u+v)>1.0 ) return intersection_none;
+
+    return SurfaceIntersection(true, t, u, v, normalize_normal(cross(v1-v0, v2-v0), r.d.xyz));
+}
+
 // Intersect ray with debug thing
 SceneIntersection debug_intersect(Ray r) {
     vec3 pa = vec3(0.);
