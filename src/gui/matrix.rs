@@ -39,6 +39,12 @@ pub enum Matrix {
         mirror: TVec3,
         scale: ParametrizeOrNot,
     },
+    Exact {
+        i: TVec3,
+        j: TVec3,
+        k: TVec3,
+        pos: TVec3,
+    },
 }
 
 impl Default for Matrix {
@@ -54,7 +60,7 @@ impl Default for Matrix {
 
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
-        &["Simple", "Mul", "Teleport", "Param."]
+        &["Simple", "Mul", "Teleport", "Param.", "Exact"]
     }
     fn get_number(&self) -> usize {
         use Matrix::*;
@@ -63,6 +69,7 @@ impl ComboBoxChoosable for Matrix {
             Mul { .. } => 1,
             Teleport { .. } => 2,
             Parametrized { .. } => 3,
+            Exact { .. } => 4,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -147,6 +154,28 @@ impl ComboBoxChoosable for Matrix {
                         z: ParametrizeOrNot::No(0.),
                     },
                     scale: ParametrizeOrNot::No(1.),
+                },
+            },
+            4 => Exact {
+                i: TVec3 {
+                    x: ParametrizeOrNot::No(1.0),
+                    y: ParametrizeOrNot::No(0.0),
+                    z: ParametrizeOrNot::No(0.0),
+                },
+                j: TVec3 {
+                    x: ParametrizeOrNot::No(0.0),
+                    y: ParametrizeOrNot::No(1.0),
+                    z: ParametrizeOrNot::No(0.0),
+                },
+                k: TVec3 {
+                    x: ParametrizeOrNot::No(0.0),
+                    y: ParametrizeOrNot::No(0.0),
+                    z: ParametrizeOrNot::No(1.0),
+                },
+                pos: TVec3 {
+                    x: ParametrizeOrNot::No(0.0),
+                    y: ParametrizeOrNot::No(0.0),
+                    z: ParametrizeOrNot::No(0.0),
                 },
             },
             _ => unreachable!(),
@@ -325,6 +354,44 @@ impl StorageElem2 for Matrix {
                     data_id.with(3),
                 );
             }
+            Exact { i, j, k, pos } => {
+                let hpat![uniforms, formulas_cache] = input;
+                ui.label("i: ");
+                changed.uniform |= i.egui(
+                    ui,
+                    |ui, x| egui_f64(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(0),
+                );
+                ui.separator();
+                ui.label("j: ");
+                changed.uniform |= j.egui(
+                    ui,
+                    |ui, x| egui_f64(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(0),
+                );
+                ui.separator();
+                ui.label("k: ");
+                changed.uniform |= k.egui(
+                    ui,
+                    |ui, x| egui_f64(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(0),
+                );
+                ui.separator();
+                ui.label("pos: ");
+                changed.uniform |= pos.egui(
+                    ui,
+                    |ui, x| egui_f64(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(0),
+                );
+            }
         }
         /*
         // POSTPONE
@@ -405,6 +472,18 @@ impl StorageElem2 for Matrix {
                     ),
                 )
             }
+            Exact { i, j, k, pos } => {
+                macro_rules! get {
+                    ($($x:tt)*) => {$($x)*.get(uniforms, formulas_cache)?};
+                }
+                let matrix = [
+                    [get!(i.x), get!(i.y), get!(i.z), 0.],
+                    [get!(j.x), get!(j.y), get!(j.z), 0.],
+                    [get!(k.x), get!(k.y), get!(k.z), 0.],
+                    [get!(pos.x), get!(pos.y), get!(pos.z), 1.],
+                ];
+                DMat4::from_cols_array_2d(&matrix)
+            }
         })
     }
 
@@ -451,6 +530,13 @@ impl StorageElem2 for Matrix {
                 mirror.remove_as_field(uniforms, formulas_cache);
                 scale.remove_as_field(uniforms, formulas_cache);
             }
+            Exact { i, j, k, pos } => {
+                let hpat![uniforms, formulas_cache] = input;
+                i.remove_as_field(uniforms, formulas_cache);
+                j.remove_as_field(uniforms, formulas_cache);
+                k.remove_as_field(uniforms, formulas_cache);
+                pos.remove_as_field(uniforms, formulas_cache);
+            }
         }
     }
 
@@ -483,6 +569,12 @@ impl StorageElem2 for Matrix {
                     + rotate.errors_count(uniforms, formulas_cache)
                     + mirror.errors_count(uniforms, formulas_cache)
                     + scale.errors_count(uniforms, formulas_cache)
+            }
+            Exact { i, j, k, pos } => {
+                i.errors_count(uniforms, formulas_cache)
+                    + j.errors_count(uniforms, formulas_cache)
+                    + k.errors_count(uniforms, formulas_cache)
+                    + pos.errors_count(uniforms, formulas_cache)
             }
         }
         // POSTPONE
