@@ -67,6 +67,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/same_shape.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Cut prism",
+                        link: "cut_prism",
+                        content: include_str!("../../scenes/cut_prism.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
