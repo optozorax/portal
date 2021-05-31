@@ -71,7 +71,7 @@ impl Default for Scenes {
                         name: "Cut prism",
                         link: "cut_prism",
                         content: include_str!("../../scenes/cut_prism.ron"),
-                        hidden: true,
+                        hidden: false,
                     },
                 ],
             },
