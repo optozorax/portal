@@ -230,7 +230,9 @@ impl StorageElem2 for Object {
                         ui.add(Label::new("float ").text_color(COLOR_TYPE).monospace());
                         ui.add(Label::new("x, ").monospace());
                         ui.add(Label::new("float ").text_color(COLOR_TYPE).monospace());
-                        ui.add(Label::new("y) {").monospace());
+                        ui.add(Label::new("y, ").monospace());
+                        ui.add(Label::new("bool ").text_color(COLOR_TYPE).monospace());
+                        ui.add(Label::new("back) {").monospace());
                     });
                 }
                 egui_with_red_field(ui, has_errors, |ui| {

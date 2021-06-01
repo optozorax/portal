@@ -713,7 +713,7 @@ impl Scene {
                                 pos
                             ));
                         } else {
-                            result.add_string(format!("int is_inside_{}(vec4 pos, float x, float y) {{\n", pos));
+                            result.add_string(format!("int is_inside_{}(vec4 pos, float x, float y, bool back) {{\n", pos));
                         }
                         result.add_identifier_string(id, &is_inside.0.0);
                         result.add_string("\n}\n");
@@ -759,12 +759,16 @@ impl Scene {
                         Simple(matrix) => {
                             let matrix = Object::get_name(matrix?, &self.matrices)?;
                             result.add_string(format!(
+                                "normal = -get_normal({});\n",
+                                matrix.normal_name()
+                            ));
+                            result.add_string(format!(
                                 "hit = plane_intersect(r, {}, get_normal({}));\n",
                                 matrix.inverse_name(),
                                 matrix.normal_name()
                             ));
                             result.add_string(format!(
-                                "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v)); }}\n\n",
+                                "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(hit.n, normal))); }}\n\n",
                                 pos
                             ));
                         }
