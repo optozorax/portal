@@ -56,6 +56,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Moving doorway",
+                        link: "moving_doorway",
+                        content: include_str!("../../scenes/moving_doorway.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Speed model",
                         link: "speed_model",
                         content: include_str!("../../scenes/speed_model.ron"),
