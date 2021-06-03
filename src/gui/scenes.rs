@@ -68,6 +68,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Non linear movement",
+                        link: "non_linear",
+                        content: include_str!("../../scenes/non_linear.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Same shape",
                         link: "same_shape",
                         content: include_str!("../../scenes/same_shape.ron"),
