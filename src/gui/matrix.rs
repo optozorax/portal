@@ -45,6 +45,11 @@ pub enum Matrix {
         k: TVec3,
         pos: TVec3,
     },
+    If {
+        condition: ParametrizeOrNot,
+        then: Option<MatrixId>,
+        otherwise: Option<MatrixId>,
+    },
 }
 
 impl Default for Matrix {
@@ -60,7 +65,7 @@ impl Default for Matrix {
 
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
-        &["Simple", "Mul", "Teleport", "Param.", "Exact"]
+        &["Simple", "Mul", "Teleport", "Param.", "Exact", "If"]
     }
     fn get_number(&self) -> usize {
         use Matrix::*;
@@ -70,6 +75,7 @@ impl ComboBoxChoosable for Matrix {
             Teleport { .. } => 2,
             Parametrized { .. } => 3,
             Exact { .. } => 4,
+            If { .. } => 5,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -177,6 +183,11 @@ impl ComboBoxChoosable for Matrix {
                     y: ParametrizeOrNot::No(0.0),
                     z: ParametrizeOrNot::No(0.0),
                 },
+            },
+            5 => If {
+                condition: ParametrizeOrNot::No(1.0),
+                then: None,
+                otherwise: None,
             },
             _ => unreachable!(),
         };
@@ -392,6 +403,25 @@ impl StorageElem2 for Matrix {
                     data_id.with(0),
                 );
             }
+            If {
+                condition,
+                then,
+                otherwise,
+            } => {
+                let hpat![uniforms, formulas_cache] = input;
+                changed.uniform |= condition.egui(
+                    ui,
+                    "If:",
+                    1.0,
+                    |ui, x| egui_f64_positive(ui, x),
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(3),
+                );
+                changed |= inline_helper.inline("Then:", 45., then, ui, input, data_id.with(0));
+                changed |=
+                    inline_helper.inline("Else:", 45., otherwise, ui, input, data_id.with(1));
+            }
         }
         /*
         // POSTPONE
@@ -484,6 +514,17 @@ impl StorageElem2 for Matrix {
                 ];
                 DMat4::from_cols_array_2d(&matrix)
             }
+            If {
+                condition,
+                then,
+                otherwise,
+            } => {
+                if condition.get(uniforms, formulas_cache)? > 0.5 {
+                    get_helper.get((*then)?)?
+                } else {
+                    get_helper.get((*otherwise)?)?
+                }
+            }
         })
     }
 
@@ -537,6 +578,20 @@ impl StorageElem2 for Matrix {
                 k.remove_as_field(uniforms, formulas_cache);
                 pos.remove_as_field(uniforms, formulas_cache);
             }
+            If {
+                condition,
+                then,
+                otherwise,
+            } => {
+                let hpat![uniforms, formulas_cache] = input;
+                condition.remove_as_field(uniforms, formulas_cache);
+                if let Some(x) = then {
+                    f(*x, input);
+                }
+                if let Some(x) = otherwise {
+                    f(*x, input);
+                }
+            }
         }
     }
 
@@ -575,6 +630,15 @@ impl StorageElem2 for Matrix {
                     + j.errors_count(uniforms, formulas_cache)
                     + k.errors_count(uniforms, formulas_cache)
                     + pos.errors_count(uniforms, formulas_cache)
+            }
+            If {
+                condition,
+                then,
+                otherwise,
+            } => {
+                condition.errors_count(uniforms, formulas_cache)
+                    + then.map(|a| f(a)).unwrap_or(1)
+                    + otherwise.map(|a| f(a)).unwrap_or(1)
             }
         }
         // POSTPONE
