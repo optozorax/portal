@@ -295,6 +295,7 @@ struct Window {
 
     offset_after_material: f64,
     render_depth: i32,
+    reduce_complexity: bool,
 
     available_scenes: Scenes,
 
@@ -367,6 +368,7 @@ impl Window {
 
             offset_after_material: 0.005,
             render_depth: 100,
+            reduce_complexity: false,
 
             available_scenes,
 
@@ -723,6 +725,10 @@ First, predefined library is included, then uniforms, then user library, then in
                         ui.add(egui::Slider::new(depth, 0..=10000).clamp_to_range(true));
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
+                    ui.separator();
+                    ui.label("Reduce complexity:");
+                    changed.uniform |= egui_bool(ui, &mut self.reduce_complexity);
+                    ui.label("(Disables things that increases resulting gif size if you capturing screen)");
                 });
             self.render_options_opened = render_options_opened;
         }
@@ -806,6 +812,8 @@ First, predefined library is included, then uniforms, then user library, then in
             .set_uniform("_ray_tracing_depth", self.render_depth);
         self.material
             .set_uniform("_offset_after_material", self.offset_after_material as f32);
+        self.material
+            .set_uniform("_reduce_complexity", self.reduce_complexity as i32);
     }
 
     fn draw(&mut self) {

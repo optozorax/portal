@@ -430,6 +430,7 @@ impl Scene {
             ("_offset_after_material".to_owned(), UniformType::Float1),
             ("_view_angle".to_owned(), UniformType::Float1),
             ("_use_panini_projection".to_owned(), UniformType::Int1),
+            ("_reduce_complexity".to_owned(), UniformType::Int1),
             ("_panini_param".to_owned(), UniformType::Float1),
         ]);
 

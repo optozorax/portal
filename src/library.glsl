@@ -124,13 +124,19 @@ vec3 color(float r, float g, float b) {
     return vec3(r*r, g*g, b*b);
 }
 
+uniform int _reduce_complexity; // Disables things that increases resulting gif size if you capturing screen
+
 // Returns how this normal should change color.
 float color_normal(vec3 normal, vec4 direction) {
+    if (_reduce_complexity == 1) return 1.0;
+
     return abs(dot(normalize(direction.xyz), normalize(normal)));
 }
 
 // Returns grid color based on position and start color. Copy-pasted somewhere from shadertoy.
 vec3 color_grid(vec3 start, vec2 uv) {
+    if (_reduce_complexity == 1) return start;
+
     uv /= 8.;
     uv = uv - vec2(0.125, 0.125);
     const float fr = 3.14159*8.0;
