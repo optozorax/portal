@@ -80,9 +80,15 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "Cut prism",
+                        name: "Cutting prism",
                         link: "cut_prism",
                         content: include_str!("../../scenes/cut_prism.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Cutting plane",
+                        link: "cut_plane",
+                        content: include_str!("../../scenes/cut_plane.ron"),
                         hidden: false,
                     },
                 ],
