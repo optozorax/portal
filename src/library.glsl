@@ -3,6 +3,8 @@
 
 precision highp float;
 
+uniform int _black_border_disable;
+
 // ---------------------------------------------------------------------------
 // Scalar math ---------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -124,28 +126,34 @@ vec3 color(float r, float g, float b) {
     return vec3(r*r, g*g, b*b);
 }
 
-uniform int _reduce_complexity; // Disables things that increases resulting gif size if you capturing screen
+uniform int _grid_disable;
+uniform int _angle_color_disable;
 
 // Returns how this normal should change color.
 float color_normal(vec3 normal, vec4 direction) {
-    if (_reduce_complexity == 1) return 1.0;
+    if (_angle_color_disable == 1) return 1.0;
 
     return abs(dot(normalize(direction.xyz), normalize(normal)));
 }
 
 // Returns grid color based on position and start color. Copy-pasted somewhere from shadertoy.
 vec3 color_grid(vec3 start, vec2 uv) {
-    if (_reduce_complexity == 1) return start;
+    if (_grid_disable == 1) return start;
 
-    uv /= 8.;
-    uv = uv - vec2(0.125, 0.125);
-    const float fr = 3.14159*8.0;
-    vec3 col = start;
-    col += 0.4*smoothstep(-0.01,0.01,cos(uv.x*fr*0.5)*cos(uv.y*fr*0.5)); 
-    float wi = smoothstep(-1.0,-0.98,cos(uv.x*fr))*smoothstep(-1.0,-0.98,cos(uv.y*fr));
-    col *= wi;
-    
-    return col;
+    int x = int(abs(uv.x/2.));
+    int y = int(abs(uv.y/2.));
+
+    if (uv.x < 0.) x = x+1;
+    if (uv.y < 0.) y = y+1;
+
+    x = x + y;
+    y = 2;
+
+    if (x - y * (x/y) == 1) {
+        return start * 0.7;
+    } else {
+        return start * 1.1;
+    }
 }
 
 // Adds color `b` to color `a` with coef, that must lie in [0..1]. If coef == 0, then result is `a`, if coef == 1.0, then result is `b`.

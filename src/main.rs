@@ -275,6 +275,14 @@ impl RotateAroundCam {
     }
 }
 
+fn dpi_increase() {
+    unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi *= 1.2;
+}
+
+fn dpi_decrease() {
+    unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi /= 1.2;
+}
+
 struct Window {
     scene: Scene,
     cam: RotateAroundCam,
@@ -295,7 +303,10 @@ struct Window {
 
     offset_after_material: f64,
     render_depth: i32,
-    reduce_complexity: bool,
+    aa_count: i32,
+    angle_color_disable: bool,
+    grid_disable: bool,
+    black_border_disable: bool,
 
     available_scenes: Scenes,
 
@@ -368,7 +379,10 @@ impl Window {
 
             offset_after_material: 0.005,
             render_depth: 100,
-            reduce_complexity: false,
+            aa_count: 2,
+            angle_color_disable: false,
+            grid_disable: false,
+            black_border_disable: false,
 
             available_scenes,
 
@@ -726,9 +740,31 @@ First, predefined library is included, then uniforms, then user library, then in
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
                     ui.separator();
-                    ui.label("Reduce complexity:");
-                    changed.uniform |= egui_bool(ui, &mut self.reduce_complexity);
-                    ui.label("(Disables things that increases resulting gif size if you capturing screen)");
+                    ui.label("Disable darkening by angle with normal:");
+                    changed.uniform |= egui_bool(ui, &mut self.angle_color_disable);
+                    ui.label("(This increases resulting gif size if you capturing screen)");
+                    ui.separator();
+                    ui.label("Disable grid:");
+                    changed.uniform |= egui_bool(ui, &mut self.grid_disable);
+                    ui.label("(If you want extreme small gif)");
+                    ui.separator();
+                    ui.label("Antialiasing count:");
+                    changed.uniform |= check_changed(&mut self.aa_count, |count| {
+                        ui.add(egui::Slider::new(count, 1..=16).clamp_to_range(true));
+                    });
+                    ui.separator();
+                    ui.label("Disable small black border:");
+                    changed.uniform |= egui_bool(ui, &mut self.black_border_disable);
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.label("Dpi:");
+                        if ui.button("+").clicked() {
+                            dpi_increase();
+                        }
+                        if ui.button("-").clicked() {
+                            dpi_decrease();
+                        }
+                    });
                 });
             self.render_options_opened = render_options_opened;
         }
@@ -810,10 +846,15 @@ First, predefined library is included, then uniforms, then user library, then in
         );
         self.material
             .set_uniform("_ray_tracing_depth", self.render_depth);
+        self.material.set_uniform("_aa_count", self.aa_count);
         self.material
             .set_uniform("_offset_after_material", self.offset_after_material as f32);
         self.material
-            .set_uniform("_reduce_complexity", self.reduce_complexity as i32);
+            .set_uniform("_angle_color_disable", self.angle_color_disable as i32);
+        self.material
+            .set_uniform("_grid_disable", self.grid_disable as i32);
+        self.material
+            .set_uniform("_black_border_disable", self.black_border_disable as i32);
     }
 
     fn draw(&mut self) {

@@ -85,8 +85,10 @@ uniform mat4 _camera;
 uniform float _view_angle;
 uniform int _use_panini_projection;
 uniform float _panini_param;
+uniform int _aa_count;
 varying vec2 uv;
 varying vec2 uv_screen;
+varying float pixel_size;
 
 const float Pi = 3.14159265359;
 const float Pi2 = Pi * 2.0;
@@ -135,16 +137,29 @@ vec3 PaniniProjection(vec2 tc, float fov, float d)
     return vec3(sinPhi, tanTheta, cosPhi) * s;
 }
 
-void main() {
+vec3 get_color(vec2 image_position) {
     vec4 o = _camera * vec4(0., 0., 0., 1.);
     vec4 d;
     if (_use_panini_projection == 1) {
-        d = normalize(_camera * vec4(PaniniProjection(vec2(uv_screen.x, uv_screen.y), _view_angle, _panini_param), 0.));
+        d = normalize(_camera * vec4(PaniniProjection(vec2(image_position.x, image_position.y), _view_angle, _panini_param), 0.));
     } else {
         float h = tan(_view_angle / 2.);
-        d = normalize(_camera * vec4(uv_screen.x * h, uv_screen.y * h, 1.0, 0.));
+        d = normalize(_camera * vec4(image_position.x * h, image_position.y * h, 1.0, 0.));
     }
      
     Ray r = Ray(o, d);
-    gl_FragColor = vec4(sqrt(ray_tracing(r)), 1.);
+    return ray_tracing(r);
+}
+
+void main() {
+    vec3 result = vec3(0.);
+
+    int count = _aa_count;
+    for (int ax = 0; ax < count; ax++) {
+        for (int ay = 0; ay < count; ay++) {
+            result += get_color(uv_screen + vec2(float(ax), float(ay)) * pixel_size / float(count) * 2.);
+        }    
+    }
+
+    gl_FragColor = vec4(sqrt(result/float(count * count)), 1.);
 }

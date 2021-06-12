@@ -18,6 +18,9 @@ egui_demo_lib = "0.12.0"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 color-backtrace = "0.5.0"
 
+[patch.crates-io]
+miniquad = { path = '/home/zorax/testing/miniquad' }
+
 ## cargo clean; cargo build --release; strip target/release/portal; upx --best --lzma target/release/portal; ll target/release
 ## result native size is ~1MB
 ## cargo build --release --target wasm32-unknown-unknown; wasm-strip target/wasm32-unknown-unknown/release/portal.wasm; ll target/wasm32-unknown-unknown/release/

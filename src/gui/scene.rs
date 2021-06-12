@@ -427,10 +427,13 @@ impl Scene {
             ("_camera".to_owned(), UniformType::Mat4),
             ("_resolution".to_owned(), UniformType::Float2),
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
+            ("_aa_count".to_owned(), UniformType::Int1),
             ("_offset_after_material".to_owned(), UniformType::Float1),
             ("_view_angle".to_owned(), UniformType::Float1),
             ("_use_panini_projection".to_owned(), UniformType::Int1),
-            ("_reduce_complexity".to_owned(), UniformType::Int1),
+            ("_angle_color_disable".to_owned(), UniformType::Int1),
+            ("_grid_disable".to_owned(), UniformType::Int1),
+            ("_black_border_disable".to_owned(), UniformType::Int1),
             ("_panini_param".to_owned(), UniformType::Float1),
         ]);
 
@@ -995,6 +998,7 @@ attribute vec2 texcoord;
 
 varying lowp vec2 uv;
 varying lowp vec2 uv_screen;
+varying float pixel_size;
 
 uniform mat4 Model;
 uniform mat4 Projection;
@@ -1005,8 +1009,10 @@ uniform vec2 _resolution;
 void main() {
     vec4 res = Projection * Model * vec4(position, 1);
 
-    uv_screen = (position.xy - _resolution/2.) / min(_resolution.x, _resolution.y) * 2.;
+    float coef = min(_resolution.x, _resolution.y);
+    uv_screen = (position.xy - _resolution/2.) / coef * 2.;
     uv = texcoord;
+    pixel_size = 1. / coef;
 
     gl_Position = res;
 }
