@@ -155,8 +155,14 @@ void main() {
     vec3 result = vec3(0.);
 
     int count = _aa_count;
-    for (int ax = 0; ax < count; ax++) {
-        for (int ay = 0; ay < count; ay++) {
+    for (int ax = 0; ax < 10000; ax++) {
+        if (ax >= _aa_count) {
+            break;
+        }
+        for (int ay = 0; ay < 10000; ay++) {
+            if (ay >= _aa_count) {
+                break;
+            }
             result += get_color(uv_screen + vec2(float(ax), float(ay)) * pixel_size / float(count) * 2.);
         }    
     }
