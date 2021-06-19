@@ -275,12 +275,18 @@ impl RotateAroundCam {
     }
 }
 
+fn user_dpi() -> &'static mut f32 {
+    &mut unsafe { macroquad::prelude::get_internal_gl() }
+        .quad_context
+        .user_dpi
+}
+
 fn dpi_increase() {
-    unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi *= 1.2;
+    *user_dpi() *= 1.05;
 }
 
 fn dpi_decrease() {
-    unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi /= 1.2;
+    *user_dpi() /= 1.05;
 }
 
 struct Window {
@@ -313,6 +319,8 @@ struct Window {
     about: EngRusText,
 
     scene_initted: bool,
+
+    show_menu: bool,
 
     scene_name: &'static str,
 }
@@ -394,6 +402,8 @@ impl Window {
             scene_initted: false,
 
             scene_name,
+
+            show_menu: true,
         };
         result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
@@ -438,60 +448,67 @@ impl Window {
 
         let mut changed = WhatChanged::default();
 
-        egui::TopPanel::top("my top").show(ctx, |ui| {
-            use egui::menu;
-            menu::bar(ui, |ui| {
-                menu::menu(ui, "🗋 Load", |ui| {
-                    if let Some((content, link, name)) = self.available_scenes.egui(ui) {
-                        let s = content;
-                        // let old: OldScene = serde_json::from_str(&s).unwrap();
-                        // *self = old.into();
-                        self.scene = ron::from_str(s).unwrap();
-                        self.scene.init(&mut self.data, &mut ctx.memory());
-                        self.material.delete();
-                        self.material = self
-                            .scene
-                            .get_new_material(&self.data)
-                            .unwrap()
-                            .unwrap_or_else(|err| {
-                                portal::error!(
-                                    format,
-                                    "code:\n{}\n\nmessage:\n{}",
-                                    add_line_numbers(&err.0),
-                                    err.1
-                                );
-                                std::process::exit(1)
-                            });
-                        changed.uniform = true;
-                        self.data.reload_textures = true;
-                        self.cam.set_cam(&self.scene.cam);
-                        self.offset_after_material = self.scene.cam.offset_after_material;
-                        quad_url::set_program_parameter("scene", link);
-                        self.scene_name = name;
+        use macroquad::prelude::*;
+        if is_key_pressed(KeyCode::A) {
+            self.show_menu = !self.show_menu;
+        }
+
+        if self.show_menu {
+            egui::TopPanel::top("my top").show(ctx, |ui| {
+                use egui::menu;
+                menu::bar(ui, |ui| {
+                    menu::menu(ui, "🗋 Load", |ui| {
+                        if let Some((content, link, name)) = self.available_scenes.egui(ui) {
+                            let s = content;
+                            // let old: OldScene = serde_json::from_str(&s).unwrap();
+                            // *self = old.into();
+                            self.scene = ron::from_str(s).unwrap();
+                            self.scene.init(&mut self.data, &mut ctx.memory());
+                            self.material.delete();
+                            self.material = self
+                                .scene
+                                .get_new_material(&self.data)
+                                .unwrap()
+                                .unwrap_or_else(|err| {
+                                    portal::error!(
+                                        format,
+                                        "code:\n{}\n\nmessage:\n{}",
+                                        add_line_numbers(&err.0),
+                                        err.1
+                                    );
+                                    std::process::exit(1)
+                                });
+                            changed.uniform = true;
+                            self.data.reload_textures = true;
+                            self.cam.set_cam(&self.scene.cam);
+                            self.offset_after_material = self.scene.cam.offset_after_material;
+                            quad_url::set_program_parameter("scene", link);
+                            self.scene_name = name;
+                        }
+                        ui.separator();
+                        if ui.button("Import...").clicked() && self.import_window.is_none() {
+                            self.import_window = Some("".to_owned());
+                        }
+                    });
+                    if ui.button("↔ Control scene").clicked() {
+                        self.control_scene_opened = true;
+                    };
+                    if ui.button("✏ Edit scene").clicked() {
+                        self.edit_scene_opened = true;
                     }
-                    ui.separator();
-                    if ui.button("Import...").clicked() && self.import_window.is_none() {
-                        self.import_window = Some("".to_owned());
+                    if ui.button("📸 Camera settings").clicked() {
+                        self.camera_settings_opened = true;
                     }
+                    if ui.button("⛭ Rendering options").clicked() {
+                        self.render_options_opened = true;
+                    }
+                    if ui.button("❓ About").clicked() {
+                        self.about_opened = true;
+                    }
+                    EngRusSettings::egui(ui);
                 });
-                if ui.button("↔ Control scene").clicked() {
-                    self.control_scene_opened = true;
-                };
-                if ui.button("✏ Edit scene").clicked() {
-                    self.edit_scene_opened = true;
-                }
-                if ui.button("📸 Camera settings").clicked() {
-                    self.camera_settings_opened = true;
-                }
-                if ui.button("⛭ Rendering options").clicked() {
-                    self.render_options_opened = true;
-                }
-                if ui.button("❓ About").clicked() {
-                    self.about_opened = true;
-                }
-                EngRusSettings::egui(ui);
             });
-        });
+        }
         let mut edit_scene_opened = self.edit_scene_opened;
 
         let errors_count = self.scene.errors_count(0, &mut self.data);
@@ -757,11 +774,23 @@ First, predefined library is included, then uniforms, then user library, then in
                     changed.uniform |= egui_bool(ui, &mut self.black_border_disable);
                     ui.separator();
                     ui.horizontal(|ui| {
-                        ui.label("Dpi:");
-                        if ui.button("+").clicked() {
+                        ui.label(format!("DPI: {:.2}", *user_dpi()));
+                        if ui
+                            .add(
+                                egui::widgets::Button::new(" + ")
+                                    .text_style(egui::TextStyle::Monospace),
+                            )
+                            .clicked()
+                        {
                             dpi_increase();
                         }
-                        if ui.button("-").clicked() {
+                        if ui
+                            .add(
+                                egui::widgets::Button::new(" - ")
+                                    .text_style(egui::TextStyle::Monospace),
+                            )
+                            .clicked()
+                        {
                             dpi_decrease();
                         }
                     });
@@ -870,12 +899,15 @@ fn window_conf() -> Conf {
     Conf {
         window_title: "Portal Explorer".to_owned(),
         high_dpi: true,
+        fullscreen: true,
         ..Default::default()
     }
 }
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    *user_dpi() *= 1.7;
+
     #[cfg(not(target_arch = "wasm32"))]
     color_backtrace::install();
 
