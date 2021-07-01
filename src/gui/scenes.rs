@@ -233,6 +233,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/portal_in_portal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Monoportal in monoportal",
+                        link: "monoportal_in_monoportal",
+                        content: include_str!("../../scenes/monoportal_in_monoportal.ron"),
+                        hidden: true,
+                    },
                 ],
             },
         ])
