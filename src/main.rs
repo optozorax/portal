@@ -387,7 +387,7 @@ impl Window {
 
             offset_after_material: 0.005,
             render_depth: 100,
-            aa_count: 2,
+            aa_count: 1,
             angle_color_disable: false,
             grid_disable: false,
             black_border_disable: false,
@@ -449,7 +449,7 @@ impl Window {
         let mut changed = WhatChanged::default();
 
         use macroquad::prelude::*;
-        if is_key_pressed(KeyCode::A) {
+        if is_key_pressed(KeyCode::Z) {
             self.show_menu = !self.show_menu;
         }
 
@@ -906,7 +906,7 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    *user_dpi() *= 1.7;
+    *user_dpi() *= 2.5;
 
     #[cfg(not(target_arch = "wasm32"))]
     color_backtrace::install();

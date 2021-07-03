@@ -94,6 +94,30 @@ impl Default for Scenes {
                 ],
             },
             SceneSection {
+                name: "Portal in portal",
+                hidden: false,
+                scenes: vec![
+                    Scene {
+                        name: "Portal in portal: two pairs",
+                        link: "portal_in_portal_two_pairs",
+                        content: include_str!("../../scenes/portal_in_portal_two_pairs.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Ellipse portal in portal",
+                        link: "portal_in_portal",
+                        content: include_str!("../../scenes/portal_in_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Monoportal in monoportal",
+                        link: "monoportal_in_monoportal",
+                        content: include_str!("../../scenes/monoportal_in_monoportal.ron"),
+                        hidden: true,
+                    },
+                ],
+            },
+            SceneSection {
                 name: "Monoportals",
                 hidden: false,
                 scenes: vec![
@@ -217,30 +241,6 @@ impl Default for Scenes {
             //         },
             //     ],
             // },
-            SceneSection {
-                name: "Portal in portal",
-                hidden: false,
-                scenes: vec![
-                    Scene {
-                        name: "Portal in portal: two pairs",
-                        link: "portal_in_portal_two_pairs",
-                        content: include_str!("../../scenes/portal_in_portal_two_pairs.ron"),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Ellipse portal in portal",
-                        link: "portal_in_portal",
-                        content: include_str!("../../scenes/portal_in_portal.ron"),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Monoportal in monoportal",
-                        link: "monoportal_in_monoportal",
-                        content: include_str!("../../scenes/monoportal_in_monoportal.ron"),
-                        hidden: true,
-                    },
-                ],
-            },
         ])
     }
 }
