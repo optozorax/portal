@@ -1,4 +1,4 @@
-#version 100
+#version 300 es
 // Version can't be changed to upper versions because of WebGL.
 
 precision highp float;

@@ -54,10 +54,7 @@ uniform int _ray_tracing_depth;
 
 vec3 ray_tracing(Ray r) {
     vec3 current_color = vec3(1.);
-    for (int j = 0; j < 10000; j++) {
-        if (j > _ray_tracing_depth) {
-            return current_color;
-        }
+    for (int j = 0; j < _ray_tracing_depth; j++) {
         SceneIntersection i = scene_intersect(r);
 
         // Offset ray
@@ -86,9 +83,10 @@ uniform float _view_angle;
 uniform int _use_panini_projection;
 uniform float _panini_param;
 uniform int _aa_count;
-varying vec2 uv;
-varying vec2 uv_screen;
-varying float pixel_size;
+in vec2 uv;
+in vec2 uv_screen;
+in float pixel_size;
+out vec4 out_Color;
 
 const float Pi = 3.14159265359;
 const float Pi2 = Pi * 2.0;
@@ -151,21 +149,24 @@ vec3 get_color(vec2 image_position) {
     return ray_tracing(r);
 }
 
+// thanks https://habr.com/ru/post/440892/
+vec2 quasi_random(int i) {
+    float a1 = 0.7548776662466927600500267982588025643670318456949186300834636687;
+    float a2 = 0.5698402909980532659121818632752155853637566123932930564053138358;
+    return vec2(
+        mod(0.5 + a1*float(i), 1.0),
+        mod(0.5 + a2*float(i), 1.0)
+    );
+}
+
 void main() {
     vec3 result = vec3(0.);
 
     int count = _aa_count;
-    for (int ax = 0; ax < 10000; ax++) {
-        if (ax >= _aa_count) {
-            break;
-        }
-        for (int ay = 0; ay < 10000; ay++) {
-            if (ay >= _aa_count) {
-                break;
-            }
-            result += get_color(uv_screen + vec2(float(ax), float(ay)) * pixel_size / float(count) * 2.);
-        }    
+    for (int a = 0; a < _aa_count; a++) {
+        vec2 offset = quasi_random(a);
+        result += get_color(uv_screen + offset * pixel_size * 2.);
     }
 
-    gl_FragColor = vec4(sqrt(result/float(count * count)), 1.);
+    out_Color = vec4(sqrt(result/float(count)), 1.);
 }

@@ -283,6 +283,10 @@ fn dpi_decrease() {
     unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi /= 1.2;
 }
 
+fn dpi_set(dpi: f32) {
+    unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi = dpi;
+}
+
 struct Window {
     scene: Scene,
     cam: RotateAroundCam,
@@ -330,7 +334,7 @@ impl Window {
             .find(|(name, _)| *name == "scene")
             .and_then(|(_, value)| available_scenes.get_by_link(value));
 
-        let default_scene = "portal_in_portal";
+        let default_scene = "basics";
 
         let (scene_content, scene_name) = if let Some(result) = required_scene {
             result
@@ -379,7 +383,7 @@ impl Window {
 
             offset_after_material: 0.005,
             render_depth: 100,
-            aa_count: 2,
+            aa_count: 1,
             angle_color_disable: false,
             grid_disable: false,
             black_border_disable: false,
@@ -736,7 +740,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.separator();
                     ui.label("Render depth:");
                     changed.uniform |= check_changed(&mut self.render_depth, |depth| {
-                        ui.add(egui::Slider::new(depth, 0..=10000).clamp_to_range(true));
+                        ui.add(egui::Slider::new(depth, 0..=1000).clamp_to_range(true));
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
                     ui.separator();
@@ -869,7 +873,7 @@ First, predefined library is included, then uniforms, then user library, then in
 fn window_conf() -> Conf {
     Conf {
         window_title: "Portal Explorer".to_owned(),
-        high_dpi: true,
+        high_dpi: false,
         ..Default::default()
     }
 }
@@ -878,6 +882,8 @@ fn window_conf() -> Conf {
 async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     color_backtrace::install();
+
+    dpi_set(1.5);
 
     let mut window = Window::new().await;
 
