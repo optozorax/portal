@@ -44,18 +44,18 @@ Video has English subtitles (but the main language is Russian).
 
 # Screenshots
 
-![](img/interface.png)
+![](img/interface.webp)
 
-![](img/monoportal.png)
+![](img/monoportal.webp)
 
-![](img/mobius.png)
+![](img/mobius.webp)
 
-![](img/mobius_monoportal.png)
+![](img/mobius_monoportal.webp)
 
-![](img/panini.png)
+![](img/panini.webp)
 
-![](img/triple.png)
+![](img/triple.webp)
 
-![](img/portal_in_portal.png)
+![](img/portal_in_portal.webp)
 
-![](img/portal_in_portal_2.png)
+![](img/portal_in_portal_2.webp)
