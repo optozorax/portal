@@ -11,7 +11,7 @@
 const version = "0.1.26";
 
 const canvas = document.querySelector("#glcanvas");
-const gl = canvas.getContext("webgl");
+const gl = canvas.getContext("webgl2");
 if (gl === null) {
     alert("Unable to initialize WebGL. Your browser or machine may not support it.");
 }
@@ -42,17 +42,6 @@ function assert(flag, message) {
 }
 
 function acquireVertexArrayObjectExtension(ctx) {
-    // Extension available in WebGL 1 from Firefox 25 and WebKit 536.28/desktop Safari 6.0.3 onwards. Core feature in WebGL 2.
-    var ext = ctx.getExtension('OES_vertex_array_object');
-    if (ext) {
-        ctx['createVertexArray'] = function () { return ext['createVertexArrayOES'](); };
-        ctx['deleteVertexArray'] = function (vao) { ext['deleteVertexArrayOES'](vao); };
-        ctx['bindVertexArray'] = function (vao) { ext['bindVertexArrayOES'](vao); };
-        ctx['isVertexArray'] = function (vao) { return ext['isVertexArrayOES'](vao); };
-    }
-    else {
-        alert("Unable to get OES_vertex_array_object extension");
-    }
 }
 
 
@@ -80,11 +69,6 @@ function acquireDisjointTimerQueryExtension(ctx) {
 acquireVertexArrayObjectExtension(gl);
 acquireInstancedArraysExtension(gl);
 acquireDisjointTimerQueryExtension(gl);
-
-// https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_depth_texture
-if (gl.getExtension('WEBGL_depth_texture') == null) {
-    alert("Cant initialize WEBGL_depth_texture extension");
-}
 
 function getArray(ptr, arr, n) {
     return new arr(wasm_memory.buffer, ptr, n);
@@ -434,9 +418,11 @@ function into_sapp_mousebutton(btn) {
 function into_sapp_keycode(key_code) {
     switch (key_code) {
         case "Space": return 32;
+        case "Quote": return 39;
         case "Comma": return 44;
         case "Minus": return 45;
         case "Period": return 46;
+        case "Slash": return 47;
         case "Digit0": return 48;
         case "Digit1": return 49;
         case "Digit2": return 50;
@@ -478,6 +464,7 @@ function into_sapp_keycode(key_code) {
         case "BracketLeft": return 91;
         case "Backslash": return 92;
         case "BracketRight": return 93;
+        case "Backquote": return 96;
         case "Escape": return 256;
         case "Enter": return 257;
         case "Tab": return 258;
@@ -1109,6 +1096,8 @@ var importObject = {
                     case 259:
                     // tab - for UI
                     case 258:
+                    // quote and slash are Quick Find on Firefox
+                    case 39: case 47:
                         event.preventDefault();
                         break;
                 }
@@ -1124,9 +1113,9 @@ var importObject = {
                     modifiers |= SAPP_MODIFIER_ALT;
                 }
                 wasm_exports.key_down(sapp_key_code, modifiers, event.repeat);
-                // for "space" preventDefault will prevent
+                // for "space", "quote", and "slash" preventDefault will prevent
                 // key_press event, so send it here instead
-                if (sapp_key_code == 32) {
+                if (sapp_key_code == 32 || sapp_key_code == 39 || sapp_key_code == 47) {
                     wasm_exports.key_press(sapp_key_code);
                 }
             };
@@ -1197,7 +1186,7 @@ var importObject = {
                 var pastedData = clipboardData.getData('Text');
 
                 if (pastedData != undefined && pastedData != null && pastedData.length != 0) {
-                    var len = pastedData.length;
+                    var len = (new TextEncoder().encode(pastedData)).length;
                     var msg = wasm_exports.allocate_vec_u8(len);
                     var heap = new Uint8Array(wasm_memory.buffer, msg, len);
                     stringToUTF8(pastedData, heap, 0, len);
