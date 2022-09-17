@@ -1,4 +1,4 @@
-#version 300 es
+#version 100
 // Version can't be changed to upper versions because of WebGL.
 
 precision highp float;
@@ -20,6 +20,10 @@ bool between(float a, float x, float b) {
 // Returns square of input.
 float sqr(float a) {
     return a*a;
+}
+
+vec4 texture(sampler2D tex, vec2 pos) {
+    return texture2D(tex, pos);
 }
 
 // ---------------------------------------------------------------------------

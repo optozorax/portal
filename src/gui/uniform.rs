@@ -239,7 +239,7 @@ impl FormulasCacheInner {
 
     /// You must call `self.compile(text)?;` before
     fn get_unsafe<'a, 'b>(&'a self, text: &'b str) -> Option<&'a fasteval::Instruction> {
-        self.cache.get(text).unwrap().as_ref()
+        self.cache.get(text)?.as_ref()
     }
 
     /// Returns `None` when text is wrong formula

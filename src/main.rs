@@ -276,15 +276,15 @@ impl RotateAroundCam {
 }
 
 fn dpi_increase() {
-    unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi *= 1.2;
+    // unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi *= 1.2;
 }
 
 fn dpi_decrease() {
-    unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi /= 1.2;
+    // unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi /= 1.2;
 }
 
 fn dpi_set(dpi: f32) {
-    unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi = dpi;
+    // unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi = dpi;
 }
 
 struct Window {

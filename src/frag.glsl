@@ -83,10 +83,10 @@ uniform float _view_angle;
 uniform int _use_panini_projection;
 uniform float _panini_param;
 uniform int _aa_count;
-in vec2 uv;
-in vec2 uv_screen;
-in float pixel_size;
-out vec4 out_Color;
+varying vec2 uv;
+varying vec2 uv_screen;
+varying float pixel_size;
+// varying vec4 out_Color;
 
 const float Pi = 3.14159265359;
 const float Pi2 = Pi * 2.0;
@@ -168,5 +168,5 @@ void main() {
         result += get_color(uv_screen + offset * pixel_size * 2.);
     }
 
-    out_Color = vec4(sqrt(result/float(count)), 1.);
+    gl_FragColor = vec4(sqrt(result/float(count)), 1.);
 }

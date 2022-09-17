@@ -94,6 +94,24 @@ impl Default for Scenes {
                 ],
             },
             SceneSection {
+                name: "Advanced",
+                hidden: false,
+                scenes: vec![
+                    Scene {
+                        name: "Cylinder",
+                        link: "cylinder",
+                        content: include_str!("../../scenes/cylinder.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Trefoil knot",
+                        link: "trefoil",
+                        content: include_str!("../../scenes/trefoil.ron"),
+                        hidden: false,
+                    },
+                ],
+            },
+            SceneSection {
                 name: "Monoportals",
                 hidden: false,
                 scenes: vec![

@@ -992,13 +992,13 @@ const FRAGMENT_SHADER: &str = include_str!("../frag.glsl");
 
 pub const LIBRARY: &str = include_str!("../library.glsl");
 
-const VERTEX_SHADER: &str = "#version 300 es
-in vec3 position;
-in vec2 texcoord;
+const VERTEX_SHADER: &str = "#version 100
+attribute vec3 position;
+attribute vec2 texcoord;
 
-out lowp vec2 uv;
-out lowp vec2 uv_screen;
-out float pixel_size;
+varying lowp vec2 uv;
+varying lowp vec2 uv_screen;
+varying float pixel_size;
 
 uniform mat4 Model;
 uniform mat4 Projection;
