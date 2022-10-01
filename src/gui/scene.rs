@@ -173,7 +173,7 @@ impl Scene {
                 data.to_export = Some(s);
             }
             if ui
-                .add(Button::new("Recompile").enabled(*should_recompile))
+                .add_enabled(*should_recompile, Button::new("Recompile"))
                 .clicked()
             {
                 match self.get_new_material(&data) {
@@ -925,14 +925,14 @@ impl Scene {
                 .init_stage(&mut self.matrices, &self.dev_stage.matrices);
 
             if let Some(cam) = stage.set_cam {
-                memory.data.insert(CurrentCam(cam));
+                memory.data.insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(cam));
             } else {
-                memory.data.insert(CurrentCam(None));
+                memory.data.insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
             }
         } else {
             self.dev_stage.uniforms.init_stage(&mut self.uniforms);
             self.dev_stage.matrices.init_stage(&mut self.matrices);
-            memory.data.insert(CurrentCam(None));
+            memory.data.insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
         }
         WhatChanged::from_uniform(true)
     }
@@ -967,6 +967,7 @@ impl Scene {
             &mut self.uniforms,
             &mut self.matrices,
             &mut self.elements_descriptions,
+            egui::Id::new("control_egui"),
         );
 
         if self.animation_stages.len() != 0 {
@@ -975,7 +976,7 @@ impl Scene {
             if let Some(stage) = self.current_stage {
                 if let Some(stage) = self.animation_stages.get_original(stage) {
                     with_swapped!(x => (self.uniforms, data.formulas_cache);
-                        changed |= stage.user_egui(ui, &mut x, &mut self.matrices, &mut self.cameras, &mut self.elements_descriptions));
+                        changed |= stage.user_egui(ui, &mut x, &mut self.matrices, &mut self.cameras, &mut self.elements_descriptions, egui::Id::new("control_egui 2")));
                 } else {
                     self.current_stage = None;
                 }

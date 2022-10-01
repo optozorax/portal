@@ -167,30 +167,30 @@ impl StorageElem2 for Material {
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
                     ui.add(
-                        Label::new("MaterialProcessing ")
-                            .text_color(COLOR_TYPE)
-                            .monospace(),
+                        Label::new(egui::RichText::new("MaterialProcessing ")
+                            .color(COLOR_TYPE)
+                            .monospace()),
                     );
                     ui.add(
-                        Label::new("process_material")
-                            .text_color(COLOR_FUNCTION)
-                            .monospace(),
+                        Label::new(egui::RichText::new("process_material")
+                            .color(COLOR_FUNCTION)
+                            .monospace()),
                     );
-                    ui.add(Label::new("(\n  ").monospace());
+                    ui.add(Label::new(egui::RichText::new("(\n  ").monospace()));
                     ui.add(
-                        Label::new("SurfaceIntersect ")
-                            .text_color(COLOR_TYPE)
-                            .monospace(),
+                        Label::new(egui::RichText::new("SurfaceIntersect ")
+                            .color(COLOR_TYPE)
+                            .monospace()),
                     );
-                    ui.add(Label::new("hit,\n  ").monospace());
-                    ui.add(Label::new("Ray ").text_color(COLOR_TYPE).monospace());
-                    ui.add(Label::new("r\n) {").monospace());
+                    ui.add(Label::new(egui::RichText::new("hit,\n  ").monospace()));
+                    ui.add(Label::new(egui::RichText::new("Ray ").color(COLOR_TYPE).monospace()));
+                    ui.add(Label::new(egui::RichText::new("r\n) {").monospace()));
                 });
 
                 egui_with_red_field(ui, has_errors, |ui| {
                     changed |= code.0.egui(ui).shader;
                 });
-                ui.add(Label::new("}").monospace());
+                ui.add(Label::new(egui::RichText::new("}").monospace()));
 
                 if let Some(local_errors) = errors.get(self_id) {
                     egui_errors(ui, local_errors);

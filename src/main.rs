@@ -118,7 +118,7 @@ impl RotateAroundCam {
         }
 
         if is_something_changed {
-            memory.data.insert(self.get_calculated_cam());
+            memory.data.insert_persisted(egui::Id::new("CalculatedCam"), self.get_calculated_cam());
         }
 
         self.previous_mouse = mouse_pos;
@@ -275,18 +275,6 @@ impl RotateAroundCam {
     }
 }
 
-fn dpi_increase() {
-    // unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi *= 1.2;
-}
-
-fn dpi_decrease() {
-    // unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi /= 1.2;
-}
-
-fn dpi_set(dpi: f32) {
-    // unsafe { macroquad::prelude::get_internal_gl() }.quad_context.user_dpi = dpi;
-}
-
 struct Window {
     scene: Scene,
     cam: RotateAroundCam,
@@ -425,7 +413,7 @@ impl Window {
         }
     }
 
-    fn process_mouse_and_keys(&mut self, ctx: &egui::CtxRef) -> bool {
+    fn process_mouse_and_keys(&mut self, ctx: &egui::Context) -> bool {
         let mut is_something_changed = false;
 
         self.data
@@ -437,15 +425,15 @@ impl Window {
             self.scene.init(&mut self.data, &mut ctx.memory());
             ctx.memory()
                 .data
-                .insert(OriginalCam(self.cam.get_calculated_cam()));
+                .insert_persisted(egui::Id::new("OriginalCam"), OriginalCam(self.cam.get_calculated_cam()));
         }
 
         let mut changed = WhatChanged::default();
 
-        egui::TopPanel::top("my top").show(ctx, |ui| {
+        egui::containers::panel::TopBottomPanel::top("my top").show(ctx, |ui| {
             use egui::menu;
             menu::bar(ui, |ui| {
-                menu::menu(ui, "🗋 Load", |ui| {
+                ui.menu_button("🗋 Load", |ui| {
                     if let Some((content, link, name)) = self.available_scenes.egui(ui) {
                         let s = content;
                         // let old: OldScene = serde_json::from_str(&s).unwrap();
@@ -506,7 +494,7 @@ impl Window {
         })
         .id(egui::Id::new("Edit scene"))
         .open(&mut edit_scene_opened)
-        .scroll(true)
+        .vscroll(true)
         .show(ctx, |ui| {
             let (changed1, material) =
                 self.scene
@@ -535,7 +523,7 @@ impl Window {
         if let Some((code, message)) = self.error_message.as_ref() {
             if self.data.show_error_window {
                 egui::Window::new("Error message")
-                    .scroll(true)
+                    .vscroll(true)
                     .default_width(700.)
                     .show(ctx, |ui| {
                         egui::CollapsingHeader::new("code")
@@ -554,7 +542,7 @@ impl Window {
                                 let mut clone = message.clone();
                                 ui.add(
                                     egui::TextEdit::multiline(&mut clone)
-                                        .text_style(egui::TextStyle::Monospace),
+                                        .font(egui::TextStyle::Monospace),
                                 );
                             });
                     });
@@ -567,7 +555,7 @@ impl Window {
             let generated_code_show_text = &mut self.data.generated_code_show_text;
             if let Some(code) = show_compiled_code {
                 egui::Window::new("Generated GLSL code")
-                    .scroll(true)
+                    .vscroll(true)
                     .open(&mut not_close)
                     .default_width(700.)
                     .show(ctx, |ui| {
@@ -593,7 +581,7 @@ First, predefined library is included, then uniforms, then user library, then in
                         if *generated_code_show_text {
                             ui.add(
                                 egui::TextEdit::multiline(code)
-                                    .text_style(egui::TextStyle::Monospace),
+                                    .font(egui::TextStyle::Monospace),
                             );
                         } else {
                             ui.monospace(&*code);
@@ -610,12 +598,12 @@ First, predefined library is included, then uniforms, then user library, then in
             if let Some(to_export) = self.data.to_export.as_ref() {
                 egui::Window::new("Export scene")
                     .open(&mut not_remove_export)
-                    .scroll(true)
+                    .vscroll(true)
                     .show(ctx, |ui| {
                         let mut clone = to_export.clone();
                         ui.add(
                             egui::TextEdit::multiline(&mut clone)
-                                .text_style(egui::TextStyle::Monospace),
+                                .font(egui::TextStyle::Monospace),
                         );
                     });
             }
@@ -631,11 +619,11 @@ First, predefined library is included, then uniforms, then user library, then in
             if let Some(content) = &mut import_window {
                 egui::Window::new("Import scene")
                     .open(&mut opened)
-                    .scroll(true)
+                    .vscroll(true)
                     .show(ctx, |ui| {
                         ui.add(
                             egui::TextEdit::multiline(content)
-                                .text_style(egui::TextStyle::Monospace),
+                                .font(egui::TextStyle::Monospace),
                         );
                         if ui.button("Recompile").clicked() {
                             match ron::from_str::<Scene>(content) {
@@ -666,7 +654,7 @@ First, predefined library is included, then uniforms, then user library, then in
                         if let Some(err) = &self.import_window_errors {
                             ui.horizontal_wrapped(|ui| {
                                 ui.spacing_mut().item_spacing.x = 0.;
-                                ui.add(egui::Label::new("Error: ").text_color(egui::Color32::RED));
+                                ui.add(egui::Label::new(egui::RichText::new("Error: ").color(egui::Color32::RED)));
                                 ui.label(err);
                             });
                         }
@@ -682,7 +670,7 @@ First, predefined library is included, then uniforms, then user library, then in
             let mut control_scene_opened = self.control_scene_opened;
             egui::Window::new("Control scene")
                 .open(&mut control_scene_opened)
-                .scroll(true)
+                .vscroll(true)
                 .show(ctx, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.heading(self.scene_name);
@@ -700,7 +688,7 @@ First, predefined library is included, then uniforms, then user library, then in
         {
             egui::Window::new("GLSL library")
                 .open(&mut self.data.show_glsl_library)
-                .scroll(true)
+                .vscroll(true)
                 .default_width(600.)
                 .show(ctx, |ui| {
                     egui_demo_lib::easy_mark::easy_mark(ui, "# What is this\n\nThis is predefined library GLSL code, it included before user code, so you can use functions and etc. from this.\n\n---\n\n# Code\n\n");
@@ -763,10 +751,10 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.horizontal(|ui| {
                         ui.label("Dpi:");
                         if ui.button("+").clicked() {
-                            dpi_increase();
+                            ui.ctx().set_pixels_per_point(ui.ctx().pixels_per_point() * 1.2);
                         }
                         if ui.button("-").clicked() {
-                            dpi_decrease();
+                            ui.ctx().set_pixels_per_point(ui.ctx().pixels_per_point() / 1.2);
                         }
                     });
                 });
@@ -782,9 +770,9 @@ First, predefined library is included, then uniforms, then user library, then in
                     egui_demo_lib::easy_mark::easy_mark(ui, text);
                     ui.separator();
 
-                    let mut checked = *ui.memory().data.get_or_default::<ShowHiddenScenes>();
+                    let mut checked = *ui.memory().data.get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new("ShowHiddenScenes"));
                     ui.checkbox(&mut checked.0, "Show hidden scenes :P");
-                    ui.memory().data.insert(checked);
+                    ui.memory().data.insert_persisted(egui::Id::new("ShowHiddenScenes"), checked);
                 });
             self.about_opened = about_opened;
         }
@@ -797,21 +785,21 @@ First, predefined library is included, then uniforms, then user library, then in
             self.scene.set_uniforms(self.material, &mut self.data);
             self.set_uniforms();
 
-            let current_cam = memory.data.get_or_default::<CurrentCam>().0;
+            let current_cam = memory.data.get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam")).0;
             if self.cam.from != current_cam {
                 let calculated_cam = if let Some(id) = current_cam {
                     // set getted camera
 
                     if self.cam.from.is_none() {
                         let calculated_cam = self.cam.get_calculated_cam();
-                        memory.data.insert(OriginalCam(calculated_cam));
+                        memory.data.insert_persisted(egui::Id::new("OriginalCam"), OriginalCam(calculated_cam));
                     }
 
                     with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
                         self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap())
                 } else {
                     // set original camera
-                    memory.data.get_or_default::<OriginalCam>().0
+                    memory.data.get_persisted_mut_or_default::<OriginalCam>(egui::Id::new("OriginalCam")).0
                 };
 
                 self.cam.from = current_cam;
@@ -873,7 +861,7 @@ First, predefined library is included, then uniforms, then user library, then in
 fn window_conf() -> Conf {
     Conf {
         window_title: "Portal Explorer".to_owned(),
-        high_dpi: false,
+        high_dpi: true,
         ..Default::default()
     }
 }
@@ -882,8 +870,6 @@ fn window_conf() -> Conf {
 async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     color_backtrace::install();
-
-    dpi_set(1.5);
 
     let mut window = Window::new().await;
 

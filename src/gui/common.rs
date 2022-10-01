@@ -222,7 +222,7 @@ pub fn egui_label(ui: &mut Ui, label: &str, size: f64) {
         rect.max,
         Align2::RIGHT_CENTER,
         label,
-        TextStyle::Body,
+        egui::FontId::monospace(14.0),
         ui.visuals().text_color(),
     );
 }
@@ -244,7 +244,7 @@ pub fn egui_existing_name(
             *add_to_errors_count += 1;
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing.x = 0.;
-                ui.add(Label::new("Error: ").text_color(Color32::RED));
+                ui.add(Label::new(egui::RichText::new("Error: ").color(Color32::RED)));
                 ui.label(format!("name '{}' not found", current));
             });
         }
@@ -257,19 +257,19 @@ pub fn egui_errors(ui: &mut Ui, errors: &[(usize, String)]) {
         for (line_no, message) in errors {
             if *line_no == usize::MAX {
                 ui.add(
-                    Label::new("UNKNOWN ERR: ")
-                        .text_color(COLOR_ERROR)
-                        .monospace(),
+                    Label::new(egui::RichText::new("UNKNOWN ERR: ")
+                        .color(COLOR_ERROR)
+                        .monospace()),
                 );
             } else {
                 ui.add(
-                    Label::new(format!("ERR:{}: ", line_no))
-                        .text_color(COLOR_ERROR)
-                        .monospace(),
+                    Label::new(egui::RichText::new(format!("ERR:{}: ", line_no))
+                        .color(COLOR_ERROR)
+                        .monospace()),
                 );
             }
-            ui.add(Label::new(message).monospace());
-            ui.add(Label::new("\n").monospace());
+            ui.add(Label::new(egui::RichText::new(message).monospace()));
+            ui.add(Label::new(egui::RichText::new("\n").monospace()));
         }
     });
 }
@@ -295,7 +295,7 @@ pub fn egui_with_red_field<Res>(
 }
 
 pub fn egui_with_enabled_by(ui: &mut Ui, by: bool, f: impl FnOnce(&mut Ui)) {
-    let previous = ui.enabled();
+    let previous = ui.is_enabled();
     ui.set_enabled(by);
     f(ui);
     ui.set_enabled(previous);
@@ -318,21 +318,21 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
     ui.vertical(|ui| {
         let id = Id::new(id_source);
 
-        let mut state = *ui.memory().id_data.get_or_default::<State>(id);
+        let mut state = *ui.memory().data.get_persisted_mut_or_default::<State>(id);
 
         ui.horizontal(|ui| {
             ui.selectable_value(&mut state, State::View, "View");
             ui.selectable_value(&mut state, State::Edit, "Edit");
         });
 
-        ui.memory().id_data.insert(id, state);
+        ui.memory().data.insert_persisted(id, state);
 
         match state {
             State::View => {
                 egui_demo_lib::easy_mark::easy_mark(ui, text);
             }
             State::Edit => {
-                ui.add(TextEdit::multiline(text).text_style(TextStyle::Monospace));
+                ui.add(TextEdit::multiline(text).font(TextStyle::Monospace));
             }
         }
     })

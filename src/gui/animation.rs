@@ -105,7 +105,7 @@ impl ValueToUser {
             ui.spacing_mut().item_spacing.x = 0.;
             ui.label(self.overrided_name.to_string());
             if let Some(help) = &self.help_description {
-                let response = ui.add(egui::Label::new("(?)").small_raised());
+                let response = ui.add(egui::Label::new(egui::RichText::new("(?)").small_raised()));
                 response.on_hover_text(help.text(ui));
             }
             ui.label(": ");
@@ -190,12 +190,15 @@ impl<T: StorageElem2 + std::fmt::Debug> StageChanging<T> {
         vertical: bool,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        for id in storage
+        for (i, id) in storage
             .visible_elements()
             .map(|(id, _)| id)
             .collect::<Vec<_>>()
+            .into_iter()
+            .enumerate()
         {
             if let Some(element) = self.0.get(&id) {
+                ui.memory().data.insert_persisted::<usize>(egui::Id::new("AnimationStage i"), i);
                 changed |= element.user_egui(ui, storage, &user_egui, names, id, vertical);
             } else {
                 crate::error!();
@@ -451,6 +454,7 @@ impl GlobalUserUniforms {
         uniforms: &mut Storage2<AnyUniform>,
         matrices: &mut Storage2<Matrix>,
         elements_descriptions: &mut ElementsDescriptions,
+        id: egui::Id,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         changed |= self.uniforms.user_egui(
@@ -464,7 +468,7 @@ impl GlobalUserUniforms {
             ui,
             matrices,
             &mut elements_descriptions.matrices,
-            |elem, ui| elem.user_egui(ui),
+            |elem, ui| elem.user_egui(ui, id),
             true,
         );
         changed
@@ -551,6 +555,7 @@ impl AnimationStage {
         matrices: &mut Storage2<Matrix>,
         cameras: &mut Storage2<Cam>,
         elements_descriptions: &mut ElementsDescriptions,
+        id: egui::Id,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         if let Some(description) = &self.description {
@@ -560,7 +565,7 @@ impl AnimationStage {
         }
 
         if self.original_cam_button {
-            let id = ui.memory().data.get_or_default::<CurrentCam>().0;
+            let id = ui.memory().data.get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam")).0;
             let selected = id.is_none();
             if ui.radio(selected, "Original camera").clicked() && !selected {
                 Cam::set_original_cam(ui);
@@ -596,7 +601,10 @@ impl AnimationStage {
             ui,
             matrices,
             &mut elements_descriptions.matrices,
-            |elem, ui| elem.user_egui(ui),
+            |elem, ui| {
+                let i = ui.memory().data.get_persisted::<usize>(egui::Id::new("AnimationStage i"));
+                elem.user_egui(ui, id.with(i))
+            },
             true,
         );
         changed

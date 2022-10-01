@@ -277,28 +277,25 @@ impl<T: StorageElem2> Storage2<T> {
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             egui_label(ui, "Name:", 45.);
-                            ui.with_layout(Layout::right_to_left(), |ui| {
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                                 if ui
-                                    .add(Button::new("Delete").text_color(Color32::RED))
+                                    .add(Button::new(RichText::new("Delete").color(Color32::RED)))
                                     .clicked()
                                 {
                                     to_delete = Some(pos);
                                 }
                                 if ui
-                                .add(
-                                    Button::new("⏷") // down
-                                        .text_color(ui.visuals().hyperlink_color)
-                                        .enabled(pos + 1 != len),
+                                .add_enabled(pos + 1 != len,
+                                    Button::new(RichText::new("⏷").color(ui.visuals().hyperlink_color)) // down
+                                        
                                 )
                                 .clicked()
                             {
                                 to_move_down = Some(pos);
                             }
                                 if ui
-                                .add(
-                                    Button::new("⏶") // up
-                                        .text_color(ui.visuals().hyperlink_color)
-                                        .enabled(pos != 0),
+                                .add_enabled(pos != 0,
+                                    Button::new(RichText::new("⏶").color(ui.visuals().hyperlink_color)) // up
                                 )
                                 .clicked()
                             {
@@ -349,7 +346,7 @@ impl<T: StorageElem2> Storage2<T> {
         }
 
         if ui
-            .add(Button::new("Add").text_color(Color32::GREEN))
+            .add(Button::new(RichText::new("Add").color(Color32::GREEN)))
             .clicked()
         {
             self.push_default();
@@ -391,7 +388,7 @@ impl<T: StorageElem2> Storage2<T> {
             ui.horizontal(|ui| {
                 egui_label(ui, label, label_size);
 
-                ui.with_layout(Layout::right_to_left(), |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if ui
                         .add(egui::SelectableLabel::new(inline, "📌"))
                         .on_hover_text(
@@ -402,7 +399,7 @@ impl<T: StorageElem2> Storage2<T> {
                         if inline {
                             if let Some(id) = id {
                                 self.remove(*id, input);
-                                ui.memory().id_data.remove(&data_id);
+                                ui.memory().data.remove::<String>(data_id);
                             }
                         }
 
@@ -450,8 +447,8 @@ impl<T: StorageElem2> Storage2<T> {
                 .to_owned()
         } else {
             ui.memory()
-                .id_data
-                .get_or_default::<String>(data_id)
+                .data
+                .get_persisted_mut_or_default::<String>(data_id)
                 .clone()
         };
 
@@ -474,10 +471,10 @@ impl<T: StorageElem2> Storage2<T> {
                 .find(|(_, elem)| elem.is_named_as(&current_name))
             {
                 *id = Some(T::IdWrapper::wrap(*new_id));
-                ui.memory().id_data.remove(&data_id);
+                ui.memory().data.remove::<String>(data_id);
             } else {
                 *id = None;
-                ui.memory().id_data.insert(data_id, current_name);
+                ui.memory().data.insert_persisted(data_id, current_name);
             }
         }
 

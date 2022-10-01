@@ -270,7 +270,7 @@ impl Scenes {
             link,
             name,
             ..
-        } in self.0.iter().map(|x| x.scenes.iter()).flatten()
+        } in self.0.iter().flat_map(|x| x.scenes.iter())
         {
             if *link == need_link {
                 return Some((content, name));
@@ -280,34 +280,29 @@ impl Scenes {
     }
 
     pub fn egui(&self, ui: &mut Ui) -> Option<(&'static str, &'static str, &'static str)> {
-        let show_hidden = ui.memory().data.get_or_default::<ShowHiddenScenes>().0;
+        let show_hidden = ui.memory().data.get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new("ShowHiddenScenes")).0;
         ui.set_width(170.);
         let mut result = None;
-        for (
-            pos,
-            SceneSection {
+        for SceneSection {
                 name,
                 hidden,
                 scenes: inner,
-            },
-        ) in self.0.iter().enumerate()
+            } in self.0.iter()
         {
             if show_hidden || !hidden {
-                if pos != 0 {
-                    ui.separator();
-                }
-                ui.add(egui::Label::new(*name).strong().underline().monospace());
-                for Scene {
-                    name,
-                    content,
-                    hidden,
-                    link,
-                } in inner
-                {
-                    if (show_hidden || !hidden) && ui.button(*name).clicked() {
-                        result = Some((*content, *link, *name))
+                ui.menu_button(*name, |ui| {
+                    for Scene {
+                        name,
+                        content,
+                        hidden,
+                        link,
+                    } in inner
+                    {
+                        if (show_hidden || !hidden) && ui.button(*name).clicked() {
+                            result = Some((*content, *link, *name))
+                        }
                     }
-                }
+                });
             }
         }
         result

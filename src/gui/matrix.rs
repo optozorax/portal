@@ -200,9 +200,10 @@ pub fn simple_matrix_egui(
     rotate: &mut DVec3,
     mirror: &mut (bool, bool, bool),
     scale: &mut f64,
+    id: egui::Id,
 ) -> bool {
     let mut is_changed = false;
-    Grid::new("matrix")
+    Grid::new(id)
         .striped(true)
         .min_col_width(45.)
         .max_col_width(45.)
@@ -239,14 +240,14 @@ pub fn simple_matrix_egui(
 }
 
 impl Matrix {
-    pub fn user_egui(&mut self, ui: &mut Ui) -> WhatChanged {
+    pub fn user_egui(&mut self, ui: &mut Ui, id: egui::Id) -> WhatChanged {
         match self {
             Matrix::Simple {
                 offset,
                 scale,
                 rotate,
                 mirror,
-            } => WhatChanged::from_uniform(simple_matrix_egui(ui, offset, rotate, mirror, scale)),
+            } => WhatChanged::from_uniform(simple_matrix_egui(ui, offset, rotate, mirror, scale, id)),
             _ => {
                 drop(ui.label(
                     "Internal error, other types of matrices are not allowed to be accessed by user.",
@@ -319,7 +320,7 @@ impl StorageElem2 for Matrix {
                 rotate,
                 mirror,
             } => {
-                changed.uniform |= simple_matrix_egui(ui, offset, rotate, mirror, scale);
+                changed.uniform |= simple_matrix_egui(ui, offset, rotate, mirror, scale, data_id.with("matrix"));
             }
             Parametrized {
                 offset,
