@@ -5,6 +5,7 @@ use crate::gui::unique_id::UniqueId;
 use core::cell::RefCell;
 use egui::*;
 use glam::*;
+use std::collections::BTreeSet;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::RangeInclusive;
 
@@ -14,6 +15,108 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Formula(pub String);
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, Copy)]
+pub struct TrefoilSpecial(pub [(bool, u8); 18]);
+
+impl TrefoilSpecial {
+    pub fn egui(&mut self, ui: &mut egui::Ui) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        ui.vertical(|ui| {
+            let n_to_name = |n| format!("{}{}", n / 3 + 1, ["a", "b", "c"][n % 3]);
+
+            let enabled_vals = self
+                .0
+                .iter()
+                .enumerate()
+                .filter(|x| x.1 .0)
+                .map(|x| x.0)
+                .collect::<Vec<_>>();
+
+            let mut to_rotate = None;
+
+            for (i, (enabled, val)) in self.0.iter_mut().enumerate() {
+                if i % 3 == 0 && i != 0 {
+                    ui.separator();
+                }
+                if i % 3 == 0 && ui.button("rotate").clicked() {
+                    to_rotate = Some(i / 3);
+                    changed.uniform |= true;
+                }
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new(n_to_name(i) + ".").monospace());
+                    changed.uniform |= check_changed(enabled, |enabled| {
+                        ui.checkbox(enabled, "");
+                    });
+                    if *enabled {
+                        // egui::ComboBox::from_id_source(i)
+                        //     .selected_text(n_to_name(*val as usize))
+                        //     .show_ui(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            changed.uniform |= check_changed(val, |val| {
+                                let mut prev = None;
+                                for i in &enabled_vals {
+                                    if prev.map(|prev| prev / 3 != i / 3).unwrap_or(false) {
+                                        ui.separator();
+                                    }
+                                    if ui
+                                        .selectable_label(*val == *i as u8, n_to_name(*i))
+                                        .clicked()
+                                    {
+                                        *val = *i as u8;
+                                    }
+                                    prev = Some(i);
+                                }
+                            });
+                        });
+                        // }
+                        // );
+                    }
+                });
+            }
+
+            if let Some(to_rotate) = to_rotate {
+                let vec = (0..3)
+                    .map(|i| self.0[to_rotate * 3 + i])
+                    .filter(|v| v.0)
+                    .map(|v| v.1)
+                    .collect::<Vec<_>>();
+                let mut pos = 0;
+                for i in 0..3 {
+                    let (enabled, val) = &mut self.0[to_rotate * 3 + i];
+                    if *enabled {
+                        *val = vec[(pos + 1) % vec.len()];
+                        pos += 1;
+                    }
+                }
+            }
+
+            ui.separator();
+
+            let mut unused_vals = enabled_vals.into_iter().collect::<BTreeSet<_>>();
+
+            for (enabled, val) in &self.0 {
+                if *enabled && !unused_vals.contains(&(*val as usize)) {
+                    ui.label(format!(
+                        "Use of non-existent value {}",
+                        n_to_name(*val as usize)
+                    ));
+                }
+            }
+
+            for (enabled, val) in &self.0 {
+                if *enabled {
+                    unused_vals.remove(&(*val as usize));
+                }
+            }
+
+            for unused in unused_vals {
+                ui.label(format!("Unused value {}", n_to_name(unused)));
+            }
+        });
+        changed
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AnyUniform {
     Bool(bool),
@@ -22,6 +125,7 @@ pub enum AnyUniform {
     Angle(f64),
     Progress(f64),
     Formula(Formula),
+    TrefoilSpecial(TrefoilSpecial),
 }
 
 impl AnyUniform {
@@ -39,6 +143,7 @@ pub enum AnyUniformResult {
     Bool(bool),
     Int(i32),
     Float(f64),
+    TrefoilSpecial(TrefoilSpecial),
 }
 
 impl From<AnyUniformResult> for f64 {
@@ -53,6 +158,7 @@ impl From<AnyUniformResult> for f64 {
             }
             AnyUniformResult::Int(i) => i as f64,
             AnyUniformResult::Float(f) => f,
+            AnyUniformResult::TrefoilSpecial(_) => -1.0,
         }
     }
 }
@@ -326,7 +432,9 @@ impl FormulasCache {
 
 impl ComboBoxChoosable for AnyUniform {
     fn variants() -> &'static [&'static str] {
-        &["bool", "int", "float", "angle", "progress", "formula"]
+        &[
+            "bool", "int", "float", "angle", "progress", "formula", "trefoil",
+        ]
     }
     fn get_number(&self) -> usize {
         use AnyUniform::*;
@@ -337,6 +445,7 @@ impl ComboBoxChoosable for AnyUniform {
             Angle { .. } => 3,
             Progress { .. } => 4,
             Formula { .. } => 5,
+            TrefoilSpecial { .. } => 6,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -350,6 +459,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Angle(a) => *a >= 1.0,
                 Progress(a) => *a >= 1.0,
                 Formula { .. } => false,
+                TrefoilSpecial { .. } => false,
             }),
             1 => match self {
                 Bool(b) => AnyUniform::int(*b as i32),
@@ -358,6 +468,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Angle(a) => AnyUniform::int(rad2deg(*a as f64) as i32),
                 Progress(a) => AnyUniform::int(*a as i32),
                 Formula { .. } => AnyUniform::int(0),
+                TrefoilSpecial { .. } => AnyUniform::int(0),
             },
             2 => match self {
                 Bool(b) => AnyUniform::float(*b as i32 as f64),
@@ -366,6 +477,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Progress(a) => AnyUniform::float(*a),
                 Float { .. } => self.clone(),
                 Formula { .. } => AnyUniform::float(0.0),
+                TrefoilSpecial { .. } => AnyUniform::float(0.0),
             },
             3 => Angle(match self {
                 Bool(b) => (*b as i32 as f64) * std::f64::consts::PI,
@@ -380,6 +492,7 @@ impl ComboBoxChoosable for AnyUniform {
                     macroquad::math::clamp(value.get_value(), 0., std::f64::consts::TAU)
                 }
                 Formula { .. } => 0.0,
+                TrefoilSpecial { .. } => 0.0,
             }),
             4 => Progress(0.5),
             5 => Formula(match self {
@@ -389,7 +502,9 @@ impl ComboBoxChoosable for AnyUniform {
                 Progress(a) => F(a.to_string()),
                 Float(value) => F(value.get_value().to_string()),
                 Formula(f) => f.clone(),
+                TrefoilSpecial(_) => F("0".to_string()),
             }),
+            6 => TrefoilSpecial(Default::default()),
             _ => unreachable!(),
         };
     }
@@ -595,14 +710,11 @@ impl StorageElem2 for AnyUniform {
         match self {
             Int(value) => result |= value.egui(ui, 1.0, 0..=0, -10..=10),
             Float(value) => result |= value.egui(ui, 0.01, 0..=2, -10.0..=10.0),
-            Bool(x) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_bool(ui, x))),
-            Angle(a) => {
-                drop(ui.centered_and_justified(|ui| result.uniform |= egui_angle_f64(ui, a)))
-            }
-            Progress(a) => drop(ui.centered_and_justified(|ui| result.uniform |= egui_0_1(ui, a))),
-            Formula(x) => {
-                drop(ui.centered_and_justified(|ui| result |= x.egui(ui, formulas_cache)))
-            }
+            Bool(x) => drop(ui.vertical_centered(|ui| result.uniform |= egui_bool(ui, x))),
+            Angle(a) => drop(ui.vertical_centered(|ui| result.uniform |= egui_angle_f64(ui, a))),
+            Progress(a) => drop(ui.vertical_centered(|ui| result.uniform |= egui_0_1(ui, a))),
+            Formula(x) => drop(ui.vertical_centered(|ui| result |= x.egui(ui, formulas_cache))),
+            TrefoilSpecial(arr) => result |= arr.egui(ui),
         }
         result
     }
@@ -686,6 +798,7 @@ impl StorageElem2 for AnyUniform {
             AnyUniform::Formula(f) => {
                 AnyUniformResult::Float(formulas_cache.eval_unsafe(&f.0, &mut cb)?.ok()?)
             }
+            AnyUniform::TrefoilSpecial(t) => AnyUniformResult::TrefoilSpecial(*t),
         })
     }
 

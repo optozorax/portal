@@ -244,7 +244,9 @@ pub fn egui_existing_name(
             *add_to_errors_count += 1;
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing.x = 0.;
-                ui.add(Label::new(egui::RichText::new("Error: ").color(Color32::RED)));
+                ui.add(Label::new(
+                    egui::RichText::new("Error: ").color(Color32::RED),
+                ));
                 ui.label(format!("name '{}' not found", current));
             });
         }
@@ -256,17 +258,17 @@ pub fn egui_errors(ui: &mut Ui, errors: &[(usize, String)]) {
         ui.spacing_mut().item_spacing.x = 0.;
         for (line_no, message) in errors {
             if *line_no == usize::MAX {
-                ui.add(
-                    Label::new(egui::RichText::new("UNKNOWN ERR: ")
+                ui.add(Label::new(
+                    egui::RichText::new("UNKNOWN ERR: ")
                         .color(COLOR_ERROR)
-                        .monospace()),
-                );
+                        .monospace(),
+                ));
             } else {
-                ui.add(
-                    Label::new(egui::RichText::new(format!("ERR:{}: ", line_no))
+                ui.add(Label::new(
+                    egui::RichText::new(format!("ERR:{}: ", line_no))
                         .color(COLOR_ERROR)
-                        .monospace()),
-                );
+                        .monospace(),
+                ));
             }
             ui.add(Label::new(egui::RichText::new(message).monospace()));
             ui.add(Label::new(egui::RichText::new("\n").monospace()));

@@ -197,41 +197,65 @@ impl StorageElem2 for Object {
                     ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.;
 
-                        ui.add(Label::new(egui::RichText::new("int ").color(COLOR_TYPE).monospace()));
-                        ui.add(
-                            Label::new(egui::RichText::new("is_inside")
+                        ui.add(Label::new(
+                            egui::RichText::new("int ").color(COLOR_TYPE).monospace(),
+                        ));
+                        ui.add(Label::new(
+                            egui::RichText::new("is_inside")
                                 .color(COLOR_FUNCTION)
-                                .monospace()),
-                        );
+                                .monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("(").monospace()));
-                        ui.add(Label::new(egui::RichText::new("vec4 ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("vec4 ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("pos, ").monospace()));
-                        ui.add(Label::new(egui::RichText::new("float ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("float ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("x, ").monospace()));
-                        ui.add(Label::new(egui::RichText::new("float ").color(COLOR_TYPE).monospace()));
-                        ui.add(Label::new(egui::RichText::new("y, \n              ").monospace()));
-                        ui.add(Label::new(egui::RichText::new("bool ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("float ").color(COLOR_TYPE).monospace(),
+                        ));
+                        ui.add(Label::new(
+                            egui::RichText::new("y, \n              ").monospace(),
+                        ));
+                        ui.add(Label::new(
+                            egui::RichText::new("bool ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("back, ").monospace()));
-                        ui.add(Label::new(egui::RichText::new("bool ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("bool ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("first) {").monospace()));
                     });
                 } else {
                     ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.;
-                        ui.add(Label::new(egui::RichText::new("int ").color(COLOR_TYPE).monospace()));
-                        ui.add(
-                            Label::new(egui::RichText::new("is_inside")
+                        ui.add(Label::new(
+                            egui::RichText::new("int ").color(COLOR_TYPE).monospace(),
+                        ));
+                        ui.add(Label::new(
+                            egui::RichText::new("is_inside")
                                 .color(COLOR_FUNCTION)
-                                .monospace()),
-                        );
+                                .monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("(").monospace()));
-                        ui.add(Label::new(egui::RichText::new("vec4 ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("vec4 ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("pos, ").monospace()));
-                        ui.add(Label::new(egui::RichText::new("float ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("float ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("x, ").monospace()));
-                        ui.add(Label::new(egui::RichText::new("float ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("float ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("y, ").monospace()));
-                        ui.add(Label::new(egui::RichText::new("bool ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("bool ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("back) {").monospace()));
                     });
                 }
@@ -252,34 +276,40 @@ impl StorageElem2 for Object {
                     ui.spacing_mut().item_spacing.x = 0.;
 
                     if matches!(kind, ObjectType::Portal { .. }) {
-                        ui.add(
-                            Label::new(egui::RichText::new("SceneIntersection ")
+                        ui.add(Label::new(
+                            egui::RichText::new("SceneIntersection ")
                                 .color(COLOR_TYPE)
-                                .monospace()),
-                        );
-                        ui.add(
-                            Label::new(egui::RichText::new("intersect")
+                                .monospace(),
+                        ));
+                        ui.add(Label::new(
+                            egui::RichText::new("intersect")
                                 .color(COLOR_FUNCTION)
-                                .monospace()),
-                        );
+                                .monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("(").monospace()));
-                        ui.add(Label::new(egui::RichText::new("Ray ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("Ray ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("r, ").monospace()));
-                        ui.add(Label::new(egui::RichText::new("bool ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("bool ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("first) {").monospace()));
                     } else {
-                        ui.add(
-                            Label::new(egui::RichText::new("SceneIntersection ")
+                        ui.add(Label::new(
+                            egui::RichText::new("SceneIntersection ")
                                 .color(COLOR_TYPE)
-                                .monospace()),
-                        );
-                        ui.add(
-                            Label::new(egui::RichText::new("intersect")
+                                .monospace(),
+                        ));
+                        ui.add(Label::new(
+                            egui::RichText::new("intersect")
                                 .color(COLOR_FUNCTION)
-                                .monospace()),
-                        );
+                                .monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("(").monospace()));
-                        ui.add(Label::new(egui::RichText::new("Ray ").color(COLOR_TYPE).monospace()));
+                        ui.add(Label::new(
+                            egui::RichText::new("Ray ").color(COLOR_TYPE).monospace(),
+                        ));
                         ui.add(Label::new(egui::RichText::new("r) {").monospace()));
                     }
                 });

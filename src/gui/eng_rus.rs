@@ -25,7 +25,11 @@ impl Default for EngRusSettings {
 impl EngRusSettings {
     pub fn egui(ui: &mut Ui) {
         let id = egui::Id::new("EngRusSettings");
-        let mut state = *ui.memory().data.get_persisted_mut_or_default::<EngRusSettings>(id) == EngRusSettings::Rus;
+        let mut state = *ui
+            .memory()
+            .data
+            .get_persisted_mut_or_default::<EngRusSettings>(id)
+            == EngRusSettings::Rus;
 
         if ui
             .add(egui::SelectableLabel::new(state, "🔤 Русский язык"))
@@ -77,7 +81,10 @@ impl EngRusText {
     }
 
     pub fn text<'a>(&'a self, ui: &mut Ui) -> &'a str {
-        let state = *ui.memory().data.get_persisted_mut_or_default::<EngRusSettings>(egui::Id::new("EngRusSettings"));
+        let state = *ui
+            .memory()
+            .data
+            .get_persisted_mut_or_default::<EngRusSettings>(egui::Id::new("EngRusSettings"));
         match state {
             EngRusSettings::Eng => &self.eng,
             EngRusSettings::Rus => &self.rus,

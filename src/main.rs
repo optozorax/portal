@@ -118,7 +118,9 @@ impl RotateAroundCam {
         }
 
         if is_something_changed {
-            memory.data.insert_persisted(egui::Id::new("CalculatedCam"), self.get_calculated_cam());
+            memory
+                .data
+                .insert_persisted(egui::Id::new("CalculatedCam"), self.get_calculated_cam());
         }
 
         self.previous_mouse = mouse_pos;
@@ -322,7 +324,7 @@ impl Window {
             .find(|(name, _)| *name == "scene")
             .and_then(|(_, value)| available_scenes.get_by_link(value));
 
-        let default_scene = "basics";
+        let default_scene = "trefoil";
 
         let (scene_content, scene_name) = if let Some(result) = required_scene {
             result
@@ -423,9 +425,10 @@ impl Window {
         if !self.scene_initted {
             self.scene_initted = true;
             self.scene.init(&mut self.data, &mut ctx.memory());
-            ctx.memory()
-                .data
-                .insert_persisted(egui::Id::new("OriginalCam"), OriginalCam(self.cam.get_calculated_cam()));
+            ctx.memory().data.insert_persisted(
+                egui::Id::new("OriginalCam"),
+                OriginalCam(self.cam.get_calculated_cam()),
+            );
         }
 
         let mut changed = WhatChanged::default();
@@ -495,6 +498,7 @@ impl Window {
         .id(egui::Id::new("Edit scene"))
         .open(&mut edit_scene_opened)
         .vscroll(true)
+        .hscroll(true)
         .show(ctx, |ui| {
             let (changed1, material) =
                 self.scene
@@ -602,8 +606,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     .show(ctx, |ui| {
                         let mut clone = to_export.clone();
                         ui.add(
-                            egui::TextEdit::multiline(&mut clone)
-                                .font(egui::TextStyle::Monospace),
+                            egui::TextEdit::multiline(&mut clone).font(egui::TextStyle::Monospace),
                         );
                     });
             }
@@ -671,6 +674,7 @@ First, predefined library is included, then uniforms, then user library, then in
             egui::Window::new("Control scene")
                 .open(&mut control_scene_opened)
                 .vscroll(true)
+                .hscroll(true)
                 .show(ctx, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.heading(self.scene_name);
@@ -751,10 +755,12 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.horizontal(|ui| {
                         ui.label("Dpi:");
                         if ui.button("+").clicked() {
-                            ui.ctx().set_pixels_per_point(ui.ctx().pixels_per_point() * 1.2);
+                            ui.ctx()
+                                .set_pixels_per_point(ui.ctx().pixels_per_point() * 1.2);
                         }
                         if ui.button("-").clicked() {
-                            ui.ctx().set_pixels_per_point(ui.ctx().pixels_per_point() / 1.2);
+                            ui.ctx()
+                                .set_pixels_per_point(ui.ctx().pixels_per_point() / 1.2);
                         }
                     });
                 });
@@ -770,9 +776,16 @@ First, predefined library is included, then uniforms, then user library, then in
                     egui_demo_lib::easy_mark::easy_mark(ui, text);
                     ui.separator();
 
-                    let mut checked = *ui.memory().data.get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new("ShowHiddenScenes"));
+                    let mut checked = *ui
+                        .memory()
+                        .data
+                        .get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new(
+                            "ShowHiddenScenes",
+                        ));
                     ui.checkbox(&mut checked.0, "Show hidden scenes :P");
-                    ui.memory().data.insert_persisted(egui::Id::new("ShowHiddenScenes"), checked);
+                    ui.memory()
+                        .data
+                        .insert_persisted(egui::Id::new("ShowHiddenScenes"), checked);
                 });
             self.about_opened = about_opened;
         }
@@ -785,21 +798,30 @@ First, predefined library is included, then uniforms, then user library, then in
             self.scene.set_uniforms(self.material, &mut self.data);
             self.set_uniforms();
 
-            let current_cam = memory.data.get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam")).0;
+            let current_cam = memory
+                .data
+                .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+                .0;
             if self.cam.from != current_cam {
                 let calculated_cam = if let Some(id) = current_cam {
                     // set getted camera
 
                     if self.cam.from.is_none() {
                         let calculated_cam = self.cam.get_calculated_cam();
-                        memory.data.insert_persisted(egui::Id::new("OriginalCam"), OriginalCam(calculated_cam));
+                        memory.data.insert_persisted(
+                            egui::Id::new("OriginalCam"),
+                            OriginalCam(calculated_cam),
+                        );
                     }
 
                     with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
                         self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap())
                 } else {
                     // set original camera
-                    memory.data.get_persisted_mut_or_default::<OriginalCam>(egui::Id::new("OriginalCam")).0
+                    memory
+                        .data
+                        .get_persisted_mut_or_default::<OriginalCam>(egui::Id::new("OriginalCam"))
+                        .0
                 };
 
                 self.cam.from = current_cam;
@@ -861,7 +883,7 @@ First, predefined library is included, then uniforms, then user library, then in
 fn window_conf() -> Conf {
     Conf {
         window_title: "Portal Explorer".to_owned(),
-        high_dpi: true,
+        high_dpi: false,
         ..Default::default()
     }
 }

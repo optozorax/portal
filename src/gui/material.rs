@@ -166,24 +166,26 @@ impl StorageElem2 for Material {
             Complex { code } => {
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
-                    ui.add(
-                        Label::new(egui::RichText::new("MaterialProcessing ")
+                    ui.add(Label::new(
+                        egui::RichText::new("MaterialProcessing ")
                             .color(COLOR_TYPE)
-                            .monospace()),
-                    );
-                    ui.add(
-                        Label::new(egui::RichText::new("process_material")
+                            .monospace(),
+                    ));
+                    ui.add(Label::new(
+                        egui::RichText::new("process_material")
                             .color(COLOR_FUNCTION)
-                            .monospace()),
-                    );
+                            .monospace(),
+                    ));
                     ui.add(Label::new(egui::RichText::new("(\n  ").monospace()));
-                    ui.add(
-                        Label::new(egui::RichText::new("SurfaceIntersect ")
+                    ui.add(Label::new(
+                        egui::RichText::new("SurfaceIntersect ")
                             .color(COLOR_TYPE)
-                            .monospace()),
-                    );
+                            .monospace(),
+                    ));
                     ui.add(Label::new(egui::RichText::new("hit,\n  ").monospace()));
-                    ui.add(Label::new(egui::RichText::new("Ray ").color(COLOR_TYPE).monospace()));
+                    ui.add(Label::new(
+                        egui::RichText::new("Ray ").color(COLOR_TYPE).monospace(),
+                    ));
                     ui.add(Label::new(egui::RichText::new("r\n) {").monospace()));
                 });
 

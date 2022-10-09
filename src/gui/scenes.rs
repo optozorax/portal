@@ -280,14 +280,18 @@ impl Scenes {
     }
 
     pub fn egui(&self, ui: &mut Ui) -> Option<(&'static str, &'static str, &'static str)> {
-        let show_hidden = ui.memory().data.get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new("ShowHiddenScenes")).0;
+        let show_hidden = ui
+            .memory()
+            .data
+            .get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new("ShowHiddenScenes"))
+            .0;
         ui.set_width(170.);
         let mut result = None;
         for SceneSection {
-                name,
-                hidden,
-                scenes: inner,
-            } in self.0.iter()
+            name,
+            hidden,
+            scenes: inner,
+        } in self.0.iter()
         {
             if show_hidden || !hidden {
                 ui.menu_button(*name, |ui| {

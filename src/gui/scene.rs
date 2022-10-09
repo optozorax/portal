@@ -79,8 +79,8 @@ pub struct Scene {
 impl Drop for Scene {
     fn drop(&mut self) {
         match ron::to_string(self) {
-            Ok(result) => crate::error!(format, "scene:\n\n{}", result),
-            Err(err) => crate::error!(format, "errors while serializing scene: {:?}", err),
+            Ok(_result) => crate::error!(format, "scene:\n\n{}", result),
+            Err(_err) => crate::error!(format, "errors while serializing scene: {:?}", err),
         }
     }
 }
@@ -227,11 +227,12 @@ impl Scene {
                         use AnyUniformResult::*;
                         match self.uniforms.get(id, &data.formulas_cache) {
                             Some(x) => match x {
-                                Bool(b) => ui.label(b.to_string()),
-                                Int(b) => ui.label(b.to_string()),
-                                Float(b) => ui.label(b.to_string()),
+                                Bool(b) => drop(ui.label(b.to_string())),
+                                Int(b) => drop(ui.label(b.to_string())),
+                                Float(b) => drop(ui.label(b.to_string())),
+                                TrefoilSpecial(_) => {}
                             },
-                            None => ui.label("NotFound"),
+                            None => drop(ui.label("NotFound")),
                         }
                     });
                 }
@@ -419,6 +420,11 @@ impl Scene {
                 Some(AnyUniformResult::Bool(_)) => result.push((name, UniformType::Int1)),
                 Some(AnyUniformResult::Int { .. }) => result.push((name, UniformType::Int1)),
                 Some(AnyUniformResult::Float { .. }) => result.push((name, UniformType::Float1)),
+                Some(AnyUniformResult::TrefoilSpecial(x)) => {
+                    for (i, _) in x.0.iter().enumerate() {
+                        result.push((format!("ts_{}_{}", i, name), UniformType::Int1))
+                    }
+                }
                 None => {}
             }
         }
@@ -523,6 +529,12 @@ impl Scene {
                     AnyUniformResult::Bool(b) => material.set_uniform(&name_u, b as i32),
                     AnyUniformResult::Int(i) => material.set_uniform(&name_u, i),
                     AnyUniformResult::Float(f) => material.set_uniform(&name_u, f as f32),
+                    AnyUniformResult::TrefoilSpecial(x) => {
+                        for (i, (enabled, value)) in x.0.iter().enumerate() {
+                            let compressed_value = *value as u32 + (*enabled as u32 * 1000);
+                            material.set_uniform(&format!("ts_{}_{}", i, name_u), compressed_value);
+                        }
+                    }
                 },
                 _ => {
                     crate::error!(format, "Error getting `{}` uniform", name);
@@ -925,14 +937,20 @@ impl Scene {
                 .init_stage(&mut self.matrices, &self.dev_stage.matrices);
 
             if let Some(cam) = stage.set_cam {
-                memory.data.insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(cam));
+                memory
+                    .data
+                    .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(cam));
             } else {
-                memory.data.insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
+                memory
+                    .data
+                    .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
             }
         } else {
             self.dev_stage.uniforms.init_stage(&mut self.uniforms);
             self.dev_stage.matrices.init_stage(&mut self.matrices);
-            memory.data.insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
+            memory
+                .data
+                .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
         }
         WhatChanged::from_uniform(true)
     }

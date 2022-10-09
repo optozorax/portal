@@ -285,22 +285,27 @@ impl<T: StorageElem2> Storage2<T> {
                                     to_delete = Some(pos);
                                 }
                                 if ui
-                                .add_enabled(pos + 1 != len,
-                                    Button::new(RichText::new("⏷").color(ui.visuals().hyperlink_color)) // down
-                                        
-                                )
-                                .clicked()
-                            {
-                                to_move_down = Some(pos);
-                            }
+                                    .add_enabled(
+                                        pos + 1 != len,
+                                        Button::new(
+                                            RichText::new("⏷").color(ui.visuals().hyperlink_color),
+                                        ), // down
+                                    )
+                                    .clicked()
+                                {
+                                    to_move_down = Some(pos);
+                                }
                                 if ui
-                                .add_enabled(pos != 0,
-                                    Button::new(RichText::new("⏶").color(ui.visuals().hyperlink_color)) // up
-                                )
-                                .clicked()
-                            {
-                                to_move_up = Some(pos);
-                            }
+                                    .add_enabled(
+                                        pos != 0,
+                                        Button::new(
+                                            RichText::new("⏶").color(ui.visuals().hyperlink_color),
+                                        ), // up
+                                    )
+                                    .clicked()
+                                {
+                                    to_move_up = Some(pos);
+                                }
                                 let mut name_response = egui_with_red_field(ui, name_error, |ui| {
                                     ui.text_edit_singleline(name)
                                 });

@@ -247,7 +247,9 @@ impl Matrix {
                 scale,
                 rotate,
                 mirror,
-            } => WhatChanged::from_uniform(simple_matrix_egui(ui, offset, rotate, mirror, scale, id)),
+            } => {
+                WhatChanged::from_uniform(simple_matrix_egui(ui, offset, rotate, mirror, scale, id))
+            }
             _ => {
                 drop(ui.label(
                     "Internal error, other types of matrices are not allowed to be accessed by user.",
@@ -320,7 +322,8 @@ impl StorageElem2 for Matrix {
                 rotate,
                 mirror,
             } => {
-                changed.uniform |= simple_matrix_egui(ui, offset, rotate, mirror, scale, data_id.with("matrix"));
+                changed.uniform |=
+                    simple_matrix_egui(ui, offset, rotate, mirror, scale, data_id.with("matrix"));
             }
             Parametrized {
                 offset,

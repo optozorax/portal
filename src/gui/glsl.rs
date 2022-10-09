@@ -44,7 +44,7 @@ impl StorageElem2 for LibraryCode {
         let mut changed = WhatChanged::default();
         egui_with_red_field(ui, errors.get(self_id).is_some(), |ui| {
             changed = WhatChanged::from_shader(
-                ui.add(TextEdit::multiline(&mut self.0 .0).text_style(TextStyle::Monospace))
+                ui.add(TextEdit::multiline(&mut self.0 .0).font(TextStyle::Monospace))
                     .changed(),
             );
             if let Some(local_errors) = errors.get(self_id) {

@@ -93,7 +93,10 @@ impl Cam {
         input: &hlist![Storage2<AnyUniform>, FormulasCache],
     ) -> Option<DVec3> {
         Some(match self.look_at {
-            CamLookAt::MatrixCenter(id) => matrices.get(id?, input)?.project_point3(DVec3::ZERO),
+            CamLookAt::MatrixCenter(id) => {
+                matrices.get(id?, input)?.project_point3(DVec3::ZERO)
+                    + DVec3::new(0.001, 0.001, 0.001)
+            }
             CamLookAt::Coordinate(pos) => pos,
         })
     }
@@ -112,11 +115,15 @@ impl Cam {
     }
 
     pub fn set_this_cam(&mut self, ui: &mut Ui, self_id: CameraId) {
-        ui.memory().data.insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(Some(self_id)));
+        ui.memory()
+            .data
+            .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(Some(self_id)));
     }
 
     pub fn set_original_cam(ui: &mut Ui) {
-        ui.memory().data.insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
+        ui.memory()
+            .data
+            .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
     }
 
     pub fn user_egui(
@@ -126,7 +133,11 @@ impl Cam {
         self_id: CameraId,
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        let id = ui.memory().data.get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam")).0;
+        let id = ui
+            .memory()
+            .data
+            .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+            .0;
         let selected = id == Some(self_id);
         let name = names.get(self_id).clone();
         ui.horizontal(|ui| {
@@ -187,7 +198,11 @@ impl StorageElem2 for Cam {
         ));
         ui.separator();
 
-        let id = ui.memory().data.get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"), ).0;
+        let id = ui
+            .memory()
+            .data
+            .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+            .0;
         if ui
             .add_enabled(id != Some(self_id), Button::new("Set this cam as current"))
             .clicked()
@@ -196,7 +211,11 @@ impl StorageElem2 for Cam {
             changed.uniform = true;
         }
 
-        let id = ui.memory().data.get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam")).0;
+        let id = ui
+            .memory()
+            .data
+            .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+            .0;
         if ui
             .add_enabled(id.is_some(), Button::new("Return original camera"))
             .clicked()
@@ -211,19 +230,29 @@ impl StorageElem2 for Cam {
             .add(Button::new("Set angles from current camera"))
             .clicked()
         {
-            let current_cam = *ui.memory().data.get_persisted_mut_or_default::<CalculatedCam>(egui::Id::new("CalculatedCam"));
+            let current_cam = *ui
+                .memory()
+                .data
+                .get_persisted_mut_or_default::<CalculatedCam>(egui::Id::new("CalculatedCam"));
             self.alpha = current_cam.alpha;
             self.beta = current_cam.beta;
             self.r = current_cam.r;
             changed.uniform = true;
         }
 
-        let id = ui.memory().data.get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam")).0;
+        let id = ui
+            .memory()
+            .data
+            .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+            .0;
         if ui
             .add_enabled(id.is_none(), Button::new("Set center from current camera"))
             .clicked()
         {
-            let current_cam = *ui.memory().data.get_persisted_mut_or_default::<CalculatedCam>(egui::Id::new("CalculatedCam"), );
+            let current_cam = *ui
+                .memory()
+                .data
+                .get_persisted_mut_or_default::<CalculatedCam>(egui::Id::new("CalculatedCam"));
             self.look_at = CamLookAt::Coordinate(current_cam.look_at);
             changed.uniform = true;
         }
