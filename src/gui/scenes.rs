@@ -109,6 +109,18 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/trefoil.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Triple portal",
+                        link: "triple_portal",
+                        content: include_str!("../../scenes/triple_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Hopf Link portal",
+                        link: "hopf_link",
+                        content: include_str!("../../scenes/hopf_link.ron"),
+                        hidden: false,
+                    }
                 ],
             },
             SceneSection {
@@ -166,14 +178,28 @@ impl Default for Scenes {
                 ],
             },
             SceneSection {
-                name: "Triple portal",
+                name: "Tilings",
                 hidden: false,
-                scenes: vec![Scene {
-                    name: "Triple portal",
-                    link: "triple_portal",
-                    content: include_str!("../../scenes/triple_portal.ron"),
-                    hidden: false,
-                }],
+                scenes: vec![
+                    Scene {
+                        name: "Triangle tiling",
+                        link: "triangle_tiling",
+                        content: include_str!("../../scenes/triangle_tiling.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Square tiling",
+                        link: "square_tiling",
+                        content: include_str!("../../scenes/square_tiling.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Hexagonal tiling",
+                        link: "hexagonal_tiling",
+                        content: include_str!("../../scenes/hexagonal_tiling.ron"),
+                        hidden: false,
+                    },
+                ],
             },
             SceneSection {
                 name: "Mobius band",
@@ -193,48 +219,6 @@ impl Default for Scenes {
                     },
                 ],
             },
-            SceneSection {
-                name: "Links",
-                hidden: false,
-                scenes: vec![Scene {
-                    name: "Hopf Link portal",
-                    link: "hopf_link",
-                    content: include_str!("../../scenes/hopf_link.ron"),
-                    hidden: false,
-                }],
-            },
-            // SceneSection {
-            //     name: "Trefoil",
-            //     hidden: true,
-            //     scenes: vec![
-            //         Scene {
-            //             name: "Self-hiding order 1",
-            //             link: "trefoil_knot",
-            //             content: include_str!(
-            //                 "../../scenes/trefoil_knot_monoportal_self_hiding.json"
-            //             ),
-            //             hidden: false,
-            //         },
-            //         Scene {
-            //             name: "Order 1",
-            //             link: "trefoil_knot",
-            //             content: include_str!("../../scenes/trefoil_knot_monoportal.json"),
-            //             hidden: false,
-            //         },
-            //         Scene {
-            //             name: "Order 2",
-            //             link: "trefoil_knot",
-            //             content: include_str!("../../scenes/trefoil_knot.json"),
-            //             hidden: false,
-            //         },
-            //         Scene {
-            //             name: "Order 3",
-            //             link: "trefoil_knot_3",
-            //             content: include_str!("../../scenes/trefoil_knot_3.json"),
-            //             hidden: false,
-            //         },
-            //     ],
-            // },
             SceneSection {
                 name: "Portal in portal",
                 hidden: false,
