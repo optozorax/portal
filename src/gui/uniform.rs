@@ -32,15 +32,9 @@ impl TrefoilSpecial {
                 .map(|x| x.0)
                 .collect::<Vec<_>>();
 
-            let mut to_rotate = None;
-
             for (i, (enabled, val)) in self.0.iter_mut().enumerate() {
                 if i % 3 == 0 && i != 0 {
                     ui.separator();
-                }
-                if i % 3 == 0 && ui.button("rotate").clicked() {
-                    to_rotate = Some(i / 3);
-                    changed.uniform |= true;
                 }
                 ui.horizontal(|ui| {
                     ui.label(egui::RichText::new(n_to_name(i) + ".").monospace());
@@ -48,9 +42,6 @@ impl TrefoilSpecial {
                         ui.checkbox(enabled, "");
                     });
                     if *enabled {
-                        // egui::ComboBox::from_id_source(i)
-                        //     .selected_text(n_to_name(*val as usize))
-                        //     .show_ui(ui, |ui| {
                         ui.horizontal(|ui| {
                             changed.uniform |= check_changed(val, |val| {
                                 let mut prev = None;
@@ -68,26 +59,8 @@ impl TrefoilSpecial {
                                 }
                             });
                         });
-                        // }
-                        // );
                     }
                 });
-            }
-
-            if let Some(to_rotate) = to_rotate {
-                let vec = (0..3)
-                    .map(|i| self.0[to_rotate * 3 + i])
-                    .filter(|v| v.0)
-                    .map(|v| v.1)
-                    .collect::<Vec<_>>();
-                let mut pos = 0;
-                for i in 0..3 {
-                    let (enabled, val) = &mut self.0[to_rotate * 3 + i];
-                    if *enabled {
-                        *val = vec[(pos + 1) % vec.len()];
-                        pos += 1;
-                    }
-                }
             }
 
             ui.separator();

@@ -324,7 +324,7 @@ impl Window {
             .find(|(name, _)| *name == "scene")
             .and_then(|(_, value)| available_scenes.get_by_link(value));
 
-        let default_scene = "trefoil";
+        let default_scene = "room";
 
         let (scene_content, scene_name) = if let Some(result) = required_scene {
             result
