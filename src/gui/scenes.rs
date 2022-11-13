@@ -199,6 +199,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/hexagonal_tiling.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Triple tiling",
+                        link: "triple_tiling",
+                        content: include_str!("../../scenes/triple_tiling.ron"),
+                        hidden: false,
+                    },
                 ],
             },
             SceneSection {
