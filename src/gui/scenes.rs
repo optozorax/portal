@@ -91,6 +91,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/cut_plane.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Linear transformations",
+                        link: "linear_transformations",
+                        content: include_str!("../../scenes/linear_transformations.ron"),
+                        hidden: false,
+                    },
                 ],
             },
             SceneSection {
