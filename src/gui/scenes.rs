@@ -97,6 +97,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/linear_transformations.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Surface portal",
+                        link: "surface_portal",
+                        content: include_str!("../../scenes/surface_portal.ron"),
+                        hidden: false,
+                    },
                 ],
             },
             SceneSection {
