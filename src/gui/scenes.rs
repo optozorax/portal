@@ -103,6 +103,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/surface_portal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Surface portal???",
+                        link: "surface_portal2",
+                        content: include_str!("../../scenes/surface_portal2.ron"),
+                        hidden: false,
+                    },
                 ],
             },
             SceneSection {
