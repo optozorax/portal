@@ -118,6 +118,30 @@ impl Default for Scenes {
                 ],
             },
             SceneSection {
+                name: "Triple portal",
+                hidden: false,
+                scenes: vec![
+                    Scene {
+                        name: "Triple portal",
+                        link: "triple_portal",
+                        content: include_str!("../../scenes/triple_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "\"Triple portal\"",
+                        link: "triple_portal_ish",
+                        content: include_str!("../../scenes/triple_portal_ish.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "N-tuple portal",
+                        link: "n_tuple_portal",
+                        content: include_str!("../../scenes/n_tuple_portal.ron"),
+                        hidden: false,
+                    },
+                ],
+            },
+            SceneSection {
                 name: "Advanced",
                 hidden: false,
                 scenes: vec![
@@ -131,12 +155,6 @@ impl Default for Scenes {
                         name: "Trefoil knot",
                         link: "trefoil",
                         content: include_str!("../../scenes/trefoil.ron"),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Triple portal",
-                        link: "triple_portal",
-                        content: include_str!("../../scenes/triple_portal.ron"),
                         hidden: false,
                     },
                     Scene {
