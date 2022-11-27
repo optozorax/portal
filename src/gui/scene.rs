@@ -530,8 +530,9 @@ impl Scene {
                     AnyUniformResult::Int(i) => material.set_uniform(&name_u, i),
                     AnyUniformResult::Float(f) => material.set_uniform(&name_u, f as f32),
                     AnyUniformResult::TrefoilSpecial(x) => {
-                        for (i, (enabled, value)) in x.0.iter().enumerate() {
-                            let compressed_value = *value as u32 + (*enabled as u32 * 1000);
+                        for (i, (enabled, value, color)) in x.0.iter().enumerate() {
+                            let compressed_value =
+                                *value as u32 + (*enabled as u32 * 10000) + (*color as u32 * 1000);
                             material.set_uniform(&format!("ts_{}_{}", i, name_u), compressed_value);
                         }
                     }

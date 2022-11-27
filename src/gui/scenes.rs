@@ -162,7 +162,7 @@ impl Default for Scenes {
                         link: "hopf_link",
                         content: include_str!("../../scenes/hopf_link.ron"),
                         hidden: false,
-                    }
+                    },
                 ],
             },
             SceneSection {

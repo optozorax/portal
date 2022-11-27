@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 pub struct Formula(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, Copy)]
-pub struct TrefoilSpecial(pub [(bool, u8); 18]);
+pub struct TrefoilSpecial(pub [(bool, u8, u8); 18]);
 
 impl TrefoilSpecial {
     pub fn egui(&mut self, ui: &mut egui::Ui) -> WhatChanged {
@@ -32,7 +32,7 @@ impl TrefoilSpecial {
                 .map(|x| x.0)
                 .collect::<Vec<_>>();
 
-            for (i, (enabled, val)) in self.0.iter_mut().enumerate() {
+            for (i, (enabled, val, color)) in self.0.iter_mut().enumerate() {
                 if i % 3 == 0 && i != 0 {
                     ui.separator();
                 }
@@ -58,6 +58,17 @@ impl TrefoilSpecial {
                                     prev = Some(i);
                                 }
                             });
+                            ui.separator();
+                            ui.separator();
+                            ui.separator();
+                            const COLORS: [&str; 6] = ["R", "G", "B", "Y", "V", "G"];
+                            changed.uniform |= check_changed(color, |color| {
+                                for (i, c) in COLORS.iter().enumerate() {
+                                    if ui.selectable_label(*color == i as u8, *c).clicked() {
+                                        *color = i as u8;
+                                    }
+                                }
+                            });
                         });
                     }
                 });
@@ -67,7 +78,7 @@ impl TrefoilSpecial {
 
             let mut unused_vals = enabled_vals.into_iter().collect::<BTreeSet<_>>();
 
-            for (enabled, val) in &self.0 {
+            for (enabled, val, _) in &self.0 {
                 if *enabled && !unused_vals.contains(&(*val as usize)) {
                     ui.label(format!(
                         "Use of non-existent value {}",
@@ -76,7 +87,7 @@ impl TrefoilSpecial {
                 }
             }
 
-            for (enabled, val) in &self.0 {
+            for (enabled, val, _) in &self.0 {
                 if *enabled {
                     unused_vals.remove(&(*val as usize));
                 }
