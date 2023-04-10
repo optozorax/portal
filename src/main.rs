@@ -460,6 +460,10 @@ impl Window {
                         changed.uniform = true;
                         self.data.reload_textures = true;
                         self.cam.set_cam(&self.scene.cam);
+                        ui.ctx().memory().data.insert_persisted(
+                            egui::Id::new("OriginalCam"),
+                            OriginalCam(self.cam.get_calculated_cam()),
+                        );
                         self.offset_after_material = self.scene.cam.offset_after_material;
                         quad_url::set_program_parameter("scene", link);
                         self.scene_name = name;
