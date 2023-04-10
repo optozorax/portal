@@ -888,7 +888,8 @@ First, predefined library is included, then uniforms, then user library, then in
 fn window_conf() -> Conf {
     Conf {
         window_title: "Portal Explorer".to_owned(),
-        high_dpi: false,
+        high_dpi: true,
+        window_resizable: true,
         ..Default::default()
     }
 }
