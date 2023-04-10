@@ -680,6 +680,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 .vscroll(true)
                 .hscroll(true)
                 .show(ctx, |ui| {
+                    ui.spacing_mut().slider_width = 200.;
                     ui.vertical_centered(|ui| {
                         ui.heading(self.scene_name);
                     });
