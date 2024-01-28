@@ -37,6 +37,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/room.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Analytical approach (for video)",
+                        link: "analytical_approach",
+                        content: include_str!("../../scenes/analytical_approach.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
