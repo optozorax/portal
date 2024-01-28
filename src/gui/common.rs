@@ -28,14 +28,8 @@ pub fn rad2deg(rad: f64) -> f64 {
     rad * 180. / PI
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ShaderErrors(HashMap<TypeId, HashMap<UniqueId, Vec<(usize, String)>>>);
-
-impl Default for ShaderErrors {
-    fn default() -> Self {
-        Self(HashMap::new())
-    }
-}
 
 #[derive(Debug, Default)]
 pub struct TextureErrors(pub BTreeMap<String, macroquad::file::FileError>);
@@ -134,11 +128,11 @@ pub fn egui_angle(ui: &mut Ui, angle: &mut f64) -> bool {
         DragValue::from_get_set(|v| {
             if let Some(v) = v {
                 if v > 360. {
-                    current = v as f64 % 360.;
+                    current = v % 360.;
                 } else if v < 0. {
-                    current = 360. + (v as f64 % 360.);
+                    current = 360. + (v % 360.);
                 } else {
-                    current = v as f64;
+                    current = v;
                 }
             }
             current
@@ -304,17 +298,12 @@ pub fn egui_with_enabled_by(ui: &mut Ui, by: bool, f: impl FnOnce(&mut Ui)) {
 }
 
 pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::Response {
-    #[derive(Clone, Copy, Eq, PartialEq, Debug)]
+    #[derive(Clone, Copy, Eq, PartialEq, Debug, Default)]
     #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
     enum State {
+        #[default]
         View,
         Edit,
-    }
-
-    impl Default for State {
-        fn default() -> Self {
-            State::View
-        }
     }
 
     ui.vertical(|ui| {

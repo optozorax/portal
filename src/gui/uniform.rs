@@ -244,7 +244,7 @@ impl ParametrizeOrNot {
         use ParametrizeOrNot::*;
         Some(match self {
             Yes(f) => uniforms.get((*f)?, formulas_cache)?.into(),
-            No(f) => (*f),
+            No(f) => *f,
         })
     }
 
@@ -293,7 +293,7 @@ impl Formula {
             let response = egui_with_red_field(ui, has_errors, |ui| {
                 ui.add(
                     TextEdit::multiline(text)
-                        .text_style(TextStyle::Monospace)
+                        .font(TextStyle::Monospace)
                         .desired_rows(1),
                 )
             });
@@ -322,13 +322,13 @@ impl Default for FormulasCacheInner {
 }
 
 impl FormulasCacheInner {
-    pub fn get<'a, 'b>(&'a mut self, text: &'b str) -> Option<&'a fasteval::Instruction> {
+    pub fn get<'a>(&'a mut self, text: &str) -> Option<&'a fasteval::Instruction> {
         self.compile(text)?;
         self.get_unsafe(text)
     }
 
     /// You must call `self.compile(text)?;` before
-    fn get_unsafe<'a, 'b>(&'a self, text: &'b str) -> Option<&'a fasteval::Instruction> {
+    fn get_unsafe<'a>(&'a self, text: &str) -> Option<&'a fasteval::Instruction> {
         self.cache.get(text)?.as_ref()
     }
 
@@ -449,7 +449,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Bool(b) => AnyUniform::int(*b as i32),
                 Int { .. } => self.clone(),
                 Float(value) => AnyUniform::int(value.get_value() as i32),
-                Angle(a) => AnyUniform::int(rad2deg(*a as f64) as i32),
+                Angle(a) => AnyUniform::int(rad2deg(*a) as i32),
                 Progress(a) => AnyUniform::int(*a as i32),
                 Formula { .. } => AnyUniform::int(0),
                 TrefoilSpecial { .. } => AnyUniform::int(0),
@@ -469,7 +469,7 @@ impl ComboBoxChoosable for AnyUniform {
                     deg2rad(value.get_value() as f64),
                     0.,
                     std::f64::consts::TAU,
-                ) as f64,
+                ),
                 Angle(a) => *a,
                 Progress(a) => *a * std::f64::consts::TAU,
                 Float(value) => {
@@ -712,39 +712,39 @@ impl StorageElem2 for AnyUniform {
             Some(match name {
                 // Custom functions
                 "if" => {
-                    if (*args.get(0)? - 1.0).abs() < 1e-6 {
+                    if (*args.first()? - 1.0).abs() < 1e-6 {
                         *args.get(1)?
                     } else {
                         *args.get(2)?
                     }
                 }
                 "and" => {
-                    if (*args.get(0)? - 1.0).abs() < 1e-6 && (*args.get(1)? - 1.0).abs() < 1e-6 {
+                    if (*args.first()? - 1.0).abs() < 1e-6 && (*args.get(1)? - 1.0).abs() < 1e-6 {
                         1.0
                     } else {
                         0.0
                     }
                 }
                 "or" => {
-                    if (*args.get(0)? - 1.0).abs() < 1e-6 || (*args.get(1)? - 1.0).abs() < 1e-6 {
+                    if (*args.first()? - 1.0).abs() < 1e-6 || (*args.get(1)? - 1.0).abs() < 1e-6 {
                         1.0
                     } else {
                         0.0
                     }
                 }
                 "not" => {
-                    if (*args.get(0)? - 1.0).abs() < 1e-6 {
+                    if (*args.first()? - 1.0).abs() < 1e-6 {
                         0.0
                     } else {
                         1.0
                     }
                 }
-                "deg2rad" => args.get(0)? / 180. * std::f64::consts::PI,
-                "rad2deg" => args.get(0)? * 180. / std::f64::consts::PI,
-                "switch" => *args.get(*args.get(0)? as usize)?,
+                "deg2rad" => args.first()? / 180. * std::f64::consts::PI,
+                "rad2deg" => args.first()? * 180. / std::f64::consts::PI,
+                "switch" => *args.get(*args.first()? as usize)?,
 
                 "on" => {
-                    let v = *args.get(0)?;
+                    let v = *args.first()?;
                     let a = *args.get(1)?;
                     let b = *args.get(2)?;
 
@@ -757,7 +757,7 @@ impl StorageElem2 for AnyUniform {
                     }
                 }
 
-                "inv" => 1.0 - args.get(0)?,
+                "inv" => 1.0 - args.first()?,
 
                 "time" => formulas_cache.get_time(),
 

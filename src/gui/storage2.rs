@@ -131,7 +131,7 @@ impl<T: StorageElem2> Storage2<T> {
     }
 
     pub fn all_ids(&self) -> impl Iterator<Item = T::IdWrapper> + '_ {
-        self.storage.iter().map(|(key, _)| T::IdWrapper::wrap(*key))
+        self.storage.keys().map(|key| T::IdWrapper::wrap(*key))
     }
 
     fn get_inner(
@@ -262,7 +262,7 @@ impl<T: StorageElem2> Storage2<T> {
             std::mem::swap(&mut elem, self.storage.get_mut(id).unwrap());
 
             if let StorageInner::Named(elem, name) = &mut elem {
-                let name_error = self.storage.iter().any(|x| x.1.is_named_as(&name));
+                let name_error = self.storage.iter().any(|x| x.1.is_named_as(name));
 
                 let errors_count = errors_count + name_error as usize;
 

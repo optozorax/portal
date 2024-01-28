@@ -15,7 +15,7 @@ pub fn shader_error_parser(error: &str) -> Vec<Result<(usize, &str), &str>> {
     fn expect_int(input: &mut &str) -> Option<usize> {
         let pos = input
             .char_indices()
-            .take_while(|(_, c)| c.is_digit(10))
+            .take_while(|(_, c)| c.is_ascii_digit())
             .last()
             .map(|(i, c)| i + c.len_utf8())?;
         let lineno: usize = input[..pos].parse().ok()?;

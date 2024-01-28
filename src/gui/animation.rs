@@ -43,6 +43,7 @@ impl<T: StorageElem2> Animation<T> {
     }
 }
 
+#[allow(clippy::derivable_impls)]
 impl<T: StorageElem2> Default for Animation<T> {
     fn default() -> Self {
         Animation::FromDev
@@ -502,7 +503,7 @@ impl<T: StorageElem2> Animation<T> {
         ui.horizontal(|ui| {
             changed.uniform |= egui_combo_box(
                 ui,
-                &name,
+                name,
                 ANIMATION_STAGE_NAME_SIZE,
                 self,
                 data_id.with("combo"),

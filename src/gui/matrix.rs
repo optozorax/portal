@@ -335,7 +335,7 @@ impl StorageElem2 for Matrix {
                 ui.label("Offset: ");
                 changed.uniform |= offset.egui(
                     ui,
-                    |ui, x| egui_f64(ui, x),
+                    egui_f64,
                     uniforms,
                     formulas_cache,
                     data_id.with(0),
@@ -344,7 +344,7 @@ impl StorageElem2 for Matrix {
                 ui.label("Rotate: ");
                 changed.uniform |= rotate.egui(
                     ui,
-                    |ui, x| egui_angle(ui, x),
+                    egui_angle,
                     uniforms,
                     formulas_cache,
                     data_id.with(1),
@@ -353,7 +353,7 @@ impl StorageElem2 for Matrix {
                 ui.label("Mirror: ");
                 changed.uniform |= mirror.egui(
                     ui,
-                    |ui, x| egui_0_1(ui, x),
+                    egui_0_1,
                     uniforms,
                     formulas_cache,
                     data_id.with(2),
@@ -363,7 +363,7 @@ impl StorageElem2 for Matrix {
                     ui,
                     "Scale:",
                     1.0,
-                    |ui, x| egui_f64_positive(ui, x),
+                    egui_f64_positive,
                     uniforms,
                     formulas_cache,
                     data_id.with(3),
@@ -374,7 +374,7 @@ impl StorageElem2 for Matrix {
                 ui.label("i: ");
                 changed.uniform |= i.egui(
                     ui,
-                    |ui, x| egui_f64(ui, x),
+                    egui_f64,
                     uniforms,
                     formulas_cache,
                     data_id.with(0),
@@ -383,7 +383,7 @@ impl StorageElem2 for Matrix {
                 ui.label("j: ");
                 changed.uniform |= j.egui(
                     ui,
-                    |ui, x| egui_f64(ui, x),
+                    egui_f64,
                     uniforms,
                     formulas_cache,
                     data_id.with(0),
@@ -392,7 +392,7 @@ impl StorageElem2 for Matrix {
                 ui.label("k: ");
                 changed.uniform |= k.egui(
                     ui,
-                    |ui, x| egui_f64(ui, x),
+                    egui_f64,
                     uniforms,
                     formulas_cache,
                     data_id.with(0),
@@ -401,7 +401,7 @@ impl StorageElem2 for Matrix {
                 ui.label("pos: ");
                 changed.uniform |= pos.egui(
                     ui,
-                    |ui, x| egui_f64(ui, x),
+                    egui_f64,
                     uniforms,
                     formulas_cache,
                     data_id.with(0),
@@ -417,7 +417,7 @@ impl StorageElem2 for Matrix {
                     ui,
                     "If:",
                     1.0,
-                    |ui, x| egui_f64_positive(ui, x),
+                    egui_f64_positive,
                     uniforms,
                     formulas_cache,
                     data_id.with(3),
@@ -607,15 +607,15 @@ impl StorageElem2 for Matrix {
     ) -> usize {
         use Matrix::*;
         match self {
-            Mul { to, what } => to.map(|a| f(a)).unwrap_or(1) + what.map(|a| f(a)).unwrap_or(1),
+            Mul { to, what } => to.map(&mut f).unwrap_or(1) + what.map(&mut f).unwrap_or(1),
             Teleport {
                 first_portal,
                 second_portal,
                 what,
             } => {
-                first_portal.map(|a| f(a)).unwrap_or(1)
-                    + second_portal.map(|a| f(a)).unwrap_or(1)
-                    + what.map(|a| f(a)).unwrap_or(1)
+                first_portal.map(&mut f).unwrap_or(1)
+                    + second_portal.map(&mut f).unwrap_or(1)
+                    + what.map(&mut f).unwrap_or(1)
             }
             Simple { .. } => 0,
             Parametrized {
@@ -641,8 +641,8 @@ impl StorageElem2 for Matrix {
                 otherwise,
             } => {
                 condition.errors_count(uniforms, formulas_cache)
-                    + then.map(|a| f(a)).unwrap_or(1)
-                    + otherwise.map(|a| f(a)).unwrap_or(1)
+                    + then.map(&mut f).unwrap_or(1)
+                    + otherwise.map(f).unwrap_or(1)
             }
         }
         // POSTPONE

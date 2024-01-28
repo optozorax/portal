@@ -20,14 +20,8 @@ pub struct CalculatedCam {
     pub r: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct CurrentCam(pub Option<CameraId>); // if this is None, then camera is original
-
-impl Default for CurrentCam {
-    fn default() -> Self {
-        Self(None)
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct OriginalCam(pub CalculatedCam);

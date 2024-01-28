@@ -79,8 +79,8 @@ pub struct Scene {
 impl Drop for Scene {
     fn drop(&mut self) {
         match ron::to_string(self) {
-            Ok(_result) => crate::error!(format, "scene:\n\n{}", result),
-            Err(_err) => crate::error!(format, "errors while serializing scene: {:?}", err),
+            Ok(result) => crate::error!(format, "scene:\n\n{}", result),
+            Err(err) => crate::error!(format, "errors while serializing scene: {:?}", err),
         }
     }
 }
@@ -176,7 +176,7 @@ impl Scene {
                 .add_enabled(*should_recompile, Button::new("Recompile"))
                 .clicked()
             {
-                match self.get_new_material(&data) {
+                match self.get_new_material(data) {
                     Some(Ok(m)) => {
                         data.reload_textures = true;
                         material = Some(Ok(m));
@@ -301,7 +301,7 @@ impl Scene {
                 data.show_glsl_library = true;
             }
             if ui.button("View generated GLSL code").clicked() {
-                data.show_compiled_code = self.generate_shader_code(&data).map(|x| x.storage);
+                data.show_compiled_code = self.generate_shader_code(data).map(|x| x.storage);
             }
         });
 
@@ -315,7 +315,7 @@ impl Scene {
                     *show_error_window = true;
                 }
             });
-            egui_errors(ui, &local_errors);
+            egui_errors(ui, local_errors);
         }
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -469,7 +469,7 @@ impl Scene {
                         }
                     }
                     .into_iter()
-                    .filter_map(|id| Some((id, Object::get_name(id, &matrices)?))),
+                    .filter_map(|id| Some((id, Object::get_name(id, matrices)?))),
                 )
             })
             .flatten()
@@ -498,8 +498,8 @@ impl Scene {
                     Portal(a, b) => {
                         let a = (*a)?;
                         let b = (*b)?;
-                        let a = (a, Object::get_name(a, &matrices)?);
-                        let b = (b, Object::get_name(b, &matrices)?);
+                        let a = (a, Object::get_name(a, matrices)?);
+                        let b = (b, Object::get_name(b, matrices)?);
                         Some((a, b))
                     }
                 },

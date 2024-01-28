@@ -37,12 +37,6 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/room.ron"),
                         hidden: true,
                     },
-                    // Scene {
-                    //     name: "Misc",
-                    //     link: "misc",
-                    //     content: include_str!("../../scenes/misc.json"),
-                    //     hidden: true,
-                    // },
                 ],
             },
             SceneSection {

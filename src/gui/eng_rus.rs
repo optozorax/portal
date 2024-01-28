@@ -9,17 +9,12 @@ pub struct EngRusText {
     pub rus: String,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 pub enum EngRusSettings {
+    #[default]
     Eng,
     Rus,
-}
-
-impl Default for EngRusSettings {
-    fn default() -> Self {
-        EngRusSettings::Eng
-    }
 }
 
 impl EngRusSettings {

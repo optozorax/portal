@@ -88,7 +88,7 @@ pub struct LibraryCode(pub GlslCode);
 impl GlslCode {
     pub fn egui(&mut self, ui: &mut Ui) -> WhatChanged {
         WhatChanged::from_shader(
-            ui.add(TextEdit::multiline(&mut self.0).text_style(TextStyle::Monospace))
+            ui.add(TextEdit::multiline(&mut self.0).font(TextStyle::Monospace))
                 .changed(),
         )
     }
