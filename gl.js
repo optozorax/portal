@@ -8,10 +8,10 @@
 
 "use strict";
 
-const version = "0.1.26";
+const version = "0.4.0";
 
 const canvas = document.querySelector("#glcanvas");
-const gl = canvas.getContext("webgl2");
+const gl = canvas.getContext("webgl");
 if (gl === null) {
     alert("Unable to initialize WebGL. Your browser or machine may not support it.");
 }
@@ -42,6 +42,17 @@ function assert(flag, message) {
 }
 
 function acquireVertexArrayObjectExtension(ctx) {
+    // Extension available in WebGL 1 from Firefox 25 and WebKit 536.28/desktop Safari 6.0.3 onwards. Core feature in WebGL 2.
+    var ext = ctx.getExtension('OES_vertex_array_object');
+    if (ext) {
+        ctx['createVertexArray'] = function () { return ext['createVertexArrayOES'](); };
+        ctx['deleteVertexArray'] = function (vao) { ext['deleteVertexArrayOES'](vao); };
+        ctx['bindVertexArray'] = function (vao) { ext['bindVertexArrayOES'](vao); };
+        ctx['isVertexArray'] = function (vao) { return ext['isVertexArrayOES'](vao); };
+    }
+    else {
+        alert("Unable to get OES_vertex_array_object extension");
+    }
 }
 
 
@@ -66,9 +77,21 @@ function acquireDisjointTimerQueryExtension(ctx) {
     }
 }
 
+try {
+    gl.getExtension("EXT_shader_texture_lod");
+    gl.getExtension("OES_standard_derivatives");
+} catch (e) {
+    console.warn(e);
+}
+
 acquireVertexArrayObjectExtension(gl);
 acquireInstancedArraysExtension(gl);
 acquireDisjointTimerQueryExtension(gl);
+
+// https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_depth_texture
+if (gl.getExtension('WEBGL_depth_texture') == null) {
+    alert("Cant initialize WEBGL_depth_texture extension");
+}
 
 function getArray(ptr, arr, n) {
     return new arr(wasm_memory.buffer, ptr, n);
@@ -399,7 +422,7 @@ function animation() {
 const SAPP_EVENTTYPE_TOUCHES_BEGAN = 10;
 const SAPP_EVENTTYPE_TOUCHES_MOVED = 11;
 const SAPP_EVENTTYPE_TOUCHES_ENDED = 12;
-const SAPP_EVENTTYPE_TOUCHES_CANCELLED = 13;
+const SAPP_EVENTTYPE_TOUCHES_CANCELED = 13;
 
 const SAPP_MODIFIER_SHIFT = 1;
 const SAPP_MODIFIER_CTRL = 2;
@@ -418,11 +441,11 @@ function into_sapp_mousebutton(btn) {
 function into_sapp_keycode(key_code) {
     switch (key_code) {
         case "Space": return 32;
-        case "Quote": return 39;
+        case "Quote": return 222;
         case "Comma": return 44;
         case "Minus": return 45;
         case "Period": return 46;
-        case "Slash": return 47;
+        case "Slash": return 189;
         case "Digit0": return 48;
         case "Digit1": return 49;
         case "Digit2": return 50;
@@ -521,7 +544,7 @@ function into_sapp_keycode(key_code) {
         case "NumpadDecimal": return 330;
         case "NumpadDivide": return 331;
         case "NumpadMultiply": return 332;
-        case "NumpadSubstract": return 333;
+        case "NumpadSubtract": return 333;
         case "NumpadAdd": return 334;
         case "NumpadEnter": return 335;
         case "NumpadEqual": return 336;
@@ -614,7 +637,7 @@ var importObject = {
             gl.clearColor(r, g, b, a);
         },
         glClearStencil: function (s) {
-            gl.clearColorStencil(s);
+            gl.clearStencil(s);
         },
         glColorMask: function (red, green, blue, alpha) {
             gl.colorMask(red, green, blue, alpha);
@@ -933,6 +956,17 @@ var importObject = {
                 array[i] = log.charCodeAt(i);
             }
         },
+        glGetString: function(id) {
+            // getParameter returns "any": it could be GLenum, String or whatever,
+            // depending on the id.
+            var parameter = gl.getParameter(id).toString();
+            var len = parameter.length + 1;
+            var msg = wasm_exports.allocate_vec_u8(len);
+            var array = new Uint8Array(wasm_memory.buffer, msg, len);
+            array[parameter.length] = 0;
+            stringToUTF8(parameter, array, 0, len);
+            return msg;
+        },
         glCompileShader: function (shader, count, string, length) {
             GL.validateGLObjectID(GL.shaders, shader, 'glCompileShader', 'shader');
             gl.compileShader(GL.shaders[shader]);
@@ -1045,6 +1079,10 @@ var importObject = {
             heap[0] = result;
             heap[1] = (result - heap[0])/4294967296;
         },
+        glGenerateMipmap: function (index) {
+            gl.generateMipmap(index);
+        },
+
         setup_canvas_size: function(high_dpi) {
             window.high_dpi = high_dpi;
             resize(canvas);
@@ -1121,7 +1159,19 @@ var importObject = {
             };
             canvas.onkeyup = function (event) {
                 var sapp_key_code = into_sapp_keycode(event.code);
-                wasm_exports.key_up(sapp_key_code);
+
+                var modifiers = 0;
+                if (event.ctrlKey) {
+                    modifiers |= SAPP_MODIFIER_CTRL;
+                }
+                if (event.shiftKey) {
+                    modifiers |= SAPP_MODIFIER_SHIFT;
+                }
+                if (event.altKey) {
+                    modifiers |= SAPP_MODIFIER_ALT;
+                }
+
+                wasm_exports.key_up(sapp_key_code, modifiers);
             };
             canvas.onkeypress = function (event) {
                 var sapp_key_code = into_sapp_keycode(event.code);
@@ -1138,28 +1188,32 @@ var importObject = {
                 event.preventDefault();
 
                 for (const touch of event.changedTouches) {
-                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_BEGAN, touch.identifier, Math.floor(touch.clientX) * dpi_scale(), Math.floor(touch.clientY) * dpi_scale());
+                    let relative_position = mouse_relative_position(touch.clientX, touch.clientY);
+                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_BEGAN, touch.identifier, relative_position.x, relative_position.y);
                 }
             });
             canvas.addEventListener("touchend", function (event) {
                 event.preventDefault();
 
                 for (const touch of event.changedTouches) {
-                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_ENDED, touch.identifier, Math.floor(touch.clientX) * dpi_scale(), Math.floor(touch.clientY) * dpi_scale());
+                    let relative_position = mouse_relative_position(touch.clientX, touch.clientY);
+                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_ENDED, touch.identifier, relative_position.x, relative_position.y);
                 }
             });
             canvas.addEventListener("touchcancel", function (event) {
                 event.preventDefault();
 
                 for (const touch of event.changedTouches) {
-                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_CANCELED, touch.identifier, Math.floor(touch.clientX) * dpi_scale(), Math.floor(touch.clientY) * dpi_scale());
+                    let relative_position = mouse_relative_position(touch.clientX, touch.clientY);
+                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_CANCELED, touch.identifier, relative_position.x, relative_position.y);
                 }
             });
             canvas.addEventListener("touchmove", function (event) {
                 event.preventDefault();
 
                 for (const touch of event.changedTouches) {
-                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_MOVED, touch.identifier, Math.floor(touch.clientX) * dpi_scale(), Math.floor(touch.clientY) * dpi_scale());
+                    let relative_position = mouse_relative_position(touch.clientX, touch.clientY);
+                    wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_MOVED, touch.identifier, relative_position.x, relative_position.y);
                 }
             });
 
@@ -1194,6 +1248,45 @@ var importObject = {
                 }
             });
 
+            window.ondragover = function(e) {
+                e.preventDefault();
+            };
+
+            window.ondrop = async function(e) {
+                e.preventDefault();
+
+                wasm_exports.on_files_dropped_start();
+
+                for (let file of e.dataTransfer.files) {
+                    const nameLen = file.name.length;
+                    const nameVec = wasm_exports.allocate_vec_u8(nameLen);
+                    const nameHeap = new Uint8Array(wasm_memory.buffer, nameVec, nameLen);
+                    stringToUTF8(file.name, nameHeap, 0, nameLen);
+
+                    const fileBuf = await file.arrayBuffer();
+                    const fileLen = fileBuf.byteLength;
+                    const fileVec = wasm_exports.allocate_vec_u8(fileLen);
+                    const fileHeap = new Uint8Array(wasm_memory.buffer, fileVec, fileLen);
+                    fileHeap.set(new Uint8Array(fileBuf), 0);
+
+                    wasm_exports.on_file_dropped(nameVec, nameLen, fileVec, fileLen);
+                }
+
+                wasm_exports.on_files_dropped_finish();
+            };
+
+            let lastFocus = document.hasFocus();
+            var checkFocus = function() {
+                let hasFocus = document.hasFocus();
+                if(lastFocus == hasFocus){
+                    wasm_exports.focus(hasFocus);
+                    lastFocus = hasFocus;
+                }
+            }
+            document.addEventListener("visibilitychange", checkFocus);
+            window.addEventListener("focus", checkFocus);
+            window.addEventListener("blur", checkFocus);
+
             window.requestAnimationFrame(animation);
         },
 
@@ -1203,20 +1296,23 @@ var importObject = {
             FS.unique_id += 1;
             var xhr = new XMLHttpRequest();
             xhr.open('GET', url, true);
-            xhr.responseType = 'arraybuffer';
-            xhr.onload = function (e) {
-                if (this.status == 200) {
-                    var uInt8Array = new Uint8Array(this.response);
+            xhr.responseType = 'arraybuffer'; 
 
-                    FS.loaded_files[file_id] = uInt8Array;
-                    wasm_exports.file_loaded(file_id);
-                }
-            }
-            xhr.onerror = function (e) {
-                FS.loaded_files[file_id] = null;
-                wasm_exports.file_loaded(file_id);
+            xhr.onreadystatechange = function() {
+            // looks like readyState === 4 will be fired on either successful or unsuccessful load:
+        // https://stackoverflow.com/a/19247992
+                if (this.readyState === 4) {
+                    if(this.status === 200) {  
+                        var uInt8Array = new Uint8Array(this.response);
+    
+                        FS.loaded_files[file_id] = uInt8Array;
+                        wasm_exports.file_loaded(file_id);
+                    } else {
+                        FS.loaded_files[file_id] = null;
+                        wasm_exports.file_loaded(file_id);
+                    }
+                } 
             };
-
             xhr.send();
 
             return file_id;
@@ -1358,7 +1454,7 @@ function load(wasm_path) {
                     if (version != crate_version) {
                         console.error(
                             "Version mismatch: gl.js version is: " + version +
-                                ", rust sapp-wasm crate version is: " + crate_version);
+                                ", miniquad crate version is: " + crate_version);
                     }
                     init_plugins(plugins);
                     obj.exports.main();
