@@ -54,7 +54,8 @@ uniform int _ray_tracing_depth;
 
 vec3 ray_tracing(Ray r) {
     vec3 current_color = vec3(1.);
-    for (int j = 0; j < _ray_tracing_depth; j++) {
+    for (int j = 0; j < 10000; j++) {
+        if (j >= _ray_tracing_depth) break;
         SceneIntersection i = scene_intersect(r);
 
         // Offset ray
@@ -163,7 +164,8 @@ void main() {
     vec3 result = vec3(0.);
 
     int count = _aa_count;
-    for (int a = 0; a < _aa_count; a++) {
+    for (int a = 0; a < 30; a++) {
+        if (a >= _aa_count) break;
         vec2 offset = quasi_random(a);
         result += get_color(uv_screen + offset * pixel_size * 2.);
     }
