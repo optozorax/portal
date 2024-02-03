@@ -283,6 +283,7 @@ struct Window {
     cam: RotateAroundCam,
     material: macroquad::material::Material,
     should_recompile: bool,
+    dpi_set: bool,
 
     draw_menu: bool,
     control_scene_opened: bool,
@@ -356,6 +357,7 @@ impl Window {
         scene.set_uniforms(&mut material, &mut data);
         let mut result = Window {
             should_recompile: false,
+            dpi_set: false,
             scene,
             cam: RotateAroundCam::new(),
 
@@ -420,6 +422,11 @@ impl Window {
 
     fn process_mouse_and_keys(&mut self, ctx: &egui::Context) -> bool {
         let mut is_something_changed = false;
+
+        if !self.dpi_set {
+            ctx.set_pixels_per_point(1.7);
+            self.dpi_set = true;
+        }
 
         self.data
             .formulas_cache
