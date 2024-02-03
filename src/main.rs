@@ -767,6 +767,7 @@ First, predefined library is included, then uniforms, then user library, then in
                             ui.ctx()
                                 .set_pixels_per_point(ui.ctx().pixels_per_point() / 1.2);
                         }
+                        ui.label(format!(" ({})", ui.ctx().pixels_per_point()));
                     });
                 });
             self.render_options_opened = render_options_opened;
