@@ -9,6 +9,7 @@ use portal::gui::eng_rus::EngRusText;
 use portal::gui::scenes::ShowHiddenScenes;
 use portal::with_swapped;
 use std::f64::consts::PI;
+use gesture_recognizer::*;
 
 use macroquad::prelude::{
     clamp, clear_background, draw_rectangle, draw_texture_ex, get_screen_data,
@@ -38,6 +39,11 @@ struct RotateAroundCam {
 
     inverse_x: bool,
     inverse_y: bool,
+
+    // crutch variables, because touch processed in function where we can't pass parameters
+    mouse_over_canvas_right_now: bool,
+    is_something_changed: bool,
+    start_touch_scale: f64,
 }
 
 impl RotateAroundCam {
@@ -63,6 +69,10 @@ impl RotateAroundCam {
 
             inverse_x: false,
             inverse_y: false,
+
+            mouse_over_canvas_right_now: false,
+            is_something_changed: false,
+            start_touch_scale: 1.0,
         }
     }
 
@@ -75,32 +85,42 @@ impl RotateAroundCam {
         }
     }
 
+    fn process_mouse_offset(&mut self, x: f64, y: f64) {
+        let mut dalpha = x * self.mouse_sensitivity / 800.;
+        let mut dbeta = -y * self.mouse_sensitivity / 800.;
+
+        if self.inverse_x {
+            dalpha *= -1.0;
+        }
+        if self.inverse_y {
+            dbeta *= -1.0;
+        }
+
+        self.alpha += dalpha;
+        if self.alpha > 2.0 * PI {
+            self.alpha -= 2.0 * PI;
+        }
+        if self.alpha < 0. {
+            self.alpha += 2.0 * PI;
+        }
+        self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
+    }
+
     fn process_mouse_and_keys(
         &mut self,
         mouse_over_canvas: bool,
         memory: &mut egui::Memory,
     ) -> bool {
-        let mut is_something_changed = false;
+        let mut is_something_changed = self.is_something_changed;
 
         let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
 
         if is_mouse_button_down(MouseButton::Left) && mouse_over_canvas {
             let size = mymax(screen_width().into(), screen_height().into());
-            let mut dalpha =
-                (mouse_pos.x - self.previous_mouse.x) * self.mouse_sensitivity * size / 800.;
-            let mut dbeta =
-                -(mouse_pos.y - self.previous_mouse.y) * self.mouse_sensitivity * size / 800.;
-
-            if self.inverse_x {
-                dalpha *= -1.0;
-            }
-            if self.inverse_y {
-                dbeta *= -1.0;
-            }
-
-            self.alpha += dalpha;
-            self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
-
+            self.process_mouse_offset(
+                (mouse_pos.x - self.previous_mouse.x) * size,
+                (mouse_pos.y - self.previous_mouse.y) * size,
+            );
             is_something_changed = true;
         }
 
@@ -113,9 +133,7 @@ impl RotateAroundCam {
                 self.r *= self.scale_factor;
                 is_something_changed = true;
             }
-            if self.r > 100. {
-                self.r = 100.;
-            }
+            self.r = clamp(self.r, 0.01, 100.);
         }
 
         if is_something_changed {
@@ -161,6 +179,47 @@ impl RotateAroundCam {
         cam_settings.alpha = self.alpha;
         cam_settings.beta = self.beta;
         cam_settings.r = self.r;
+    }
+}
+
+impl macroquad::miniquad::EventHandler for Window {
+    fn update(&mut self) {}
+
+    fn draw(&mut self) {}
+
+    fn touch_event(&mut self, phase: macroquad::miniquad::TouchPhase, id: u64, x: f32, y: f32) {
+        use macroquad::miniquad::TouchPhase::*;
+        use TouchType::*;
+        let phase = match phase {
+            Started => Start,
+            Moved => Move,
+            Ended => End,
+            Cancelled => End,
+        };
+        self.gesture_recognizer.process(&mut self.cam, phase, id, x, y);
+    }
+}
+
+impl GestureEvents for RotateAroundCam {
+    fn touch_one_move(&mut self, _pos: &Point, offset: &Point) {
+        if self.mouse_over_canvas_right_now {
+            self.process_mouse_offset(offset.x as f64, offset.y as f64);
+            self.is_something_changed = true;
+        }
+    }
+
+    fn touch_scale_start(&mut self, _pos: &Point) {
+        self.start_touch_scale = self.r;
+    }
+    fn touch_scale_change(&mut self, scale: f32, _pos: &Point, offset: &Point) {
+        if self.mouse_over_canvas_right_now {
+            self.process_mouse_offset(offset.x as f64, offset.y as f64);
+
+            self.r = self.start_touch_scale / scale as f64;
+            self.r = clamp(self.r, 0.01, 100.);
+
+            self.is_something_changed = true;
+        }
     }
 }
 
@@ -312,6 +371,9 @@ struct Window {
     scene_initted: bool,
 
     scene_name: &'static str,
+
+    gesture_recognizer: GestureRecognizer,
+    input_subscriber_id: usize,
 }
 
 impl Window {
@@ -393,6 +455,9 @@ impl Window {
             scene_initted: false,
 
             scene_name,
+
+            gesture_recognizer: Default::default(),
+            input_subscriber_id: macroquad::input::utils::register_input_subscriber(),
         };
         result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
@@ -871,7 +936,11 @@ First, predefined library is included, then uniforms, then user library, then in
         }
 
         ctx.memory_mut(|memory| {
-            is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory)
+            self.cam.is_something_changed = false;
+            self.cam.mouse_over_canvas_right_now = mouse_over_canvas;
+            macroquad::input::utils::repeat_all_miniquad_input(self, self.input_subscriber_id);
+
+            is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
         });
 
         is_something_changed
@@ -939,6 +1008,8 @@ async fn main() {
     let mut image_size_changed = true;
 
     let mut ui_changed_image = true;
+
+    macroquad::input::simulate_mouse_with_touch(false);
 
     loop {
         clear_background(BLACK);

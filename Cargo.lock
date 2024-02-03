@@ -425,6 +425,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "gesture-recognizer"
+version = "0.1.0"
+source = "git+https://github.com/optozorax/gesture-recognizer#c5d34c51c8a1d4966053aed5a69845ac2b22aed5"
+
+[[package]]
 name = "getrandom"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -850,6 +855,7 @@ dependencies = [
  "egui-macroquad",
  "egui_demo_lib",
  "fasteval",
+ "gesture-recognizer",
  "glam 0.13.1",
  "macroquad",
  "quad-url",

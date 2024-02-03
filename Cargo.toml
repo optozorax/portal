@@ -14,6 +14,7 @@ egui = "0.25.0"
 fasteval = "0.2.4"
 quad-url = "0.1.0"
 egui_demo_lib = "0.25.0"
+gesture-recognizer = { git = "https://github.com/optozorax/gesture-recognizer" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 color-backtrace = "0.5.0"
