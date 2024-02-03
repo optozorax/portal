@@ -404,7 +404,7 @@ impl<T: StorageElem2> Storage2<T> {
                         if inline {
                             if let Some(id) = id {
                                 self.remove(*id, input);
-                                ui.memory().data.remove::<String>(data_id);
+                                ui.memory_mut(|memory| memory.data.remove::<String>(data_id));
                             }
                         }
 
@@ -451,10 +451,12 @@ impl<T: StorageElem2> Storage2<T> {
                 .unwrap()
                 .to_owned()
         } else {
-            ui.memory()
-                .data
-                .get_persisted_mut_or_default::<String>(data_id)
-                .clone()
+            ui.memory_mut(|memory| {
+                memory
+                    .data
+                    .get_persisted_mut_or_default::<String>(data_id)
+                    .clone()
+            })
         };
 
         let changed = ui
@@ -476,10 +478,10 @@ impl<T: StorageElem2> Storage2<T> {
                 .find(|(_, elem)| elem.is_named_as(&current_name))
             {
                 *id = Some(T::IdWrapper::wrap(*new_id));
-                ui.memory().data.remove::<String>(data_id);
+                ui.memory_mut(|memory| memory.data.remove::<String>(data_id));
             } else {
                 *id = None;
-                ui.memory().data.insert_persisted(data_id, current_name);
+                ui.memory_mut(|memory| memory.data.insert_persisted(data_id, current_name));
             }
         }
 

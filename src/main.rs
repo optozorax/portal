@@ -1,5 +1,5 @@
-use macroquad::prelude::is_key_pressed;
 use glam::{DMat4, DVec2, DVec3, DVec4};
+use macroquad::prelude::is_key_pressed;
 use portal::gui::camera::CalculatedCam;
 use portal::gui::camera::CameraId;
 use portal::gui::camera::CurrentCam;
@@ -334,14 +334,14 @@ impl Window {
             available_scenes.get_by_link(default_scene).unwrap()
         };
 
-        let mut scene: Scene = ron::from_str(&scene_content).unwrap();
+        let mut scene: Scene = ron::from_str(scene_content).unwrap();
 
         let mut data: Data = Data {
             reload_textures: true,
             ..Default::default()
         };
 
-        let material = scene
+        let mut material = scene
             .get_new_material(&data)
             .unwrap()
             .unwrap_or_else(|err| {
@@ -353,7 +353,7 @@ impl Window {
                 );
                 std::process::exit(1)
             });
-        scene.set_uniforms(material, &mut data);
+        scene.set_uniforms(&mut material, &mut data);
         let mut result = Window {
             should_recompile: false,
             scene,
@@ -427,11 +427,13 @@ impl Window {
 
         if !self.scene_initted {
             self.scene_initted = true;
-            self.scene.init(&mut self.data, &mut ctx.memory());
-            ctx.memory().data.insert_persisted(
-                egui::Id::new("OriginalCam"),
-                OriginalCam(self.cam.get_calculated_cam()),
-            );
+            ctx.memory_mut(|memory| self.scene.init(&mut self.data, memory));
+            ctx.memory_mut(|memory| {
+                memory.data.insert_persisted(
+                    egui::Id::new("OriginalCam"),
+                    OriginalCam(self.cam.get_calculated_cam()),
+                )
+            });
         }
 
         let mut changed = WhatChanged::default();
@@ -442,7 +444,7 @@ impl Window {
         if self.draw_menu {
             egui::containers::panel::TopBottomPanel::top("my top").show(ctx, |ui| {
                 use egui::menu;
-                
+
                 menu::bar(ui, |ui| {
                     ui.menu_button("🗋 Load", |ui| {
                         if let Some((content, link, name)) = self.available_scenes.egui(ui) {
@@ -450,8 +452,7 @@ impl Window {
                             // let old: OldScene = serde_json::from_str(&s).unwrap();
                             // *self = old.into();
                             self.scene = ron::from_str(s).unwrap();
-                            self.scene.init(&mut self.data, &mut ctx.memory());
-                            self.material.delete();
+                            ctx.memory_mut(|memory| self.scene.init(&mut self.data, memory));
                             self.material = self
                                 .scene
                                 .get_new_material(&self.data)
@@ -468,10 +469,12 @@ impl Window {
                             changed.uniform = true;
                             self.data.reload_textures = true;
                             self.cam.set_cam(&self.scene.cam);
-                            ui.ctx().memory().data.insert_persisted(
-                                egui::Id::new("OriginalCam"),
-                                OriginalCam(self.cam.get_calculated_cam()),
-                            );
+                            ui.ctx().memory_mut(|memory| {
+                                memory.data.insert_persisted(
+                                    egui::Id::new("OriginalCam"),
+                                    OriginalCam(self.cam.get_calculated_cam()),
+                                )
+                            });
                             self.offset_after_material = self.scene.cam.offset_after_material;
                             quad_url::set_program_parameter("scene", link);
                             self.scene_name = name;
@@ -526,7 +529,6 @@ impl Window {
             if let Some(material) = material {
                 match material {
                     Ok(material) => {
-                        self.material.delete();
                         self.material = material;
                         self.error_message = None;
                     }
@@ -645,14 +647,13 @@ First, predefined library is included, then uniforms, then user library, then in
                             match ron::from_str::<Scene>(content) {
                                 Ok(scene) => {
                                     self.scene = scene;
-                                    self.scene.init(&mut self.data, &mut ui.memory());
+                                    ui.memory_mut(|memory| self.scene.init(&mut self.data, memory));
                                     self.cam.set_cam(&self.scene.cam);
                                     self.offset_after_material = self.scene.cam.offset_after_material;
                                     changed.uniform = true;
                                     self.data.reload_textures = true;
                                     match self.scene.get_new_material(&self.data) {
                                         Some(Ok(material)) => {
-                                            self.material.delete();
                                             self.material = material;
                                         },
                                         Some(Err(_)) | None => {
@@ -791,52 +792,61 @@ First, predefined library is included, then uniforms, then user library, then in
                     egui_demo_lib::easy_mark::easy_mark(ui, text);
                     ui.separator();
 
-                    let mut checked = *ui
-                        .memory()
-                        .data
-                        .get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new(
-                            "ShowHiddenScenes",
-                        ));
+                    let mut checked = ui.memory_mut(|memory| {
+                        *memory
+                            .data
+                            .get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new(
+                                "ShowHiddenScenes",
+                            ))
+                    });
                     ui.checkbox(&mut checked.0, "Show hidden scenes :P");
-                    ui.memory()
-                        .data
-                        .insert_persisted(egui::Id::new("ShowHiddenScenes"), checked);
+                    ui.memory_mut(|memory| {
+                        memory
+                            .data
+                            .insert_persisted(egui::Id::new("ShowHiddenScenes"), checked)
+                    });
                 });
             self.about_opened = about_opened;
         }
 
         let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
 
-        let memory = &mut ctx.memory();
-
         if changed.uniform || self.scene.use_time {
-            self.scene.set_uniforms(self.material, &mut self.data);
+            self.scene.set_uniforms(&mut self.material, &mut self.data);
             self.set_uniforms();
 
-            let current_cam = memory
-                .data
-                .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
-                .0;
+            let current_cam = ctx.memory_mut(|memory| {
+                memory
+                    .data
+                    .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+                    .0
+            });
             if self.cam.from != current_cam {
                 let calculated_cam = if let Some(id) = current_cam {
                     // set getted camera
 
                     if self.cam.from.is_none() {
                         let calculated_cam = self.cam.get_calculated_cam();
-                        memory.data.insert_persisted(
-                            egui::Id::new("OriginalCam"),
-                            OriginalCam(calculated_cam),
-                        );
+                        ctx.memory_mut(|memory| {
+                            memory.data.insert_persisted(
+                                egui::Id::new("OriginalCam"),
+                                OriginalCam(calculated_cam),
+                            )
+                        });
                     }
 
                     with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
                         self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap())
                 } else {
                     // set original camera
-                    memory
-                        .data
-                        .get_persisted_mut_or_default::<OriginalCam>(egui::Id::new("OriginalCam"))
-                        .0
+                    ctx.memory_mut(|memory| {
+                        memory
+                            .data
+                            .get_persisted_mut_or_default::<OriginalCam>(egui::Id::new(
+                                "OriginalCam",
+                            ))
+                            .0
+                    })
                 };
 
                 self.cam.from = current_cam;
@@ -853,7 +863,9 @@ First, predefined library is included, then uniforms, then user library, then in
             is_something_changed = true;
         }
 
-        is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
+        ctx.memory_mut(|memory| {
+            is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory)
+        });
 
         is_something_changed
     }
@@ -889,7 +901,7 @@ First, predefined library is included, then uniforms, then user library, then in
     fn draw(&mut self) {
         self.set_uniforms();
 
-        gl_use_material(self.material);
+        gl_use_material(&self.material);
         draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
         gl_use_default_material();
     }
@@ -900,6 +912,9 @@ fn window_conf() -> Conf {
         window_title: "Portal Explorer".to_owned(),
         high_dpi: true,
         window_resizable: true,
+        // fullscreen: true,
+        window_width: 1920,
+        window_height: 1080,
         ..Default::default()
     }
 }
@@ -941,7 +956,7 @@ async fn main() {
             ui_changed_image = false;
         } else {
             draw_texture_ex(
-                texture,
+                &texture,
                 0.,
                 0.,
                 WHITE,

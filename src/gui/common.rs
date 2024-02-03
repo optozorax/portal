@@ -32,7 +32,7 @@ pub fn rad2deg(rad: f64) -> f64 {
 pub struct ShaderErrors(HashMap<TypeId, HashMap<UniqueId, Vec<(usize, String)>>>);
 
 #[derive(Debug, Default)]
-pub struct TextureErrors(pub BTreeMap<String, macroquad::file::FileError>);
+pub struct TextureErrors(pub BTreeMap<String, macroquad::Error>);
 
 impl ShaderErrors {
     pub fn get<T: Any + Wrapper>(&self, id: T) -> Option<&[(usize, String)]> {
@@ -45,9 +45,9 @@ impl ShaderErrors {
     pub fn push(&mut self, (type_id, uniq_id): (TypeId, UniqueId), value: (usize, String)) {
         self.0
             .entry(type_id)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .entry(uniq_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(value);
     }
 
@@ -309,14 +309,15 @@ pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::
     ui.vertical(|ui| {
         let id = Id::new(id_source);
 
-        let mut state = *ui.memory().data.get_persisted_mut_or_default::<State>(id);
+        let mut state =
+            ui.memory_mut(|memory| *memory.data.get_persisted_mut_or_default::<State>(id));
 
         ui.horizontal(|ui| {
             ui.selectable_value(&mut state, State::View, "View");
             ui.selectable_value(&mut state, State::Edit, "Edit");
         });
 
-        ui.memory().data.insert_persisted(id, state);
+        ui.memory_mut(|memory| memory.data.insert_persisted(id, state));
 
         match state {
             State::View => {

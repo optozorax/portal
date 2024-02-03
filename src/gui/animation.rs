@@ -199,9 +199,11 @@ impl<T: StorageElem2 + std::fmt::Debug> StageChanging<T> {
             .enumerate()
         {
             if let Some(element) = self.0.get(&id) {
-                ui.memory()
-                    .data
-                    .insert_persisted::<usize>(egui::Id::new("AnimationStage i"), i);
+                ui.memory_mut(|memory| {
+                    memory
+                        .data
+                        .insert_persisted::<usize>(egui::Id::new("AnimationStage i"), i)
+                });
                 changed |= element.user_egui(ui, storage, &user_egui, names, id, vertical);
             } else {
                 crate::error!();
@@ -568,11 +570,12 @@ impl AnimationStage {
         }
 
         if self.original_cam_button {
-            let id = ui
-                .memory()
-                .data
-                .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
-                .0;
+            let id = ui.memory_mut(|memory| {
+                memory
+                    .data
+                    .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+                    .0
+            });
             let selected = id.is_none();
             if ui.radio(selected, "Original camera").clicked() && !selected {
                 Cam::set_original_cam(ui);
@@ -609,10 +612,11 @@ impl AnimationStage {
             matrices,
             &mut elements_descriptions.matrices,
             |elem, ui| {
-                let i = ui
-                    .memory()
-                    .data
-                    .get_persisted::<usize>(egui::Id::new("AnimationStage i"));
+                let i = ui.memory_mut(|memory| {
+                    memory
+                        .data
+                        .get_persisted::<usize>(egui::Id::new("AnimationStage i"))
+                });
                 elem.user_egui(ui, id.with(i))
             },
             true,

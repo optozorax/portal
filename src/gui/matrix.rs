@@ -333,31 +333,16 @@ impl StorageElem2 for Matrix {
             } => {
                 let hpat![uniforms, formulas_cache] = input;
                 ui.label("Offset: ");
-                changed.uniform |= offset.egui(
-                    ui,
-                    egui_f64,
-                    uniforms,
-                    formulas_cache,
-                    data_id.with(0),
-                );
+                changed.uniform |=
+                    offset.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(0));
                 ui.separator();
                 ui.label("Rotate: ");
-                changed.uniform |= rotate.egui(
-                    ui,
-                    egui_angle,
-                    uniforms,
-                    formulas_cache,
-                    data_id.with(1),
-                );
+                changed.uniform |=
+                    rotate.egui(ui, egui_angle, uniforms, formulas_cache, data_id.with(1));
                 ui.separator();
                 ui.label("Mirror: ");
-                changed.uniform |= mirror.egui(
-                    ui,
-                    egui_0_1,
-                    uniforms,
-                    formulas_cache,
-                    data_id.with(2),
-                );
+                changed.uniform |=
+                    mirror.egui(ui, egui_0_1, uniforms, formulas_cache, data_id.with(2));
                 ui.separator();
                 changed.uniform |= scale.egui(
                     ui,
@@ -372,40 +357,17 @@ impl StorageElem2 for Matrix {
             Exact { i, j, k, pos } => {
                 let hpat![uniforms, formulas_cache] = input;
                 ui.label("i: ");
-                changed.uniform |= i.egui(
-                    ui,
-                    egui_f64,
-                    uniforms,
-                    formulas_cache,
-                    data_id.with(0),
-                );
+                changed.uniform |= i.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(0));
                 ui.separator();
                 ui.label("j: ");
-                changed.uniform |= j.egui(
-                    ui,
-                    egui_f64,
-                    uniforms,
-                    formulas_cache,
-                    data_id.with(0),
-                );
+                changed.uniform |= j.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(0));
                 ui.separator();
                 ui.label("k: ");
-                changed.uniform |= k.egui(
-                    ui,
-                    egui_f64,
-                    uniforms,
-                    formulas_cache,
-                    data_id.with(0),
-                );
+                changed.uniform |= k.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(0));
                 ui.separator();
                 ui.label("pos: ");
-                changed.uniform |= pos.egui(
-                    ui,
-                    egui_f64,
-                    uniforms,
-                    formulas_cache,
-                    data_id.with(0),
-                );
+                changed.uniform |=
+                    pos.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(0));
             }
             If {
                 condition,

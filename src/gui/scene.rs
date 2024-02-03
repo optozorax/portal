@@ -149,7 +149,7 @@ impl Scene {
         let response = ui.radio(current_selected, "dev");
         if response.clicked() && !current_selected {
             self.current_stage = None;
-            changed |= self.init_stage(self.current_stage, &mut ui.memory());
+            changed |= ui.memory_mut(|memory| self.init_stage(self.current_stage, memory));
         }
         changed
     }
@@ -196,7 +196,7 @@ impl Scene {
             let response = ui.radio(self.current_stage.is_none(), "dev");
             if response.clicked() && self.current_stage.is_some() {
                 self.current_stage = None;
-                changed |= self.init_stage(self.current_stage, &mut ui.memory());
+                changed |= ui.memory_mut(|memory| self.init_stage(self.current_stage, memory));
             }
 
             ui.checkbox(&mut self.use_time, "Use time");
@@ -346,7 +346,7 @@ impl Scene {
 
 pub trait UniformStruct {
     fn uniforms(&self) -> Vec<(String, UniformType)>;
-    fn set_uniforms(&self, material: macroquad::material::Material);
+    fn set_uniforms(&self, material: &mut macroquad::material::Material);
 }
 
 impl Scene {
@@ -446,7 +446,7 @@ impl Scene {
         Some(result)
     }
 
-    pub fn set_uniforms(&mut self, material: macroquad::material::Material, data: &mut Data) {
+    pub fn set_uniforms(&mut self, material: &mut macroquad::material::Material, data: &mut Data) {
         self.compile_all_formulas(&data.formulas_cache);
 
         let objects = &self.objects;
@@ -884,8 +884,10 @@ impl Scene {
 
         Some(
             load_material(
-                VERTEX_SHADER,
-                &code.storage,
+                macroquad::prelude::ShaderSource::Glsl {
+                    vertex: VERTEX_SHADER,
+                    fragment: &code.storage,
+                },
                 MaterialParams {
                     uniforms: self.uniforms(data)?,
                     textures: self.textures(),
@@ -894,11 +896,12 @@ impl Scene {
             )
             .map_err(|err| {
                 let error_message = match err {
-                    macroquad::prelude::miniquad::graphics::ShaderError::CompilationError {
-                        error_message,
-                        ..
-                    } => error_message,
-                    macroquad::prelude::miniquad::graphics::ShaderError::LinkError(msg) => msg,
+                    macroquad::Error::ShaderError(
+                        macroquad::prelude::ShaderError::CompilationError { error_message, .. },
+                    ) => error_message,
+                    macroquad::Error::ShaderError(macroquad::prelude::ShaderError::LinkError(
+                        msg,
+                    )) => msg,
                     other => {
                         crate::error!(format, "unknown material compilation error: {:?}", other);
                         Default::default()
@@ -971,7 +974,7 @@ impl Scene {
                 let text = stage_value.name.text(ui);
                 ui.radio_value(stage, Some(id), text);
                 if *stage != previous && *stage == Some(id) {
-                    changed |= self.init_stage(*stage, &mut ui.memory());
+                    changed |= ui.memory_mut(|memory| self.init_stage(*stage, memory));
                 }
             }
         });
