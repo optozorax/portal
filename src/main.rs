@@ -1,3 +1,4 @@
+use macroquad::prelude::is_key_pressed;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use portal::gui::camera::CalculatedCam;
 use portal::gui::camera::CameraId;
@@ -283,6 +284,7 @@ struct Window {
     material: macroquad::material::Material,
     should_recompile: bool,
 
+    draw_menu: bool,
     control_scene_opened: bool,
     edit_scene_opened: bool,
     camera_settings_opened: bool,
@@ -359,6 +361,7 @@ impl Window {
 
             material,
 
+            draw_menu: true,
             control_scene_opened: true,
             edit_scene_opened: false,
             camera_settings_opened: false,
@@ -433,64 +436,70 @@ impl Window {
 
         let mut changed = WhatChanged::default();
 
-        egui::containers::panel::TopBottomPanel::top("my top").show(ctx, |ui| {
-            use egui::menu;
-            menu::bar(ui, |ui| {
-                ui.menu_button("🗋 Load", |ui| {
-                    if let Some((content, link, name)) = self.available_scenes.egui(ui) {
-                        let s = content;
-                        // let old: OldScene = serde_json::from_str(&s).unwrap();
-                        // *self = old.into();
-                        self.scene = ron::from_str(s).unwrap();
-                        self.scene.init(&mut self.data, &mut ctx.memory());
-                        self.material.delete();
-                        self.material = self
-                            .scene
-                            .get_new_material(&self.data)
-                            .unwrap()
-                            .unwrap_or_else(|err| {
-                                portal::error!(
-                                    format,
-                                    "code:\n{}\n\nmessage:\n{}",
-                                    add_line_numbers(&err.0),
-                                    err.1
-                                );
-                                std::process::exit(1)
-                            });
-                        changed.uniform = true;
-                        self.data.reload_textures = true;
-                        self.cam.set_cam(&self.scene.cam);
-                        ui.ctx().memory().data.insert_persisted(
-                            egui::Id::new("OriginalCam"),
-                            OriginalCam(self.cam.get_calculated_cam()),
-                        );
-                        self.offset_after_material = self.scene.cam.offset_after_material;
-                        quad_url::set_program_parameter("scene", link);
-                        self.scene_name = name;
+        if is_key_pressed(macroquad::input::KeyCode::Escape) {
+            self.draw_menu = !self.draw_menu;
+        }
+        if self.draw_menu {
+            egui::containers::panel::TopBottomPanel::top("my top").show(ctx, |ui| {
+                use egui::menu;
+                
+                menu::bar(ui, |ui| {
+                    ui.menu_button("🗋 Load", |ui| {
+                        if let Some((content, link, name)) = self.available_scenes.egui(ui) {
+                            let s = content;
+                            // let old: OldScene = serde_json::from_str(&s).unwrap();
+                            // *self = old.into();
+                            self.scene = ron::from_str(s).unwrap();
+                            self.scene.init(&mut self.data, &mut ctx.memory());
+                            self.material.delete();
+                            self.material = self
+                                .scene
+                                .get_new_material(&self.data)
+                                .unwrap()
+                                .unwrap_or_else(|err| {
+                                    portal::error!(
+                                        format,
+                                        "code:\n{}\n\nmessage:\n{}",
+                                        add_line_numbers(&err.0),
+                                        err.1
+                                    );
+                                    std::process::exit(1)
+                                });
+                            changed.uniform = true;
+                            self.data.reload_textures = true;
+                            self.cam.set_cam(&self.scene.cam);
+                            ui.ctx().memory().data.insert_persisted(
+                                egui::Id::new("OriginalCam"),
+                                OriginalCam(self.cam.get_calculated_cam()),
+                            );
+                            self.offset_after_material = self.scene.cam.offset_after_material;
+                            quad_url::set_program_parameter("scene", link);
+                            self.scene_name = name;
+                        }
+                        ui.separator();
+                        if ui.button("Import...").clicked() && self.import_window.is_none() {
+                            self.import_window = Some("".to_owned());
+                        }
+                    });
+                    if ui.button("↔ Control scene").clicked() {
+                        self.control_scene_opened = true;
+                    };
+                    if ui.button("✏ Edit scene").clicked() {
+                        self.edit_scene_opened = true;
                     }
-                    ui.separator();
-                    if ui.button("Import...").clicked() && self.import_window.is_none() {
-                        self.import_window = Some("".to_owned());
+                    if ui.button("📸 Camera settings").clicked() {
+                        self.camera_settings_opened = true;
                     }
+                    if ui.button("⛭ Rendering options").clicked() {
+                        self.render_options_opened = true;
+                    }
+                    if ui.button("❓ About").clicked() {
+                        self.about_opened = true;
+                    }
+                    EngRusSettings::egui(ui);
                 });
-                if ui.button("↔ Control scene").clicked() {
-                    self.control_scene_opened = true;
-                };
-                if ui.button("✏ Edit scene").clicked() {
-                    self.edit_scene_opened = true;
-                }
-                if ui.button("📸 Camera settings").clicked() {
-                    self.camera_settings_opened = true;
-                }
-                if ui.button("⛭ Rendering options").clicked() {
-                    self.render_options_opened = true;
-                }
-                if ui.button("❓ About").clicked() {
-                    self.about_opened = true;
-                }
-                EngRusSettings::egui(ui);
             });
-        });
+        }
         let mut edit_scene_opened = self.edit_scene_opened;
 
         let errors_count = self.scene.errors_count(0, &mut self.data);
