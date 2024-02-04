@@ -43,7 +43,13 @@ struct RotateAroundCam {
     // crutch variables, because touch processed in function where we can't pass parameters
     mouse_over_canvas_right_now: bool,
     is_something_changed: bool,
+    current_dpi: f64,
+
     start_touch_scale: f64,
+
+    dpi_change_start_pos: Point,
+    dpi_change_start_dpi: f64,
+    new_dpi: Option<f64>,
 }
 
 impl RotateAroundCam {
@@ -73,6 +79,10 @@ impl RotateAroundCam {
             mouse_over_canvas_right_now: false,
             is_something_changed: false,
             start_touch_scale: 1.0,
+            current_dpi: 1.0,
+            dpi_change_start_dpi: 1.0,
+            dpi_change_start_pos: Default::default(),
+            new_dpi: None,
         }
     }
 
@@ -220,6 +230,15 @@ impl GestureEvents for RotateAroundCam {
 
             self.is_something_changed = true;
         }
+    }
+
+    fn touch_three_start(&mut self, pos: &Point) {
+        self.dpi_change_start_pos = pos.clone();
+        self.dpi_change_start_dpi = self.current_dpi;
+    }
+    fn touch_three_move(&mut self, pos: &Point, _offset: &Point) {
+        let offset = pos.clone() - &self.dpi_change_start_pos;
+        self.new_dpi = Some(self.dpi_change_start_dpi * (1.2_f64).powf((offset.x + offset.y) as f64 / 500.));
     }
 }
 
@@ -840,17 +859,18 @@ First, predefined library is included, then uniforms, then user library, then in
                     changed.uniform |= egui_bool(ui, &mut self.black_border_disable);
                     ui.separator();
                     ui.horizontal(|ui| {
-                        ui.label("Dpi:");
-                        if ui.button("+").clicked() {
+                        ui.label("DPI:");
+                        if ui.button("⏶").clicked() {
                             ui.ctx()
                                 .set_pixels_per_point(ui.ctx().pixels_per_point() * 1.2);
                         }
-                        if ui.button("-").clicked() {
+                        if ui.button("⏷").clicked() {
                             ui.ctx()
                                 .set_pixels_per_point(ui.ctx().pixels_per_point() / 1.2);
                         }
                         ui.label(format!(" ({})", ui.ctx().pixels_per_point()));
                     });
+                    ui.label("(DPI can be changed using three fingers, add one finger at a time to prevent triggering system three-finger gestures)")
                 });
             self.render_options_opened = render_options_opened;
         }
@@ -935,11 +955,16 @@ First, predefined library is included, then uniforms, then user library, then in
             is_something_changed = true;
         }
 
+        self.cam.current_dpi = ctx.pixels_per_point() as f64;
+        self.cam.is_something_changed = false;
+        self.cam.mouse_over_canvas_right_now = mouse_over_canvas;
+        macroquad::input::utils::repeat_all_miniquad_input(self, self.input_subscriber_id);
+        if let Some(new_dpi) = self.cam.new_dpi {
+            ctx.set_pixels_per_point(new_dpi as f32);
+            self.cam.new_dpi = None;
+            is_something_changed = true;
+        }
         ctx.memory_mut(|memory| {
-            self.cam.is_something_changed = false;
-            self.cam.mouse_over_canvas_right_now = mouse_over_canvas;
-            macroquad::input::utils::repeat_all_miniquad_input(self, self.input_subscriber_id);
-
             is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
         });
 
