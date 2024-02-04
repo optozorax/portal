@@ -390,6 +390,7 @@ struct Window {
     dpi_set: bool,
 
     draw_menu: bool,
+    welcome_opened: bool,
     control_scene_opened: bool,
     edit_scene_opened: bool,
     camera_settings_opened: bool,
@@ -412,6 +413,7 @@ struct Window {
     available_scenes: Scenes,
 
     about: EngRusText,
+    welcome: EngRusText,
 
     scene_initted: bool,
 
@@ -474,7 +476,8 @@ impl Window {
             material,
 
             draw_menu: true,
-            control_scene_opened: true,
+            welcome_opened: true,
+            control_scene_opened: scene_name != "Room",
             edit_scene_opened: false,
             camera_settings_opened: false,
             render_options_opened: false,
@@ -498,6 +501,11 @@ impl Window {
             about: EngRusText {
                 eng: include_str!("description.easymarkup.en").to_string(),
                 rus: include_str!("description.easymarkup.ru").to_string(),
+            },
+
+            welcome: EngRusText {
+                eng: include_str!("welcome.easymarkup.en").to_string(),
+                rus: include_str!("welcome.easymarkup.ru").to_string(),
             },
 
             scene_initted: false,
@@ -575,6 +583,9 @@ impl Window {
                 menu::bar(ui, |ui| {
                     ui.menu_button("🗋 Load", |ui| {
                         if let Some((content, link, name)) = self.available_scenes.egui(ui) {
+                            if self.scene_name == "Room" {
+                                self.control_scene_opened = true;
+                            }
                             let s = content;
                             // let old: OldScene = serde_json::from_str(&s).unwrap();
                             // *self = old.into();
@@ -739,6 +750,17 @@ First, predefined library is included, then uniforms, then user library, then in
             }
         }
 
+        if self.scene_name == "Room" {
+            egui::Window::new("Welcome!")
+                .open(&mut self.welcome_opened)
+                .vscroll(true)
+                .anchor(egui::Align2::CENTER_CENTER, (0., 0.))
+                .show(ctx, |ui| {
+                    let text = self.welcome.text(ui);
+                    egui_demo_lib::easy_mark::easy_mark(ui, text);
+                });
+        }
+
         {
             let mut not_remove_export = true;
             if let Some(to_export) = self.data.to_export.as_ref() {
@@ -847,6 +869,7 @@ First, predefined library is included, then uniforms, then user library, then in
             let mut camera_settings_opened = self.camera_settings_opened;
             egui::Window::new("Camera settings")
                 .open(&mut camera_settings_opened)
+                .vscroll(true)
                 .show(ctx, |ui| {
                     changed |= self.cam.egui(ui);
                 });
@@ -857,6 +880,7 @@ First, predefined library is included, then uniforms, then user library, then in
             let mut render_options_opened = self.render_options_opened;
             egui::Window::new("Render options")
                 .open(&mut render_options_opened)
+                .vscroll(true)
                 .show(ctx, |ui| {
                     ui.label("Offset after material:");
                     changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
@@ -921,6 +945,7 @@ First, predefined library is included, then uniforms, then user library, then in
             let mut about_opened = self.about_opened;
             egui::Window::new("Portal Explorer")
                 .open(&mut about_opened)
+                .vscroll(true)
                 .show(ctx, |ui| {
                     let text = self.about.text(ui);
                     egui_demo_lib::easy_mark::easy_mark(ui, text);

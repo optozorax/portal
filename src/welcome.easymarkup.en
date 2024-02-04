@@ -1,0 +1,28 @@
+Welcome to the *Portal Explorer* — here you can view all portals shown in my YouTube videos:
+• [The solution of the main portal paradox](https://www.youtube.com/watch?v=1q0sHf_n_2Y)
+• [31 portal of impossible shape](https://www.youtube.com/watch?v=TODO)
+
+You can enable russian language in last item of the menu.
+
+# Scene opening
+
+To open somescene, use `Load` in the menu and select what you're interested in.
+
+Here are the most interesting scenes:
+• `Portal in portal` > `Ellipse portal in portal`
+• `Triple portal` > `Triple portal`
+• `Advanced` > `Cylinder`
+• `Advanced` > `Trefoil knot`
+• `Mobius band` > `Mobius portal`
+
+# Opening on a smartphone
+
+⚠ Attention! If you have weak smartphone, then you shouldn't open most interesting scenes, because your phone can freeze on shader compilation of that scenes, these scenes has very heavy shaders. But if your smartphone can handle it, then some scenes can load for very long time (2 minutes for `Trefoil knot`).
+
+It's better to orient your phone to horizontal mode.
+
+Rotating and scaling use standang gestures.
+
+If you want to zoom in on the interface, you can change it in the menu `Rendering options` > `DPI`, or using a three-finger gesture. If this doesn't work (for example, you have a three-finger system gesture to take a screenshot), then slowly add your fingers one at a time.
+
+If you have a weak phone, or the demo is just very slow (for example, on a very heavy `Trefoil knot` scene), then you can reduce the resolution of the image through the `Rendering options` > `Lower resolution` option, which will significantly increase FPS. Similarly to the scale, this can be changed through a 4-finger gesture.
