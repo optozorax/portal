@@ -1,3 +1,4 @@
+use gesture_recognizer::*;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use macroquad::prelude::is_key_pressed;
 use portal::gui::camera::CalculatedCam;
@@ -9,7 +10,6 @@ use portal::gui::eng_rus::EngRusText;
 use portal::gui::scenes::ShowHiddenScenes;
 use portal::with_swapped;
 use std::f64::consts::PI;
-use gesture_recognizer::*;
 
 use macroquad::prelude::{
     clamp, clear_background, draw_rectangle, draw_texture_ex, get_screen_data,
@@ -44,12 +44,17 @@ struct RotateAroundCam {
     mouse_over_canvas_right_now: bool,
     is_something_changed: bool,
     current_dpi: f64,
+    current_render_scale: f32,
 
     start_touch_scale: f64,
 
     dpi_change_start_pos: Point,
     dpi_change_start_dpi: f64,
     new_dpi: Option<f64>,
+
+    render_scale_change_start_pos: Point,
+    render_scale_change_start_value: f32,
+    new_render_scale: Option<f32>,
 }
 
 impl RotateAroundCam {
@@ -80,9 +85,15 @@ impl RotateAroundCam {
             is_something_changed: false,
             start_touch_scale: 1.0,
             current_dpi: 1.0,
+            current_render_scale: 1.0,
+
             dpi_change_start_dpi: 1.0,
             dpi_change_start_pos: Default::default(),
             new_dpi: None,
+
+            render_scale_change_start_pos: Default::default(),
+            render_scale_change_start_value: 1.0,
+            new_render_scale: None,
         }
     }
 
@@ -206,7 +217,8 @@ impl macroquad::miniquad::EventHandler for Window {
             Ended => End,
             Cancelled => End,
         };
-        self.gesture_recognizer.process(&mut self.cam, phase, id, x, y);
+        self.gesture_recognizer
+            .process(&mut self.cam, phase, id, x, y);
     }
 }
 
@@ -238,7 +250,21 @@ impl GestureEvents for RotateAroundCam {
     }
     fn touch_three_move(&mut self, pos: &Point, _offset: &Point) {
         let offset = pos.clone() - &self.dpi_change_start_pos;
-        self.new_dpi = Some(self.dpi_change_start_dpi * (1.2_f64).powf((offset.x + offset.y) as f64 / 500.));
+        self.new_dpi =
+            Some(self.dpi_change_start_dpi * (1.2_f64).powf((offset.x + offset.y) as f64 / 500.));
+    }
+
+    fn touch_four_start(&mut self, pos: &Point) {
+        self.render_scale_change_start_pos = pos.clone();
+        self.render_scale_change_start_value = self.current_render_scale;
+    }
+    fn touch_four_move(&mut self, pos: &Point, _offset: &Point) {
+        let offset = pos.clone() - &self.render_scale_change_start_pos;
+        self.new_render_scale = Some(clamp(
+            self.render_scale_change_start_value * (1.2_f32).powf((offset.x + offset.y) / 100.),
+            0.01,
+            1.0,
+        ));
     }
 }
 
@@ -393,6 +419,9 @@ struct Window {
 
     gesture_recognizer: GestureRecognizer,
     input_subscriber_id: usize,
+
+    render_target: macroquad::prelude::RenderTarget,
+    render_scale: f32,
 }
 
 impl Window {
@@ -477,7 +506,14 @@ impl Window {
 
             gesture_recognizer: Default::default(),
             input_subscriber_id: macroquad::input::utils::register_input_subscriber(),
+
+            render_target: macroquad::prelude::render_target(4000, 4000),
+            render_scale: 0.5,
         };
+        result
+            .render_target
+            .texture
+            .set_filter(macroquad::prelude::FilterMode::Nearest);
         result.cam.set_cam(&result.scene.cam);
         result.offset_after_material = result.scene.cam.offset_after_material;
         result.reload_textures().await;
@@ -852,14 +888,20 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.separator();
                     ui.label("Antialiasing count:");
                     changed.uniform |= check_changed(&mut self.aa_count, |count| {
-                        ui.add(egui::Slider::new(count, 1..=16).clamp_to_range(true));
+                        ui.add(egui::Slider::new(count, 1..=30).clamp_to_range(true));
                     });
+                    ui.separator();
+                    ui.label("Lower rendering resolution ratio (can significantly increase FPS):");
+                    changed.uniform |= check_changed(&mut self.render_scale, |scale| {
+                        ui.add(egui::Slider::new(scale, 0.01..=1.0).clamp_to_range(true));
+                    });
+                    ui.label("(Render scale can be changed using four fingers, add one finger at a time to prevent triggering system four-finger gestures)");
                     ui.separator();
                     ui.label("Disable small black border:");
                     changed.uniform |= egui_bool(ui, &mut self.black_border_disable);
                     ui.separator();
                     ui.horizontal(|ui| {
-                        ui.label("DPI:");
+                        ui.label("Interface DPI:");
                         if ui.button("⏶").clicked() {
                             ui.ctx()
                                 .set_pixels_per_point(ui.ctx().pixels_per_point() * 1.2);
@@ -956,12 +998,18 @@ First, predefined library is included, then uniforms, then user library, then in
         }
 
         self.cam.current_dpi = ctx.pixels_per_point() as f64;
+        self.cam.current_render_scale = self.render_scale;
         self.cam.is_something_changed = false;
         self.cam.mouse_over_canvas_right_now = mouse_over_canvas;
         macroquad::input::utils::repeat_all_miniquad_input(self, self.input_subscriber_id);
         if let Some(new_dpi) = self.cam.new_dpi {
             ctx.set_pixels_per_point(new_dpi as f32);
             self.cam.new_dpi = None;
+            is_something_changed = true;
+        }
+        if let Some(new_render_scale) = self.cam.new_render_scale {
+            self.render_scale = new_render_scale;
+            self.cam.new_render_scale = None;
             is_something_changed = true;
         }
         ctx.memory_mut(|memory| {
@@ -974,8 +1022,13 @@ First, predefined library is included, then uniforms, then user library, then in
     fn set_uniforms(&mut self) {
         self.cam.get_cam(&mut self.scene.cam);
         self.scene.cam.offset_after_material = self.offset_after_material;
-        self.material
-            .set_uniform("_resolution", (screen_width(), screen_height()));
+        self.material.set_uniform(
+            "_resolution",
+            (
+                screen_width() * self.render_scale,
+                screen_height() * self.render_scale,
+            ),
+        );
         self.material
             .set_uniform("_camera", self.cam.get_matrix().as_f32());
         self.material
@@ -1002,9 +1055,49 @@ First, predefined library is included, then uniforms, then user library, then in
     fn draw(&mut self) {
         self.set_uniforms();
 
-        gl_use_material(&self.material);
-        draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
-        gl_use_default_material();
+        if self.render_scale == 1.0 {
+            gl_use_material(&self.material);
+            draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
+            gl_use_default_material();
+        } else {
+            macroquad::prelude::set_camera(&macroquad::prelude::Camera2D {
+                zoom: macroquad::prelude::vec2(
+                    1. / (self.render_target.texture.size().x / 2.),
+                    1. / (self.render_target.texture.size().y / 2.),
+                ),
+                offset: macroquad::prelude::vec2(-1., -1.),
+                render_target: Some(self.render_target.clone()),
+                ..Default::default()
+            });
+            gl_use_material(&self.material);
+            draw_rectangle(
+                0.,
+                0.,
+                screen_width() * self.render_scale,
+                screen_height() * self.render_scale,
+                WHITE,
+            );
+            gl_use_default_material();
+
+            set_default_camera();
+
+            draw_texture_ex(
+                &self.render_target.texture,
+                0.,
+                0.,
+                WHITE,
+                DrawTextureParams {
+                    source: Some(macroquad::math::Rect::new(
+                        0.,
+                        0.,
+                        screen_width() * self.render_scale,
+                        screen_height() * self.render_scale,
+                    )),
+                    dest_size: Some(macroquad::prelude::vec2(screen_width(), screen_height())),
+                    ..Default::default()
+                },
+            );
+        }
     }
 }
 

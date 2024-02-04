@@ -427,7 +427,7 @@ dependencies = [
 [[package]]
 name = "gesture-recognizer"
 version = "0.1.0"
-source = "git+https://github.com/optozorax/gesture-recognizer#c5d34c51c8a1d4966053aed5a69845ac2b22aed5"
+source = "git+https://github.com/optozorax/gesture-recognizer#66e82f0914c78872f3bff2e91f72ee88b60d5f0c"
 
 [[package]]
 name = "getrandom"
