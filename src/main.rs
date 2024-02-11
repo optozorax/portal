@@ -912,7 +912,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.separator();
                     ui.label("Antialiasing count:");
                     changed.uniform |= check_changed(&mut self.aa_count, |count| {
-                        ui.add(egui::Slider::new(count, 1..=30).clamp_to_range(true));
+                        ui.add(egui::Slider::new(count, 1..=16).clamp_to_range(true));
                     });
                     ui.separator();
                     ui.label("Lower rendering resolution ratio (can significantly increase FPS):");

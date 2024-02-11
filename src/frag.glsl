@@ -164,7 +164,7 @@ void main() {
     vec3 result = vec3(0.);
 
     int count = _aa_count;
-    for (int a = 0; a < 30; a++) {
+    for (int a = 0; a < 16; a++) {
         if (a >= _aa_count) break;
         vec2 offset = quasi_random(a);
         result += get_color(uv_screen + offset * pixel_size * 2.);
