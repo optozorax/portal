@@ -2,7 +2,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Portal explorer</title>
+    <title>Portal Explorer — web visualization of mind-blowing portals using ray-tracing</title>
     <style>
         html,
         body,
@@ -18,6 +18,34 @@
         }
     </style>
     <link rel="icon" type="image/png" href="./favicon.ico"/>
+
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript" > (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)}; m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)}) (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym"); ym(53392057, "init", { clickmap:true, trackLinks:true, accurateTrackBounce:true, webvisor:true }); </script> <noscript><div><img src="https://mc.yandex.ru/watch/53392057" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <meta name="yandex-verification" content="ec61b5ac4464201b" />
+    <!-- --- -->
+
+    {% set image = page.permalink ~ page.extra.image %}
+    <meta name="author" content="optozorax">
+    <meta name="title" content="Portal Explorer — web visualization of mind-blowing portals using ray-tracing">
+    <meta name="description" content="In Portal Explorer you can view how interesting portals are constructed, and visually explore their properties by moving and rotating them. This program doesn't work well on mobile, better opened from PC.">
+    <meta name="image" content="https://optozorax.github.io/portal/preview.png">
+
+    <!-- Facebook Meta Tags -->
+    <meta property="og:url" content="https://optozorax.github.io/portal">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Portal Explorer — web visualization of mind-blowing portals using ray-tracing">
+    <meta property="og:description" content="In Portal Explorer you can view how interesting portals are constructed, and visually explore their properties by moving and rotating them. This program doesn't work well on mobile, better opened from PC.">
+    <meta property="og:image" content="https://optozorax.github.io/portal/preview.png">
+    <meta property="og:locale" content="en">
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="twitter:domain" content="optozorax.github.io">
+    <meta property="twitter:url" content="https://optozorax.github.io/portal">
+    <meta name="twitter:title" content="Portal Explorer — web visualization of mind-blowing portals using ray-tracing">
+    <meta name="twitter:description" content="In Portal Explorer you can view how interesting portals are constructed, and visually explore their properties by moving and rotating them. This program doesn't work well on mobile, better opened from PC.">
+    <meta name="twitter:image" content="https://optozorax.github.io/portal/preview.png">
+    <meta name="twitter:creator" content="optozorax">
 </head>
 
 <body>
@@ -27,7 +55,7 @@
     <script src="sapp_jsutils.js"></script>
     <script src="audio.js"></script>
     <script src="quad-url.js"></script>
-    <script>load("portal.wasm");</script> <!-- Your compiled wasm file -->
+    <script>load("portal.wasm");</script>
 </body>
 
 </html>
