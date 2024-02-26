@@ -50,6 +50,7 @@ pub enum Matrix {
         then: Option<MatrixId>,
         otherwise: Option<MatrixId>,
     },
+    Sqrt(Option<MatrixId>),
 }
 
 impl Default for Matrix {
@@ -65,7 +66,7 @@ impl Default for Matrix {
 
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
-        &["Simple", "Mul", "Teleport", "Param.", "Exact", "If"]
+        &["Simple", "Mul", "Teleport", "Param.", "Exact", "If", "Sqrt"]
     }
     fn get_number(&self) -> usize {
         use Matrix::*;
@@ -76,6 +77,7 @@ impl ComboBoxChoosable for Matrix {
             Parametrized { .. } => 3,
             Exact { .. } => 4,
             If { .. } => 5,
+            Sqrt { .. } => 6,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -189,6 +191,7 @@ impl ComboBoxChoosable for Matrix {
                 then: None,
                 otherwise: None,
             },
+            6 => Sqrt(None),
             _ => unreachable!(),
         };
     }
@@ -388,6 +391,9 @@ impl StorageElem2 for Matrix {
                 changed |=
                     inline_helper.inline("Else:", 45., otherwise, ui, input, data_id.with(1));
             }
+            Sqrt(mat) => {
+                changed |= inline_helper.inline("Mat to sqrt:", 45., mat, ui, input, data_id.with(0));
+            }
         }
         /*
         // POSTPONE
@@ -491,6 +497,14 @@ impl StorageElem2 for Matrix {
                     get_helper.get((*otherwise)?)?
                 }
             }
+            Sqrt(mat) => {
+                if let Some(result) = mat_sqrt(&get_helper.get((*mat)?)?) {
+                    result
+                } else {
+                    crate::error!(format, "Can't calculate sqrt!{}", "");
+                    None?
+                }
+            }
         })
     }
 
@@ -558,6 +572,11 @@ impl StorageElem2 for Matrix {
                     f(*x, input);
                 }
             }
+            Sqrt(mat) => {
+                if let Some(x) = mat {
+                    f(*x, input);
+                }
+            }
         }
     }
 
@@ -606,6 +625,9 @@ impl StorageElem2 for Matrix {
                     + then.map(&mut f).unwrap_or(1)
                     + otherwise.map(f).unwrap_or(1)
             }
+            Sqrt(mat) => {
+                mat.map(&mut f).unwrap_or(1)
+            }
         }
         // POSTPONE
         /*
@@ -618,5 +640,77 @@ impl StorageElem2 for Matrix {
             errors_count += 1;
         }
         */
+    }
+}
+
+fn mat_sqrt(mat: &DMat4) -> Option<DMat4> {
+    use argmin::{
+        core::{CostFunction, Gradient},
+        solver::{linesearch::MoreThuenteLineSearch, quasinewton::BFGS},
+    };
+    use finitediff::FiniteDiff;
+    use ndarray::{Array1, Array2};
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    struct MatSquare {
+        mat: DMat4,
+    }
+
+    fn vec_to_mat2(vec: &[f64]) -> DMat4 {
+        DMat4::from_cols_array(&[
+            vec[0], vec[1], vec[2], vec[3],
+            vec[4], vec[5], vec[6], vec[7],
+            vec[8], vec[9], vec[10], vec[11],
+            0., 0., 0., 1.
+        ]).transpose()
+    }
+
+    fn mat_to_vec2(mat: &DMat4) -> Vec<f64> {
+        mat.transpose().to_cols_array().iter().copied().take(12).collect()
+    }
+
+    fn cost_mat(old: &DMat4, new: &[f64]) -> f64 {
+        let new = vec_to_mat2(new);
+        (new * new - *old).to_cols_array().into_iter().map(|x| x * x).sum()
+    }
+
+    impl CostFunction for MatSquare {
+        type Param = Array1<f64>;
+        type Output = f64;
+
+        fn cost(&self, p: &Self::Param) -> Result<Self::Output, argmin::core::Error> {
+            Ok(cost_mat(&self.mat, &p.to_vec()))
+        }
+    }
+    impl Gradient for MatSquare {
+        type Param = Array1<f64>;
+        type Gradient = Array1<f64>;
+
+        fn gradient(&self, p: &Self::Param) -> Result<Self::Gradient, argmin::core::Error> {
+            Ok((*p).forward_diff(&|x| cost_mat(&self.mat, &x.to_vec())))
+        }
+    }
+
+    let cost = MatSquare { mat: *mat };
+    let init_param: Array1<f64> = mat_to_vec2(mat).into();
+    let init_hessian: Array2<f64> = Array2::eye(12);
+    let linesearch = MoreThuenteLineSearch::new().with_c(1e-4, 0.9).ok()?;
+    let solver = BFGS::new(linesearch);
+    let res = argmin::core::Executor::new(cost, solver)
+        .configure(|state| {
+            state
+                .param(init_param)
+                .inv_hessian(init_hessian)
+                .max_iters(60)
+        })
+        // .add_observer(argmin_observer_slog::SlogLogger::term(), argmin::core::observers::ObserverMode::Always)
+        .run().ok()?;
+
+    // println!("{res}");
+
+    if res.state.cost < 1e-4 {
+        Some(vec_to_mat2(res.state.param?.view().to_slice()?))
+    } else {
+        None
     }
 }
