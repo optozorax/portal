@@ -272,16 +272,22 @@ impl Default for Scenes {
                 hidden: false,
                 scenes: vec![
                     Scene {
-                        name: "Portal in portal: two pairs",
+                        name: "Two pairs",
                         link: "portal_in_portal_two_pairs",
                         content: include_str!("../../scenes/portal_in_portal_two_pairs.ron"),
                         hidden: false,
                     },
                     Scene {
-                        name: "Ellipse portal in portal",
+                        name: "Ellipse",
                         link: "portal_in_portal",
                         content: include_str!("../../scenes/portal_in_portal.ron"),
                         hidden: false,
+                    },
+                    Scene {
+                        name: "Half-spheres",
+                        link: "half_spheres",
+                        content: include_str!("../../scenes/half_spheres.ron"),
+                        hidden: true,
                     },
                     Scene {
                         name: "Monoportal in monoportal",
