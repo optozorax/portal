@@ -8,6 +8,7 @@ use crate::gui::camera::Cam;
 use crate::gui::common::*;
 use crate::gui::eng_rus::EngRusText;
 use crate::gui::material::*;
+use crate::gui::intersection_material::*;
 use crate::gui::matrix::*;
 use crate::gui::object::*;
 use crate::gui::texture::*;
@@ -58,6 +59,10 @@ pub struct Scene {
     pub textures: Storage2<TextureName>,
 
     materials: Storage2<Material>,
+
+    #[serde(default)]
+    intersection_materials: Storage2<IntersectionMaterial>,
+
     library: Storage2<LibraryCode>,
 
     animations_filters: AnimationFilters,
@@ -255,6 +260,8 @@ impl Scene {
 
         changed |= self.materials.egui(ui, &mut data.errors, "Materials");
 
+        changed |= self.intersection_materials.egui(ui, &mut data.errors, "Intersection with material");
+
         changed |= self.textures.egui(ui, &mut data.texture_errors, "Textures");
 
         changed |= self.library.egui(ui, &mut data.errors, "User GLSL code");
@@ -335,6 +342,7 @@ impl Scene {
             + with_swapped!(x => (data.errors, self.matrices, self.uniforms, data.formulas_cache);
                 self.objects.errors_count_all(&x))
             + self.materials.errors_count_all(&data.errors)
+            + self.intersection_materials.errors_count_all(&data.errors)
             + self.library.errors_count_all(&data.errors)
             + if let Some(local_errors) = data.errors.get::<()>(()) {
                 local_errors.len()
@@ -851,6 +859,30 @@ impl Scene {
                     },
                 }
                 result.add_string("\n");
+            }
+            result
+        });
+
+        storages.insert("intersection_material_functions".to_owned(), {
+            let mut result = StringStorage::default();
+
+            for (pos, (id, _)) in self.intersection_materials.visible_elements().enumerate() {
+                let object = self.intersection_materials.get(id, &()).unwrap();
+                result.add_string(format!(
+                    "SceneIntersectionWithMaterial intersect_material_{}(Ray r) {{\n",
+                    pos
+                ));
+                result.add_identifier_string(id, &object.0.0.0);
+                result.add_string("\n}\n");
+            }
+            result
+        });
+
+        storages.insert("intersection_material_processing".to_owned(), {
+            let mut result = StringStorage::default();
+            for (pos, (_, _)) in self.intersection_materials.visible_elements().enumerate() {
+                result.add_string(format!("hit = intersect_material_{}(r);\n", pos));
+                result.add_string("if (nearer(result.scene.hit, hit.scene.hit)) { result = hit; }\n\n");
             }
             result
         });

@@ -3,6 +3,7 @@ pub mod combo_box;
 pub mod common;
 pub mod glsl;
 pub mod material;
+pub mod intersection_material;
 pub mod matrix;
 pub mod object;
 pub mod scene;

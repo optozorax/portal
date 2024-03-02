@@ -14,6 +14,8 @@
 
 //%intersection_functions//%
 
+//%intersection_material_functions//%
+
 SceneIntersection scene_intersect(Ray r) {
     SceneIntersection i = SceneIntersection(0, intersection_none);
     SceneIntersection ihit = SceneIntersection(0, intersection_none);
@@ -46,6 +48,15 @@ MaterialProcessing material_process(Ray r, SceneIntersection i) {
     return material_final(vec3(0.));
 }
 
+SceneIntersectionWithMaterial scene_intersect_material_process(Ray r) {
+    SceneIntersectionWithMaterial result = SceneIntersectionWithMaterial(scene_intersection_none, material_empty());
+    SceneIntersectionWithMaterial hit = SceneIntersectionWithMaterial(scene_intersection_none, material_empty());
+
+//%intersection_material_processing//%
+    
+    return result;
+}
+
 // ---------------------------------------------------------------------------
 // Ray tracing ---------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -57,11 +68,22 @@ vec3 ray_tracing(Ray r) {
     for (int j = 0; j < 10000; j++) {
         if (j >= _ray_tracing_depth) break;
         SceneIntersection i = scene_intersect(r);
+        SceneIntersectionWithMaterial i2 = scene_intersect_material_process(r);
+
+        r.o += r.d * i.hit.t;
+        MaterialProcessing m;
+        if (nearer(i.hit, i2.scene.hit)) {
+            if (i2.scene.material == CUSTOM_MATERIAL) {
+                m = i2.material;
+            } else {
+                m = material_process(r, i2.scene);
+            }
+        } else if (i.hit.hit) {
+            m = material_process(r, i);
+        }
 
         // Offset ray
-        r.o += r.d * i.hit.t;
-        if (i.hit.hit) {
-            MaterialProcessing m = material_process(r, i);
+        if (i.hit.hit || i2.scene.hit.hit) {
             current_color *= m.mul_to_color;
             if (m.is_final) {
                 return current_color;
@@ -170,5 +192,5 @@ void main() {
         result += get_color(uv_screen + offset * pixel_size * 2.);
     }
 
-    gl_FragColor = vec4(sqrt(result/float(count)), 1.);
+    gl_FragColor = vec4(sqrt(result/float(_aa_count)), 1.);
 }

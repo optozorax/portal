@@ -36,6 +36,11 @@ struct Ray
     vec4 d; // Direction.
 };
 
+Ray offset_ray(Ray r, float t) {
+    r.o += r.d * t;
+    return r;
+}
+
 const Ray ray_none = Ray(vec4(0.), vec4(0.));
 
 // Returns normal that anti-directed to dir ray, and has length 1.
@@ -86,7 +91,7 @@ Ray transform(mat4 matrix, Ray r) {
 }
 
 vec3 get_normal(mat4 matrix) {
-    return matrix[2].xyz;
+    return (matrix * vec4(0., 0., 1., 0.)).xyz;
 }
 
 // ---------------------------------------------------------------------------
@@ -105,6 +110,16 @@ struct SurfaceIntersection {
 // No intersection.
 const SurfaceIntersection intersection_none = SurfaceIntersection(false, 1e10, 0., 0., vec3(0.));
 
+SurfaceIntersection plane_intersect_normalized(Ray r) {
+    float t = -r.o.z/r.d.z;
+    if (t < 0.) {
+        return intersection_none;
+    } else {
+        vec4 pos = r.o + r.d * t; 
+        return SurfaceIntersection(true, t, pos.x, pos.y, vec3(0., 0., 1.));
+    }
+}
+
 // Intersect ray with plane with matrix `inverse(plane)`, and `normal`.
 SurfaceIntersection plane_intersect(Ray r, mat4 plane_inv, vec3 normal) {
     normal = normalize_normal(normal, r.d.xyz);
@@ -112,13 +127,13 @@ SurfaceIntersection plane_intersect(Ray r, mat4 plane_inv, vec3 normal) {
     float len = length(r.d);
     r.d = normalize(r.d);
 
-    float t = -r.o.z/r.d.z;
-    if (t < 0.) {
-        return intersection_none;
-    } else {
-        vec4 pos = r.o + r.d * t; 
-        return SurfaceIntersection(true, t / len, pos.x, pos.y, normal);
+    SurfaceIntersection result = plane_intersect_normalized(r);
+    if (result.hit) {
+        result.t /= len;
+        result.n = normal;
     }
+
+    return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,21 +158,8 @@ float color_normal(vec3 normal, vec4 direction) {
 // Returns grid color based on position and start color. Copy-pasted somewhere from shadertoy.
 vec3 color_grid(vec3 start, vec2 uv) {
     if (_grid_disable == 1) return start;
-
-    int x = int(abs(uv.x/2.));
-    int y = int(abs(uv.y/2.));
-
-    if (uv.x < 0.) x = x+1;
-    if (uv.y < 0.) y = y+1;
-
-    x = x + y;
-    y = 2;
-
-    if (x - y * (x/y) == 1) {
-        return start * 0.7;
-    } else {
-        return start * 1.1;
-    }
+    uv = fract(uv * 0.25);
+    return start * mix(mix(0.7, 1.1, step(uv.x, 0.5)), mix(1.1, 0.7, step(uv.x, 0.5)), step(uv.y, 0.5));
 }
 
 // Adds color `b` to color `a` with coef, that must lie in [0..1]. If coef == 0, then result is `a`, if coef == 1.0, then result is `b`.
@@ -177,6 +179,10 @@ struct MaterialProcessing {
     vec3 mul_to_color; // If is_final = true, then this color is multiplied to current color, otherwise this is the final color.
     Ray new_ray; // New ray if is_final = true.
 };
+
+MaterialProcessing material_empty() {
+    return MaterialProcessing(true, vec3(0.), ray_none);    
+}
 
 // Shortcut for creating material with is_final = true.
 MaterialProcessing material_final(vec3 color) {
@@ -221,19 +227,23 @@ MaterialProcessing material_refract(
     return material_next(add_to_color, r);
 }
 
+MaterialProcessing material_teleport_transformed(Ray r) {
+    // todo add add_gray_after_teleportation
+    r.o += r.d * _offset_after_material;
+    r.d = normalize(r.d);
+    return material_next(vec3(1.), r);
+}
+
 // Function to easy write teleport material.
 MaterialProcessing material_teleport(
     SurfaceIntersection hit, Ray r,
     mat4 teleport_matrix
 ) {
-    r.o += r.d * _offset_after_material;
-    // todo add add_gray_after_teleportation
-    r = transform(teleport_matrix, r);
-    r.d = normalize(r.d);
-    return material_next(vec3(1.), r);
+    return material_teleport_transformed(transform(teleport_matrix, r));
 }
 
 // System materials
+#define CUSTOM_MATERIAL -1
 #define NOT_INSIDE 0
 #define TELEPORT 1
 
@@ -428,3 +438,12 @@ SceneIntersection process_portal_intersection(SceneIntersection i, SurfaceInters
     }
     return i;
 }
+
+// ---------------------------------------------------------------------------
+// Scene intersection with material ------------------------------------------
+// ---------------------------------------------------------------------------
+
+struct SceneIntersectionWithMaterial {
+    SceneIntersection scene; // if scene.material == CUSTOM_MATERIAL, then material below is used
+    MaterialProcessing material;
+};

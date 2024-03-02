@@ -134,3 +134,40 @@ return SceneIntersection(black_M, SurfaceIntersection(true, t, u, v, n));"#
         ))
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntersectionMaterialCode(pub GlslCode);
+
+impl Default for IntersectionMaterialCode {
+    fn default() -> Self {
+        Self(GlslCode(r#"vec3 op = -r.o.xyz;
+float b = dot(op, r.d.xyz);
+float det = b*b - dot(op, op) + 1.0;
+if (det < 0.) return SceneIntersectionWithMaterial(scene_intersection_none, material_empty());
+
+det = sqrt(det);
+float t = b - det;
+if (t < 0.) t = b + det;
+if (t < 0.) return SceneIntersectionWithMaterial(scene_intersection_none, material_empty());
+
+vec4 pos = r.o + r.d * t;
+vec3 n = normalize(pos.xyz);
+
+float u = atan(pos.z, pos.x);
+float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
+
+SurfaceIntersection hit = SurfaceIntersection(true, t, u, v, n);
+if (u > 0.) {
+    return SceneIntersectionWithMaterial(
+        SceneIntersection(CUSTOM_MATERIAL, hit),
+        material_simple(hit, r, vec3(9.21e-2, 7.28e-1, 6.81e-2) * r.d.xyz, 5e-1, true, 4e0, 3e-1)
+    );
+} else {
+    return SceneIntersectionWithMaterial(
+        SceneIntersection(grid_gray_M, hit),
+        material_empty()
+    );
+}
+"#.to_owned()))
+    }
+}
