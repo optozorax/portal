@@ -443,6 +443,8 @@ impl Scene {
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
             ("_aa_count".to_owned(), UniformType::Int1),
             ("_offset_after_material".to_owned(), UniformType::Float1),
+            ("_t_start".to_owned(), UniformType::Float1),
+            ("_t_end".to_owned(), UniformType::Float1),
             ("_view_angle".to_owned(), UniformType::Float1),
             ("_use_panini_projection".to_owned(), UniformType::Int1),
             ("_angle_color_disable".to_owned(), UniformType::Int1),

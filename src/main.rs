@@ -404,6 +404,8 @@ struct Window {
     data: Data,
 
     offset_after_material: f64,
+    gray_t_start: f64,
+    gray_t_size: f64,
     render_depth: i32,
     aa_count: i32,
     angle_color_disable: bool,
@@ -490,6 +492,8 @@ impl Window {
             data,
 
             offset_after_material: 0.005,
+            gray_t_start: 10.,
+            gray_t_size: 200.,
             render_depth: 100,
             aa_count: 1,
             angle_color_disable: false,
@@ -902,6 +906,11 @@ First, predefined library is included, then uniforms, then user library, then in
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
                     ui.separator();
+                    ui.label("Graying after distance:");
+                    changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_start);
+                    ui.label("Graying size:");
+                    changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_size);
+                    ui.separator();
                     ui.label("Disable darkening by angle with normal:");
                     changed.uniform |= egui_bool(ui, &mut self.angle_color_disable);
                     ui.label("(This increases resulting gif size if you capturing screen)");
@@ -1069,6 +1078,10 @@ First, predefined library is included, then uniforms, then user library, then in
         self.material.set_uniform("_aa_count", self.aa_count);
         self.material
             .set_uniform("_offset_after_material", self.offset_after_material as f32);
+        self.material
+            .set_uniform("_t_start", self.gray_t_start as f32);
+        self.material
+            .set_uniform("_t_end", (self.gray_t_start + self.gray_t_size) as f32);
         self.material
             .set_uniform("_angle_color_disable", self.angle_color_disable as i32);
         self.material

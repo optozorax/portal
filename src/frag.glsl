@@ -62,31 +62,43 @@ SceneIntersectionWithMaterial scene_intersect_material_process(Ray r) {
 // ---------------------------------------------------------------------------
 
 uniform int _ray_tracing_depth;
+uniform float _t_end;
+uniform float _t_start;
 
 vec3 ray_tracing(Ray r) {
     vec3 current_color = vec3(1.);
-    for (int j = 0; j < 10000; j++) {
+    float all_t = 0.;
         if (j >= _ray_tracing_depth) break;
         SceneIntersection i = scene_intersect(r);
         SceneIntersectionWithMaterial i2 = scene_intersect_material_process(r);
-
-        r.o += r.d * i.hit.t;
+        
         MaterialProcessing m;
         if (nearer(i.hit, i2.scene.hit)) {
+            r.o += r.d * i2.scene.hit.t;
+            all_t += i2.scene.hit.t;
             if (i2.scene.material == CUSTOM_MATERIAL) {
                 m = i2.material;
             } else {
                 m = material_process(r, i2.scene);
             }
         } else if (i.hit.hit) {
+            r.o += r.d * i.hit.t;
+            all_t += i.hit.t;
             m = material_process(r, i);
         }
+
+        if (all_t > _t_end) return color(0., 0., 0.);
 
         // Offset ray
         if (i.hit.hit || i2.scene.hit.hit) {
             current_color *= m.mul_to_color;
             if (m.is_final) {
-                return current_color;
+                if (all_t > _t_start) {
+                    float gray_t = (all_t - _t_start) / (_t_end - _t_start);
+                    return color(0., 0., 0.) * sqr(sqr(gray_t)) + current_color * sqr(sqr(1.0 - gray_t));
+                } else {
+                    return current_color;
+                }
             } else {
                 r = m.new_ray;
             }
@@ -94,7 +106,7 @@ vec3 ray_tracing(Ray r) {
             return current_color * color(0.6, 0.6, 0.6);
         }
     }
-    return current_color;
+    return color(0., 0., 0.);
 }
 
 // ---------------------------------------------------------------------------
