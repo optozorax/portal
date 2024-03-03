@@ -56,24 +56,6 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "Moving doorway",
-                        link: "moving_doorway",
-                        content: include_str!("../../scenes/moving_doorway.ron"),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Speed model",
-                        link: "speed_model",
-                        content: include_str!("../../scenes/speed_model.ron"),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Non linear movement",
-                        link: "non_linear",
-                        content: include_str!("../../scenes/non_linear.ron"),
-                        hidden: false,
-                    },
-                    Scene {
                         name: "Same shape",
                         link: "same_shape",
                         content: include_str!("../../scenes/same_shape.ron"),
@@ -113,6 +95,30 @@ impl Default for Scenes {
                         name: "Support portals",
                         link: "support_portals",
                         content: include_str!("../../scenes/support_portals.ron"),
+                        hidden: false,
+                    },
+                ],
+            },
+            SceneSection {
+                name: "Physics",
+                hidden: false,
+                scenes: vec![
+                    Scene {
+                        name: "Moving doorway",
+                        link: "moving_doorway",
+                        content: include_str!("../../scenes/moving_doorway.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Speed model",
+                        link: "speed_model",
+                        content: include_str!("../../scenes/speed_model.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Non linear movement",
+                        link: "non_linear",
+                        content: include_str!("../../scenes/non_linear.ron"),
                         hidden: false,
                     },
                 ],
