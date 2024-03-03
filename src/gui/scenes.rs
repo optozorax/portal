@@ -296,9 +296,15 @@ impl Default for Scenes {
                         hidden: true,
                     },
                     Scene {
-                        name: "Monoportal in monoportal",
+                        name: "Monoportal",
                         link: "monoportal_in_monoportal",
                         content: include_str!("../../scenes/monoportal_in_monoportal.ron"),
+                        hidden: true,
+                    },
+                    Scene {
+                        name: "Self-intersect",
+                        link: "self_intersect",
+                        content: include_str!("../../scenes/self_intersect.ron"),
                         hidden: true,
                     },
                 ],
