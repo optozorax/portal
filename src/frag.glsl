@@ -68,6 +68,7 @@ uniform float _t_start;
 vec3 ray_tracing(Ray r) {
     vec3 current_color = vec3(1.);
     float all_t = 0.;
+    for (int j = 0; j < 10000; j++) {
         if (j >= _ray_tracing_depth) break;
         SceneIntersection i = scene_intersect(r);
         SceneIntersectionWithMaterial i2 = scene_intersect_material_process(r);
@@ -197,7 +198,6 @@ vec2 quasi_random(int i) {
 void main() {
     vec3 result = vec3(0.);
 
-    int count = _aa_count;
     for (int a = 0; a < 16; a++) {
         if (a >= _aa_count) break;
         vec2 offset = quasi_random(a);
