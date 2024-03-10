@@ -296,6 +296,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Plus ultra",
+                        link: "plus_ultra",
+                        content: include_str!("../../scenes/portal_in_portal_plus_ultra.ron"),
+                        hidden: true,
+                    },
+                    Scene {
                         name: "Half-spheres",
                         link: "half_spheres",
                         content: include_str!("../../scenes/half_spheres.ron"),
