@@ -175,6 +175,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/hopf_link.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Sphere to plane mapping portal",
+                        link: "sphere_to_plane",
+                        content: include_str!("../../scenes/sphere_to_plane.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
