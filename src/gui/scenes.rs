@@ -176,6 +176,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Spherical geometry model",
+                        link: "spherical_geometry",
+                        content: include_str!("../../scenes/spherical_geometry.ron"),
+                        hidden: true,
+                    },
+                    Scene {
                         name: "Sphere to plane mapping portal",
                         link: "sphere_to_plane",
                         content: include_str!("../../scenes/sphere_to_plane.ron"),
