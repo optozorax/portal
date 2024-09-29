@@ -615,7 +615,10 @@ var importObject = {
             emscripten_shaders_hack = flag;
         },
         sapp_set_clipboard: function(ptr, len) {
-            clipboard = UTF8ToString(ptr, len);
+            let string_copy = (' ' + UTF8ToString(ptr, len)).slice(1);
+            if (string_copy != "") {
+                clipboard = string_copy;
+            }
         },
         dpi_scale,
         rand: function () {
@@ -1220,7 +1223,7 @@ var importObject = {
             window.onresize = function () {
                 resize(canvas, wasm_exports.resize);
             };
-            window.addEventListener("copy", function(e) {
+            window.addEventListener("copy", function(event) {
                 if (clipboard != null) {
                     event.clipboardData.setData('text/plain', clipboard);
                     event.preventDefault();
