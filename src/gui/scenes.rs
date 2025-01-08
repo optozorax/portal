@@ -277,6 +277,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/triple_tiling.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Recursive room",
+                        link: "recursive_room",
+                        content: include_str!("../../scenes/recursive_room.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
