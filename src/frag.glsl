@@ -111,6 +111,94 @@ vec3 ray_tracing(Ray r) {
 }
 
 // ---------------------------------------------------------------------------
+// Camera teleportation ------------------------------------------------------
+// ---------------------------------------------------------------------------
+
+// thanks https://stackoverflow.com/questions/17981163/webgl-read-pixels-from-floating-point-render-target/20859830#20859830
+float shift_right(float v, float amt) {
+    v = floor(v) + 0.5;
+    return floor(v / exp2(amt));
+}
+float shift_left(float v, float amt) {
+    return floor(v * exp2(amt) + 0.5);
+}
+float mask_last(float v, float bits) {
+    return mod(v, shift_left(1.0, bits));
+}
+float extract_bits(float num, float from, float to) {
+    from = floor(from + 0.5);
+    to = floor(to + 0.5);
+    return mask_last(shift_right(num, from), to - from);
+}
+vec4 encode_float(float val) {
+    if(val == 0.0)
+        return vec4(0, 0, 0, 0);
+    float sign = val > 0.0 ? 0.0 : 1.0;
+    val = abs(val);
+    float exponent = floor(log2(val));
+    float biased_exponent = exponent + 127.0;
+    float fraction = ((val / exp2(exponent)) - 1.0) * 8388608.0;
+    float t = biased_exponent / 2.0;
+    float last_bit_of_biased_exponent = fract(t) * 2.0;
+    float remaining_bits_of_biased_exponent = floor(t);
+    float byte4 = extract_bits(fraction, 0.0, 8.0) / 255.0;
+    float byte3 = extract_bits(fraction, 8.0, 16.0) / 255.0;
+    float byte2 = (last_bit_of_biased_exponent * 128.0 + extract_bits(fraction, 16.0, 23.0)) / 255.0;
+    float byte1 = (sign * 128.0 + remaining_bits_of_biased_exponent) / 255.0;
+    return vec4(byte4, byte3, byte2, byte1);
+}
+
+vec4 teleport_external_ray(Ray r) {
+    r = normalize_ray(r);
+    bool have_result = false;
+    bool stop_at_object = false;
+    float all_t = 0.;
+    for (int j = 0; j < 10; j++) {
+        SceneIntersection i = scene_intersect(r);
+        SceneIntersectionWithMaterial i2 = scene_intersect_material_process(r);
+        
+        bool continue_intersect = false;
+        MaterialProcessing m;
+        if (nearer(i.hit, i2.scene.hit)) {
+            if (i2.scene.hit.t * r.tmul + all_t < 1.0) {
+                r.o += r.d * i2.scene.hit.t;
+                all_t += i2.scene.hit.t * r.tmul;
+                if (i2.scene.material == CUSTOM_MATERIAL) {
+                    m = i2.material;
+                } else {
+                    m = material_process(r, i2.scene);
+                }
+                continue_intersect = !m.is_final;
+                stop_at_object = stop_at_object || m.is_final;
+            }
+        } else if (i.hit.hit) {
+            if (i.hit.t * r.tmul + all_t < 1.0) {
+                r.o += r.d * i.hit.t;
+                all_t += i.hit.t * r.tmul;
+                m = material_process(r, i);
+                continue_intersect = !m.is_final;
+                stop_at_object = stop_at_object || m.is_final;
+            }
+        }
+
+        if (continue_intersect) {
+            r = m.new_ray;
+            have_result = true;
+        } else {
+            break;
+        }
+    }
+    float last_value = 1.;
+    if (stop_at_object) last_value = -1.;
+    if (have_result) {
+        r.o += r.d * (1.0 - all_t) / r.tmul;
+        return vec4(r.o.xyz, last_value);
+    } else {
+        return vec4(vec3(0.), last_value);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Draw image ----------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
@@ -119,10 +207,14 @@ uniform float _view_angle;
 uniform int _use_panini_projection;
 uniform float _panini_param;
 uniform int _aa_count;
-varying vec2 uv;
+varying vec2 uv; // absolute coordinates, integer values, from 0
 varying vec2 uv_screen;
 varying float pixel_size;
 // varying vec4 out_Color;
+
+uniform int _teleport_external_ray;
+uniform vec3 _external_ray_a;
+uniform vec3 _external_ray_b;
 
 const float Pi = 3.14159265359;
 const float Pi2 = Pi * 2.0;
@@ -198,11 +290,33 @@ vec2 quasi_random(int i) {
 void main() {
     vec3 result = vec3(0.);
 
-    for (int a = 0; a < 16; a++) {
-        if (a >= _aa_count) break;
-        vec2 offset = quasi_random(a);
-        result += get_color(uv_screen + offset * pixel_size * 2.);
+    if (_teleport_external_ray == 0) {
+        for (int a = 0; a < 16; a++) {
+            if (a >= _aa_count) break;
+            vec2 offset = quasi_random(a);
+            result += get_color(uv_screen + offset * pixel_size * 2.);
+        }
+        result = sqrt(result/float(_aa_count));
+    } else {
+        vec4 teleported = teleport_external_ray(Ray(vec4(_external_ray_a, 1.), vec4(_external_ray_b - _external_ray_a, 0.), 1.));
+
+        float val = 0.;
+        if (int(uv.y) == 0) { val = teleported.x; } else
+        if (int(uv.y) == 1) { val = teleported.y; } else
+        if (int(uv.y) == 2) { val = teleported.z; }
+
+        if (int(uv.x) == 0) {
+            result = encode_float(val).xyz;
+        } else {
+            result = encode_float(val).www;
+        }
+
+        if (teleported.w < 0. && int(uv.x) == 1) {
+            // we encountered object
+            result.y = 1.;
+            result.z = 0.;
+        }
     }
 
-    gl_FragColor = vec4(sqrt(result/float(_aa_count)), 1.);
+    gl_FragColor = vec4(result, 1.);
 }

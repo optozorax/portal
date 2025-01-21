@@ -22,6 +22,7 @@ use portal::gui::{common::*, scene::*, texture::*};
 
 use egui::{DragValue, Ui};
 
+#[derive(Clone)]
 struct RotateAroundCam {
     look_at: DVec3,
     alpha: f64,
@@ -55,6 +56,10 @@ struct RotateAroundCam {
     render_scale_change_start_pos: Point,
     render_scale_change_start_value: f32,
     new_render_scale: Option<f32>,
+
+    teleport_matrix: DMat4,
+    allow_teleport: bool,
+    stop_at_objects: bool,
 }
 
 impl RotateAroundCam {
@@ -94,6 +99,10 @@ impl RotateAroundCam {
             render_scale_change_start_pos: Default::default(),
             render_scale_change_start_value: 1.0,
             new_render_scale: None,
+
+            teleport_matrix: DMat4::IDENTITY,
+            allow_teleport: true,
+            stop_at_objects: false,
         }
     }
 
@@ -180,12 +189,13 @@ impl RotateAroundCam {
         let i = k.cross(DVec3::new(0., 1., 0.)).normalize();
         let j = k.cross(i).normalize();
 
-        DMat4::from_cols(
-            DVec4::new(i.x, i.y, i.z, 0.),
-            DVec4::new(j.x, j.y, j.z, 0.),
-            DVec4::new(k.x, k.y, k.z, 0.),
-            DVec4::new(pos.x, pos.y, pos.z, 1.),
-        )
+        self.teleport_matrix
+            * DMat4::from_cols(
+                DVec4::new(i.x, i.y, i.z, 0.),
+                DVec4::new(j.x, j.y, j.z, 0.),
+                DVec4::new(k.x, k.y, k.z, 0.),
+                DVec4::new(pos.x, pos.y, pos.z, 1.),
+            )
     }
 
     fn set_cam(&mut self, s: &CamSettings) {
@@ -193,6 +203,7 @@ impl RotateAroundCam {
         self.alpha = s.alpha;
         self.beta = s.beta;
         self.r = s.r;
+        self.teleport_matrix = DMat4::IDENTITY;
     }
 
     fn get_cam(&mut self, cam_settings: &mut CamSettings) {
@@ -283,6 +294,39 @@ impl RotateAroundCam {
             changed |= egui_f64(ui, &mut self.look_at.z);
             ui.separator();
         });
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.label("Stop camera at objects:");
+            changed |= check_changed(&mut self.stop_at_objects, |is_use| {
+                ui.add(egui::Checkbox::new(is_use, ""));
+            });
+        });
+        ui.horizontal(|ui| {
+            ui.label("Allow camera teleportation:");
+            changed |= check_changed(&mut self.allow_teleport, |is_use| {
+                ui.add(egui::Checkbox::new(is_use, ""));
+            });
+        });
+        ui.horizontal(|ui| {
+            ui.label("Teleportation matrix: ");
+            if ui.button("Reset").clicked() {
+                self.teleport_matrix = DMat4::IDENTITY;
+                changed = true;
+            }
+        });
+        for row in self.teleport_matrix.to_cols_array_2d() {
+            ui.horizontal(|ui| {
+                for mut value in row {
+                    ui.add_enabled(
+                        false,
+                        DragValue::new(&mut value)
+                            .speed(0.01)
+                            .min_decimals(0)
+                            .max_decimals(2),
+                    );
+                }
+            });
+        }
         ui.separator();
         ui.horizontal(|ui| {
             ui.label("α");
@@ -426,6 +470,9 @@ struct Window {
 
     render_target: macroquad::prelude::RenderTarget,
     render_scale: f32,
+
+    external_ray_render_target: macroquad::prelude::RenderTarget,
+    prev_cam_pos: DVec3,
 }
 
 impl Window {
@@ -521,12 +568,16 @@ impl Window {
 
             render_target: macroquad::prelude::render_target(4000, 4000),
             render_scale: 0.5,
+
+            external_ray_render_target: macroquad::prelude::render_target(2, 3),
+            prev_cam_pos: Default::default(),
         };
         result
             .render_target
             .texture
             .set_filter(macroquad::prelude::FilterMode::Nearest);
         result.cam.set_cam(&result.scene.cam);
+        result.prev_cam_pos = (result.cam.get_matrix() * DVec4::new(0., 0., 0., 1.)).truncate();
         result.offset_after_material = result.scene.cam.offset_after_material;
         result.reload_textures().await;
         result
@@ -1022,6 +1073,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 self.cam.beta = calculated_cam.beta;
                 self.cam.r = calculated_cam.r;
                 self.cam.look_at = calculated_cam.look_at;
+                self.cam.teleport_matrix = DMat4::IDENTITY;
             } else if let Some(id) = self.cam.from {
                 let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
                     self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
@@ -1047,10 +1099,78 @@ First, predefined library is included, then uniforms, then user library, then in
             is_something_changed = true;
         }
         ctx.memory_mut(|memory| {
-            is_something_changed |= self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
+            let prev_cam = self.cam.clone();
+            let cam_changed = self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
+            if cam_changed {
+                self.teleport_camera(prev_cam);
+            }
+            is_something_changed |= cam_changed;
         });
 
         is_something_changed
+    }
+
+    fn teleport_camera(&mut self, prev_cam: RotateAroundCam) {
+        if !(self.cam.allow_teleport || self.cam.stop_at_objects) {
+            return;
+        }
+        let cam_pos = (self.cam.get_matrix() * DVec4::new(0., 0., 0., 1.)).truncate();
+        let (teleported, encounter_object) = self.teleport_external_ray(self.prev_cam_pos, cam_pos);
+        if self.cam.stop_at_objects && encounter_object {
+            self.cam = prev_cam.clone();
+            return;
+        }
+        if let Some(new_pos) = teleported {
+            if !self.cam.allow_teleport {
+                return;
+            }
+            let res = || -> Option<()> {
+                let cam_teleport_dx = 0.001;
+                let cam_matrix = self.cam.teleport_matrix;
+
+                let i = (cam_matrix * DVec4::new(1., 0., 0., 0.) * cam_teleport_dx).truncate();
+                let i = self
+                    .teleport_external_ray(self.prev_cam_pos + i, cam_pos + i)
+                    .0?
+                    - new_pos;
+                let i = DVec4::from((i, 0.)) / cam_teleport_dx;
+
+                let j = (cam_matrix * DVec4::new(0., 1., 0., 0.) * cam_teleport_dx).truncate();
+                let j = self
+                    .teleport_external_ray(self.prev_cam_pos + j, cam_pos + j)
+                    .0?
+                    - new_pos;
+                let j = DVec4::from((j, 0.)) / cam_teleport_dx;
+
+                let k = (cam_matrix * DVec4::new(0., 0., 1., 0.) * cam_teleport_dx).truncate();
+                let k = self
+                    .teleport_external_ray(self.prev_cam_pos + k, cam_pos + k)
+                    .0?
+                    - new_pos;
+                let k = DVec4::from((k, 0.)) / cam_teleport_dx;
+
+                let pos = DVec4::new(0., 0., 0., 1.);
+
+                let new_mat = DMat4::from_cols(i, j, k, pos);
+
+                let pos = new_pos
+                    - (new_mat
+                        * cam_matrix.inverse()
+                        * DVec4::new(cam_pos.x, cam_pos.y, cam_pos.z, 1.))
+                    .truncate();
+                let pos = DVec4::from((pos, 1.));
+
+                self.cam.teleport_matrix = DMat4::from_cols(i, j, k, pos);
+
+                self.prev_cam_pos = (self.cam.get_matrix() * DVec4::new(0., 0., 0., 1.)).truncate();
+                Some(())
+            }();
+            if res == None {
+                self.cam = prev_cam;
+            }
+        } else {
+            self.prev_cam_pos = cam_pos;
+        }
     }
 
     fn set_uniforms(&mut self) {
@@ -1078,16 +1198,30 @@ First, predefined library is included, then uniforms, then user library, then in
         self.material.set_uniform("_aa_count", self.aa_count);
         self.material
             .set_uniform("_offset_after_material", self.offset_after_material as f32);
+
+        let scale = self
+            .cam
+            .get_matrix()
+            .to_cols_array_2d()
+            .into_iter()
+            .take(3)
+            .map(|x| DVec4::from(x).length())
+            .sum::<f64>()
+            / 3.0;
         self.material
-            .set_uniform("_t_start", self.gray_t_start as f32);
-        self.material
-            .set_uniform("_t_end", (self.gray_t_start + self.gray_t_size) as f32);
+            .set_uniform("_t_start", self.gray_t_start as f32 * scale as f32);
+        self.material.set_uniform(
+            "_t_end",
+            (self.gray_t_start + self.gray_t_size) as f32 * scale as f32,
+        );
+
         self.material
             .set_uniform("_angle_color_disable", self.angle_color_disable as i32);
         self.material
             .set_uniform("_grid_disable", self.grid_disable as i32);
         self.material
             .set_uniform("_black_border_disable", self.black_border_disable as i32);
+        self.material.set_uniform("_teleport_external_ray", 0);
     }
 
     fn draw(&mut self) {
@@ -1135,6 +1269,55 @@ First, predefined library is included, then uniforms, then user library, then in
                     ..Default::default()
                 },
             );
+        }
+    }
+
+    fn teleport_external_ray(&mut self, a: DVec3, b: DVec3) -> (Option<glam::DVec3>, bool) {
+        self.set_uniforms();
+        self.material
+            .set_uniform("_teleport_external_ray", 1 as i32);
+        self.material.set_uniform("_external_ray_a", a.as_f32());
+        self.material.set_uniform("_external_ray_b", b.as_f32());
+
+        macroquad::prelude::set_camera(&macroquad::prelude::Camera2D {
+            zoom: macroquad::prelude::vec2(
+                1. / (self.external_ray_render_target.texture.size().x / 2.),
+                1. / (self.external_ray_render_target.texture.size().y / 2.),
+            ),
+            offset: macroquad::prelude::vec2(-1., -1.),
+            render_target: Some(self.external_ray_render_target.clone()),
+            ..Default::default()
+        });
+        gl_use_material(&self.material);
+        draw_rectangle(
+            0.,
+            0.,
+            self.external_ray_render_target.texture.size().x,
+            self.external_ray_render_target.texture.size().y,
+            WHITE,
+        );
+        gl_use_default_material();
+        set_default_camera();
+
+        let arr = self
+            .external_ray_render_target
+            .texture
+            .get_texture_data()
+            .bytes;
+
+        let encounter_object = (arr[0 + 5] == 255 && arr[0 + 6] == 0)
+            || (arr[8 + 5] == 255 && arr[8 + 6] == 0)
+            || (arr[16 + 5] == 255 && arr[16 + 6] == 0);
+        let x = f32::from_le_bytes([arr[0 + 0], arr[0 + 1], arr[0 + 2], arr[0 + 4]]);
+        let y = f32::from_le_bytes([arr[8 + 0], arr[8 + 1], arr[8 + 2], arr[8 + 4]]);
+        let z = f32::from_le_bytes([arr[16 + 0], arr[16 + 1], arr[16 + 2], arr[16 + 4]]);
+        if !(x == 0.0 && y == 0.0 && z == 0.0) {
+            return (
+                Some(DVec3::new(x.into(), y.into(), z.into())),
+                encounter_object,
+            );
+        } else {
+            return (None, encounter_object);
         }
     }
 }

@@ -451,6 +451,9 @@ impl Scene {
             ("_grid_disable".to_owned(), UniformType::Int1),
             ("_black_border_disable".to_owned(), UniformType::Int1),
             ("_panini_param".to_owned(), UniformType::Float1),
+            ("_teleport_external_ray".to_owned(), UniformType::Int1),
+            ("_external_ray_a".to_owned(), UniformType::Float3),
+            ("_external_ray_b".to_owned(), UniformType::Float3),
         ]);
 
         Some(result)
@@ -1068,7 +1071,7 @@ void main() {
 
     float coef = min(_resolution.x, _resolution.y);
     uv_screen = (position.xy - _resolution/2.) / coef * 2.;
-    uv = texcoord;
+    uv = position.xy;
     pixel_size = 1. / coef;
 
     gl_Position = res;
