@@ -101,7 +101,7 @@ pub struct IsInsideCode(pub GlslCode);
 impl Default for IsInsideCode {
     fn default() -> Self {
         IsInsideCode(GlslCode(
-            "if (x*x + y*y < 1.) {\n  return black_M;\n} else {\n  return NOT_INSIDE;\n}"
+            "if (x*x + y*y < 1.) {\n  return grid_gray_M;\n} else {\n  return NOT_INSIDE;\n}"
                 .to_owned(),
         ))
     }
@@ -129,7 +129,7 @@ vec3 n = normalize(pos.xyz);
 float u = atan(pos.z, pos.x);
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
-return SceneIntersection(black_M, SurfaceIntersection(true, t, u, v, n));"#
+return SceneIntersection(grid_gray_M, SurfaceIntersection(true, t, u, v, n));"#
                 .to_owned(),
         ))
     }

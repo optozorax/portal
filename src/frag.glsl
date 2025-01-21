@@ -76,7 +76,7 @@ vec3 ray_tracing(Ray r) {
         MaterialProcessing m;
         if (nearer(i.hit, i2.scene.hit)) {
             r.o += r.d * i2.scene.hit.t;
-            all_t += i2.scene.hit.t;
+            all_t += i2.scene.hit.t * r.tmul;
             if (i2.scene.material == CUSTOM_MATERIAL) {
                 m = i2.material;
             } else {
@@ -84,7 +84,7 @@ vec3 ray_tracing(Ray r) {
             }
         } else if (i.hit.hit) {
             r.o += r.d * i.hit.t;
-            all_t += i.hit.t;
+            all_t += i.hit.t * r.tmul;
             m = material_process(r, i);
         }
 
@@ -181,7 +181,7 @@ vec3 get_color(vec2 image_position) {
         d = normalize(_camera * vec4(image_position.x * h, image_position.y * h, 1.0, 0.));
     }
      
-    Ray r = Ray(o, d);
+    Ray r = Ray(o, d, 1.0);
     return ray_tracing(r);
 }
 

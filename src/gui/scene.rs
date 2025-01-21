@@ -773,7 +773,7 @@ impl Scene {
                     DebugMatrix(matrix) => {
                         let matrix = Object::get_name(matrix?, &self.matrices)?;
                         result.add_string(format!(
-                            "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);",
+                            "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray = normalize_ray(transformed_ray);",
                             matrix.inverse_name()
                         ));
                         result.add_string("ihit = debug_intersect(transformed_ray);\nihit.hit.t /= len;\n");
@@ -825,7 +825,7 @@ impl Scene {
                         Simple(matrix) => {
                             let matrix = Object::get_name(matrix?, &self.matrices)?;
                             result.add_string(format!(
-                                "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);",
+                                "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray = normalize_ray(transformed_ray);",
                                 matrix.inverse_name()
                             ));
                             result.add_string(format!(
@@ -840,7 +840,7 @@ impl Scene {
                         Portal(a, b) => {
                             let mut add = |matrix: &MatrixName, first, material| {
                                 result.add_string(format!(
-                                    "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray.d = normalize(transformed_ray.d);",
+                                    "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray = normalize_ray(transformed_ray);",
                                     matrix.inverse_name()
                                 ));
                                 result.add_string(format!(

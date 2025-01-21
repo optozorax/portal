@@ -34,6 +34,7 @@ struct Ray
 {
     vec4 o; // Origin.
     vec4 d; // Direction.
+    float tmul; // T multiplier
 };
 
 Ray offset_ray(Ray r, float t) {
@@ -41,7 +42,7 @@ Ray offset_ray(Ray r, float t) {
     return r;
 }
 
-const Ray ray_none = Ray(vec4(0.), vec4(0.));
+const Ray ray_none = Ray(vec4(0.), vec4(0.), 0.);
 
 // Returns normal that anti-directed to dir ray, and has length 1.
 vec3 normalize_normal(vec3 normal, vec3 dir) {
@@ -86,12 +87,20 @@ vec3 my_refract(vec3 dir, vec3 normal, float refractive_index) {
 Ray transform(mat4 matrix, Ray r) {
     return Ray(
         matrix * r.o,
-        matrix * r.d
+        matrix * r.d,
+        r.tmul
     );
 }
 
 vec3 get_normal(mat4 matrix) {
     return (matrix * vec4(0., 0., 1., 0.)).xyz;
+}
+
+Ray normalize_ray(Ray r) {
+    float len = length(r.d);
+    r.d /= len;
+    r.tmul /= len;
+    return r;
 }
 
 // ---------------------------------------------------------------------------
@@ -230,7 +239,7 @@ MaterialProcessing material_refract(
 MaterialProcessing material_teleport_transformed(Ray r) {
     // todo add add_gray_after_teleportation
     r.o += r.d * _offset_after_material;
-    r.d = normalize(r.d);
+    r = normalize_ray(r);
     return material_next(vec3(1.), r);
 }
 
