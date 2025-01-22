@@ -392,7 +392,8 @@ impl StorageElem2 for Matrix {
                     inline_helper.inline("Else:", 45., otherwise, ui, input, data_id.with(1));
             }
             Sqrt(mat) => {
-                changed |= inline_helper.inline("Mat to sqrt:", 45., mat, ui, input, data_id.with(0));
+                changed |=
+                    inline_helper.inline("Mat to sqrt:", 45., mat, ui, input, data_id.with(0));
             }
         }
         /*
@@ -625,9 +626,7 @@ impl StorageElem2 for Matrix {
                     + then.map(&mut f).unwrap_or(1)
                     + otherwise.map(f).unwrap_or(1)
             }
-            Sqrt(mat) => {
-                mat.map(&mut f).unwrap_or(1)
-            }
+            Sqrt(mat) => mat.map(&mut f).unwrap_or(1),
         }
         // POSTPONE
         /*
@@ -658,20 +657,28 @@ fn mat_sqrt(mat: &DMat4) -> Option<DMat4> {
 
     fn vec_to_mat2(vec: &[f64]) -> DMat4 {
         DMat4::from_cols_array(&[
-            vec[0], vec[1], vec[2], vec[3],
-            vec[4], vec[5], vec[6], vec[7],
-            vec[8], vec[9], vec[10], vec[11],
-            0., 0., 0., 1.
-        ]).transpose()
+            vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], vec[6], vec[7], vec[8], vec[9],
+            vec[10], vec[11], 0., 0., 0., 1.,
+        ])
+        .transpose()
     }
 
     fn mat_to_vec2(mat: &DMat4) -> Vec<f64> {
-        mat.transpose().to_cols_array().iter().copied().take(12).collect()
+        mat.transpose()
+            .to_cols_array()
+            .iter()
+            .copied()
+            .take(12)
+            .collect()
     }
 
     fn cost_mat(old: &DMat4, new: &[f64]) -> f64 {
         let new = vec_to_mat2(new);
-        (new * new - *old).to_cols_array().into_iter().map(|x| x * x).sum()
+        (new * new - *old)
+            .to_cols_array()
+            .into_iter()
+            .map(|x| x * x)
+            .sum()
     }
 
     impl CostFunction for MatSquare {
@@ -704,7 +711,8 @@ fn mat_sqrt(mat: &DMat4) -> Option<DMat4> {
                 .max_iters(60)
         })
         // .add_observer(argmin_observer_slog::SlogLogger::term(), argmin::core::observers::ObserverMode::Always)
-        .run().ok()?;
+        .run()
+        .ok()?;
 
     // println!("{res}");
 

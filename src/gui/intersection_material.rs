@@ -45,7 +45,7 @@ impl StorageElem2 for IntersectionMaterial {
         let mut changed = false;
 
         let has_errors = errors.get(self_id).is_some();
-        
+
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 0.;
             ui.add(Label::new(
@@ -66,7 +66,7 @@ impl StorageElem2 for IntersectionMaterial {
         });
 
         egui_with_red_field(ui, has_errors, |ui| {
-            changed |= self.0.0.egui(ui).shader;
+            changed |= self.0 .0.egui(ui).shader;
         });
         ui.add(Label::new(egui::RichText::new("}").monospace()));
 
@@ -92,4 +92,3 @@ impl StorageElem2 for IntersectionMaterial {
         errors.get(self_id).map(|x| x.len()).unwrap_or(0)
     }
 }
-

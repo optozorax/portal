@@ -381,7 +381,11 @@ impl Scenes {
         } in self.0.iter()
         {
             if show_hidden || !hidden {
-                let name2 = if *hidden { format!("* {}", *name).to_string() } else { name.to_string() };
+                let name2 = if *hidden {
+                    format!("* {}", *name).to_string()
+                } else {
+                    name.to_string()
+                };
                 ui.menu_button(&name2, |ui| {
                     for Scene {
                         name,
@@ -390,7 +394,11 @@ impl Scenes {
                         link,
                     } in inner
                     {
-                        let name2 = if *hidden { format!("* {}", *name).to_string() } else { name.to_string() };
+                        let name2 = if *hidden {
+                            format!("* {}", *name).to_string()
+                        } else {
+                            name.to_string()
+                        };
                         if (show_hidden || !hidden) && ui.button(&name2).clicked() {
                             result = Some((*content, *link, *name))
                         }

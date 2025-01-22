@@ -7,8 +7,8 @@ use crate::gui::animation::*;
 use crate::gui::camera::Cam;
 use crate::gui::common::*;
 use crate::gui::eng_rus::EngRusText;
-use crate::gui::material::*;
 use crate::gui::intersection_material::*;
+use crate::gui::material::*;
 use crate::gui::matrix::*;
 use crate::gui::object::*;
 use crate::gui::texture::*;
@@ -260,7 +260,9 @@ impl Scene {
 
         changed |= self.materials.egui(ui, &mut data.errors, "Materials");
 
-        changed |= self.intersection_materials.egui(ui, &mut data.errors, "Intersection with material");
+        changed |=
+            self.intersection_materials
+                .egui(ui, &mut data.errors, "Intersection with material");
 
         changed |= self.textures.egui(ui, &mut data.texture_errors, "Textures");
 
@@ -877,7 +879,7 @@ impl Scene {
                     "SceneIntersectionWithMaterial intersect_material_{}(Ray r) {{\n",
                     pos
                 ));
-                result.add_identifier_string(id, &object.0.0.0);
+                result.add_identifier_string(id, &object.0 .0 .0);
                 result.add_string("\n}\n");
             }
             result
@@ -887,7 +889,9 @@ impl Scene {
             let mut result = StringStorage::default();
             for (pos, (_, _)) in self.intersection_materials.visible_elements().enumerate() {
                 result.add_string(format!("hit = intersect_material_{}(r);\n", pos));
-                result.add_string("if (nearer(result.scene.hit, hit.scene.hit)) { result = hit; }\n\n");
+                result.add_string(
+                    "if (nearer(result.scene.hit, hit.scene.hit)) { result = hit; }\n\n",
+                );
             }
             result
         });

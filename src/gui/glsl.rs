@@ -140,7 +140,8 @@ pub struct IntersectionMaterialCode(pub GlslCode);
 
 impl Default for IntersectionMaterialCode {
     fn default() -> Self {
-        Self(GlslCode(r#"vec3 op = -r.o.xyz;
+        Self(GlslCode(
+            r#"vec3 op = -r.o.xyz;
 float b = dot(op, r.d.xyz);
 float det = b*b - dot(op, op) + 1.0;
 if (det < 0.) return SceneIntersectionWithMaterial(scene_intersection_none, material_empty());
@@ -168,6 +169,8 @@ if (u > 0.) {
         material_empty()
     );
 }
-"#.to_owned()))
+"#
+            .to_owned(),
+        ))
     }
 }
