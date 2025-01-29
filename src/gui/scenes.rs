@@ -164,6 +164,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Cylinder spherical",
+                        link: "cylinder_spherical",
+                        content: include_str!("../../scenes/cylinder_spherical.ron"),
+                        hidden: true,
+                    },
+                    Scene {
                         name: "Trefoil knot",
                         link: "trefoil",
                         content: include_str!("../../scenes/trefoil.ron"),
