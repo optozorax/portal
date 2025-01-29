@@ -57,6 +57,7 @@ struct RotateAroundCam {
     render_scale_change_start_value: f32,
     new_render_scale: Option<f32>,
 
+    prev_cam_pos: DVec3,
     teleport_matrix: DMat4,
     allow_teleport: bool,
     stop_at_objects: bool,
@@ -103,6 +104,7 @@ impl RotateAroundCam {
             teleport_matrix: DMat4::IDENTITY,
             allow_teleport: true,
             stop_at_objects: false,
+            prev_cam_pos: Default::default(),
         }
     }
 
@@ -196,6 +198,10 @@ impl RotateAroundCam {
                 DVec4::new(k.x, k.y, k.z, 0.),
                 DVec4::new(pos.x, pos.y, pos.z, 1.),
             )
+    }
+
+    fn get_cam_pos(&self) -> DVec3 {
+        (self.get_matrix() * DVec4::new(0., 0., 0., 1.)).truncate()
     }
 
     fn set_cam(&mut self, s: &CamSettings) {
@@ -311,6 +317,7 @@ impl RotateAroundCam {
             ui.label("Teleportation matrix: ");
             if ui.button("Reset").clicked() {
                 self.teleport_matrix = DMat4::IDENTITY;
+                self.prev_cam_pos = self.get_cam_pos();
                 changed = true;
             }
         });
@@ -472,7 +479,6 @@ struct Window {
     render_scale: f32,
 
     external_ray_render_target: macroquad::prelude::RenderTarget,
-    prev_cam_pos: DVec3,
 }
 
 impl Window {
@@ -570,14 +576,13 @@ impl Window {
             render_scale: 0.5,
 
             external_ray_render_target: macroquad::prelude::render_target(2, 3),
-            prev_cam_pos: Default::default(),
         };
         result
             .render_target
             .texture
             .set_filter(macroquad::prelude::FilterMode::Nearest);
         result.cam.set_cam(&result.scene.cam);
-        result.prev_cam_pos = (result.cam.get_matrix() * DVec4::new(0., 0., 0., 1.)).truncate();
+        result.cam.prev_cam_pos = result.cam.get_cam_pos();
         result.offset_after_material = result.scene.cam.offset_after_material;
         result.reload_textures().await;
         result
@@ -1114,8 +1119,8 @@ First, predefined library is included, then uniforms, then user library, then in
         if !(self.cam.allow_teleport || self.cam.stop_at_objects) {
             return;
         }
-        let cam_pos = (self.cam.get_matrix() * DVec4::new(0., 0., 0., 1.)).truncate();
-        let (teleported, encounter_object) = self.teleport_external_ray(self.prev_cam_pos, cam_pos);
+        let cam_pos = self.cam.get_cam_pos();
+        let (teleported, encounter_object) = self.teleport_external_ray(self.cam.prev_cam_pos, cam_pos);
         if self.cam.stop_at_objects && encounter_object {
             self.cam = prev_cam.clone();
             return;
@@ -1130,21 +1135,21 @@ First, predefined library is included, then uniforms, then user library, then in
 
                 let i = (cam_matrix * DVec4::new(1., 0., 0., 0.) * cam_teleport_dx).truncate();
                 let i = self
-                    .teleport_external_ray(self.prev_cam_pos + i, cam_pos + i)
+                    .teleport_external_ray(self.cam.prev_cam_pos + i, cam_pos + i)
                     .0?
                     - new_pos;
                 let i = DVec4::from((i, 0.)) / cam_teleport_dx;
 
                 let j = (cam_matrix * DVec4::new(0., 1., 0., 0.) * cam_teleport_dx).truncate();
                 let j = self
-                    .teleport_external_ray(self.prev_cam_pos + j, cam_pos + j)
+                    .teleport_external_ray(self.cam.prev_cam_pos + j, cam_pos + j)
                     .0?
                     - new_pos;
                 let j = DVec4::from((j, 0.)) / cam_teleport_dx;
 
                 let k = (cam_matrix * DVec4::new(0., 0., 1., 0.) * cam_teleport_dx).truncate();
                 let k = self
-                    .teleport_external_ray(self.prev_cam_pos + k, cam_pos + k)
+                    .teleport_external_ray(self.cam.prev_cam_pos + k, cam_pos + k)
                     .0?
                     - new_pos;
                 let k = DVec4::from((k, 0.)) / cam_teleport_dx;
@@ -1162,14 +1167,14 @@ First, predefined library is included, then uniforms, then user library, then in
 
                 self.cam.teleport_matrix = DMat4::from_cols(i, j, k, pos);
 
-                self.prev_cam_pos = (self.cam.get_matrix() * DVec4::new(0., 0., 0., 1.)).truncate();
+                self.cam.prev_cam_pos = self.cam.get_cam_pos();
                 Some(())
             }();
             if res == None {
                 self.cam = prev_cam;
             }
         } else {
-            self.prev_cam_pos = cam_pos;
+            self.cam.prev_cam_pos = cam_pos;
         }
     }
 
