@@ -421,7 +421,7 @@ impl Scene {
             .into_iter()
             .collect::<BTreeSet<_>>()
             .into_iter()
-            .map(|name| (name, UniformType::Mat4))
+            .map(|name| (name, UniformType::DMat4))
             .collect::<Vec<_>>();
 
         for (id, name) in self.uniforms.visible_elements() {
@@ -429,7 +429,7 @@ impl Scene {
             match self.uniforms.get(id, &data.formulas_cache) {
                 Some(AnyUniformResult::Bool(_)) => result.push((name, UniformType::Int1)),
                 Some(AnyUniformResult::Int { .. }) => result.push((name, UniformType::Int1)),
-                Some(AnyUniformResult::Float { .. }) => result.push((name, UniformType::Float1)),
+                Some(AnyUniformResult::Float { .. }) => result.push((name, UniformType::Double1)),
                 Some(AnyUniformResult::TrefoilSpecial(x)) => {
                     for (i, _) in x.0.iter().enumerate() {
                         result.push((format!("ts_{}_{}", i, name), UniformType::Int1))
@@ -440,22 +440,22 @@ impl Scene {
         }
 
         result.extend(vec![
-            ("_camera".to_owned(), UniformType::Mat4),
+            ("_camera".to_owned(), UniformType::DMat4),
             ("_resolution".to_owned(), UniformType::Float2),
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
             ("_aa_count".to_owned(), UniformType::Int1),
-            ("_offset_after_material".to_owned(), UniformType::Float1),
-            ("_t_start".to_owned(), UniformType::Float1),
-            ("_t_end".to_owned(), UniformType::Float1),
-            ("_view_angle".to_owned(), UniformType::Float1),
+            ("_offset_after_material".to_owned(), UniformType::Double1),
+            ("_t_start".to_owned(), UniformType::Double1),
+            ("_t_end".to_owned(), UniformType::Double1),
+            ("_view_angle".to_owned(), UniformType::Double1),
             ("_use_panini_projection".to_owned(), UniformType::Int1),
             ("_angle_color_disable".to_owned(), UniformType::Int1),
             ("_grid_disable".to_owned(), UniformType::Int1),
             ("_black_border_disable".to_owned(), UniformType::Int1),
-            ("_panini_param".to_owned(), UniformType::Float1),
+            ("_panini_param".to_owned(), UniformType::Double1),
             ("_teleport_external_ray".to_owned(), UniformType::Int1),
-            ("_external_ray_a".to_owned(), UniformType::Float3),
-            ("_external_ray_b".to_owned(), UniformType::Float3),
+            ("_external_ray_a".to_owned(), UniformType::Double3),
+            ("_external_ray_b".to_owned(), UniformType::Double3),
         ]);
 
         Some(result)
@@ -496,8 +496,8 @@ impl Scene {
         for (id, name) in passed_matrices {
             let matrix = with_swapped!(x => (*uniforms, data.formulas_cache); matrices.get(id, &x));
             if let Some(matrix) = matrix {
-                material.set_uniform(&name.normal_name(), matrix.as_f32());
-                material.set_uniform(&name.inverse_name(), matrix.inverse().as_f32());
+                material.set_uniform(&name.normal_name(), matrix);
+                material.set_uniform(&name.inverse_name(), matrix.inverse());
             } else {
                 crate::error!(format, "matrix `{}` can't be getted", name.0);
             }
@@ -526,12 +526,12 @@ impl Scene {
             if let Some((ma, mb)) = a.zip(b) {
                 material.set_uniform(
                     &namea.teleport_to_name(&nameb),
-                    (mb * ma.inverse()).as_f32(),
+                    mb * ma.inverse(),
                 );
                 if namea.0 != nameb.0 {
                     material.set_uniform(
                         &nameb.teleport_to_name(&namea),
-                        (ma * mb.inverse()).as_f32(),
+                        ma * mb.inverse(),
                     );
                 }
             }
@@ -543,7 +543,7 @@ impl Scene {
                 Some(result) => match result {
                     AnyUniformResult::Bool(b) => material.set_uniform(&name_u, b as i32),
                     AnyUniformResult::Int(i) => material.set_uniform(&name_u, i),
-                    AnyUniformResult::Float(f) => material.set_uniform(&name_u, f as f32),
+                    AnyUniformResult::Float(f) => material.set_uniform(&name_u, f as f64),
                     AnyUniformResult::TrefoilSpecial(x) => {
                         for (i, (enabled, value, color)) in x.0.iter().enumerate() {
                             let compressed_value =
@@ -569,18 +569,23 @@ impl Scene {
             .filter(|(name, _)| !name.starts_with('_'))
         {
             result.add_string(format!(
-                "uniform {} {};\n",
+                "uniform {} {}; // !RETAIN_FLOAT!\n",
                 match kind {
-                    UniformType::Mat4 => "mat4",
-                    UniformType::Float1 => "float",
+                    UniformType::DMat4 => "dmat4",
+                    UniformType::Double1 => "double",
                     UniformType::Int1 => "int",
 
+                    UniformType::Mat4 => unreachable!(),
+                    UniformType::Float1 => unreachable!(),
                     UniformType::Float2 => unreachable!(),
                     UniformType::Float3 => unreachable!(),
                     UniformType::Float4 => unreachable!(),
                     UniformType::Int2 => unreachable!(),
                     UniformType::Int3 => unreachable!(),
                     UniformType::Int4 => unreachable!(),
+                    UniformType::Double2 => unreachable!(),
+                    UniformType::Double3 => unreachable!(),
+                    UniformType::Double4 => unreachable!(),
                 },
                 name
             ))
@@ -911,7 +916,46 @@ impl Scene {
             result
         });
 
-        Some(apply_template(FRAGMENT_SHADER, storages))
+        let mut res = apply_template(FRAGMENT_SHADER, storages);
+        let mut res_storage = String::new();
+        for line in res.storage.lines() {
+            if !line.contains("!RETAIN_FLOAT!") {
+                res_storage += &line
+                    .replace("float", "double")
+
+                    .replace("vec2", "dvec2")
+                    .replace("vec3", "dvec3")
+                    .replace("vec4", "dvec4")
+                    .replace("mat2", "dmat2")
+                    .replace("mat3", "dmat3")
+                    .replace("mat4", "dmat4")
+
+                    .replace("sin(", "dsin(")
+                    .replace("cos(", "dcos(")
+                    .replace("tan(", "dtan(")
+                    .replace("adtan(", "datan(")
+                    .replace("adcos(", "dacos(")
+                    // .replace("asin(", "dasin(")
+                    // .replace("exp(", "dexp(")
+                    .replace("exp2(", "dexp2(")
+                    // .replace("log(", "dlog(")
+                    .replace("log2(", "dlog2(")
+                    // .replace("sqrt(", "dsqrt(")
+                    // .replace("pow(", "dpow(")
+
+                    // .replace("abs(", "dabs(")
+                    // .replace("floor(", "dfloor(")
+                    // .replace("ceil(", "dceil(")
+                    ;
+            } else {
+                res_storage += &line;
+            }
+            res_storage += "\n";
+        }
+
+        res.storage = res_storage;
+
+        Some(res)
     }
 
     pub fn get_new_material(
@@ -1056,13 +1100,13 @@ const FRAGMENT_SHADER: &str = include_str!("../frag.glsl");
 
 pub const LIBRARY: &str = include_str!("../library.glsl");
 
-const VERTEX_SHADER: &str = "#version 100
-attribute vec3 position;
-attribute vec2 texcoord;
+const VERTEX_SHADER: &str = "#version 460
+in vec3 position;
+in vec2 texcoord;
 
-varying lowp vec2 uv;
-varying lowp vec2 uv_screen;
-varying float pixel_size;
+out vec2 uv;
+out vec2 uv_screen;
+out float pixel_size;
 
 uniform mat4 Model;
 uniform mat4 Projection;

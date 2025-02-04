@@ -1,13 +1,23 @@
-#version 100
+#version 460
+#extension GL_ARB_gpu_shader_fp64 : require
 // Version can't be changed to upper versions because of WebGL.
 
-precision highp float;
+// precision highp float;
 
 uniform int _black_border_disable;
 
 // ---------------------------------------------------------------------------
 // Scalar math ---------------------------------------------------------------
 // ---------------------------------------------------------------------------
+
+
+double dsin(double x) { return double(sin(float(x))); } // !RETAIN_FLOAT!
+double dcos(double x) { return double(cos(float(x))); } // !RETAIN_FLOAT!
+double dtan(double x) { return double(tan(float(x))); } // !RETAIN_FLOAT!
+double dacos(double x) { return double(acos(float(x))); } // !RETAIN_FLOAT!
+double datan(double x, double y) { return double(atan(float(x), float(y))); } // !RETAIN_FLOAT!
+double dexp2(double x) { return double(exp2(float(x))); } // !RETAIN_FLOAT!
+double dlog2(double x) { return double(log2(float(x))); }  // !RETAIN_FLOAT!
 
 #define PI acos(-1.)
 #define PI2 (acos(-1.) / 2.0)
@@ -23,7 +33,7 @@ float sqr(float a) {
 }
 
 vec4 texture(sampler2D tex, vec2 pos) {
-    return texture2D(tex, pos);
+    return texture2D(tex, vec2(pos.x, pos.y)); // !RETAIN_FLOAT!
 }
 
 // ---------------------------------------------------------------------------

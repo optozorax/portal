@@ -45,7 +45,7 @@ struct RotateAroundCam {
     mouse_over_canvas_right_now: bool,
     is_something_changed: bool,
     current_dpi: f64,
-    current_render_scale: f32,
+    current_render_scale: f64,
 
     start_touch_scale: f64,
 
@@ -54,8 +54,8 @@ struct RotateAroundCam {
     new_dpi: Option<f64>,
 
     render_scale_change_start_pos: Point,
-    render_scale_change_start_value: f32,
-    new_render_scale: Option<f32>,
+    render_scale_change_start_value: f64,
+    new_render_scale: Option<f64>,
 
     prev_cam_pos: DVec3,
     teleport_matrix: DMat4,
@@ -278,7 +278,7 @@ impl GestureEvents for RotateAroundCam {
     fn touch_four_move(&mut self, pos: &Point, _offset: &Point) {
         let offset = pos.clone() - &self.render_scale_change_start_pos;
         self.new_render_scale = Some(clamp(
-            self.render_scale_change_start_value * (1.2_f32).powf((offset.x + offset.y) / 100.),
+            self.render_scale_change_start_value * (1.2_f64).powf((offset.x + offset.y) as f64 / 100.),
             0.01,
             1.0,
         ));
@@ -476,7 +476,7 @@ struct Window {
     input_subscriber_id: usize,
 
     render_target: macroquad::prelude::RenderTarget,
-    render_scale: f32,
+    render_scale: f64,
 
     external_ray_render_target: macroquad::prelude::RenderTarget,
 }
@@ -1184,16 +1184,16 @@ First, predefined library is included, then uniforms, then user library, then in
         self.material.set_uniform(
             "_resolution",
             (
-                screen_width() * self.render_scale,
-                screen_height() * self.render_scale,
+                screen_width() * self.render_scale as f32,
+                screen_height() * self.render_scale as f32,
             ),
         );
         self.material
-            .set_uniform("_camera", self.cam.get_matrix().as_f32());
+            .set_uniform("_camera", self.cam.get_matrix());
         self.material
-            .set_uniform("_view_angle", self.cam.view_angle as f32);
+            .set_uniform("_view_angle", self.cam.view_angle as f64);
         self.material
-            .set_uniform("_panini_param", self.cam.panini_param as f32);
+            .set_uniform("_panini_param", self.cam.panini_param as f64);
         self.material.set_uniform(
             "_use_panini_projection",
             self.cam.use_panini_projection as i32,
@@ -1202,7 +1202,7 @@ First, predefined library is included, then uniforms, then user library, then in
             .set_uniform("_ray_tracing_depth", self.render_depth);
         self.material.set_uniform("_aa_count", self.aa_count);
         self.material
-            .set_uniform("_offset_after_material", self.offset_after_material as f32);
+            .set_uniform("_offset_after_material", self.offset_after_material as f64);
 
         let scale = self
             .cam
@@ -1214,10 +1214,10 @@ First, predefined library is included, then uniforms, then user library, then in
             .sum::<f64>()
             / 3.0;
         self.material
-            .set_uniform("_t_start", self.gray_t_start as f32 * scale as f32);
+            .set_uniform("_t_start", self.gray_t_start as f64 * scale as f64);
         self.material.set_uniform(
             "_t_end",
-            (self.gray_t_start + self.gray_t_size) as f32 * scale as f32,
+            (self.gray_t_start + self.gray_t_size) as f64 * scale as f64,
         );
 
         self.material
@@ -1250,8 +1250,8 @@ First, predefined library is included, then uniforms, then user library, then in
             draw_rectangle(
                 0.,
                 0.,
-                screen_width() * self.render_scale,
-                screen_height() * self.render_scale,
+                screen_width() * self.render_scale as f32,
+                screen_height() * self.render_scale as f32,
                 WHITE,
             );
             gl_use_default_material();
@@ -1267,8 +1267,8 @@ First, predefined library is included, then uniforms, then user library, then in
                     source: Some(macroquad::math::Rect::new(
                         0.,
                         0.,
-                        screen_width() * self.render_scale,
-                        screen_height() * self.render_scale,
+                        screen_width() * self.render_scale as f32,
+                        screen_height() * self.render_scale as f32,
                     )),
                     dest_size: Some(macroquad::prelude::vec2(screen_width(), screen_height())),
                     ..Default::default()
@@ -1281,8 +1281,8 @@ First, predefined library is included, then uniforms, then user library, then in
         self.set_uniforms();
         self.material
             .set_uniform("_teleport_external_ray", 1 as i32);
-        self.material.set_uniform("_external_ray_a", a.as_f32());
-        self.material.set_uniform("_external_ray_b", b.as_f32());
+        self.material.set_uniform("_external_ray_a", a);
+        self.material.set_uniform("_external_ray_b", b);
 
         macroquad::prelude::set_camera(&macroquad::prelude::Camera2D {
             zoom: macroquad::prelude::vec2(

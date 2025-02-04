@@ -115,37 +115,37 @@ vec3 ray_tracing(Ray r) {
 // ---------------------------------------------------------------------------
 
 // thanks https://stackoverflow.com/questions/17981163/webgl-read-pixels-from-floating-point-render-target/20859830#20859830
-float shift_right(float v, float amt) {
-    v = floor(v) + 0.5;
-    return floor(v / exp2(amt));
+float shift_right(float v, float amt) { // !RETAIN_FLOAT!
+    v = floor(v) + 0.5; // !RETAIN_FLOAT!
+    return floor(v / exp2(amt)); // !RETAIN_FLOAT!
 }
-float shift_left(float v, float amt) {
-    return floor(v * exp2(amt) + 0.5);
+float shift_left(float v, float amt) { // !RETAIN_FLOAT!
+    return floor(v * exp2(amt) + 0.5); // !RETAIN_FLOAT!
 }
-float mask_last(float v, float bits) {
-    return mod(v, shift_left(1.0, bits));
+float mask_last(float v, float bits) { // !RETAIN_FLOAT!
+    return mod(v, shift_left(1.0, bits)); // !RETAIN_FLOAT!
 }
-float extract_bits(float num, float from, float to) {
-    from = floor(from + 0.5);
-    to = floor(to + 0.5);
-    return mask_last(shift_right(num, from), to - from);
+float extract_bits(float num, float from, float to) { // !RETAIN_FLOAT!
+    from = floor(from + 0.5); // !RETAIN_FLOAT!
+    to = floor(to + 0.5); // !RETAIN_FLOAT!
+    return mask_last(shift_right(num, from), to - from); // !RETAIN_FLOAT!
 }
-vec4 encode_float(float val) {
-    if(val == 0.0)
-        return vec4(0, 0, 0, 0);
-    float sign = val > 0.0 ? 0.0 : 1.0;
-    val = abs(val);
-    float exponent = floor(log2(val));
-    float biased_exponent = exponent + 127.0;
-    float fraction = ((val / exp2(exponent)) - 1.0) * 8388608.0;
-    float t = biased_exponent / 2.0;
-    float last_bit_of_biased_exponent = fract(t) * 2.0;
-    float remaining_bits_of_biased_exponent = floor(t);
-    float byte4 = extract_bits(fraction, 0.0, 8.0) / 255.0;
-    float byte3 = extract_bits(fraction, 8.0, 16.0) / 255.0;
-    float byte2 = (last_bit_of_biased_exponent * 128.0 + extract_bits(fraction, 16.0, 23.0)) / 255.0;
-    float byte1 = (sign * 128.0 + remaining_bits_of_biased_exponent) / 255.0;
-    return vec4(byte4, byte3, byte2, byte1);
+vec4 encode_float(float val) { // !RETAIN_FLOAT!
+    if(val == 0.0) // !RETAIN_FLOAT!
+        return vec4(0, 0, 0, 0); // !RETAIN_FLOAT!
+    float sign = val > 0.0 ? 0.0 : 1.0; // !RETAIN_FLOAT!
+    val = abs(val); // !RETAIN_FLOAT!
+    float exponent = floor(log2(val)); // !RETAIN_FLOAT!
+    float biased_exponent = exponent + 127.0; // !RETAIN_FLOAT!
+    float fraction = ((val / exp2(exponent)) - 1.0) * 8388608.0; // !RETAIN_FLOAT!
+    float t = biased_exponent / 2.0; // !RETAIN_FLOAT!
+    float last_bit_of_biased_exponent = fract(t) * 2.0; // !RETAIN_FLOAT!
+    float remaining_bits_of_biased_exponent = floor(t); // !RETAIN_FLOAT!
+    float byte4 = extract_bits(fraction, 0.0, 8.0) / 255.0; // !RETAIN_FLOAT!
+    float byte3 = extract_bits(fraction, 8.0, 16.0) / 255.0; // !RETAIN_FLOAT!
+    float byte2 = (last_bit_of_biased_exponent * 128.0 + extract_bits(fraction, 16.0, 23.0)) / 255.0; // !RETAIN_FLOAT!
+    float byte1 = (sign * 128.0 + remaining_bits_of_biased_exponent) / 255.0; // !RETAIN_FLOAT!
+    return vec4(byte4, byte3, byte2, byte1); // !RETAIN_FLOAT!
 }
 
 vec4 teleport_external_ray(Ray r) {
@@ -202,15 +202,15 @@ vec4 teleport_external_ray(Ray r) {
 // Draw image ----------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-uniform mat4 _camera;
+uniform dmat4 _camera; // !RETAIN_FLOAT!
 uniform float _view_angle;
 uniform int _use_panini_projection;
 uniform float _panini_param;
 uniform int _aa_count;
-varying vec2 uv; // absolute coordinates, integer values, from 0
-varying vec2 uv_screen;
-varying float pixel_size;
-// varying vec4 out_Color;
+in vec2 uv; // absolute coordinates, integer values, from 0 // !RETAIN_FLOAT!
+in vec2 uv_screen; // !RETAIN_FLOAT!
+in float pixel_size; // !RETAIN_FLOAT!
+out vec4 fragColor; // !RETAIN_FLOAT!
 
 uniform int _teleport_external_ray;
 uniform vec3 _external_ray_a;
@@ -294,7 +294,7 @@ void main() {
         for (int a = 0; a < 16; a++) {
             if (a >= _aa_count) break;
             vec2 offset = quasi_random(a);
-            result += get_color(uv_screen + offset * pixel_size * 2.);
+            result += get_color(vec2(uv_screen.x, uv_screen.y) + offset * double(pixel_size) * 2.);
         }
         result = sqrt(result/float(_aa_count));
     } else {
@@ -305,10 +305,11 @@ void main() {
         if (int(uv.y) == 1) { val = teleported.y; } else
         if (int(uv.y) == 2) { val = teleported.z; }
 
+        vec4 encoded = encode_float(float(val)); // !RETAIN_FLOAT!
         if (int(uv.x) == 0) {
-            result = encode_float(val).xyz;
+            result = vec3(encoded.x, encoded.y, encoded.z); 
         } else {
-            result = encode_float(val).www;
+            result = vec3(encoded.w, encoded.w, encoded.w);
         }
 
         if (teleported.w < 0. && int(uv.x) == 1) {
@@ -318,5 +319,16 @@ void main() {
         }
     }
 
-    gl_FragColor = vec4(result, 1.);
+    /*
+    double val = (_camera * dvec4(1., 0., 0., 0.)).x; // !RETAIN_FLOAT!
+    // double val = 420.420;
+    vec4 encoded = encode_float(float(val)); // !RETAIN_FLOAT!
+    if (int(uv.x) == 0) {
+        result = vec3(encoded.x, encoded.y, encoded.z); 
+    } else {
+        result = vec3(encoded.w, encoded.w, encoded.w);
+    }
+    */
+
+    fragColor = vec4(result.x, result.y, result.z, 1.); // !RETAIN_FLOAT!
 }
