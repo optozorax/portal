@@ -325,6 +325,13 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/portal_in_portal.ron"),
                         hidden: false,
                     },
+                    
+                    Scene {
+                        name: "Fully inside attempt with support portal",
+                        link: "portal_in_portal_1x_attempt",
+                        content: include_str!("../../scenes/portal_in_portal_1x_attempt.ron"),
+                        hidden: true,
+                    },
                     Scene {
                         name: "Plus ultra",
                         link: "plus_ultra",
