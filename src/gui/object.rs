@@ -37,16 +37,30 @@ pub enum ObjectType {
     Portal(Option<MatrixId>, Option<MatrixId>),
 }
 
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub enum SubspaceType {
+    #[default]
+    Normal,
+    Subspace,
+    Both,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
     DebugMatrix(Option<MatrixId>),
     Flat {
         kind: ObjectType,
         is_inside: IsInsideCode, // gets current position (vec4), surface x y, must return material number. if this is portal, then additionally gets `first`, `back`
+
+        #[serde(default)]
+        in_subspace: SubspaceType,
     },
     Complex {
         kind: ObjectType,
         intersect: IntersectCode, // gets transformed Ray, must return SurfaceIntersect
+
+        #[serde(default)]
+        in_subspace: SubspaceType,
     },
 }
 
@@ -59,6 +73,29 @@ impl Default for ObjectType {
 impl Default for Object {
     fn default() -> Self {
         Object::DebugMatrix(None)
+    }
+}
+
+impl ComboBoxChoosable for SubspaceType {
+    fn variants() -> &'static [&'static str] {
+        &["Normal", "Subspace", "Both"]
+    }
+    fn get_number(&self) -> usize {
+        use SubspaceType::*;
+        match self {
+            Normal => 0,
+            Subspace => 1,
+            Both => 2,
+        }
+    }
+    fn set_number(&mut self, number: usize) {
+        use SubspaceType::*;
+        *self = match number {
+            0 => Normal,
+            1 => Subspace,
+            2 => Both,
+            _ => unreachable!(),
+        };
     }
 }
 
@@ -102,10 +139,12 @@ impl ComboBoxChoosable for Object {
             1 => Flat {
                 kind: Default::default(),
                 is_inside: Default::default(),
+                in_subspace: Default::default(),
             },
             2 => Complex {
                 kind: Default::default(),
                 intersect: Default::default(),
+                in_subspace: Default::default(),
             },
             _ => unreachable!(),
         };
@@ -189,7 +228,9 @@ impl StorageElem2 for Object {
                 let (matrices, input) = input;
                 changed |= matrices.inline("Matrix:", 45., a, ui, input, data_id.with(0));
             }
-            Flat { kind, is_inside } => {
+            Flat { kind, is_inside, in_subspace } => {
+                changed.shader |= egui_combo_label(ui, "Subspace:", 45., in_subspace);
+                ui.separator();
                 changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
                 changed |= kind.egui(ui, input, data_id.with(0));
                 ui.separator();
@@ -267,11 +308,12 @@ impl StorageElem2 for Object {
                     egui_errors(ui, local_errors);
                 }
             }
-            Complex { kind, intersect } => {
+            Complex { kind, intersect, in_subspace } => {
+                changed.shader |= egui_combo_label(ui, "Subspace:", 45., in_subspace);
+                ui.separator();
                 changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
                 changed |= kind.egui(ui, input, data_id.with(0));
                 ui.separator();
-
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.;
 

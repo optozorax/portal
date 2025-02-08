@@ -389,7 +389,7 @@ impl Scene {
                     result.push(matrix.normal_name());
                     result.push(matrix.inverse_name());
                 }
-                Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
+                Flat { kind, is_inside: _, in_subspace: _ } | Complex { kind, intersect: _, in_subspace: _ } => match kind {
                     Simple(matrix) => {
                         let matrix = Object::get_name((*matrix)?, &self.matrices)?;
                         result.push(matrix.normal_name());
@@ -441,6 +441,7 @@ impl Scene {
 
         result.extend(vec![
             ("_camera".to_owned(), UniformType::Mat4),
+            ("_camera_in_subspace".to_owned(), UniformType::Int1),
             ("_resolution".to_owned(), UniformType::Float2),
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
             ("_aa_count".to_owned(), UniformType::Int1),
@@ -476,7 +477,7 @@ impl Scene {
                 Some(
                     match &objects.get(id, &())? {
                         DebugMatrix(matrix) => vec![(*matrix)?],
-                        Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => {
+                        Flat { kind, is_inside: _, in_subspace: _ } | Complex { kind, intersect: _, in_subspace: _ } => {
                             match kind {
                                 Simple(matrix) => vec![(*matrix)?],
                                 Portal(a, b) => vec![(*a)?, (*b)?],
@@ -508,7 +509,7 @@ impl Scene {
             use ObjectType::*;
             match &objects.get(id, &())? {
                 DebugMatrix(_) => None,
-                Flat { kind, is_inside: _ } | Complex { kind, intersect: _ } => match kind {
+                Flat { kind, is_inside: _, in_subspace: _ } | Complex { kind, intersect: _, in_subspace: _ } => match kind {
                     Simple(_) => None,
                     Portal(a, b) => {
                         let a = (*a)?;
@@ -581,6 +582,8 @@ impl Scene {
                     UniformType::Int2 => unreachable!(),
                     UniformType::Int3 => unreachable!(),
                     UniformType::Int4 => unreachable!(),
+
+                    _ => todo!(),
                 },
                 name
             ))
@@ -738,7 +741,7 @@ impl Scene {
                 let object = self.objects.get(id, &()).unwrap();
                 match object {
                     DebugMatrix(_) => {}
-                    Flat { kind, is_inside } => {
+                    Flat { kind, is_inside, in_subspace: _ } => {
                         if matches!(kind, Portal { .. }) {
                             result.add_string(format!(
                                 "int is_inside_{}(vec4 pos, float x, float y, bool back, bool first) {{\n",
@@ -750,7 +753,7 @@ impl Scene {
                         result.add_identifier_string(id, &is_inside.0.0);
                         result.add_string("\n}\n");
                     }
-                    Complex { kind, intersect } => {
+                    Complex { kind, intersect, in_subspace: _ } => {
                         if matches!(kind, Portal { .. }) {
                             result.add_string(format!(
                                 "SceneIntersection intersect_{}(Ray r, bool first) {{\n",
@@ -787,81 +790,104 @@ impl Scene {
                             matrix.normal_name()
                         ));
                     }
-                    Flat { kind, is_inside: _ } => match kind {
-                        Simple(matrix) => {
-                            let matrix = Object::get_name(matrix?, &self.matrices)?;
-                            result.add_string(format!(
-                                "normal = -get_normal({});\n",
-                                matrix.normal_name()
-                            ));
-                            result.add_string(format!(
-                                "hit = plane_intersect(r, {}, get_normal({}));\n",
-                                matrix.inverse_name(),
-                                matrix.normal_name()
-                            ));
-                            result.add_string(format!(
-                                "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(hit.n, normal))); }}\n\n",
-                                pos
-                            ));
+                    Flat { kind, is_inside: _, in_subspace } => {
+                        match in_subspace {
+                            SubspaceType::Normal => result.add_string(format!("if (r.in_subspace == false) {{")),
+                            SubspaceType::Subspace => result.add_string(format!("if (r.in_subspace == true) {{")),
+                            SubspaceType::Both => {},
                         }
-                        Portal(a, b) => {
-                            let mut add = |matrix: &MatrixName, first, material| {
+                        match kind {
+                            Simple(matrix) => {
+                                let matrix = Object::get_name(matrix?, &self.matrices)?;
                                 result.add_string(format!(
-                                    "normal = {}get_normal({});\n",
-                                    if first { "-" } else { "" },
+                                    "normal = -get_normal({});\n",
                                     matrix.normal_name()
                                 ));
                                 result.add_string(format!(
-                                    "hit = plane_intersect(r, {}, normal);\n",
-                                    matrix.inverse_name()
+                                    "hit = plane_intersect(r, {}, get_normal({}));\n",
+                                    matrix.inverse_name(),
+                                    matrix.normal_name()
                                 ));
                                 result.add_string(format!(
-                                    "if (nearer(i, hit)) {{ i = process_portal_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(hit.n, normal), {}), {}); }}\n\n",
-                                    pos, first, material
+                                    "if (nearer(i, hit)) {{ i = process_plane_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(hit.n, normal))); }}\n\n",
+                                    pos
                                 ));
-                            };
-                            let a = Object::get_name(a?, &self.matrices)?;
-                            let b = Object::get_name(b?, &self.matrices)?;
-                            add(&a, true, format!("teleport_{}_1_M", pos));
-                            add(&b, false, format!("teleport_{}_2_M", pos));
+                            }
+                            Portal(a, b) => {
+                                let mut add = |matrix: &MatrixName, first, material| {
+                                    result.add_string(format!(
+                                        "normal = {}get_normal({});\n",
+                                        if first { "-" } else { "" },
+                                        matrix.normal_name()
+                                    ));
+                                    result.add_string(format!(
+                                        "hit = plane_intersect(r, {}, normal);\n",
+                                        matrix.inverse_name()
+                                    ));
+                                    result.add_string(format!(
+                                        "if (nearer(i, hit)) {{ i = process_portal_intersection(i, hit, is_inside_{}(r.o + r.d * hit.t, hit.u, hit.v, is_collinear(hit.n, normal), {}), {}); }}\n\n",
+                                        pos, first, material
+                                    ));
+                                };
+                                let a = Object::get_name(a?, &self.matrices)?;
+                                let b = Object::get_name(b?, &self.matrices)?;
+                                add(&a, true, format!("teleport_{}_1_M", pos));
+                                add(&b, false, format!("teleport_{}_2_M", pos));
+                            }
+                        };
+                        match in_subspace {
+                            SubspaceType::Normal | SubspaceType::Subspace => result.add_string(format!("}}")),
+                            SubspaceType::Both => {},
                         }
                     },
-                    Complex { kind, intersect: _ } => match kind {
-                        Simple(matrix) => {
-                            let matrix = Object::get_name(matrix?, &self.matrices)?;
-                            result.add_string(format!(
-                                "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray = normalize_ray(transformed_ray);",
-                                matrix.inverse_name()
-                            ));
-                            result.add_string(format!(
-                                "ihit = intersect_{}(transformed_ray);\nihit.hit.t /= len;\n",
-                                pos,
-                            ));
-                            result.add_string(format!(
-                                "if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
-                                matrix.normal_name()
-                            ));
+                    Complex { kind, intersect: _, in_subspace } => {
+                        match in_subspace {
+                            SubspaceType::Normal => result.add_string(format!("if (r.in_subspace == false) {{")),
+                            SubspaceType::Subspace => result.add_string(format!("if (r.in_subspace == true) {{")),
+                            SubspaceType::Both => {},
                         }
-                        Portal(a, b) => {
-                            let mut add = |matrix: &MatrixName, first, material| {
+                        match kind {
+                            Simple(matrix) => {
+                                let matrix = Object::get_name(matrix?, &self.matrices)?;
                                 result.add_string(format!(
                                     "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray = normalize_ray(transformed_ray);",
                                     matrix.inverse_name()
                                 ));
                                 result.add_string(format!(
-                                    "ihit = intersect_{}(transformed_ray, {});\nihit.hit.t /= len;\n",
-                                    pos, first
+                                    "ihit = intersect_{}(transformed_ray);\nihit.hit.t /= len;\n",
+                                    pos,
                                 ));
                                 result.add_string(format!(
-                                    "if (nearer(i, ihit) && ihit.material != NOT_INSIDE) {{ if (ihit.material == TELEPORT) {{ ihit.material = {}; }} i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
-                                    material,
+                                    "if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
                                     matrix.normal_name()
                                 ));
-                            };
-                            let a = Object::get_name(a?, &self.matrices)?;
-                            let b = Object::get_name(b?, &self.matrices)?;
-                            add(&a, true, format!("teleport_{}_1_M", pos));
-                            add(&b, false, format!("teleport_{}_2_M", pos));
+                            }
+                            Portal(a, b) => {
+                                let mut add = |matrix: &MatrixName, first, material| {
+                                    result.add_string(format!(
+                                        "transformed_ray = transform({}, r);\nlen = length(transformed_ray.d);\ntransformed_ray = normalize_ray(transformed_ray);",
+                                        matrix.inverse_name()
+                                    ));
+                                    result.add_string(format!(
+                                        "ihit = intersect_{}(transformed_ray, {});\nihit.hit.t /= len;\n",
+                                        pos, first
+                                    ));
+                                    result.add_string(format!(
+                                        "if (nearer(i, ihit) && ihit.material != NOT_INSIDE) {{ if (ihit.material == TELEPORT) {{ ihit.material = {}; }} if (ihit.material == TELEPORT_SUBSPACE) {{ ihit.material = {}; ihit.in_subspace = true; }} i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
+                                        material,
+                                        material,
+                                        matrix.normal_name()
+                                    ));
+                                };
+                                let a = Object::get_name(a?, &self.matrices)?;
+                                let b = Object::get_name(b?, &self.matrices)?;
+                                add(&a, true, format!("teleport_{}_1_M", pos));
+                                add(&b, false, format!("teleport_{}_2_M", pos));
+                            }
+                        };
+                        match in_subspace {
+                            SubspaceType::Normal | SubspaceType::Subspace => result.add_string(format!("}}")),
+                            SubspaceType::Both => {},
                         }
                     },
                 }

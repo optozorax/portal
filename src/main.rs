@@ -61,6 +61,8 @@ struct RotateAroundCam {
     teleport_matrix: DMat4,
     allow_teleport: bool,
     stop_at_objects: bool,
+
+    in_subspace: bool,
 }
 
 impl RotateAroundCam {
@@ -105,6 +107,8 @@ impl RotateAroundCam {
             allow_teleport: true,
             stop_at_objects: false,
             prev_cam_pos: Default::default(),
+
+            in_subspace: false,
         }
     }
 
@@ -210,6 +214,7 @@ impl RotateAroundCam {
         self.beta = s.beta;
         self.r = s.r;
         self.teleport_matrix = DMat4::IDENTITY;
+        self.in_subspace = false;
     }
 
     fn get_cam(&mut self, cam_settings: &mut CamSettings) {
@@ -310,6 +315,12 @@ impl RotateAroundCam {
         ui.horizontal(|ui| {
             ui.label("Allow camera teleportation:");
             changed |= check_changed(&mut self.allow_teleport, |is_use| {
+                ui.add(egui::Checkbox::new(is_use, ""));
+            });
+        });
+        ui.horizontal(|ui| {
+            ui.label("Inside subspace:");
+            changed |= check_changed(&mut self.in_subspace, |is_use| {
                 ui.add(egui::Checkbox::new(is_use, ""));
             });
         });
@@ -848,10 +859,6 @@ First, predefined library is included, then uniforms, then user library, then in
                     .open(&mut opened)
                     .vscroll(true)
                     .show(ctx, |ui| {
-                        ui.add(
-                            egui::TextEdit::multiline(content)
-                                .font(egui::TextStyle::Monospace),
-                        );
                         if ui.button("Recompile").clicked() {
                             match ron::from_str::<Scene>(content) {
                                 Ok(scene) => {
@@ -876,6 +883,10 @@ First, predefined library is included, then uniforms, then user library, then in
                                 }
                             }
                         }
+                        ui.add(
+                            egui::TextEdit::multiline(content)
+                                .font(egui::TextStyle::Monospace),
+                        );
 
                         if let Some(err) = &self.import_window_errors {
                             ui.horizontal_wrapped(|ui| {
@@ -1079,6 +1090,7 @@ First, predefined library is included, then uniforms, then user library, then in
                 self.cam.r = calculated_cam.r;
                 self.cam.look_at = calculated_cam.look_at;
                 self.cam.teleport_matrix = DMat4::IDENTITY;
+                self.cam.in_subspace = false;
             } else if let Some(id) = self.cam.from {
                 let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
                     self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
@@ -1120,7 +1132,7 @@ First, predefined library is included, then uniforms, then user library, then in
             return;
         }
         let cam_pos = self.cam.get_cam_pos();
-        let (teleported, encounter_object) = self.teleport_external_ray(self.cam.prev_cam_pos, cam_pos);
+        let (teleported, encounter_object, change_subspace) = self.teleport_external_ray(self.cam.prev_cam_pos, cam_pos);
         if self.cam.stop_at_objects && encounter_object {
             self.cam = prev_cam.clone();
             return;
@@ -1167,6 +1179,10 @@ First, predefined library is included, then uniforms, then user library, then in
 
                 self.cam.teleport_matrix = DMat4::from_cols(i, j, k, pos);
 
+                if change_subspace {
+                    self.cam.in_subspace = !self.cam.in_subspace;
+                }
+
                 self.cam.prev_cam_pos = self.cam.get_cam_pos();
                 Some(())
             }();
@@ -1190,6 +1206,8 @@ First, predefined library is included, then uniforms, then user library, then in
         );
         self.material
             .set_uniform("_camera", self.cam.get_matrix().as_f32());
+        self.material
+            .set_uniform("_camera_in_subspace", self.cam.in_subspace as i32);
         self.material
             .set_uniform("_view_angle", self.cam.view_angle as f32);
         self.material
@@ -1277,7 +1295,7 @@ First, predefined library is included, then uniforms, then user library, then in
         }
     }
 
-    fn teleport_external_ray(&mut self, a: DVec3, b: DVec3) -> (Option<glam::DVec3>, bool) {
+    fn teleport_external_ray(&mut self, a: DVec3, b: DVec3) -> (Option<glam::DVec3>, bool, bool) {
         self.set_uniforms();
         self.material
             .set_uniform("_teleport_external_ray", 1 as i32);
@@ -1310,9 +1328,8 @@ First, predefined library is included, then uniforms, then user library, then in
             .get_texture_data()
             .bytes;
 
-        let encounter_object = (arr[0 + 5] == 255 && arr[0 + 6] == 0)
-            || (arr[8 + 5] == 255 && arr[8 + 6] == 0)
-            || (arr[16 + 5] == 255 && arr[16 + 6] == 0);
+        let encounter_object = (arr[0 + 5] == 255) || (arr[8 + 5] == 255) || (arr[16 + 5] == 255);
+        let change_subspace = (arr[0 + 6] == 255) || (arr[8 + 6] == 255) || (arr[16 + 6] == 255);
         let x = f32::from_le_bytes([arr[0 + 0], arr[0 + 1], arr[0 + 2], arr[0 + 4]]);
         let y = f32::from_le_bytes([arr[8 + 0], arr[8 + 1], arr[8 + 2], arr[8 + 4]]);
         let z = f32::from_le_bytes([arr[16 + 0], arr[16 + 1], arr[16 + 2], arr[16 + 4]]);
@@ -1320,9 +1337,10 @@ First, predefined library is included, then uniforms, then user library, then in
             return (
                 Some(DVec3::new(x.into(), y.into(), z.into())),
                 encounter_object,
+                change_subspace,
             );
         } else {
-            return (None, encounter_object);
+            return (None, encounter_object, change_subspace);
         }
     }
 }

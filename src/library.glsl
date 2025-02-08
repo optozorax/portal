@@ -35,6 +35,7 @@ struct Ray
     vec4 o; // Origin.
     vec4 d; // Direction.
     float tmul; // T multiplier
+    bool in_subspace; // inside subspace for portal in portal scenes (plus ultra)
 };
 
 Ray offset_ray(Ray r, float t) {
@@ -42,7 +43,7 @@ Ray offset_ray(Ray r, float t) {
     return r;
 }
 
-const Ray ray_none = Ray(vec4(0.), vec4(0.), 0.);
+const Ray ray_none = Ray(vec4(0.), vec4(0.), 0., false);
 
 // Returns normal that anti-directed to dir ray, and has length 1.
 vec3 normalize_normal(vec3 normal, vec3 dir) {
@@ -88,7 +89,8 @@ Ray transform(mat4 matrix, Ray r) {
     return Ray(
         matrix * r.o,
         matrix * r.d,
-        r.tmul
+        r.tmul,
+        r.in_subspace
     );
 }
 
@@ -251,15 +253,21 @@ MaterialProcessing material_teleport(
     return material_teleport_transformed(transform(teleport_matrix, r));
 }
 
+MaterialProcessing material_change_subspace(Ray r) {
+    r.in_subspace = !r.in_subspace;
+    return material_next(vec3(1.), r);
+}
+
 // System materials
 #define CUSTOM_MATERIAL -1
 #define NOT_INSIDE 0
 #define TELEPORT 1
+#define TELEPORT_SUBSPACE 2
 
 // Actual predefined materials
-#define DEBUG_RED 2
-#define DEBUG_GREEN 3
-#define DEBUG_BLUE 4
+#define DEBUG_RED 3
+#define DEBUG_GREEN 4
+#define DEBUG_BLUE 5
 
 // User must use this offset for his materials
 #define USER_MATERIAL_OFFSET 10
@@ -272,9 +280,10 @@ MaterialProcessing material_teleport(
 struct SceneIntersection {
     int material;
     SurfaceIntersection hit;
+    bool in_subspace;
 };
 
-const SceneIntersection scene_intersection_none = SceneIntersection(0, intersection_none);
+const SceneIntersection scene_intersection_none = SceneIntersection(0, intersection_none, false);
 
 bool nearer(SurfaceIntersection result, SurfaceIntersection current) {
     return current.hit && (current.t > 0.) && (!result.hit || (result.hit && current.t < result.t));
@@ -396,7 +405,7 @@ SceneIntersection debug_intersect(Ray r) {
     float radius = 0.03;
 
     SurfaceIntersection hit = intersection_none;
-    SceneIntersection i = SceneIntersection(0, hit);
+    SceneIntersection i = SceneIntersection(0, hit, false);
 
     hit = cap(r, pa, vec3(1., 0., 0.), radius);
     if (nearer(i, hit)) {
@@ -428,6 +437,8 @@ SceneIntersection process_plane_intersection(SceneIntersection i, SurfaceInterse
         // Not inside, do nothing
     } else if (inside == TELEPORT) {
         // This is wrong code, do nothing
+    } else if (inside == TELEPORT_SUBSPACE) {
+        // This is wrong code, do nothing
     } else {
         i.hit = hit;
         i.material = inside;
@@ -441,6 +452,10 @@ SceneIntersection process_portal_intersection(SceneIntersection i, SurfaceInters
     } else if (inside == TELEPORT) {
         i.hit = hit;
         i.material = teleport_material;
+    } else if (inside == TELEPORT_SUBSPACE) {
+        i.hit = hit;
+        i.material = teleport_material;
+        i.in_subspace = true;
     } else {
         i.hit = hit;
         i.material = inside;

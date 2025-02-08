@@ -17,8 +17,8 @@
 //%intersection_material_functions//%
 
 SceneIntersection scene_intersect(Ray r) {
-    SceneIntersection i = SceneIntersection(0, intersection_none);
-    SceneIntersection ihit = SceneIntersection(0, intersection_none);
+    SceneIntersection i = SceneIntersection(0, intersection_none, false);
+    SceneIntersection ihit = SceneIntersection(0, intersection_none, false);
     SurfaceIntersection hit = intersection_none;
     vec3 normal = vec3(0.);
     int inside = NOT_INSIDE;
@@ -32,6 +32,7 @@ SceneIntersection scene_intersect(Ray r) {
 
 MaterialProcessing material_process(Ray r, SceneIntersection i) {
     SurfaceIntersection hit = i.hit;
+    if (i.in_subspace) { r.in_subspace = !r.in_subspace; }
     if (i.material == 0) {
     } else if (i.material == DEBUG_RED) {
         return material_simple(hit, r, color(0.9, 0.2, 0.2), 0.5, false, 1., 0.);
@@ -104,7 +105,11 @@ vec3 ray_tracing(Ray r) {
                 r = m.new_ray;
             }
         } else {
-            return current_color * color(0.6, 0.6, 0.6);
+            if (r.in_subspace) {
+                return color(0., 0., 0.);
+            } else {
+                return current_color * color(0.6, 0.6, 0.6);
+            }
         }
     }
     return color(0., 0., 0.);
@@ -148,7 +153,15 @@ vec4 encode_float(float val) {
     return vec4(byte4, byte3, byte2, byte1);
 }
 
-vec4 teleport_external_ray(Ray r) {
+struct ExternalRayTeleportation {
+    vec3 pos;
+    bool encounter_object;
+    bool change_subspace;
+};
+
+uniform int _camera_in_subspace;
+
+ExternalRayTeleportation teleport_external_ray(Ray r) {
     r = normalize_ray(r);
     bool have_result = false;
     bool stop_at_object = false;
@@ -188,13 +201,11 @@ vec4 teleport_external_ray(Ray r) {
             break;
         }
     }
-    float last_value = 1.;
-    if (stop_at_object) last_value = -1.;
     if (have_result) {
         r.o += r.d * (1.0 - all_t) / r.tmul;
-        return vec4(r.o.xyz, last_value);
+        return ExternalRayTeleportation(r.o.xyz, stop_at_object, int(r.in_subspace) != _camera_in_subspace);
     } else {
-        return vec4(vec3(0.), last_value);
+        return ExternalRayTeleportation(vec3(0.), stop_at_object, int(r.in_subspace) != _camera_in_subspace);
     }
 }
 
@@ -273,7 +284,7 @@ vec3 get_color(vec2 image_position) {
         d = normalize(_camera * vec4(image_position.x * h, image_position.y * h, 1.0, 0.));
     }
      
-    Ray r = Ray(o, d, 1.0);
+    Ray r = Ray(o, d, 1.0, _camera_in_subspace == 1);
     return ray_tracing(r);
 }
 
@@ -298,12 +309,12 @@ void main() {
         }
         result = sqrt(result/float(_aa_count));
     } else {
-        vec4 teleported = teleport_external_ray(Ray(vec4(_external_ray_a, 1.), vec4(_external_ray_b - _external_ray_a, 0.), 1.));
+        ExternalRayTeleportation teleported = teleport_external_ray(Ray(vec4(_external_ray_a, 1.), vec4(_external_ray_b - _external_ray_a, 0.), 1., _camera_in_subspace == 1));
 
         float val = 0.;
-        if (int(uv.y) == 0) { val = teleported.x; } else
-        if (int(uv.y) == 1) { val = teleported.y; } else
-        if (int(uv.y) == 2) { val = teleported.z; }
+        if (int(uv.y) == 0) { val = teleported.pos.x; } else
+        if (int(uv.y) == 1) { val = teleported.pos.y; } else
+        if (int(uv.y) == 2) { val = teleported.pos.z; }
 
         if (int(uv.x) == 0) {
             result = encode_float(val).xyz;
@@ -311,10 +322,11 @@ void main() {
             result = encode_float(val).www;
         }
 
-        if (teleported.w < 0. && int(uv.x) == 1) {
-            // we encountered object
+        if (teleported.encounter_object && int(uv.x) == 1) {
             result.y = 1.;
-            result.z = 0.;
+        }
+        if (teleported.change_subspace && int(uv.x) == 1) {
+            result.z = 1.0;
         }
     }
 

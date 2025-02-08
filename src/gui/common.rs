@@ -121,6 +121,10 @@ pub fn egui_bool(ui: &mut Ui, flag: &mut bool) -> bool {
     check_changed(flag, |flag| drop(ui.add(Checkbox::new(flag, ""))))
 }
 
+pub fn egui_bool_named(ui: &mut Ui, flag: &mut bool, name: &str) -> bool {
+    check_changed(flag, |flag| drop(ui.add(Checkbox::new(flag, name))))
+}
+
 pub fn egui_angle(ui: &mut Ui, angle: &mut f64) -> bool {
     let mut current = rad2deg(*angle);
     let previous = current;
