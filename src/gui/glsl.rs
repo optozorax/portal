@@ -129,7 +129,7 @@ vec3 n = normalize(pos.xyz);
 float u = atan(pos.z, pos.x);
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
-return SceneIntersection(grid_gray_M, SurfaceIntersection(true, t, u, v, n));"#
+return SceneIntersection(grid_gray_M, SurfaceIntersection(true, t, u, v, n), false);"#
                 .to_owned(),
         ))
     }
@@ -160,7 +160,7 @@ float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 SurfaceIntersection hit = SurfaceIntersection(true, t, u, v, n);
 if (u > 0.) {
     return SceneIntersectionWithMaterial(
-        SceneIntersection(CUSTOM_MATERIAL, hit),
+        SceneIntersection(CUSTOM_MATERIAL, hit, false),
         material_simple(hit, r, vec3(9.21e-2, 7.28e-1, 6.81e-2) * r.d.xyz, 5e-1, true, 4e0, 3e-1)
     );
 } else {
