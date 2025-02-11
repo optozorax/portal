@@ -786,8 +786,8 @@ impl Scene {
                         ));
                         result.add_string("ihit = debug_intersect(transformed_ray);\nihit.hit.t /= len;\n");
                         result.add_string(format!(
-                            "if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
-                            matrix.normal_name()
+                            "if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(adjugate({}) * i.hit.n); }}\n\n",
+                            matrix.inverse_name()
                         ));
                     }
                     Flat { kind, is_inside: _, in_subspace } => {
@@ -858,7 +858,7 @@ impl Scene {
                                     pos,
                                 ));
                                 result.add_string(format!(
-                                    "if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
+                                    "if (nearer(i, ihit)) {{ i = ihit; i.hit.n = normalize(adjugate({}) * i.hit.n); }}\n\n",
                                     matrix.normal_name()
                                 ));
                             }
@@ -873,7 +873,7 @@ impl Scene {
                                         pos, first
                                     ));
                                     result.add_string(format!(
-                                        "if (nearer(i, ihit) && ihit.material != NOT_INSIDE) {{ if (ihit.material == TELEPORT) {{ ihit.material = {}; }} if (ihit.material == TELEPORT_SUBSPACE) {{ ihit.material = {}; ihit.in_subspace = true; }} i = ihit; i.hit.n = normalize(({} * vec4(i.hit.n, 0.)).xyz); }}\n\n",
+                                        "if (nearer(i, ihit) && ihit.material != NOT_INSIDE) {{ if (ihit.material == TELEPORT) {{ ihit.material = {}; }} if (ihit.material == TELEPORT_SUBSPACE) {{ ihit.material = {}; ihit.in_subspace = true; }} i = ihit; i.hit.n = normalize(adjugate({}) * i.hit.n); }}\n\n",
                                         material,
                                         material,
                                         matrix.normal_name()
