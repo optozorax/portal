@@ -338,6 +338,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/portal_in_portal_plus_ultra.ron"),
                         hidden: true,
                     },
+                     Scene {
+                        name: "Infinite cones to emulate plus ultra",
+                        link: "portal_in_portal_cone",
+                        content: include_str!("../../scenes/portal_in_portal_cone.ron"),
+                        hidden: true,
+                    },
                     Scene {
                         name: "Half-spheres",
                         link: "half_spheres",
