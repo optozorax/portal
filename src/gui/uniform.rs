@@ -759,6 +759,10 @@ impl StorageElem2 for AnyUniform {
 
                 "inv" => 1.0 - args.first()?,
 
+                "sqrt" => args.first()?.sqrt(),
+
+                "atan2" => args.first()?.atan2(*args.get(1)?),
+
                 "time" => formulas_cache.get_time(),
 
                 // Free variables
@@ -766,7 +770,7 @@ impl StorageElem2 for AnyUniform {
                     .get(if let Some(id) = get_helper.find_id(name) {
                         id
                     } else {
-                        crate::error!(format, "cannot find variable `{}`", name);
+                        crate::error!(format, "cannot find variable or function `{}`", name);
                         return None;
                     })?
                     .into(),
