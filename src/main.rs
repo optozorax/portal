@@ -473,6 +473,7 @@ struct Window {
     angle_color_disable: bool,
     grid_disable: bool,
     black_border_disable: bool,
+    darken_by_distance: bool,
 
     available_scenes: Scenes,
 
@@ -563,6 +564,7 @@ impl Window {
             angle_color_disable: false,
             grid_disable: false,
             black_border_disable: false,
+            darken_by_distance: true,
 
             available_scenes,
 
@@ -973,9 +975,12 @@ First, predefined library is included, then uniforms, then user library, then in
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
                     ui.separator();
-                    ui.label("Graying after distance:");
+                    ui.separator();
+                    ui.label("Darkening by distance:");
+                    changed.uniform |= egui_bool(ui, &mut self.darken_by_distance);
+                    ui.label("Darkening after distance:");
                     changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_start);
-                    ui.label("Graying size:");
+                    ui.label("Darkening size:");
                     changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_size);
                     ui.separator();
                     ui.label("Disable darkening by angle with normal:");
@@ -1244,6 +1249,8 @@ First, predefined library is included, then uniforms, then user library, then in
             .set_uniform("_grid_disable", self.grid_disable as i32);
         self.material
             .set_uniform("_black_border_disable", self.black_border_disable as i32);
+        self.material
+            .set_uniform("_darken_by_distance", self.darken_by_distance as i32);
         self.material.set_uniform("_teleport_external_ray", 0);
     }
 

@@ -65,6 +65,7 @@ SceneIntersectionWithMaterial scene_intersect_material_process(Ray r) {
 uniform int _ray_tracing_depth;
 uniform float _t_end;
 uniform float _t_start;
+uniform int _darken_by_distance;
 
 vec3 ray_tracing(Ray r) {
     vec3 current_color = vec3(1.);
@@ -89,13 +90,12 @@ vec3 ray_tracing(Ray r) {
             m = material_process(r, i);
         }
 
-        if (all_t > _t_end) return color(0., 0., 0.);
-
         // Offset ray
         if (i.hit.hit || i2.scene.hit.hit) {
             current_color *= m.mul_to_color;
             if (m.is_final) {
-                if (all_t > _t_start) {
+                if (all_t > _t_start && _darken_by_distance == 1) {
+                    if (all_t > _t_end) all_t = _t_end;
                     float gray_t = (all_t - _t_start) / (_t_end - _t_start);
                     return color(0., 0., 0.) * sqr(sqr(gray_t)) + current_color * sqr(sqr(1.0 - gray_t));
                 } else {
