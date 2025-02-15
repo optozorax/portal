@@ -1,3 +1,4 @@
+use macroquad::prelude::is_key_down;
 use gesture_recognizer::*;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use macroquad::prelude::is_key_pressed;
@@ -63,6 +64,8 @@ struct RotateAroundCam {
     stop_at_objects: bool,
 
     in_subspace: bool,
+
+    free_movement: bool,
 }
 
 impl RotateAroundCam {
@@ -109,6 +112,8 @@ impl RotateAroundCam {
             prev_cam_pos: Default::default(),
 
             in_subspace: false,
+
+            free_movement: false,
         }
     }
 
@@ -160,6 +165,47 @@ impl RotateAroundCam {
             is_something_changed = true;
         }
 
+        if is_key_pressed(macroquad::input::KeyCode::Q) {
+            self.change_free_movement();
+            is_something_changed = true;
+        }
+
+        if self.free_movement {
+            let move_speed = 0.03;
+
+            let dir = self.get_pos_vec();
+
+            let i = dir.normalize().cross(DVec3::new(0., 1., 0.)).normalize();
+
+            if is_key_down(macroquad::input::KeyCode::W) {
+                self.look_at += -dir * move_speed;
+                is_something_changed = true;
+            }
+            if is_key_down(macroquad::input::KeyCode::S) {
+                self.look_at += dir * move_speed;
+                is_something_changed = true;
+            }
+
+
+            if is_key_down(macroquad::input::KeyCode::Space) {
+                self.look_at.y += self.r * move_speed;
+                is_something_changed = true;
+            }
+            if is_key_down(macroquad::input::KeyCode::LeftShift) || is_key_down(macroquad::input::KeyCode::RightShift) {
+                self.look_at.y -= self.r * move_speed;
+                is_something_changed = true;
+            }
+
+            if is_key_down(macroquad::input::KeyCode::A) {
+                self.look_at += i * self.r * move_speed;
+                is_something_changed = true;
+            }
+            if is_key_down(macroquad::input::KeyCode::D) {
+                self.look_at -= i * self.r * move_speed;
+                is_something_changed = true;
+            }
+        }
+
         let wheel_value = mouse_wheel().1;
         if mouse_over_canvas {
             if wheel_value > 0. {
@@ -183,13 +229,16 @@ impl RotateAroundCam {
         is_something_changed
     }
 
-    fn get_matrix(&self) -> DMat4 {
-        let pos = DVec3::new(
+    fn get_pos_vec(&self) -> DVec3 {
+        DVec3::new(
             self.beta.sin() * self.alpha.cos(),
             self.beta.cos(),
             self.beta.sin() * self.alpha.sin(),
         ) * self.r
-            + self.look_at;
+    }
+
+    fn get_matrix(&self) -> DMat4 {
+        let pos = self.get_pos_vec() + self.look_at;
 
         let k = (self.look_at - pos).normalize();
         let i = k.cross(DVec3::new(0., 1., 0.)).normalize();
@@ -200,8 +249,22 @@ impl RotateAroundCam {
                 DVec4::new(i.x, i.y, i.z, 0.),
                 DVec4::new(j.x, j.y, j.z, 0.),
                 DVec4::new(k.x, k.y, k.z, 0.),
-                DVec4::new(pos.x, pos.y, pos.z, 1.),
+                if self.free_movement {
+                    DVec4::new(self.look_at.x, self.look_at.y, self.look_at.z, 1.)
+                } else {
+                    DVec4::new(pos.x, pos.y, pos.z, 1.)
+                },
             )
+    }
+
+    fn change_free_movement(&mut self) {
+        if !self.free_movement {
+            self.look_at = self.get_cam_pos();
+            self.free_movement = true;
+        } else {
+            self.look_at = self.look_at - self.get_pos_vec();
+            self.free_movement = false;
+        }
     }
 
     fn get_cam_pos(&self) -> DVec3 {
@@ -305,6 +368,14 @@ impl RotateAroundCam {
             changed |= egui_f64(ui, &mut self.look_at.z);
             ui.separator();
         });
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.label("Enable camera free movement:");
+            changed |= check_changed(&mut self.free_movement, |is_use| {
+                ui.add(egui::Checkbox::new(is_use, ""));
+            });
+        });
+        ui.label("Toggled by Q. Controls: WASD + Space (up) + Shift (down). Use wheel to control movement speed.");
         ui.separator();
         ui.horizontal(|ui| {
             ui.label("Stop camera at objects:");
