@@ -938,7 +938,22 @@ impl Scene {
             result
         });
 
-        Some(apply_template(FRAGMENT_SHADER, storages))
+        // Choose different for cycles: one uses variables, other uses numbers (variable one not compiles on some systems)
+        let mut res = apply_template(FRAGMENT_SHADER, storages);
+        let mut res_storage = String::new();
+        for line in res.storage.lines() {
+            let number_for = line.contains("!FOR_NUMBER!");
+            let variable_for = line.contains("!FOR_VARIABLE!");
+            if (number_for && data.for_prefer_variable) || (variable_for && !data.for_prefer_variable) {
+                // skip line
+            } else {
+                res_storage += &line;
+            }
+            res_storage += "\n";
+        }
+        res.storage = res_storage;
+
+        Some(res)
     }
 
     pub fn get_new_material(

@@ -518,6 +518,7 @@ impl Window {
 
         let mut data: Data = Data {
             reload_textures: true,
+            for_prefer_variable: true,
             ..Default::default()
         };
 
@@ -955,6 +956,9 @@ First, predefined library is included, then uniforms, then user library, then in
                 .open(&mut render_options_opened)
                 .vscroll(true)
                 .show(ctx, |ui| {
+                    ui.label("Improve compilation speed time: (uncheck if not compiles on your machine, disabled option uses for-cycles on numbers instead of variables)");
+                    changed.shader |= egui_bool(ui, &mut self.data.for_prefer_variable);
+                    ui.separator();
                     ui.label("Offset after material:");
                     changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
                         const MIN: f64 = 0.0000001;
@@ -974,7 +978,6 @@ First, predefined library is included, then uniforms, then user library, then in
                         ui.add(egui::Slider::new(depth, 0..=1000).clamp_to_range(true));
                     });
                     ui.label("(Max count of ray bounce after portal, reflect, refract)");
-                    ui.separator();
                     ui.separator();
                     ui.label("Darkening by distance:");
                     changed.uniform |= egui_bool(ui, &mut self.darken_by_distance);
@@ -1128,6 +1131,10 @@ First, predefined library is included, then uniforms, then user library, then in
             }
             is_something_changed |= cam_changed;
         });
+
+        if changed.shader {
+            self.should_recompile = true;
+        }
 
         is_something_changed
     }

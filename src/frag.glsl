@@ -70,8 +70,8 @@ uniform int _darken_by_distance;
 vec3 ray_tracing(Ray r) {
     vec3 current_color = vec3(1.);
     float all_t = 0.;
-    for (int j = 0; j < 10000; j++) {
-        if (j >= _ray_tracing_depth) break;
+    for (int j = 0; j < 10000; j++) { if (j >= _ray_tracing_depth) break; // !FOR_NUMBER!
+    for (int j = 0; j < _ray_tracing_depth; j++) { // !FOR_VARIABLE!
         SceneIntersection i = scene_intersect(r);
         SceneIntersectionWithMaterial i2 = scene_intersect_material_process(r);
         
@@ -166,7 +166,9 @@ ExternalRayTeleportation teleport_external_ray(Ray r) {
     bool have_result = false;
     bool stop_at_object = false;
     float all_t = 0.;
-    for (int j = 0; j < 10; j++) {
+    int max_camera_teleports = 10;
+    for (int j = 0; j < 10000; j++) { if (j >= max_camera_teleports) break; // !FOR_NUMBER!
+    for (int j = 0; j < max_camera_teleports; j++) { // !FOR_VARIABLE!
         SceneIntersection i = scene_intersect(r);
         SceneIntersectionWithMaterial i2 = scene_intersect_material_process(r);
         
@@ -302,8 +304,8 @@ void main() {
     vec3 result = vec3(0.);
 
     if (_teleport_external_ray == 0) {
-        for (int a = 0; a < 16; a++) {
-            if (a >= _aa_count) break;
+        for (int a = 0; a < 16; a++) { if (a >= _aa_count) break; // !FOR_NUMBER!
+        for (int a = 0; a < _aa_count; a++) { // !FOR_VARIABLE!
             vec2 offset = quasi_random(a);
             result += get_color(uv_screen + offset * pixel_size * 2.);
         }

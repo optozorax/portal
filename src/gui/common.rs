@@ -71,6 +71,8 @@ pub struct Data {
     pub texture_errors: TextureErrors,
 
     pub generated_code_show_text: bool,
+
+    pub for_prefer_variable: bool,
 }
 
 pub fn add_line_numbers(s: &str) -> String {
