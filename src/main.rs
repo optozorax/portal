@@ -589,7 +589,7 @@ impl Window {
 
         let mut data: Data = Data {
             reload_textures: true,
-            for_prefer_variable: true,
+            for_prefer_variable: cfg!(not(target_arch = "wasm32")),
             ..Default::default()
         };
 
