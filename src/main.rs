@@ -66,6 +66,9 @@ struct RotateAroundCam {
     in_subspace: bool,
 
     free_movement: bool,
+
+    prev_view_angle: f64,
+    zoom_mode: bool,
 }
 
 impl RotateAroundCam {
@@ -114,6 +117,9 @@ impl RotateAroundCam {
             in_subspace: false,
 
             free_movement: false,
+
+            prev_view_angle: deg2rad(90.),
+            zoom_mode: false,
         }
     }
 
@@ -203,6 +209,21 @@ impl RotateAroundCam {
             if is_key_down(macroquad::input::KeyCode::D) {
                 self.look_at -= i * self.r * move_speed;
                 is_something_changed = true;
+            }
+
+            if is_key_down(macroquad::input::KeyCode::LeftControl) || is_key_down(macroquad::input::KeyCode::RightControl) {
+                if !self.zoom_mode {
+                    self.zoom_mode = true;
+                    self.prev_view_angle = self.view_angle;
+                    self.view_angle = deg2rad(10.);
+                    is_something_changed = true;
+                }
+            } else {
+                if self.zoom_mode {
+                    self.zoom_mode = false;
+                    self.view_angle = self.prev_view_angle;
+                    is_something_changed = true;
+                }
             }
         }
 
@@ -380,7 +401,7 @@ impl RotateAroundCam {
                 ui.add(egui::Checkbox::new(is_use, ""));
             });
         });
-        ui.label("Toggled by Q. Controls: WASD + Space (up) + Shift (down). Use wheel to control movement speed.");
+        ui.label("Toggled by Q. Controls: WASD + Space (up) + Shift (down). Use wheel to control movement speed. Hold Ctrl to zoom. ");
         ui.separator();
         ui.horizontal(|ui| {
             ui.label("Stop camera at objects:");
