@@ -259,7 +259,7 @@ impl RotateAroundCam {
 
     fn change_free_movement(&mut self) {
         if !self.free_movement {
-            self.look_at = self.get_cam_pos();
+            self.look_at = self.get_pos_vec() + self.look_at;
             self.free_movement = true;
         } else {
             self.look_at = self.look_at - self.get_pos_vec();
@@ -276,6 +276,11 @@ impl RotateAroundCam {
         self.alpha = s.alpha;
         self.beta = s.beta;
         self.r = s.r;
+
+        if self.free_movement {
+            self.look_at = self.get_pos_vec() + self.look_at;
+        }
+
         self.teleport_matrix = DMat4::IDENTITY;
         self.in_subspace = false;
     }
@@ -1223,10 +1228,17 @@ First, predefined library is included, then uniforms, then user library, then in
                 self.cam.look_at = calculated_cam.look_at;
                 self.cam.teleport_matrix = DMat4::IDENTITY;
                 self.cam.in_subspace = false;
+
+                if self.cam.free_movement {
+                    self.cam.look_at = self.cam.get_pos_vec() + self.cam.look_at;
+                }
             } else if let Some(id) = self.cam.from {
                 let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
                     self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
-                self.cam.look_at = calculated_cam.look_at;
+
+                if !self.cam.free_movement {
+                    self.cam.look_at = calculated_cam.look_at;
+                }
             }
 
             is_something_changed = true;
