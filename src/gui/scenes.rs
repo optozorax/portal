@@ -43,6 +43,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/analytical_approach.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Digits texture",
+                        link: "digits_debug",
+                        content: include_str!("../../scenes/digits_debug.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
