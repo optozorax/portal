@@ -532,7 +532,60 @@ impl Window {
                     add_line_numbers(&err.0),
                     err.1
                 );
-                std::process::exit(1)
+
+                // use this material so that users can change some settings so that their code compiles
+                let dummy_material = macroquad::prelude::load_material(
+                    macroquad::prelude::ShaderSource::Glsl {
+                        vertex: "#version 100
+                                attribute vec3 position;
+                                attribute vec2 texcoord;
+
+                                varying lowp vec2 center;
+                                varying lowp vec2 uv;
+                                varying lowp vec2 uv_screen;
+
+                                uniform mat4 Model;
+                                uniform mat4 Projection;
+
+                                uniform vec2 Center;
+
+                                void main() {
+                                    vec4 res = Projection * Model * vec4(position, 1);
+                                    vec4 c = Projection * Model * vec4(Center, 0, 1);
+
+                                    uv_screen = res.xy / 2.0 + vec2(0.5, 0.5);
+                                    center = c.xy / 2.0 + vec2(0.5, 0.5);
+                                    uv = texcoord;
+
+                                    gl_Position = res;
+                                }
+                                ",
+                        fragment: r#"#version 100
+                                precision lowp float;
+
+                                varying vec2 uv;
+                                varying vec2 uv_screen;
+                                varying vec2 center;
+
+                                uniform sampler2D _ScreenTexture;
+
+                                void main() {
+                                    float gradient = length(uv);
+                                    vec2 uv_zoom = (uv_screen - center) * gradient + center;
+
+                                    gl_FragColor = texture2D(_ScreenTexture, uv_zoom);
+                                }
+                                "#,
+                    },
+                    macroquad::prelude::MaterialParams {
+                        uniforms: vec![("Center".to_owned(), macroquad::prelude::UniformType::Float2)],
+                        textures: scene.textures(),
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+
+                dummy_material
             });
         scene.set_uniforms(&mut material, &mut data);
         let mut result = Window {
