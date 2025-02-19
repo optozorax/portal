@@ -329,7 +329,7 @@ impl macroquad::miniquad::EventHandler for Window {
             Cancelled => End,
         };
         self.gesture_recognizer
-            .process(&mut self.cam, phase, id, x, y);
+            .process(&mut self.renderer.cam, phase, id, x, y);
     }
 }
 
@@ -541,27 +541,12 @@ impl RotateAroundCam {
     }
 }
 
-struct Window {
+struct SceneRenderer {
     scene: Scene,
     cam: RotateAroundCam,
+    prev_cam: RotateAroundCam,
     material: macroquad::material::Material,
-    should_recompile: bool,
-    dpi_set: bool,
-
-    draw_menu: bool,
-    welcome_opened: bool,
-    control_scene_opened: bool,
-    edit_scene_opened: bool,
-    camera_settings_opened: bool,
-    render_options_opened: bool,
-    about_opened: bool,
-    import_window: Option<String>,
-    import_window_errors: Option<String>,
-
-    error_message: Option<(String, String)>,
-
     data: Data,
-
     offset_after_material: f64,
     gray_t_start: f64,
     gray_t_size: f64,
@@ -571,46 +556,12 @@ struct Window {
     grid_disable: bool,
     black_border_disable: bool,
     darken_by_distance: bool,
-
-    available_scenes: Scenes,
-
-    about: EngRusText,
-    welcome: EngRusText,
-
-    scene_initted: bool,
-
-    scene_name: &'static str,
-
-    gesture_recognizer: GestureRecognizer,
-    input_subscriber_id: usize,
-
     render_target: macroquad::prelude::RenderTarget,
-    render_scale: f32,
-
     external_ray_render_target: macroquad::prelude::RenderTarget,
 }
 
-impl Window {
-    async fn new() -> Self {
-        let available_scenes: Scenes = Default::default();
-
-        let required_scene = quad_url::get_program_parameters()
-            .iter()
-            .filter_map(|x| {
-                let x = quad_url::easy_parse(x)?;
-                Some((x.0, x.1?))
-            })
-            .find(|(name, _)| *name == "scene")
-            .and_then(|(_, value)| available_scenes.get_by_link(value));
-
-        let default_scene = "room";
-
-        let (scene_content, scene_name) = if let Some(result) = required_scene {
-            result
-        } else {
-            available_scenes.get_by_link(default_scene).unwrap()
-        };
-
+impl SceneRenderer {
+    async fn new(scene_content: &str) -> Self {
         let mut scene: Scene = ron::from_str(scene_content).unwrap();
 
         let mut data: Data = Data {
@@ -684,27 +635,14 @@ impl Window {
 
                 dummy_material
             });
+
         scene.set_uniforms(&mut material, &mut data);
-        let mut result = Window {
-            should_recompile: false,
-            dpi_set: false,
+
+        let mut result = Self {
             scene,
             cam: RotateAroundCam::new(),
-
+            prev_cam: RotateAroundCam::new(),
             material,
-
-            draw_menu: true,
-            welcome_opened: true,
-            control_scene_opened: scene_name != "Room",
-            edit_scene_opened: false,
-            camera_settings_opened: false,
-            render_options_opened: false,
-            about_opened: false,
-            import_window: None,
-            import_window_errors: None,
-
-            error_message: None,
-
             data,
 
             offset_after_material: 0.005,
@@ -716,31 +654,10 @@ impl Window {
             grid_disable: false,
             black_border_disable: false,
             darken_by_distance: true,
-
-            available_scenes,
-
-            about: EngRusText {
-                eng: include_str!("description.easymarkup.en").to_string(),
-                rus: include_str!("description.easymarkup.ru").to_string(),
-            },
-
-            welcome: EngRusText {
-                eng: include_str!("welcome.easymarkup.en").to_string(),
-                rus: include_str!("welcome.easymarkup.ru").to_string(),
-            },
-
-            scene_initted: false,
-
-            scene_name,
-
-            gesture_recognizer: Default::default(),
-            input_subscriber_id: macroquad::input::utils::register_input_subscriber(),
-
             render_target: macroquad::prelude::render_target(4000, 4000),
-            render_scale: 0.5,
-
             external_ray_render_target: macroquad::prelude::render_target(2, 3),
         };
+
         result
             .render_target
             .texture
@@ -772,528 +689,21 @@ impl Window {
         }
     }
 
-    fn process_mouse_and_keys(&mut self, ctx: &egui::Context) -> bool {
-        let mut is_something_changed = false;
-
-        if !self.dpi_set {
-            ctx.set_pixels_per_point(1.7);
-            self.dpi_set = true;
-        }
-
-        self.data
-            .formulas_cache
-            .set_time(macroquad::miniquad::date::now());
-
-        if !self.scene_initted {
-            self.scene_initted = true;
-            ctx.memory_mut(|memory| self.scene.init(&mut self.data, memory));
-            ctx.memory_mut(|memory| {
-                memory.data.insert_persisted(
-                    egui::Id::new("OriginalCam"),
-                    OriginalCam(self.cam.get_calculated_cam()),
-                )
-            });
-        }
-
-        let mut changed = WhatChanged::default();
-
-        if is_key_pressed(macroquad::input::KeyCode::Escape) {
-            self.draw_menu = !self.draw_menu;
-        }
-        if self.draw_menu {
-            egui::containers::panel::TopBottomPanel::top("my top").show(ctx, |ui| {
-                use egui::menu;
-
-                menu::bar(ui, |ui| {
-                    ui.menu_button("🗋 Load", |ui| {
-                        if let Some((content, link, name)) = self.available_scenes.egui(ui) {
-                            if self.scene_name == "Room" {
-                                self.control_scene_opened = true;
-                            }
-                            let s = content;
-                            // let old: OldScene = serde_json::from_str(&s).unwrap();
-                            // *self = old.into();
-                            self.scene = ron::from_str(s).unwrap();
-                            ctx.memory_mut(|memory| self.scene.init(&mut self.data, memory));
-                            self.material = self
-                                .scene
-                                .get_new_material(&self.data)
-                                .unwrap()
-                                .unwrap_or_else(|err| {
-                                    portal::error!(
-                                        format,
-                                        "code:\n{}\n\nmessage:\n{}",
-                                        add_line_numbers(&err.0),
-                                        err.1
-                                    );
-                                    std::process::exit(1)
-                                });
-                            changed.uniform = true;
-                            self.data.reload_textures = true;
-                            self.cam.set_cam(&self.scene.cam);
-                            ui.ctx().memory_mut(|memory| {
-                                memory.data.insert_persisted(
-                                    egui::Id::new("OriginalCam"),
-                                    OriginalCam(self.cam.get_calculated_cam()),
-                                )
-                            });
-                            self.offset_after_material = self.scene.cam.offset_after_material;
-                            quad_url::set_program_parameter("scene", link);
-                            self.scene_name = name;
-                        }
-                        ui.separator();
-                        if ui.button("Import...").clicked() && self.import_window.is_none() {
-                            self.import_window = Some("".to_owned());
-                        }
-                    });
-                    if ui.button("↔ Control scene").clicked() {
-                        self.control_scene_opened = true;
-                    };
-                    if ui.button("✏ Edit scene").clicked() {
-                        self.edit_scene_opened = true;
-                    }
-                    if ui.button("📸 Camera settings").clicked() {
-                        self.camera_settings_opened = true;
-                    }
-                    if ui.button("⛭ Rendering options").clicked() {
-                        self.render_options_opened = true;
-                    }
-                    if ui.button("❓ About").clicked() {
-                        self.about_opened = true;
-                    }
-                    EngRusSettings::egui(ui);
-                });
-            });
-        }
-        let mut edit_scene_opened = self.edit_scene_opened;
-
-        let errors_count = self.scene.errors_count(0, &mut self.data);
-        egui::Window::new(if errors_count > 0 {
-            format!("Edit scene ({} err)", errors_count)
-        } else {
-            "Edit scene".to_owned()
-        })
-        .id(egui::Id::new("Edit scene"))
-        .open(&mut edit_scene_opened)
-        .vscroll(true)
-        .hscroll(true)
-        .show(ctx, |ui| {
-            let (changed1, material) =
-                self.scene
-                    .egui(ui, &mut self.data, &mut self.should_recompile);
-
-            changed |= changed1;
-
-            if changed.shader {
-                self.should_recompile = true;
-            }
-
-            if let Some(material) = material {
-                match material {
-                    Ok(material) => {
-                        self.material = material;
-                        self.error_message = None;
-                    }
-                    Err(err) => {
-                        self.error_message = Some((err.0, err.1));
-                        self.data.errors = err.2;
-                    }
-                }
-            }
-        });
-        if let Some((code, message)) = self.error_message.as_ref() {
-            if self.data.show_error_window {
-                egui::Window::new("Error message")
-                    .vscroll(true)
-                    .default_width(700.)
-                    .show(ctx, |ui| {
-                        egui::CollapsingHeader::new("code")
-                            .id_source(0)
-                            .show(ui, |ui| {
-                                ui.monospace(add_line_numbers(code));
-                            });
-                        egui::CollapsingHeader::new("message")
-                            .id_source(1)
-                            .show(ui, |ui| {
-                                ui.monospace(message);
-                            });
-                        egui::CollapsingHeader::new("message to copy")
-                            .id_source(2)
-                            .show(ui, |ui| {
-                                let mut clone = message.clone();
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut clone)
-                                        .font(egui::TextStyle::Monospace),
-                                );
-                            });
-                    });
-            }
-        }
-
-        {
-            let mut not_close = true;
-            let show_compiled_code = &mut self.data.show_compiled_code;
-            let generated_code_show_text = &mut self.data.generated_code_show_text;
-            if let Some(code) = show_compiled_code {
-                egui::Window::new("Generated GLSL code")
-                    .vscroll(true)
-                    .open(&mut not_close)
-                    .default_width(700.)
-                    .show(ctx, |ui| {
-                        egui_demo_lib::easy_mark::easy_mark(ui, r#"# What is this
-
-This code is generated automatically based on:
-- Uniforms
-- Matrices
-- Objects
-- Material
-- Library
-First, predefined library is included, then uniforms, then user library, then intersection functions. So, you can use uniforms and predefined library in any your code.
-
----
-
-# Code
-
-"#);
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(generated_code_show_text, false, "View");
-                            ui.selectable_value(generated_code_show_text, true, "To copy");
-                        });
-                        if *generated_code_show_text {
-                            ui.add(
-                                egui::TextEdit::multiline(code)
-                                    .font(egui::TextStyle::Monospace),
-                            );
-                        } else {
-                            ui.monospace(&*code);
-                        }
-                    });
-            }
-            if !not_close {
-                self.data.show_compiled_code = None;
-            }
-        }
-
-        if self.scene_name == "Room" {
-            egui::Window::new("Welcome!")
-                .open(&mut self.welcome_opened)
-                .vscroll(true)
-                .anchor(egui::Align2::CENTER_CENTER, (0., 0.))
-                .show(ctx, |ui| {
-                    let text = self.welcome.text(ui);
-                    egui_demo_lib::easy_mark::easy_mark(ui, text);
-                });
-        }
-
-        {
-            let mut not_remove_export = true;
-            if let Some(to_export) = self.data.to_export.as_ref() {
-                egui::Window::new("Export scene")
-                    .open(&mut not_remove_export)
-                    .vscroll(true)
-                    .show(ctx, |ui| {
-                        let mut clone = to_export.clone();
-                        ui.add(
-                            egui::TextEdit::multiline(&mut clone).font(egui::TextStyle::Monospace),
-                        );
-                    });
-            }
-            if !not_remove_export {
-                self.data.to_export = None;
-            }
-            self.edit_scene_opened = edit_scene_opened;
-        }
-
-        {
-            let mut opened = self.import_window.is_some();
-            let mut import_window = self.import_window.clone();
-            if let Some(content) = &mut import_window {
-                egui::Window::new("Import scene")
-                    .open(&mut opened)
-                    .vscroll(true)
-                    .show(ctx, |ui| {
-                        if ui.button("Recompile").clicked() {
-                            match ron::from_str::<Scene>(content) {
-                                Ok(scene) => {
-                                    self.scene = scene;
-                                    ui.memory_mut(|memory| self.scene.init(&mut self.data, memory));
-                                    self.cam.set_cam(&self.scene.cam);
-                                    self.offset_after_material = self.scene.cam.offset_after_material;
-                                    changed.uniform = true;
-                                    self.data.reload_textures = true;
-                                    match self.scene.get_new_material(&self.data) {
-                                        Some(Ok(material)) => {
-                                            self.material = material;
-                                        },
-                                        Some(Err(_)) | None => {
-                                            self.should_recompile = true;
-                                            self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
-                                        },
-                                    }
-                                },
-                                Err(err) => {
-                                    self.import_window_errors = Some(err.to_string());
-                                }
-                            }
-                        }
-                        ui.add(
-                            egui::TextEdit::multiline(content)
-                                .font(egui::TextStyle::Monospace),
-                        );
-
-                        if let Some(err) = &self.import_window_errors {
-                            ui.horizontal_wrapped(|ui| {
-                                ui.spacing_mut().item_spacing.x = 0.;
-                                ui.add(egui::Label::new(egui::RichText::new("Error: ").color(egui::Color32::RED)));
-                                ui.label(err);
-                            });
-                        }
-                    });
-                self.import_window = import_window;
-            }
-            if !opened {
-                self.import_window = None;
-            }
-        }
-
-        {
-            let mut control_scene_opened = self.control_scene_opened;
-            egui::Window::new("Control scene")
-                .open(&mut control_scene_opened)
-                .vscroll(true)
-                .hscroll(true)
-                .show(ctx, |ui| {
-                    ui.spacing_mut().slider_width = 200.;
-                    ui.vertical_centered(|ui| {
-                        ui.heading(self.scene_name);
-                    });
-                    ui.separator();
-                    ui.collapsing("Description", |ui| {
-                        let text = self.scene.desc.text(ui);
-                        egui_demo_lib::easy_mark::easy_mark(ui, text);
-                    });
-                    changed |= self.scene.control_egui(ui, &mut self.data);
-                });
-            self.control_scene_opened = control_scene_opened;
-        }
-
-        {
-            egui::Window::new("GLSL library")
-                .open(&mut self.data.show_glsl_library)
-                .vscroll(true)
-                .default_width(600.)
-                .show(ctx, |ui| {
-                    egui_demo_lib::easy_mark::easy_mark(ui, "# What is this\n\nThis is predefined library GLSL code, it included before user code, so you can use functions and etc. from this.\n\n---\n\n# Code\n\n");
-                    ui.separator();
-                    ui.monospace(LIBRARY);
-                });
-        }
-
-        {
-            let mut camera_settings_opened = self.camera_settings_opened;
-            egui::Window::new("Camera settings")
-                .open(&mut camera_settings_opened)
-                .vscroll(true)
-                .show(ctx, |ui| {
-                    changed |= self.cam.egui(ui);
-                });
-            self.camera_settings_opened = camera_settings_opened;
-        }
-
-        {
-            let mut render_options_opened = self.render_options_opened;
-            egui::Window::new("Render options")
-                .open(&mut render_options_opened)
-                .vscroll(true)
-                .show(ctx, |ui| {
-                    ui.label("Improve compilation speed time: (uncheck if not compiles on your machine, disabled option uses for-cycles on numbers instead of variables)");
-                    changed.shader |= egui_bool(ui, &mut self.data.for_prefer_variable);
-                    ui.separator();
-                    ui.label("Offset after material:");
-                    changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
-                        const MIN: f64 = 0.0000001;
-                        const MAX: f64 = 0.1;
-                        ui.add(
-                            egui::Slider::new(offset, MIN..=MAX)
-                                .logarithmic(true)
-                                .clamp_to_range(true)
-                                .largest_finite(MAX)
-                                .smallest_positive(MIN),
-                        );
-                    });
-                    ui.label("(Ofsetting after ray being teleported, reflected, refracted)");
-                    ui.separator();
-                    ui.label("Render depth:");
-                    changed.uniform |= check_changed(&mut self.render_depth, |depth| {
-                        ui.add(egui::Slider::new(depth, 0..=1000).clamp_to_range(true));
-                    });
-                    ui.label("(Max count of ray bounce after portal, reflect, refract)");
-                    ui.separator();
-                    ui.label("Darkening by distance:");
-                    changed.uniform |= egui_bool(ui, &mut self.darken_by_distance);
-                    ui.label("Darkening after distance:");
-                    changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_start);
-                    ui.label("Darkening size:");
-                    changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_size);
-                    ui.separator();
-                    ui.label("Disable darkening by angle with normal:");
-                    changed.uniform |= egui_bool(ui, &mut self.angle_color_disable);
-                    ui.label("(This increases resulting gif size if you capturing screen)");
-                    ui.separator();
-                    ui.label("Disable grid:");
-                    changed.uniform |= egui_bool(ui, &mut self.grid_disable);
-                    ui.label("(If you want extreme small gif)");
-                    ui.separator();
-                    ui.label("Antialiasing count:");
-                    changed.uniform |= check_changed(&mut self.aa_count, |count| {
-                        ui.add(egui::Slider::new(count, 1..=16).clamp_to_range(true));
-                    });
-                    ui.separator();
-                    ui.label("Lower rendering resolution ratio (can significantly increase FPS):");
-                    changed.uniform |= check_changed(&mut self.render_scale, |scale| {
-                        ui.add(egui::Slider::new(scale, 0.01..=1.0).clamp_to_range(true));
-                    });
-                    ui.label("(Render scale can be changed using four fingers, add one finger at a time to prevent triggering system four-finger gestures)");
-                    ui.separator();
-                    ui.label("Disable small black border:");
-                    changed.uniform |= egui_bool(ui, &mut self.black_border_disable);
-                    ui.separator();
-                    ui.horizontal(|ui| {
-                        ui.label("Interface DPI:");
-                        if ui.button("⏶").clicked() {
-                            ui.ctx()
-                                .set_pixels_per_point(ui.ctx().pixels_per_point() * 1.2);
-                        }
-                        if ui.button("⏷").clicked() {
-                            ui.ctx()
-                                .set_pixels_per_point(ui.ctx().pixels_per_point() / 1.2);
-                        }
-                        ui.label(format!(" ({})", ui.ctx().pixels_per_point()));
-                    });
-                    ui.label("(DPI can be changed using three fingers, add one finger at a time to prevent triggering system three-finger gestures)")
-                });
-            self.render_options_opened = render_options_opened;
-        }
-
-        {
-            let mut about_opened = self.about_opened;
-            egui::Window::new("Portal Explorer")
-                .open(&mut about_opened)
-                .vscroll(true)
-                .show(ctx, |ui| {
-                    let text = self.about.text(ui);
-                    egui_demo_lib::easy_mark::easy_mark(ui, text);
-                    ui.separator();
-
-                    let mut checked = ui.memory_mut(|memory| {
-                        *memory
-                            .data
-                            .get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new(
-                                "ShowHiddenScenes",
-                            ))
-                    });
-                    ui.checkbox(&mut checked.0, "Show hidden scenes :P");
-                    ui.memory_mut(|memory| {
-                        memory
-                            .data
-                            .insert_persisted(egui::Id::new("ShowHiddenScenes"), checked)
-                    });
-                });
-            self.about_opened = about_opened;
-        }
-
-        let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
-
-        if changed.uniform || self.scene.use_time {
-            self.scene.set_uniforms(&mut self.material, &mut self.data);
-            self.set_uniforms();
-
-            let current_cam = ctx.memory_mut(|memory| {
-                memory
-                    .data
-                    .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
-                    .0
-            });
-            if self.cam.from != current_cam {
-                let calculated_cam = if let Some(id) = current_cam {
-                    // set getted camera
-
-                    if self.cam.from.is_none() {
-                        let calculated_cam = self.cam.get_calculated_cam();
-                        ctx.memory_mut(|memory| {
-                            memory.data.insert_persisted(
-                                egui::Id::new("OriginalCam"),
-                                OriginalCam(calculated_cam),
-                            )
-                        });
-                    }
-
-                    with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
-                        self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap())
-                } else {
-                    // set original camera
-                    ctx.memory_mut(|memory| {
-                        memory
-                            .data
-                            .get_persisted_mut_or_default::<OriginalCam>(egui::Id::new(
-                                "OriginalCam",
-                            ))
-                            .0
-                    })
-                };
-
-                self.cam.from = current_cam;
-                self.cam.alpha = calculated_cam.alpha;
-                self.cam.beta = calculated_cam.beta;
-                self.cam.r = calculated_cam.r;
-                self.cam.look_at = calculated_cam.look_at;
-                self.cam.teleport_matrix = DMat4::IDENTITY;
-                self.cam.in_subspace = false;
-
-                if self.cam.free_movement {
-                    self.cam.look_at = self.cam.get_pos_vec() + self.cam.look_at;
-                }
-            } else if let Some(id) = self.cam.from {
-                let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
-                    self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
-
-                if !self.cam.free_movement {
-                    self.cam.look_at = calculated_cam.look_at;
-                }
-            }
-
-            is_something_changed = true;
-        }
-
-        self.cam.current_dpi = ctx.pixels_per_point() as f64;
-        self.cam.current_render_scale = self.render_scale;
-        self.cam.is_something_changed = false;
-        self.cam.mouse_over_canvas_right_now = mouse_over_canvas;
-        macroquad::input::utils::repeat_all_miniquad_input(self, self.input_subscriber_id);
-        if let Some(new_dpi) = self.cam.new_dpi {
-            ctx.set_pixels_per_point(new_dpi as f32);
-            self.cam.new_dpi = None;
-            is_something_changed = true;
-        }
-        if let Some(new_render_scale) = self.cam.new_render_scale {
-            self.render_scale = new_render_scale;
-            self.cam.new_render_scale = None;
-            is_something_changed = true;
-        }
-        ctx.memory_mut(|memory| {
-            let prev_cam = self.cam.clone();
-            let cam_changed = self.cam.process_mouse_and_keys(mouse_over_canvas, memory);
-            if cam_changed {
-                self.teleport_camera(prev_cam);
-            }
-            is_something_changed |= cam_changed;
-        });
-
-        if changed.shader {
-            self.should_recompile = true;
-        }
-
-        is_something_changed
+    fn load_from_scene(&mut self, scene: Scene, memory: &mut egui::Memory) -> Option<Result<(), (String, String, ShaderErrors)>> {
+        self.scene = scene;
+        self.scene.init(&mut self.data, memory);
+        self.material = match self.scene.get_new_material(&self.data)? {
+            Ok(material) => material,
+            Err(err) => return Some(Err(err)),
+        };
+        self.data.reload_textures = true;
+        self.cam.set_cam(&self.scene.cam);
+        memory.data.insert_persisted(
+            egui::Id::new("OriginalCam"),
+            OriginalCam(self.cam.get_calculated_cam()),
+        );
+        self.offset_after_material = self.scene.cam.offset_after_material;
+        Some(Ok(()))
     }
 
     fn teleport_camera(&mut self, prev_cam: RotateAroundCam) {
@@ -1363,14 +773,14 @@ First, predefined library is included, then uniforms, then user library, then in
         }
     }
 
-    fn set_uniforms(&mut self) {
+    fn set_uniforms(&mut self, width: f32, height: f32) {
         self.cam.get_cam(&mut self.scene.cam);
         self.scene.cam.offset_after_material = self.offset_after_material;
         self.material.set_uniform(
             "_resolution",
             (
-                screen_width() * self.render_scale,
-                screen_height() * self.render_scale,
+                width,
+                height,
             ),
         );
         self.material
@@ -1418,56 +828,8 @@ First, predefined library is included, then uniforms, then user library, then in
         self.material.set_uniform("_teleport_external_ray", 0);
     }
 
-    fn draw(&mut self) {
-        self.set_uniforms();
-
-        if self.render_scale == 1.0 {
-            gl_use_material(&self.material);
-            draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
-            gl_use_default_material();
-        } else {
-            macroquad::prelude::set_camera(&macroquad::prelude::Camera2D {
-                zoom: macroquad::prelude::vec2(
-                    1. / (self.render_target.texture.size().x / 2.),
-                    1. / (self.render_target.texture.size().y / 2.),
-                ),
-                offset: macroquad::prelude::vec2(-1., -1.),
-                render_target: Some(self.render_target.clone()),
-                ..Default::default()
-            });
-            gl_use_material(&self.material);
-            draw_rectangle(
-                0.,
-                0.,
-                screen_width() * self.render_scale,
-                screen_height() * self.render_scale,
-                WHITE,
-            );
-            gl_use_default_material();
-
-            set_default_camera();
-
-            draw_texture_ex(
-                &self.render_target.texture,
-                0.,
-                0.,
-                WHITE,
-                DrawTextureParams {
-                    source: Some(macroquad::math::Rect::new(
-                        0.,
-                        0.,
-                        screen_width() * self.render_scale,
-                        screen_height() * self.render_scale,
-                    )),
-                    dest_size: Some(macroquad::prelude::vec2(screen_width(), screen_height())),
-                    ..Default::default()
-                },
-            );
-        }
-    }
-
     fn teleport_external_ray(&mut self, a: DVec3, b: DVec3) -> (Option<glam::DVec3>, bool, bool) {
-        self.set_uniforms();
+        self.set_uniforms(0., 0.);
         self.material
             .set_uniform("_teleport_external_ray", 1 as i32);
         self.material.set_uniform("_external_ray_a", a.as_f32());
@@ -1512,6 +874,668 @@ First, predefined library is included, then uniforms, then user library, then in
             );
         } else {
             return (None, encounter_object, change_subspace);
+        }
+    }
+
+    fn draw_full_screen(&mut self) {
+        self.set_uniforms(screen_width(), screen_height());
+        gl_use_material(&self.material);
+        draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
+        gl_use_default_material();
+    }
+
+    fn draw_texture(&mut self, width: f32, height: f32) {
+        self.scene.set_uniforms(&mut self.material, &mut self.data);
+        self.set_uniforms(width, height);
+        macroquad::prelude::set_camera(&macroquad::prelude::Camera2D {
+            zoom: macroquad::prelude::vec2(
+                1. / (self.render_target.texture.size().x / 2.),
+                1. / (self.render_target.texture.size().y / 2.),
+            ),
+            offset: macroquad::prelude::vec2(-1., -1.),
+            render_target: Some(self.render_target.clone()),
+            ..Default::default()
+        });
+        gl_use_material(&self.material);
+        draw_rectangle(
+            0.,
+            0.,
+            width,
+            height,
+            WHITE,
+        );
+        gl_use_default_material();
+        set_default_camera();
+    }
+
+    fn update(&mut self, memory: &mut egui::Memory) {
+        self.data
+            .formulas_cache
+            .set_time(macroquad::miniquad::date::now());
+
+        let current_cam = 
+            memory
+                .data
+                .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+                .0;
+        if self.cam.from != current_cam {
+            let calculated_cam = if let Some(id) = current_cam {
+                // set getted camera
+
+                if self.cam.from.is_none() {
+                    let calculated_cam = self.cam.get_calculated_cam();
+                    memory.data.insert_persisted(
+                        egui::Id::new("OriginalCam"),
+                        OriginalCam(calculated_cam),
+                    );
+                }
+
+                with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
+                    self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap())
+            } else {
+                // set original camera
+                memory
+                    .data
+                    .get_persisted_mut_or_default::<OriginalCam>(egui::Id::new(
+                        "OriginalCam",
+                    ))
+                    .0
+            };
+
+            self.cam.from = current_cam;
+            self.cam.alpha = calculated_cam.alpha;
+            self.cam.beta = calculated_cam.beta;
+            self.cam.r = calculated_cam.r;
+            self.cam.look_at = calculated_cam.look_at;
+            self.cam.teleport_matrix = DMat4::IDENTITY;
+            self.cam.in_subspace = false;
+
+            if self.cam.free_movement {
+                self.cam.look_at = self.cam.get_pos_vec() + self.cam.look_at;
+            }
+        } else if let Some(id) = self.cam.from {
+            let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
+                self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
+
+            if !self.cam.free_movement {
+                self.cam.look_at = calculated_cam.look_at;
+            }
+        }
+
+        // move into "update" method of renderer
+        if self.cam.get_matrix() != self.prev_cam.get_matrix() {
+            self.teleport_camera(self.prev_cam.clone());
+        }
+        self.prev_cam = self.cam.clone();
+    }
+
+    fn egui_rendering_settings(&mut self, ui: &mut Ui) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        ui.label("Improve compilation speed time: (uncheck if not compiles on your machine, disabled option uses for-cycles on numbers instead of variables)");
+        changed.shader |= egui_bool(ui, &mut self.data.for_prefer_variable);
+        ui.separator();
+        ui.label("Offset after material:");
+        changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
+            const MIN: f64 = 0.0000001;
+            const MAX: f64 = 0.1;
+            ui.add(
+                egui::Slider::new(offset, MIN..=MAX)
+                    .logarithmic(true)
+                    .clamp_to_range(true)
+                    .largest_finite(MAX)
+                    .smallest_positive(MIN),
+            );
+        });
+        ui.label("(Ofsetting after ray being teleported, reflected, refracted)");
+        ui.separator();
+        ui.label("Render depth:");
+        changed.uniform |= check_changed(&mut self.render_depth, |depth| {
+            ui.add(egui::Slider::new(depth, 0..=1000).clamp_to_range(true));
+        });
+        ui.label("(Max count of ray bounce after portal, reflect, refract)");
+        ui.separator();
+        ui.label("Darkening by distance:");
+        changed.uniform |= egui_bool(ui, &mut self.darken_by_distance);
+        ui.label("Darkening after distance:");
+        changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_start);
+        ui.label("Darkening size:");
+        changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_size);
+        ui.separator();
+        ui.label("Disable darkening by angle with normal:");
+        changed.uniform |= egui_bool(ui, &mut self.angle_color_disable);
+        ui.label("(This increases resulting gif size if you capturing screen)");
+        ui.separator();
+        ui.label("Disable grid:");
+        changed.uniform |= egui_bool(ui, &mut self.grid_disable);
+        ui.label("(If you want extreme small gif)");
+        ui.separator();
+        ui.label("Antialiasing count:");
+        changed.uniform |= check_changed(&mut self.aa_count, |count| {
+            ui.add(egui::Slider::new(count, 1..=16).clamp_to_range(true));
+        });
+        ui.separator();
+        ui.label("Disable small black border:");
+        changed.uniform |= egui_bool(ui, &mut self.black_border_disable);
+        changed
+    }
+}
+
+struct Window {
+    renderer: SceneRenderer,
+
+    should_recompile: bool,
+    dpi_set: bool,
+
+    draw_menu: bool,
+    welcome_opened: bool,
+    control_scene_opened: bool,
+    edit_scene_opened: bool,
+    camera_settings_opened: bool,
+    render_options_opened: bool,
+    about_opened: bool,
+    import_window: Option<String>,
+    import_window_errors: Option<String>,
+
+    error_message: Option<(String, String)>,
+
+    available_scenes: Scenes,
+
+    about: EngRusText,
+    welcome: EngRusText,
+
+    scene_initted: bool,
+
+    scene_name: &'static str,
+
+    gesture_recognizer: GestureRecognizer,
+    input_subscriber_id: usize,
+
+    render_scale: f32,
+}
+
+impl Window {
+    async fn new() -> Self {
+        let available_scenes: Scenes = Default::default();
+
+        let required_scene = quad_url::get_program_parameters()
+            .iter()
+            .filter_map(|x| {
+                let x = quad_url::easy_parse(x)?;
+                Some((x.0, x.1?))
+            })
+            .find(|(name, _)| *name == "scene")
+            .and_then(|(_, value)| available_scenes.get_by_link(value));
+
+        let default_scene = "room";
+
+        let (scene_content, scene_name) = if let Some(result) = required_scene {
+            result
+        } else {
+            available_scenes.get_by_link(default_scene).unwrap()
+        };
+
+        
+        Window {
+            renderer: SceneRenderer::new(scene_content).await,
+            render_scale: 0.5,
+            should_recompile: false,
+            dpi_set: false,
+
+            draw_menu: true,
+            welcome_opened: true,
+            control_scene_opened: scene_name != "Room",
+            edit_scene_opened: false,
+            camera_settings_opened: false,
+            render_options_opened: false,
+            about_opened: false,
+            import_window: None,
+            import_window_errors: None,
+
+            error_message: None,
+            available_scenes,
+
+            about: EngRusText {
+                eng: include_str!("description.easymarkup.en").to_string(),
+                rus: include_str!("description.easymarkup.ru").to_string(),
+            },
+
+            welcome: EngRusText {
+                eng: include_str!("welcome.easymarkup.en").to_string(),
+                rus: include_str!("welcome.easymarkup.ru").to_string(),
+            },
+
+            scene_initted: false,
+
+            scene_name,
+
+            gesture_recognizer: Default::default(),
+            input_subscriber_id: macroquad::input::utils::register_input_subscriber(),
+
+        }
+    }
+
+    fn process_mouse_and_keys(&mut self, ctx: &egui::Context) -> bool {
+        let mut is_something_changed = false;
+
+        if !self.dpi_set {
+            ctx.set_pixels_per_point(1.7);
+            self.dpi_set = true;
+        }
+
+        if !self.scene_initted {
+            self.scene_initted = true;
+            ctx.memory_mut(|memory| {
+                self.renderer.scene.init(&mut self.renderer.data, memory);
+                memory.data.insert_persisted(
+                    egui::Id::new("OriginalCam"),
+                    OriginalCam(self.renderer.cam.get_calculated_cam()),
+                );
+            });
+        }
+
+        let mut changed = WhatChanged::default();
+
+        if is_key_pressed(macroquad::input::KeyCode::Escape) {
+            self.draw_menu = !self.draw_menu;
+        }
+        if self.draw_menu {
+            egui::containers::panel::TopBottomPanel::top("my top").show(ctx, |ui| {
+                use egui::menu;
+
+                menu::bar(ui, |ui| {
+                    ui.menu_button("🗋 Load", |ui| {
+                        if let Some((content, link, name)) = self.available_scenes.egui(ui) {
+                            if self.scene_name == "Room" {
+                                self.control_scene_opened = true;
+                            }
+                            ctx.memory_mut(|memory| {
+                                changed.uniform = true;
+                                let scene = ron::from_str(content).unwrap();
+                                self.renderer.load_from_scene(scene, memory)
+                                    .unwrap()
+                                    .unwrap_or_else(|err| {
+                                        portal::error!(
+                                            format,
+                                            "code:\n{}\n\nmessage:\n{}",
+                                            add_line_numbers(&err.0),
+                                            err.1
+                                        );
+                                        std::process::exit(1)
+                                    });
+                            });
+                            quad_url::set_program_parameter("scene", link);
+                            self.scene_name = name;
+                        }
+                        ui.separator();
+                        if ui.button("Import...").clicked() && self.import_window.is_none() {
+                            self.import_window = Some("".to_owned());
+                        }
+                    });
+                    if ui.button("↔ Control scene").clicked() {
+                        self.control_scene_opened = true;
+                    };
+                    if ui.button("✏ Edit scene").clicked() {
+                        self.edit_scene_opened = true;
+                    }
+                    if ui.button("📸 Camera settings").clicked() {
+                        self.camera_settings_opened = true;
+                    }
+                    if ui.button("⛭ Rendering options").clicked() {
+                        self.render_options_opened = true;
+                    }
+                    if ui.button("❓ About").clicked() {
+                        self.about_opened = true;
+                    }
+                    EngRusSettings::egui(ui);
+                });
+            });
+        }
+        let mut edit_scene_opened = self.edit_scene_opened;
+
+        let errors_count = self.renderer.scene.errors_count(0, &mut self.renderer.data);
+        egui::Window::new(if errors_count > 0 {
+            format!("Edit scene ({} err)", errors_count)
+        } else {
+            "Edit scene".to_owned()
+        })
+        .id(egui::Id::new("Edit scene"))
+        .open(&mut edit_scene_opened)
+        .vscroll(true)
+        .hscroll(true)
+        .show(ctx, |ui| {
+            let (changed1, material) =
+                self.renderer.scene
+                    .egui(ui, &mut self.renderer.data, &mut self.should_recompile);
+
+            changed |= changed1;
+
+            if changed.shader {
+                self.should_recompile = true;
+            }
+
+            if let Some(material) = material {
+                match material {
+                    Ok(material) => {
+                        self.renderer.material = material;
+                        self.error_message = None;
+                    }
+                    Err(err) => {
+                        self.error_message = Some((err.0, err.1));
+                        self.renderer.data.errors = err.2;
+                    }
+                }
+            }
+        });
+        if let Some((code, message)) = self.error_message.as_ref() {
+            if self.renderer.data.show_error_window {
+                egui::Window::new("Error message")
+                    .vscroll(true)
+                    .default_width(700.)
+                    .show(ctx, |ui| {
+                        egui::CollapsingHeader::new("code")
+                            .id_source(0)
+                            .show(ui, |ui| {
+                                ui.monospace(add_line_numbers(code));
+                            });
+                        egui::CollapsingHeader::new("message")
+                            .id_source(1)
+                            .show(ui, |ui| {
+                                ui.monospace(message);
+                            });
+                        egui::CollapsingHeader::new("message to copy")
+                            .id_source(2)
+                            .show(ui, |ui| {
+                                let mut clone = message.clone();
+                                ui.add(
+                                    egui::TextEdit::multiline(&mut clone)
+                                        .font(egui::TextStyle::Monospace),
+                                );
+                            });
+                    });
+            }
+        }
+
+        {
+            let mut not_close = true;
+            let show_compiled_code = &mut self.renderer.data.show_compiled_code;
+            let generated_code_show_text = &mut self.renderer.data.generated_code_show_text;
+            if let Some(code) = show_compiled_code {
+                egui::Window::new("Generated GLSL code")
+                    .vscroll(true)
+                    .open(&mut not_close)
+                    .default_width(700.)
+                    .show(ctx, |ui| {
+                        egui_demo_lib::easy_mark::easy_mark(ui, r#"# What is this
+
+This code is generated automatically based on:
+- Uniforms
+- Matrices
+- Objects
+- Material
+- Library
+First, predefined library is included, then uniforms, then user library, then intersection functions. So, you can use uniforms and predefined library in any your code.
+
+---
+
+# Code
+
+"#);
+                        ui.horizontal(|ui| {
+                            ui.selectable_value(generated_code_show_text, false, "View");
+                            ui.selectable_value(generated_code_show_text, true, "To copy");
+                        });
+                        if *generated_code_show_text {
+                            ui.add(
+                                egui::TextEdit::multiline(code)
+                                    .font(egui::TextStyle::Monospace),
+                            );
+                        } else {
+                            ui.monospace(&*code);
+                        }
+                    });
+            }
+            if !not_close {
+                self.renderer.data.show_compiled_code = None;
+            }
+        }
+
+        if self.scene_name == "Room" {
+            egui::Window::new("Welcome!")
+                .open(&mut self.welcome_opened)
+                .vscroll(true)
+                .anchor(egui::Align2::CENTER_CENTER, (0., 0.))
+                .show(ctx, |ui| {
+                    let text = self.welcome.text(ui);
+                    egui_demo_lib::easy_mark::easy_mark(ui, text);
+                });
+        }
+
+        {
+            let mut not_remove_export = true;
+            if let Some(to_export) = self.renderer.data.to_export.as_ref() {
+                egui::Window::new("Export scene")
+                    .open(&mut not_remove_export)
+                    .vscroll(true)
+                    .show(ctx, |ui| {
+                        let mut clone = to_export.clone();
+                        ui.add(
+                            egui::TextEdit::multiline(&mut clone).font(egui::TextStyle::Monospace),
+                        );
+                    });
+            }
+            if !not_remove_export {
+                self.renderer.data.to_export = None;
+            }
+            self.edit_scene_opened = edit_scene_opened;
+        }
+
+        {
+            let mut opened = self.import_window.is_some();
+            let mut import_window = self.import_window.clone();
+            if let Some(content) = &mut import_window {
+                egui::Window::new("Import scene")
+                    .open(&mut opened)
+                    .vscroll(true)
+                    .show(ctx, |ui| {
+                        if ui.button("Recompile").clicked() {
+                            match ron::from_str::<Scene>(content) {
+                                Ok(scene) => {
+                                    ui.memory_mut(|memory| {
+                                        match self.renderer.load_from_scene(scene, memory) {
+                                            Some(Ok(())) => {},
+                                            Some(Err(_)) | None => {
+                                                self.should_recompile = true;
+                                                self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
+                                            },
+                                        }
+                                    });
+                                },
+                                Err(err) => {
+                                    self.import_window_errors = Some(err.to_string());
+                                }
+                            }
+                        }
+                        ui.add(
+                            egui::TextEdit::multiline(content)
+                                .font(egui::TextStyle::Monospace),
+                        );
+
+                        if let Some(err) = &self.import_window_errors {
+                            ui.horizontal_wrapped(|ui| {
+                                ui.spacing_mut().item_spacing.x = 0.;
+                                ui.add(egui::Label::new(egui::RichText::new("Error: ").color(egui::Color32::RED)));
+                                ui.label(err);
+                            });
+                        }
+                    });
+                self.import_window = import_window;
+            }
+            if !opened {
+                self.import_window = None;
+            }
+        }
+
+        {
+            let mut control_scene_opened = self.control_scene_opened;
+            egui::Window::new("Control scene")
+                .open(&mut control_scene_opened)
+                .vscroll(true)
+                .hscroll(true)
+                .show(ctx, |ui| {
+                    ui.spacing_mut().slider_width = 200.;
+                    ui.vertical_centered(|ui| {
+                        ui.heading(self.scene_name);
+                    });
+                    ui.separator();
+                    ui.collapsing("Description", |ui| {
+                        let text = self.renderer.scene.desc.text(ui);
+                        egui_demo_lib::easy_mark::easy_mark(ui, text);
+                    });
+                    changed |= self.renderer.scene.control_egui(ui, &mut self.renderer.data);
+                });
+            self.control_scene_opened = control_scene_opened;
+        }
+
+        {
+            egui::Window::new("GLSL library")
+                .open(&mut self.renderer.data.show_glsl_library)
+                .vscroll(true)
+                .default_width(600.)
+                .show(ctx, |ui| {
+                    egui_demo_lib::easy_mark::easy_mark(ui, "# What is this\n\nThis is predefined library GLSL code, it included before user code, so you can use functions and etc. from this.\n\n---\n\n# Code\n\n");
+                    ui.separator();
+                    ui.monospace(LIBRARY);
+                });
+        }
+
+        {
+            let mut camera_settings_opened = self.camera_settings_opened;
+            egui::Window::new("Camera settings")
+                .open(&mut camera_settings_opened)
+                .vscroll(true)
+                .show(ctx, |ui| {
+                    changed |= self.renderer.cam.egui(ui);
+                });
+            self.camera_settings_opened = camera_settings_opened;
+        }
+
+        {
+            let mut render_options_opened = self.render_options_opened;
+            egui::Window::new("Render options")
+                .open(&mut render_options_opened)
+                .vscroll(true)
+                .show(ctx, |ui| {
+
+                    changed |= self.renderer.egui_rendering_settings(ui);
+                    ui.separator();
+                    ui.label("Lower rendering resolution ratio (can significantly increase FPS):");
+                    changed.uniform |= check_changed(&mut self.render_scale, |scale| {
+                        ui.add(egui::Slider::new(scale, 0.01..=1.0).clamp_to_range(true));
+                    });
+                    ui.label("(Render scale can be changed using four fingers, add one finger at a time to prevent triggering system four-finger gestures)");
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.label("Interface DPI:");
+                        if ui.button("⏶").clicked() {
+                            ui.ctx()
+                                .set_pixels_per_point(ui.ctx().pixels_per_point() * 1.2);
+                        }
+                        if ui.button("⏷").clicked() {
+                            ui.ctx()
+                                .set_pixels_per_point(ui.ctx().pixels_per_point() / 1.2);
+                        }
+                        ui.label(format!(" ({})", ui.ctx().pixels_per_point()));
+                    });
+                    ui.label("(DPI can be changed using three fingers, add one finger at a time to prevent triggering system three-finger gestures)")
+                });
+            self.render_options_opened = render_options_opened;
+        }
+
+        {
+            let mut about_opened = self.about_opened;
+            egui::Window::new("Portal Explorer")
+                .open(&mut about_opened)
+                .vscroll(true)
+                .show(ctx, |ui| {
+                    let text = self.about.text(ui);
+                    egui_demo_lib::easy_mark::easy_mark(ui, text);
+                    ui.separator();
+
+                    let mut checked = ui.memory_mut(|memory| {
+                        *memory
+                            .data
+                            .get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new(
+                                "ShowHiddenScenes",
+                            ))
+                    });
+                    ui.checkbox(&mut checked.0, "Show hidden scenes :P");
+                    ui.memory_mut(|memory| {
+                        memory
+                            .data
+                            .insert_persisted(egui::Id::new("ShowHiddenScenes"), checked)
+                    });
+                });
+            self.about_opened = about_opened;
+        }
+
+        let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
+
+        self.renderer.cam.current_dpi = ctx.pixels_per_point() as f64;
+        self.renderer.cam.current_render_scale = self.render_scale;
+        self.renderer.cam.is_something_changed = false;
+        self.renderer.cam.mouse_over_canvas_right_now = mouse_over_canvas;
+        macroquad::input::utils::repeat_all_miniquad_input(self, self.input_subscriber_id);
+        if let Some(new_dpi) = self.renderer.cam.new_dpi {
+            ctx.set_pixels_per_point(new_dpi as f32);
+            self.renderer.cam.new_dpi = None;
+            is_something_changed = true;
+        }
+        if let Some(new_render_scale) = self.renderer.cam.new_render_scale {
+            self.render_scale = new_render_scale;
+            self.renderer.cam.new_render_scale = None;
+            is_something_changed = true;
+        }
+
+        let cam_changed = ctx.memory_mut(|memory| {
+            self.renderer.cam.process_mouse_and_keys(mouse_over_canvas, memory)
+        });
+        if changed.uniform || self.renderer.scene.use_time || cam_changed {
+            ctx.memory_mut(|memory| {
+                self.renderer.update(memory);
+            });
+
+            is_something_changed = true;
+        }
+
+        if changed.shader {
+            self.should_recompile = true;
+        }
+
+        is_something_changed
+    }
+
+    fn draw(&mut self) {
+        if self.render_scale == 1.0 {
+            self.renderer.draw_full_screen();
+        } else {
+            self.renderer.draw_texture(screen_width() * self.render_scale, screen_height() * self.render_scale);
+
+            draw_texture_ex(
+                &self.renderer.render_target.texture,
+                0.,
+                0.,
+                WHITE,
+                DrawTextureParams {
+                    source: Some(macroquad::math::Rect::new(
+                        0.,
+                        0.,
+                        screen_width() * self.render_scale,
+                        screen_height() * self.render_scale,
+                    )),
+                    dest_size: Some(macroquad::prelude::vec2(screen_width(), screen_height())),
+                    ..Default::default()
+                },
+            );
         }
     }
 }
@@ -1587,7 +1611,7 @@ async fn main() {
         });
         egui_macroquad::draw();
 
-        window.reload_textures().await;
+        window.renderer.reload_textures().await;
 
         next_frame().await;
     }
