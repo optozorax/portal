@@ -389,7 +389,16 @@ impl Scene {
                     result.push(matrix.normal_name());
                     result.push(matrix.inverse_name());
                 }
-                Flat { kind, is_inside: _, in_subspace: _ } | Complex { kind, intersect: _, in_subspace: _ } => match kind {
+                Flat {
+                    kind,
+                    is_inside: _,
+                    in_subspace: _,
+                }
+                | Complex {
+                    kind,
+                    intersect: _,
+                    in_subspace: _,
+                } => match kind {
                     Simple(matrix) => {
                         let matrix = Object::get_name((*matrix)?, &self.matrices)?;
                         result.push(matrix.normal_name());
@@ -478,12 +487,19 @@ impl Scene {
                 Some(
                     match &objects.get(id, &())? {
                         DebugMatrix(matrix) => vec![(*matrix)?],
-                        Flat { kind, is_inside: _, in_subspace: _ } | Complex { kind, intersect: _, in_subspace: _ } => {
-                            match kind {
-                                Simple(matrix) => vec![(*matrix)?],
-                                Portal(a, b) => vec![(*a)?, (*b)?],
-                            }
+                        Flat {
+                            kind,
+                            is_inside: _,
+                            in_subspace: _,
                         }
+                        | Complex {
+                            kind,
+                            intersect: _,
+                            in_subspace: _,
+                        } => match kind {
+                            Simple(matrix) => vec![(*matrix)?],
+                            Portal(a, b) => vec![(*a)?, (*b)?],
+                        },
                     }
                     .into_iter()
                     .filter_map(|id| Some((id, Object::get_name(id, matrices)?))),
@@ -510,7 +526,16 @@ impl Scene {
             use ObjectType::*;
             match &objects.get(id, &())? {
                 DebugMatrix(_) => None,
-                Flat { kind, is_inside: _, in_subspace: _ } | Complex { kind, intersect: _, in_subspace: _ } => match kind {
+                Flat {
+                    kind,
+                    is_inside: _,
+                    in_subspace: _,
+                }
+                | Complex {
+                    kind,
+                    intersect: _,
+                    in_subspace: _,
+                } => match kind {
                     Simple(_) => None,
                     Portal(a, b) => {
                         let a = (*a)?;
@@ -944,7 +969,9 @@ impl Scene {
         for line in res.storage.lines() {
             let number_for = line.contains("!FOR_NUMBER!");
             let variable_for = line.contains("!FOR_VARIABLE!");
-            if (number_for && data.for_prefer_variable) || (variable_for && !data.for_prefer_variable) {
+            if (number_for && data.for_prefer_variable)
+                || (variable_for && !data.for_prefer_variable)
+            {
                 // skip line
             } else {
                 res_storage += &line;

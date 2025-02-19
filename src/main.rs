@@ -1,6 +1,6 @@
-use macroquad::prelude::is_key_down;
 use gesture_recognizer::*;
 use glam::{DMat4, DVec2, DVec3, DVec4};
+use macroquad::prelude::is_key_down;
 use macroquad::prelude::is_key_pressed;
 use portal::gui::camera::CalculatedCam;
 use portal::gui::camera::CameraId;
@@ -192,12 +192,13 @@ impl RotateAroundCam {
                 is_something_changed = true;
             }
 
-
             if is_key_down(macroquad::input::KeyCode::Space) {
                 self.look_at.y += self.r * move_speed;
                 is_something_changed = true;
             }
-            if is_key_down(macroquad::input::KeyCode::LeftShift) || is_key_down(macroquad::input::KeyCode::RightShift) {
+            if is_key_down(macroquad::input::KeyCode::LeftShift)
+                || is_key_down(macroquad::input::KeyCode::RightShift)
+            {
                 self.look_at.y -= self.r * move_speed;
                 is_something_changed = true;
             }
@@ -211,7 +212,9 @@ impl RotateAroundCam {
                 is_something_changed = true;
             }
 
-            if is_key_down(macroquad::input::KeyCode::LeftControl) || is_key_down(macroquad::input::KeyCode::RightControl) {
+            if is_key_down(macroquad::input::KeyCode::LeftControl)
+                || is_key_down(macroquad::input::KeyCode::RightControl)
+            {
                 if !self.zoom_mode {
                     self.zoom_mode = true;
                     self.prev_view_angle = self.view_angle;
@@ -626,7 +629,10 @@ impl SceneRenderer {
                                 "#,
                     },
                     macroquad::prelude::MaterialParams {
-                        uniforms: vec![("Center".to_owned(), macroquad::prelude::UniformType::Float2)],
+                        uniforms: vec![(
+                            "Center".to_owned(),
+                            macroquad::prelude::UniformType::Float2,
+                        )],
                         textures: scene.textures(),
                         ..Default::default()
                     },
@@ -689,7 +695,11 @@ impl SceneRenderer {
         }
     }
 
-    fn load_from_scene(&mut self, scene: Scene, memory: &mut egui::Memory) -> Option<Result<(), (String, String, ShaderErrors)>> {
+    fn load_from_scene(
+        &mut self,
+        scene: Scene,
+        memory: &mut egui::Memory,
+    ) -> Option<Result<(), (String, String, ShaderErrors)>> {
         self.scene = scene;
         self.scene.init(&mut self.data, memory);
         self.material = match self.scene.get_new_material(&self.data)? {
@@ -711,7 +721,8 @@ impl SceneRenderer {
             return;
         }
         let cam_pos = self.cam.get_cam_pos();
-        let (teleported, encounter_object, change_subspace) = self.teleport_external_ray(self.cam.prev_cam_pos, cam_pos);
+        let (teleported, encounter_object, change_subspace) =
+            self.teleport_external_ray(self.cam.prev_cam_pos, cam_pos);
         if self.cam.stop_at_objects && encounter_object {
             self.cam = prev_cam.clone();
             return;
@@ -776,13 +787,7 @@ impl SceneRenderer {
     fn set_uniforms(&mut self, width: f32, height: f32) {
         self.cam.get_cam(&mut self.scene.cam);
         self.scene.cam.offset_after_material = self.offset_after_material;
-        self.material.set_uniform(
-            "_resolution",
-            (
-                width,
-                height,
-            ),
-        );
+        self.material.set_uniform("_resolution", (width, height));
         self.material
             .set_uniform("_camera", self.cam.get_matrix().as_f32());
         self.material
@@ -897,13 +902,7 @@ impl SceneRenderer {
             ..Default::default()
         });
         gl_use_material(&self.material);
-        draw_rectangle(
-            0.,
-            0.,
-            width,
-            height,
-            WHITE,
-        );
+        draw_rectangle(0., 0., width, height, WHITE);
         gl_use_default_material();
         set_default_camera();
     }
@@ -913,11 +912,10 @@ impl SceneRenderer {
             .formulas_cache
             .set_time(macroquad::miniquad::date::now());
 
-        let current_cam = 
-            memory
-                .data
-                .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
-                .0;
+        let current_cam = memory
+            .data
+            .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
+            .0;
         if self.cam.from != current_cam {
             let calculated_cam = if let Some(id) = current_cam {
                 // set getted camera
@@ -936,9 +934,7 @@ impl SceneRenderer {
                 // set original camera
                 memory
                     .data
-                    .get_persisted_mut_or_default::<OriginalCam>(egui::Id::new(
-                        "OriginalCam",
-                    ))
+                    .get_persisted_mut_or_default::<OriginalCam>(egui::Id::new("OriginalCam"))
                     .0
             };
 
@@ -1074,7 +1070,6 @@ impl Window {
             available_scenes.get_by_link(default_scene).unwrap()
         };
 
-        
         Window {
             renderer: SceneRenderer::new(scene_content).await,
             render_scale: 0.5,
@@ -1110,7 +1105,6 @@ impl Window {
 
             gesture_recognizer: Default::default(),
             input_subscriber_id: macroquad::input::utils::register_input_subscriber(),
-
         }
     }
 
@@ -1151,7 +1145,8 @@ impl Window {
                             ctx.memory_mut(|memory| {
                                 changed.uniform = true;
                                 let scene = ron::from_str(content).unwrap();
-                                self.renderer.load_from_scene(scene, memory)
+                                self.renderer
+                                    .load_from_scene(scene, memory)
                                     .unwrap()
                                     .unwrap_or_else(|err| {
                                         portal::error!(
@@ -1204,7 +1199,8 @@ impl Window {
         .hscroll(true)
         .show(ctx, |ui| {
             let (changed1, material) =
-                self.renderer.scene
+                self.renderer
+                    .scene
                     .egui(ui, &mut self.renderer.data, &mut self.should_recompile);
 
             changed |= changed1;
@@ -1391,7 +1387,10 @@ First, predefined library is included, then uniforms, then user library, then in
                         let text = self.renderer.scene.desc.text(ui);
                         egui_demo_lib::easy_mark::easy_mark(ui, text);
                     });
-                    changed |= self.renderer.scene.control_egui(ui, &mut self.renderer.data);
+                    changed |= self
+                        .renderer
+                        .scene
+                        .control_egui(ui, &mut self.renderer.data);
                 });
             self.control_scene_opened = control_scene_opened;
         }
@@ -1497,7 +1496,9 @@ First, predefined library is included, then uniforms, then user library, then in
         }
 
         let cam_changed = ctx.memory_mut(|memory| {
-            self.renderer.cam.process_mouse_and_keys(mouse_over_canvas, memory)
+            self.renderer
+                .cam
+                .process_mouse_and_keys(mouse_over_canvas, memory)
         });
         if changed.uniform || self.renderer.scene.use_time || cam_changed {
             ctx.memory_mut(|memory| {
@@ -1518,7 +1519,10 @@ First, predefined library is included, then uniforms, then user library, then in
         if self.render_scale == 1.0 {
             self.renderer.draw_full_screen();
         } else {
-            self.renderer.draw_texture(screen_width() * self.render_scale, screen_height() * self.render_scale);
+            self.renderer.draw_texture(
+                screen_width() * self.render_scale,
+                screen_height() * self.render_scale,
+            );
 
             draw_texture_ex(
                 &self.renderer.render_target.texture,

@@ -228,7 +228,11 @@ impl StorageElem2 for Object {
                 let (matrices, input) = input;
                 changed |= matrices.inline("Matrix:", 45., a, ui, input, data_id.with(0));
             }
-            Flat { kind, is_inside, in_subspace } => {
+            Flat {
+                kind,
+                is_inside,
+                in_subspace,
+            } => {
                 changed.shader |= egui_combo_label(ui, "Subspace:", 45., in_subspace);
                 ui.separator();
                 changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
@@ -308,7 +312,11 @@ impl StorageElem2 for Object {
                     egui_errors(ui, local_errors);
                 }
             }
-            Complex { kind, intersect, in_subspace } => {
+            Complex {
+                kind,
+                intersect,
+                in_subspace,
+            } => {
                 changed.shader |= egui_combo_label(ui, "Subspace:", 45., in_subspace);
                 ui.separator();
                 changed.shader |= egui_combo_label(ui, "Kind:", 45., kind);
