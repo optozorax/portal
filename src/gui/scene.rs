@@ -454,6 +454,7 @@ impl Scene {
             ("_resolution".to_owned(), UniformType::Float2),
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
             ("_aa_count".to_owned(), UniformType::Int1),
+            ("_aa_start".to_owned(), UniformType::Int1),
             ("_offset_after_material".to_owned(), UniformType::Float1),
             ("_t_start".to_owned(), UniformType::Float1),
             ("_t_end".to_owned(), UniformType::Float1),
@@ -1067,6 +1068,21 @@ impl Scene {
                 .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
         }
         WhatChanged::from_uniform(true)
+    }
+
+    pub fn init_stage_by_name(&mut self, name: &str, memory: &mut egui::Memory) -> Option<()> {
+        let elements = self
+            .animation_stages
+            .visible_elements()
+            .map(|(x, name)| (x, name.to_owned()))
+            .collect::<Vec<_>>();
+        for (id, name2) in elements {
+            if name2 == name {
+                drop(self.init_stage(Some(id), memory));
+                return Some(());
+            }
+        }
+        None
     }
 
     pub fn select_stage_ui(&mut self, ui: &mut Ui) -> WhatChanged {

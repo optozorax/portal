@@ -555,6 +555,7 @@ struct SceneRenderer {
     gray_t_size: f64,
     render_depth: i32,
     aa_count: i32,
+    aa_start: i32,
     angle_color_disable: bool,
     grid_disable: bool,
     black_border_disable: bool,
@@ -564,9 +565,7 @@ struct SceneRenderer {
 }
 
 impl SceneRenderer {
-    async fn new(scene_content: &str) -> Self {
-        let mut scene: Scene = ron::from_str(scene_content).unwrap();
-
+    async fn new(mut scene: Scene, max_width: u32, max_height: u32) -> Self {
         let mut data: Data = Data {
             reload_textures: true,
             for_prefer_variable: cfg!(not(target_arch = "wasm32")),
@@ -656,11 +655,12 @@ impl SceneRenderer {
             gray_t_size: 200.,
             render_depth: 100,
             aa_count: 1,
+            aa_start: 0,
             angle_color_disable: false,
             grid_disable: false,
             black_border_disable: false,
             darken_by_distance: true,
-            render_target: macroquad::prelude::render_target(4000, 4000),
+            render_target: macroquad::prelude::render_target(max_width, max_height),
             external_ray_render_target: macroquad::prelude::render_target(2, 3),
         };
 
@@ -803,6 +803,7 @@ impl SceneRenderer {
         self.material
             .set_uniform("_ray_tracing_depth", self.render_depth);
         self.material.set_uniform("_aa_count", self.aa_count);
+        self.material.set_uniform("_aa_start", self.aa_start);
         self.material
             .set_uniform("_offset_after_material", self.offset_after_material as f32);
 
@@ -889,15 +890,16 @@ impl SceneRenderer {
         gl_use_default_material();
     }
 
-    fn draw_texture(&mut self, width: f32, height: f32) {
+    fn draw_texture(&mut self, width: f32, height: f32, flip_y: bool) {
+        let flip_y = if flip_y { -1. } else { 1. };
         self.scene.set_uniforms(&mut self.material, &mut self.data);
         self.set_uniforms(width, height);
         macroquad::prelude::set_camera(&macroquad::prelude::Camera2D {
             zoom: macroquad::prelude::vec2(
                 1. / (self.render_target.texture.size().x / 2.),
-                1. / (self.render_target.texture.size().y / 2.),
+                1. / (self.render_target.texture.size().y / 2.) * flip_y,
             ),
-            offset: macroquad::prelude::vec2(-1., -1.),
+            offset: macroquad::prelude::vec2(-1., -1. * flip_y),
             render_target: Some(self.render_target.clone()),
             ..Default::default()
         });
@@ -907,10 +909,8 @@ impl SceneRenderer {
         set_default_camera();
     }
 
-    fn update(&mut self, memory: &mut egui::Memory) {
-        self.data
-            .formulas_cache
-            .set_time(macroquad::miniquad::date::now());
+    fn update(&mut self, memory: &mut egui::Memory, time: f64) {
+        self.data.formulas_cache.set_time(time);
 
         let current_cam = memory
             .data
@@ -1014,6 +1014,67 @@ impl SceneRenderer {
         changed.uniform |= egui_bool(ui, &mut self.black_border_disable);
         changed
     }
+
+    fn use_animation_stage(&mut self, name: &str, memory: &mut egui::Memory) {
+        self.scene.init_stage_by_name(name, memory).unwrap();
+        self.update(memory, 0.);
+    }
+
+    fn render_animation(
+        &mut self,
+        duration_seconds: f32,
+        fps: usize,
+        motion_blur_frames: usize,
+        output_name: &str,
+        memory: &mut egui::Memory,
+        width: u32,
+        height: u32,
+    ) {
+        drop(std::fs::create_dir("anim"));
+        let count = (duration_seconds * fps as f32 * motion_blur_frames as f32) as usize;
+        for (i, t) in (0..=count).map(|i| (i, i as f64 / count as f64)) {
+            self.aa_start = (i % motion_blur_frames) as i32;
+            self.update(memory, t);
+            self.draw_texture(width as f32, height as f32, true);
+            self.render_target
+                .texture
+                .get_texture_data()
+                .export_png(&format!("anim/frame_{i}.png"));
+
+            print!("\r{i}/{count} done      ");
+
+            use std::io::Write;
+            std::io::stdout().lock().flush().unwrap();
+        }
+        println!();
+
+        println!("Start ffmpeg to render video");
+        drop(std::fs::create_dir("video"));
+        let command = std::process::Command::new("ffmpeg")
+            .arg("-framerate")
+            .arg((fps * motion_blur_frames).to_string())
+            .arg("-i")
+            .arg("anim/frame_%d.png")
+            .arg("-vf")
+            .arg(format!(
+                "tmix=frames={}:weights='{}',fps={}",
+                motion_blur_frames,
+                (0..motion_blur_frames).map(|_| "1 ").collect::<String>(),
+                fps,
+            ))
+            .arg("-c:v")
+            .arg("libx264")
+            .arg("-b:v")
+            .arg("20M")
+            .arg("-pix_fmt")
+            .arg("yuv420p")
+            .arg("-y")
+            .arg(format!("video/{}.mp4", output_name))
+            .output()
+            .expect("failed to execute process");
+        std::fs::remove_dir_all("anim").unwrap();
+        println!("ffmpeg status: {}", command.status);
+    }
 }
 
 struct Window {
@@ -1070,8 +1131,10 @@ impl Window {
             available_scenes.get_by_link(default_scene).unwrap()
         };
 
+        let scene = ron::from_str(scene_content).unwrap();
+
         Window {
-            renderer: SceneRenderer::new(scene_content).await,
+            renderer: SceneRenderer::new(scene, 4000, 4000).await,
             render_scale: 0.5,
             should_recompile: false,
             dpi_set: false,
@@ -1502,7 +1565,8 @@ First, predefined library is included, then uniforms, then user library, then in
         });
         if changed.uniform || self.renderer.scene.use_time || cam_changed {
             ctx.memory_mut(|memory| {
-                self.renderer.update(memory);
+                self.renderer
+                    .update(memory, macroquad::miniquad::date::now());
             });
 
             is_something_changed = true;
@@ -1522,6 +1586,7 @@ First, predefined library is included, then uniforms, then user library, then in
             self.renderer.draw_texture(
                 screen_width() * self.render_scale,
                 screen_height() * self.render_scale,
+                false,
             );
 
             draw_texture_ex(
@@ -1537,6 +1602,7 @@ First, predefined library is included, then uniforms, then user library, then in
                         screen_height() * self.render_scale,
                     )),
                     dest_size: Some(macroquad::prelude::vec2(screen_width(), screen_height())),
+                    // flip_y: true,
                     ..Default::default()
                 },
             );
@@ -1556,10 +1622,53 @@ fn window_conf() -> Conf {
     }
 }
 
+async fn render() {
+    // let (width, height) = (3840, 2160);
+    let (width, height) = (854, 480);
+
+    // let scene_name = "monoportal_in_monoportal";
+    // let output_name = "monoportal_anim";
+    // let animation_stage = "anim";
+
+    let scene_name = "triple_tiling";
+    let output_name = "triple_tiling";
+    let animation_stage = "Explore";
+
+    let aa_count = 6;
+    let render_depth = 100;
+    let offset_after_material = 0.0000020;
+    let duration = 10.;
+    let fps = 30;
+    let motion_blur_frames = 25;
+
+    let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
+    let scene = ron::from_str(scene_content).unwrap();
+    let mut memory = egui::Memory::default();
+    let mut renderer = SceneRenderer::new(scene, width, height).await;
+    renderer.aa_count = aa_count;
+    renderer.render_depth = render_depth;
+    renderer.offset_after_material = offset_after_material;
+    renderer.use_animation_stage(animation_stage, &mut memory);
+    renderer.render_animation(
+        duration,
+        fps,
+        motion_blur_frames,
+        output_name,
+        &mut memory,
+        width,
+        height,
+    );
+}
+
 #[macroquad::main(window_conf)]
 async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     color_backtrace::install();
+
+    if false {
+        render().await;
+        return;
+    }
 
     let mut window = Window::new().await;
 

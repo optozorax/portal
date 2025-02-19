@@ -220,6 +220,7 @@ uniform float _view_angle;
 uniform int _use_panini_projection;
 uniform float _panini_param;
 uniform int _aa_count;
+uniform int _aa_start;
 varying vec2 uv; // absolute coordinates, integer values, from 0
 varying vec2 uv_screen;
 varying float pixel_size;
@@ -305,7 +306,7 @@ void main() {
 
     if (_teleport_external_ray == 0) {
         for (int a = 0; a < 16; a++) { if (a >= _aa_count) break; // !FOR_NUMBER!
-        for (int a = 0; a < _aa_count; a++) { // !FOR_VARIABLE!
+        for (int a = _aa_start; a < _aa_count + _aa_start; a++) { // !FOR_VARIABLE!
             vec2 offset = quasi_random(a);
             result += get_color(uv_screen + offset * pixel_size * 2.);
         }
