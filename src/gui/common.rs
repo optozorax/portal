@@ -208,7 +208,6 @@ pub fn egui_f64_positive(ui: &mut Ui, value: &mut f64) -> bool {
         ui.add(
             DragValue::new(value)
                 .speed(0.01)
-                .prefix("×")
                 .clamp_range(0.0..=1000.0)
                 .min_decimals(0)
                 .max_decimals(2),
@@ -389,4 +388,12 @@ pub fn egui_option<T>(
         changed |= egui_t(ui, t);
     }
     changed
+}
+
+pub fn matrix_hash(mat: &DMat4) -> f64 {
+    mat.to_cols_array().into_iter().sum::<f64>() / 16.
+}
+
+pub fn almost_identity(mat: &DMat4) -> bool {
+    matrix_hash(&(*mat - DMat4::IDENTITY)).abs() < 0.001
 }

@@ -69,6 +69,8 @@ struct RotateAroundCam {
 
     prev_view_angle: f64,
     zoom_mode: bool,
+
+    do_not_teleport_one_frame: bool,
 }
 
 impl RotateAroundCam {
@@ -120,6 +122,8 @@ impl RotateAroundCam {
 
             prev_view_angle: deg2rad(90.),
             zoom_mode: false,
+
+            do_not_teleport_one_frame: false,
         }
     }
 
@@ -129,6 +133,9 @@ impl RotateAroundCam {
             alpha: self.alpha,
             beta: self.beta,
             r: self.r,
+            in_subspace: self.in_subspace,
+            free_movement: self.free_movement,
+            matrix: self.teleport_matrix,
         }
     }
 
@@ -144,12 +151,6 @@ impl RotateAroundCam {
         }
 
         self.alpha += dalpha;
-        if self.alpha > 2.0 * PI {
-            self.alpha -= 2.0 * PI;
-        }
-        if self.alpha < 0. {
-            self.alpha += 2.0 * PI;
-        }
         self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
     }
 
@@ -717,6 +718,11 @@ impl SceneRenderer {
     }
 
     fn teleport_camera(&mut self, prev_cam: RotateAroundCam) {
+        if self.cam.do_not_teleport_one_frame {
+            self.cam.do_not_teleport_one_frame = false;
+            return;
+        }
+
         if !(self.cam.allow_teleport || self.cam.stop_at_objects) {
             return;
         }
@@ -731,8 +737,7 @@ impl SceneRenderer {
             if !self.cam.allow_teleport {
                 return;
             }
-            let res = || -> Option<()> {
-                let cam_teleport_dx = 0.001;
+            let mut res = |cam_teleport_dx: f64| -> Option<()> {
                 let cam_matrix = self.cam.teleport_matrix;
 
                 let i = (cam_matrix * DVec4::new(1., 0., 0., 0.) * cam_teleport_dx).truncate();
@@ -775,8 +780,8 @@ impl SceneRenderer {
 
                 self.cam.prev_cam_pos = self.cam.get_cam_pos();
                 Some(())
-            }();
-            if res == None {
+            };
+            if res(0.001) == None && res(0.0001) == None && res(0.00001) == None {
                 self.cam = prev_cam;
             }
         } else {
@@ -910,7 +915,7 @@ impl SceneRenderer {
     }
 
     fn update(&mut self, memory: &mut egui::Memory, time: f64) {
-        self.data.formulas_cache.set_time(time);
+        self.scene.update(memory, &mut self.data, time);
 
         let current_cam = memory
             .data
@@ -943,12 +948,14 @@ impl SceneRenderer {
             self.cam.beta = calculated_cam.beta;
             self.cam.r = calculated_cam.r;
             self.cam.look_at = calculated_cam.look_at;
-            self.cam.teleport_matrix = DMat4::IDENTITY;
-            self.cam.in_subspace = false;
+            self.cam.teleport_matrix = calculated_cam.matrix;
+            self.cam.in_subspace = calculated_cam.in_subspace;
 
             if self.cam.free_movement {
                 self.cam.look_at = self.cam.get_pos_vec() + self.cam.look_at;
             }
+
+            self.cam.do_not_teleport_one_frame = true;
         } else if let Some(id) = self.cam.from {
             let calculated_cam = with_swapped!(x => (self.scene.uniforms, self.data.formulas_cache);
                 self.scene.cameras.get_original(id).unwrap().get(&self.scene.matrices, &x).unwrap());
@@ -958,7 +965,20 @@ impl SceneRenderer {
             }
         }
 
-        // move into "update" method of renderer
+        if let Some(override_cam) = memory
+            .data
+            .get_persisted::<CalculatedCam>(egui::Id::new("OverrideCam"))
+        {
+            self.cam.alpha = override_cam.alpha;
+            self.cam.beta = override_cam.beta;
+            self.cam.r = override_cam.r;
+            self.cam.look_at = override_cam.look_at;
+
+            memory
+                .data
+                .remove::<CalculatedCam>(egui::Id::new("OverrideCam"));
+        }
+
         if self.cam.get_matrix() != self.prev_cam.get_matrix() {
             self.teleport_camera(self.prev_cam.clone());
         }
@@ -1016,7 +1036,7 @@ impl SceneRenderer {
     }
 
     fn use_animation_stage(&mut self, name: &str, memory: &mut egui::Memory) {
-        self.scene.init_stage_by_name(name, memory).unwrap();
+        self.scene.init_animation_by_name(name, memory).unwrap();
         self.update(memory, 0.);
     }
 
@@ -1563,7 +1583,11 @@ First, predefined library is included, then uniforms, then user library, then in
                 .cam
                 .process_mouse_and_keys(mouse_over_canvas, memory)
         });
-        if changed.uniform || self.renderer.scene.use_time || cam_changed {
+        if changed.uniform
+            || self.renderer.scene.use_time
+            || cam_changed
+            || self.renderer.scene.is_current_stage_real_animation()
+        {
             ctx.memory_mut(|memory| {
                 self.renderer
                     .update(memory, macroquad::miniquad::date::now());
@@ -1630,16 +1654,20 @@ async fn render() {
     // let output_name = "monoportal_anim";
     // let animation_stage = "anim";
 
-    let scene_name = "triple_tiling";
-    let output_name = "triple_tiling";
-    let animation_stage = "Explore";
+    let scene_name = "cylinder";
+    let output_name = "cylinder1";
+    let animation_stage = "id1";
 
-    let aa_count = 6;
+    // let scene_name = "portal_in_portal_cone";
+    // let output_name = "portal_in_portal_cone";
+    // let animation_stage = "test";
+
+    let aa_count = 4;
     let render_depth = 100;
-    let offset_after_material = 0.0000020;
-    let duration = 10.;
-    let fps = 30;
-    let motion_blur_frames = 25;
+    // let offset_after_material = 0.0000020;
+    let duration = 3.;
+    let fps = 60;
+    let motion_blur_frames = 5;
 
     let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
     let scene = ron::from_str(scene_content).unwrap();
@@ -1647,7 +1675,7 @@ async fn render() {
     let mut renderer = SceneRenderer::new(scene, width, height).await;
     renderer.aa_count = aa_count;
     renderer.render_depth = render_depth;
-    renderer.offset_after_material = offset_after_material;
+    // renderer.offset_after_material = offset_after_material;
     renderer.use_animation_stage(animation_stage, &mut memory);
     renderer.render_animation(
         duration,

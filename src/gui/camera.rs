@@ -1,5 +1,10 @@
 use crate::gui::animation::ElementsDescription;
+use crate::gui::common::almost_identity;
+use crate::gui::common::check_changed;
 use crate::gui::common::deg2rad;
+use crate::gui::common::egui_bool_named;
+use crate::gui::common::egui_f64;
+use crate::gui::common::matrix_hash;
 use crate::gui::common::rad2deg;
 use crate::gui::common::WhatChanged;
 use crate::gui::matrix::*;
@@ -8,9 +13,11 @@ use crate::gui::uniform::AnyUniform;
 use crate::gui::uniform::FormulasCache;
 use crate::gui::unique_id::UniqueId;
 use egui::Button;
+use egui::DragValue;
 use egui::Ui;
-use glam::DVec3;
+use glam::{DMat4, DVec3};
 use serde::{Deserialize, Serialize};
+use std::f64::consts::PI;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct CalculatedCam {
@@ -18,6 +25,9 @@ pub struct CalculatedCam {
     pub alpha: f64,
     pub beta: f64,
     pub r: f64,
+    pub free_movement: bool,
+    pub in_subspace: bool,
+    pub matrix: DMat4,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
@@ -33,6 +43,9 @@ impl Default for CalculatedCam {
             alpha: deg2rad(81.),
             beta: deg2rad(64.),
             r: 3.5,
+            in_subspace: false,
+            free_movement: false,
+            matrix: DMat4::IDENTITY,
         }
     }
 }
@@ -49,11 +62,20 @@ pub struct Cam {
     alpha: f64,
     beta: f64,
     r: f64,
+
+    #[serde(default)]
+    in_subspace: bool,
+
+    #[serde(default)]
+    free_movement: bool,
+
+    #[serde(default)]
+    matrix: DMat4,
 }
 
 impl Default for CamLookAt {
     fn default() -> Self {
-        Self::MatrixCenter(None)
+        Self::Coordinate(DVec3::default())
     }
 }
 
@@ -64,6 +86,9 @@ impl Default for Cam {
             alpha: 0.0,
             beta: 0.0,
             r: 3.5,
+            in_subspace: false,
+            free_movement: false,
+            matrix: DMat4::IDENTITY,
         }
     }
 }
@@ -105,6 +130,9 @@ impl Cam {
             alpha: self.alpha,
             beta: self.beta,
             r: self.r,
+            in_subspace: self.in_subspace,
+            free_movement: self.free_movement,
+            matrix: self.matrix,
         })
     }
 
@@ -182,19 +210,105 @@ impl StorageElem2 for Cam {
                 changed |= matrices.inline_only_name("Name:", 45., id, ui, data_id)
             }
             CamLookAt::Coordinate(coord) => {
-                ui.monospace(format!(
-                    "X: {:.1}, Y: {:.1}, Z: {:.1}",
-                    coord.x, coord.y, coord.z
-                ));
+                ui.horizontal(|ui| {
+                    ui.monospace("X");
+                    changed.uniform |= egui_f64(ui, &mut coord.x);
+                    ui.separator();
+                    ui.label("Y");
+                    changed.uniform |= egui_f64(ui, &mut coord.y);
+                    ui.separator();
+                    ui.label("Z");
+                    changed.uniform |= egui_f64(ui, &mut coord.z);
+                });
             }
         }
+        const BETA_MIN: f64 = 0.01;
+        const BETA_MAX: f64 = PI - 0.01;
+        ui.horizontal(|ui| {
+            ui.label("α");
+            changed.uniform |= check_changed(&mut self.alpha, |alpha| {
+                let mut current = rad2deg(*alpha);
+                ui.add(
+                    DragValue::new(&mut current)
+                        .speed(1.0)
+                        .suffix("°")
+                        .min_decimals(0)
+                        .max_decimals(1),
+                );
+                *alpha = deg2rad(current);
+            });
+            ui.separator();
+            ui.label("β");
+            changed.uniform |= check_changed(&mut self.beta, |beta| {
+                let mut current = rad2deg(*beta);
+                ui.add(
+                    DragValue::new(&mut current)
+                        .speed(1.0)
+                        .clamp_range(rad2deg(BETA_MIN)..=rad2deg(BETA_MAX))
+                        .suffix("°")
+                        .min_decimals(0)
+                        .max_decimals(1),
+                );
+                *beta = deg2rad(current);
+            });
+            ui.separator();
+            ui.label("R");
+            changed.uniform |= check_changed(&mut self.r, |r| {
+                ui.add(
+                    DragValue::new(r)
+                        .speed(0.01)
+                        .clamp_range(0.01..=1000.0)
+                        .min_decimals(0)
+                        .max_decimals(2),
+                );
+            });
+        });
+        if almost_identity(&self.matrix) {
+            ui.monospace("Matrix: IDENTITY");
+        } else {
+            ui.monospace(format!("Matrix: {:.3}", matrix_hash(&self.matrix)));
+        }
+        if self.free_movement {
+            ui.monospace("FREE movement");
+        } else {
+            ui.monospace("Rotate around");
+        }
+        egui_bool_named(ui, &mut self.in_subspace, "In subspace");
         ui.separator();
+
+        let current_cam = ui.memory_mut(|memory| {
+            *memory
+                .data
+                .get_persisted_mut_or_default::<CalculatedCam>(egui::Id::new("CalculatedCam"))
+        });
+
+        ui.monospace("Current:");
+        ui.monospace(format!(
+            "X: {:.1}, Y: {:.1}, Z: {:.1}",
+            current_cam.look_at.x, current_cam.look_at.y, current_cam.look_at.z
+        ));
         ui.monospace(format!(
             "α: {:.1}, β: {:.1}, r: {:.1}",
-            rad2deg(self.alpha),
-            rad2deg(self.beta),
-            self.r
+            rad2deg(current_cam.alpha),
+            rad2deg(current_cam.beta),
+            current_cam.r
         ));
+        if almost_identity(&current_cam.matrix) {
+            ui.monospace("Matrix: IDENTITY");
+        } else {
+            ui.monospace(format!("Matrix: {:.3}", matrix_hash(&current_cam.matrix)));
+        }
+        if current_cam.free_movement {
+            ui.monospace("FREE movement");
+        } else {
+            ui.monospace("Rotate around");
+        }
+        if current_cam.in_subspace {
+            ui.monospace("IN subspace");
+        } else {
+            ui.monospace("Not in subspace");
+        }
+
         ui.separator();
 
         let id = ui.memory_mut(|memory| {
@@ -227,37 +341,16 @@ impl StorageElem2 for Cam {
 
         ui.separator();
 
-        if ui
-            .add(Button::new("Set angles from current camera"))
-            .clicked()
-        {
-            let current_cam = ui.memory_mut(|memory| {
-                *memory
-                    .data
-                    .get_persisted_mut_or_default::<CalculatedCam>(egui::Id::new("CalculatedCam"))
-            });
+        if ui.add(Button::new("Copy current cam")).clicked() {
             self.alpha = current_cam.alpha;
             self.beta = current_cam.beta;
             self.r = current_cam.r;
-            changed.uniform = true;
-        }
-
-        let id = ui.memory_mut(|memory| {
-            memory
-                .data
-                .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
-                .0
-        });
-        if ui
-            .add_enabled(id.is_none(), Button::new("Set center from current camera"))
-            .clicked()
-        {
-            let current_cam = ui.memory_mut(|memory| {
-                *memory
-                    .data
-                    .get_persisted_mut_or_default::<CalculatedCam>(egui::Id::new("CalculatedCam"))
-            });
-            self.look_at = CamLookAt::Coordinate(current_cam.look_at);
+            self.matrix = current_cam.matrix;
+            self.free_movement = current_cam.free_movement;
+            self.in_subspace = current_cam.in_subspace;
+            if matches!(self.look_at, CamLookAt::Coordinate(_)) {
+                self.look_at = CamLookAt::Coordinate(current_cam.look_at);
+            }
             changed.uniform = true;
         }
 

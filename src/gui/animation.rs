@@ -768,3 +768,329 @@ impl AnyUniform {
         result
     }
 }
+
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RealAnimationPart<T: StorageElem2> {
+    CopyPrev,
+    Changed(Option<T::IdWrapper>),
+}
+
+impl<T: StorageElem2> RealAnimationPart<T> {
+    pub fn get_t(&self) -> Option<&T::IdWrapper> {
+        if let RealAnimationPart::Changed(Some(t)) = self {
+            Some(t)
+        } else {
+            None
+        }
+    }
+}
+
+#[allow(clippy::derivable_impls)]
+impl<T: StorageElem2> Default for RealAnimationPart<T> {
+    fn default() -> Self {
+        RealAnimationPart::CopyPrev
+    }
+}
+
+impl<T: StorageElem2> ComboBoxChoosable for RealAnimationPart<T> {
+    fn variants() -> &'static [&'static str] {
+        &["Copy prev", "Changed"]
+    }
+
+    fn get_number(&self) -> usize {
+        use RealAnimationPart::*;
+        match self {
+            CopyPrev => 0,
+            Changed { .. } => 1,
+        }
+    }
+
+    fn set_number(&mut self, number: usize) {
+        use RealAnimationPart::*;
+        *self = match number {
+            0 => CopyPrev,
+            1 => Changed(None),
+            _ => unreachable!(),
+        };
+    }
+}
+
+impl<T: StorageElem2> RealAnimationPart<T> {
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        storage: &mut Storage2<T>,
+        input: &mut T::Input,
+        name: &str,
+        data_id: egui::Id,
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        ui.horizontal(|ui| {
+            changed.uniform |= egui_combo_box(
+                ui,
+                name,
+                ANIMATION_STAGE_NAME_SIZE,
+                self,
+                data_id.with("combo"),
+            );
+            if let RealAnimationPart::Changed(x) = self {
+                changed |= storage.inline("", 0.0, x, ui, input, data_id);
+            }
+        });
+
+        changed
+    }
+}
+
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealAnimationStageChanging<T: StorageElem2>(HashMap<T::IdWrapper, RealAnimationPart<T>>);
+
+impl<T: StorageElem2> Default for RealAnimationStageChanging<T> {
+    fn default() -> Self {
+        RealAnimationStageChanging(HashMap::new())
+    }
+}
+
+impl<T: StorageElem2 + std::fmt::Debug> RealAnimationStageChanging<T> {
+    pub fn remove(&self, storage: &mut Storage2<T>, input: &mut T::Input) {
+        for id in self.0.values().filter_map(|x| x.get_t()) {
+            storage.remove_as_field(*id, input);
+        }
+    }
+
+    pub fn errors_count(&self, storage: &Storage2<T>, input: &T::Input) -> usize {
+        self.0
+            .values()
+            .map(|x| {
+                x.get_t()
+                    .map(|id| storage.errors_inline(*id, input))
+                    .unwrap_or(0)
+            })
+            .sum::<usize>()
+    }
+
+    pub fn egui(
+        &mut self,
+        ui: &mut Ui,
+        storage: &mut Storage2<T>,
+        input: &mut T::Input,
+        global: &mut GlobalStage<T>,
+        filter: &mut AnimationFilter<T>,
+        data_id: egui::Id,
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+
+        let visible_elements = storage
+            .visible_elements()
+            .map(|(id, name)| (id, name.to_owned()))
+            .collect::<Vec<_>>();
+
+        ui.label("Local:");
+        for (id, name) in &visible_elements {
+            let global = *global.0.entry(*id).or_default();
+            let enabled = *filter.0.entry(*id).or_default();
+            let anim = self.0.entry(*id).or_default();
+            if !global && enabled {
+                changed |= anim.egui(ui, storage, input, &name, data_id.with(id));
+            }
+        }
+
+        ui.separator();
+
+        ui.label("Global:");
+        for (id, name) in &visible_elements {
+            let global = *global.0.entry(*id).or_default();
+            let enabled = *filter.0.entry(*id).or_default();
+            let anim = self.0.entry(*id).or_default();
+            if global && enabled {
+                changed |= anim.egui(ui, storage, input, &name, data_id.with(id));
+            }
+        }
+
+        changed
+    }
+
+    pub fn init_stage(&self, storage: &mut Storage2<T>) {
+        for (id, uniform) in self.0.iter() {
+            if let Some(new_id) = uniform.get_t() {
+                storage.set_id(*id, *new_id);
+            }
+        }
+    }
+}
+
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct RealAnimationId(UniqueId);
+
+impl Wrapper for RealAnimationId {
+    fn wrap(id: UniqueId) -> Self {
+        Self(id)
+    }
+    fn un_wrap(self) -> UniqueId {
+        self.0
+    }
+}
+
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealAnimation {
+    #[serde(default)]
+    pub duration: f64,
+
+    pub animation_stage: Option<<AnimationStage as StorageElem2>::IdWrapper>,
+
+    pub uniforms: RealAnimationStageChanging<AnyUniform>,
+    pub matrices: RealAnimationStageChanging<Matrix>,
+
+    #[serde(default)]
+    pub use_prev_cam: bool,
+    pub cam_start: Option<CameraId>,
+    pub cam_end: Option<CameraId>,
+}
+
+impl Default for RealAnimation {
+    fn default() -> Self {
+        Self {
+            duration: 1.0,
+            animation_stage: None,
+            uniforms: Default::default(),
+            matrices: Default::default(),
+            use_prev_cam: false,
+            cam_start: None,
+            cam_end: None,
+        }
+    }
+}
+
+impl StorageElem2 for RealAnimation {
+    type IdWrapper = RealAnimationId;
+    type GetType = RealAnimation;
+
+    const SAFE_TO_RENAME: bool = true;
+
+    type Input = hlist![
+        Storage2<AnimationStage>,
+        Storage2<Cam>,
+        AnimationFilters,
+        GlobalUserUniforms,
+        Storage2<Matrix>,
+        Storage2<AnyUniform>,
+        FormulasCache
+    ];
+    type GetInput = ();
+
+    fn egui(
+        &mut self,
+        ui: &mut Ui,
+        (animation_stages, (cams, (filters, (global, (matrices, input))))): &mut Self::Input,
+        _: &mut InlineHelper<Self>,
+        mut data_id: egui::Id,
+        _: Self::IdWrapper,
+    ) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+
+        ui.horizontal(|ui| {
+            ui.label("Duration: ");
+            changed.uniform |= egui_f64_positive(ui, &mut self.duration);
+        });
+
+        ui.separator();
+
+        for (id, name) in animation_stages.visible_elements() {
+            let mut enabled = self.animation_stage == Some(id);
+            changed.uniform |= check_changed(&mut enabled, |enabled| {
+                drop(ui.radio_value(enabled, true, name))
+            });
+            if enabled {
+                self.animation_stage = Some(id);
+            }
+        }
+
+        ui.separator();
+        changed.uniform |= egui_bool_named(ui, &mut self.use_prev_cam, "Use prev end cam");
+        if !self.use_prev_cam {
+            changed |= cams.inline(
+                "Start cam:",
+                65.0,
+                &mut self.cam_start,
+                ui,
+                matrices,
+                data_id.with("cam_start"),
+            );
+        } else {
+            self.cam_start = None;
+        }
+        changed |= cams.inline(
+            "End cam:",
+            65.0,
+            &mut self.cam_end,
+            ui,
+            matrices,
+            data_id.with("cam_end"),
+        );
+
+        ui.separator();
+        changed |= self.matrices.egui(
+            ui,
+            matrices,
+            input,
+            &mut global.matrices,
+            &mut filters.matrices,
+            data_id.with("uniforms"),
+        );
+        data_id = data_id.with("matrices");
+        ui.separator();
+        let hpat![uniforms, formulas_cache] = input;
+        changed |= self.uniforms.egui(
+            ui,
+            uniforms,
+            formulas_cache,
+            &mut global.uniforms,
+            &mut filters.uniforms,
+            data_id.with("uniforms"),
+        );
+
+        changed
+    }
+
+    fn get(&self, _: &GetHelper<Self>, _: &Self::GetInput) -> Option<Self::GetType> {
+        Some(self.clone())
+    }
+
+    fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(
+        &self,
+        _: F,
+        (_, (_, (_, (_, (matrices, input))))): &mut Self::Input,
+    ) {
+        self.matrices.remove(matrices, input);
+        let hpat![uniforms, formulas_cache] = input;
+        self.uniforms.remove(uniforms, formulas_cache);
+    }
+
+    fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
+        &self,
+        _: F,
+        (_, (_, (_, (_, (matrices, input))))): &Self::Input,
+        _: Self::IdWrapper,
+    ) -> usize {
+        self.matrices.errors_count(matrices, input) + {
+            let hpat![uniforms, formulas_cache] = input;
+            self.uniforms.errors_count(uniforms, formulas_cache)
+        }
+    }
+}

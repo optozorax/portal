@@ -1,3 +1,5 @@
+use crate::gui::camera::CalculatedCam;
+use crate::gui::camera::CameraId;
 use crate::gui::camera::CurrentCam;
 use crate::gui::glsl::*;
 use crate::gui::storage2::Storage2;
@@ -43,6 +45,24 @@ impl Default for CamSettings {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Copy)]
+enum CurrentStage {
+    #[serde(alias = "None")]
+    #[default]
+    Dev,
+
+    #[serde(alias = "Some")]
+    Animation(AnimationId),
+
+    RealAnimation(RealAnimationId),
+}
+
+impl CurrentStage {
+    fn is_dev(&self) -> bool {
+        CurrentStage::Dev == *self
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Scene {
     pub desc: EngRusText,
@@ -72,12 +92,18 @@ pub struct Scene {
     user_uniforms: GlobalUserUniforms,
     animation_stages: Storage2<AnimationStage>,
 
-    current_stage: Option<AnimationId>,
+    current_stage: CurrentStage,
 
     dev_stage: DevStage,
 
     #[serde(default)]
+    animations: Storage2<RealAnimation>,
+
+    #[serde(default)]
     pub use_time: bool,
+
+    #[serde(default)]
+    run_animations: bool,
 }
 
 // In case of panic
@@ -90,57 +116,6 @@ impl Drop for Scene {
     }
 }
 
-/*
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OldScene {
-    pub description_en: String,
-    pub description_ru: String,
-
-    pub cam: CamSettings,
-
-    pub uniforms: Storage2<AnyUniform>,
-
-    pub matrices: StorageWithNames<Matrix>,
-    objects: StorageWithNames<ObjectComboBox>,
-
-    pub textures: StorageWithNames<TextureName>,
-
-    materials: StorageWithNames<MaterialComboBox>,
-    library: StorageWithNames<LibraryCode>,
-
-    user_uniforms: GlobalUserUniforms,
-    animation_stages: StorageWithNames<AnimationStage>,
-
-    current_stage: usize,
-}
-
-impl From<OldScene> for Scene {
-    fn from(old: OldScene) -> Scene {
-        Scene {
-            description_en: old.description_en,
-            description_ru: old.description_ru,
-
-            cam: old.cam,
-
-            uniforms: ,
-
-            matrices: old.matrices.into(),
-            objects: old.objects,
-
-            textures: old.textures,
-
-            materials: old.materials,
-            library: old.library,
-
-            user_uniforms: old.user_uniforms,
-            animation_stages: old.animation_stages,
-
-            current_stage: old.current_stage,
-        }
-    }
-}
-*/
-
 impl Scene {
     pub fn init(&mut self, data: &mut Data, memory: &mut egui::Memory) {
         data.errors = Default::default();
@@ -150,10 +125,10 @@ impl Scene {
 
     pub fn dev_stage_button(&mut self, ui: &mut Ui) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        let current_selected = self.current_stage.is_none();
+        let current_selected = self.current_stage.is_dev();
         let response = ui.radio(current_selected, "dev");
         if response.clicked() && !current_selected {
-            self.current_stage = None;
+            self.current_stage = CurrentStage::Dev;
             changed |= ui.memory_mut(|memory| self.init_stage(self.current_stage, memory));
         }
         changed
@@ -198,9 +173,9 @@ impl Scene {
                     }
                 }
             }
-            let response = ui.radio(self.current_stage.is_none(), "dev");
-            if response.clicked() && self.current_stage.is_some() {
-                self.current_stage = None;
+            let response = ui.radio(self.current_stage.is_dev(), "dev");
+            if response.clicked() && self.current_stage.is_dev() {
+                self.current_stage = CurrentStage::Dev;
                 changed |= ui.memory_mut(|memory| self.init_stage(self.current_stage, memory));
             }
 
@@ -217,7 +192,7 @@ impl Scene {
                 self.desc.egui_view_edit(ui, egui::Id::new("description"));
             });
 
-        if self.current_stage.is_none() {
+        if self.current_stage.is_dev() {
             let changed_uniforms = self.uniforms.egui(ui, &mut data.formulas_cache, "Uniforms");
             if changed_uniforms.uniform {
                 self.dev_stage.uniforms.copy(&self.uniforms);
@@ -297,10 +272,19 @@ impl Scene {
                 .animation_stages
                 .egui(ui, &mut x, "Animation stages"));
 
+        with_swapped!(x => (self.animation_stages, self.cameras, self.animations_filters, self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
+            changed |= self
+                .animations
+                .egui(ui, &mut x, "Animations"));
+
         ui.collapsing("Select stage", |ui| {
             changed |= self.dev_stage_button(ui);
             ui.separator();
             changed |= self.select_stage_ui(ui);
+            ui.separator();
+            changed |= self.select_animation_ui(ui);
+            ui.separator();
+            changed.uniform |= egui_bool_named(ui, &mut self.run_animations, "Run all animations");
         });
 
         ui.separator();
@@ -1041,32 +1025,51 @@ impl Scene {
 }
 
 impl Scene {
-    fn init_stage(&mut self, stage: Option<AnimationId>, memory: &mut egui::Memory) -> WhatChanged {
-        if let Some(id) = stage {
-            let stage = self.animation_stages.get_original(id).unwrap();
-            stage
-                .uniforms
-                .init_stage(&mut self.uniforms, &self.dev_stage.uniforms);
-            stage
-                .matrices
-                .init_stage(&mut self.matrices, &self.dev_stage.matrices);
+    fn init_stage(&mut self, stage: CurrentStage, memory: &mut egui::Memory) -> WhatChanged {
+        match stage {
+            CurrentStage::Animation(id) => {
+                let stage = self.animation_stages.get_original(id).unwrap();
+                stage
+                    .uniforms
+                    .init_stage(&mut self.uniforms, &self.dev_stage.uniforms);
+                stage
+                    .matrices
+                    .init_stage(&mut self.matrices, &self.dev_stage.matrices);
 
-            if let Some(cam) = stage.set_cam {
-                memory
-                    .data
-                    .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(cam));
-            } else {
+                if let Some(cam) = stage.set_cam {
+                    memory
+                        .data
+                        .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(cam));
+                } else {
+                    memory
+                        .data
+                        .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
+                }
+            }
+            CurrentStage::Dev => {
+                self.dev_stage.uniforms.init_stage(&mut self.uniforms);
+                self.dev_stage.matrices.init_stage(&mut self.matrices);
                 memory
                     .data
                     .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
             }
-        } else {
-            self.dev_stage.uniforms.init_stage(&mut self.uniforms);
-            self.dev_stage.matrices.init_stage(&mut self.matrices);
-            memory
-                .data
-                .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(None));
+            CurrentStage::RealAnimation(id) => {
+                let animation = self.animations.get_original(id).unwrap();
+                if let Some(stage_id) = animation.animation_stage {
+                    drop(self.init_stage(CurrentStage::Animation(stage_id), memory));
+                }
+                let animation = self.animations.get_original(id).unwrap().clone();
+                animation.uniforms.init_stage(&mut self.uniforms);
+                animation.matrices.init_stage(&mut self.matrices);
+
+                if let Some(cam) = animation.cam_start {
+                    memory
+                        .data
+                        .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(Some(cam)));
+                }
+            }
         }
+        self.current_stage = stage;
         WhatChanged::from_uniform(true)
     }
 
@@ -1078,11 +1081,132 @@ impl Scene {
             .collect::<Vec<_>>();
         for (id, name2) in elements {
             if name2 == name {
-                drop(self.init_stage(Some(id), memory));
+                drop(self.init_stage(CurrentStage::Animation(id), memory));
                 return Some(());
             }
         }
         None
+    }
+
+    pub fn init_animation_by_name(&mut self, name: &str, memory: &mut egui::Memory) -> Option<()> {
+        let elements = self
+            .animations
+            .visible_elements()
+            .map(|(x, name)| (x, name.to_owned()))
+            .collect::<Vec<_>>();
+        for (id, name2) in elements {
+            if name2 == name {
+                drop(self.init_stage(CurrentStage::RealAnimation(id), memory));
+                return Some(());
+            }
+        }
+        None
+    }
+
+    pub fn init_animation_by_position(
+        &mut self,
+        position: usize,
+        memory: &mut egui::Memory,
+    ) -> Option<()> {
+        let element = self.animations.visible_elements().nth(position)?.0;
+        drop(self.init_stage(CurrentStage::RealAnimation(element), memory));
+        Some(())
+    }
+
+    pub fn animations_len(&mut self) -> usize {
+        self.animations.len()
+    }
+
+    pub fn is_current_stage_real_animation(&self) -> bool {
+        matches!(self.current_stage, CurrentStage::RealAnimation(_))
+    }
+
+    pub fn get_current_animation_duration(&self) -> Option<f64> {
+        if let CurrentStage::RealAnimation(id) = self.current_stage {
+            Some(self.animations.get_original(id)?.duration)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_prev_animation_end_cam(&self, id: RealAnimationId) -> Option<Option<CameraId>> {
+        for (a, b) in self
+            .animations
+            .visible_elements()
+            .map(|(id, _)| id)
+            .zip(self.animations.visible_elements().map(|(id, _)| id).skip(1))
+        {
+            if b == id {
+                return Some(self.animations.get_original(a).unwrap().cam_end);
+            }
+        }
+        None
+    }
+
+    pub fn total_animation_duration(&self) -> f64 {
+        self.animations
+            .visible_elements()
+            .map(|(id, _)| self.animations.get_original(id).unwrap().duration)
+            .sum()
+    }
+
+    pub fn update(&mut self, memory: &mut egui::Memory, data: &mut Data, mut time: f64) {
+        if self.run_animations {
+            time = time % self.total_animation_duration();
+            for id in self
+                .animations
+                .visible_elements()
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>()
+            {
+                let duration = self.animations.get_original(id).unwrap().duration;
+                if time < duration {
+                    if self.current_stage != CurrentStage::RealAnimation(id) {
+                        drop(self.init_stage(CurrentStage::RealAnimation(id), memory));
+                    }
+                    time /= duration;
+                    break;
+                } else {
+                    time -= duration;
+                }
+            }
+        } else if let CurrentStage::RealAnimation(id) = self.current_stage {
+            let duration = self.animations.get_original(id).unwrap().duration;
+            time = (time % duration) / duration;
+        }
+        data.formulas_cache.set_time(time);
+
+        if let CurrentStage::RealAnimation(id) = self.current_stage {
+            let animation = self.animations.get_original(id).unwrap();
+            let cam_start = if animation.use_prev_cam {
+                self.get_prev_animation_end_cam(id)
+                    .unwrap_or(animation.cam_start)
+            } else {
+                animation.cam_start
+            };
+            if let Some((cam1, cam2)) = cam_start.zip(animation.cam_end) {
+                let cam1 = with_swapped!(x => (self.uniforms, data.formulas_cache);
+                    self.cameras.get_original(cam1).unwrap().get(&self.matrices, &x).unwrap());
+                let cam2 = with_swapped!(x => (self.uniforms, data.formulas_cache);
+                    self.cameras.get_original(cam2).unwrap().get(&self.matrices, &x).unwrap());
+
+                let t = data.formulas_cache.get_time() % 1.;
+
+                let cam = CalculatedCam {
+                    look_at: cam1.look_at.lerp(cam2.look_at, t),
+                    alpha: lerp(cam1.alpha..=cam2.alpha, t),
+                    beta: lerp(cam1.beta..=cam2.beta, t),
+                    r: lerp(cam1.r..=cam2.r, t),
+                    in_subspace: cam1.in_subspace,
+                    free_movement: cam1.free_movement,
+                    matrix: DMat4::IDENTITY,
+                };
+
+                memory
+                    .data
+                    .insert_persisted(egui::Id::new("OverrideCam"), cam);
+            }
+        }
     }
 
     pub fn select_stage_ui(&mut self, ui: &mut Ui) -> WhatChanged {
@@ -1098,8 +1222,29 @@ impl Scene {
             for id in elements {
                 let stage_value = self.animation_stages.get_original(id).unwrap();
                 let text = stage_value.name.text(ui);
-                ui.radio_value(stage, Some(id), text);
-                if *stage != previous && *stage == Some(id) {
+                ui.radio_value(stage, CurrentStage::Animation(id), text);
+                if *stage != previous && *stage == CurrentStage::Animation(id) {
+                    changed |= ui.memory_mut(|memory| self.init_stage(*stage, memory));
+                }
+            }
+        });
+        self.current_stage = current_stage;
+        changed
+    }
+
+    pub fn select_animation_ui(&mut self, ui: &mut Ui) -> WhatChanged {
+        let mut changed = WhatChanged::default();
+        let mut current_stage = self.current_stage;
+        changed.uniform |= check_changed(&mut current_stage, |stage| {
+            let previous = *stage;
+            let elements = self
+                .animations
+                .visible_elements()
+                .map(|(id, name)| (id, name.to_owned()))
+                .collect::<Vec<_>>();
+            for (id, name) in elements {
+                ui.radio_value(stage, CurrentStage::RealAnimation(id), name);
+                if *stage != previous && *stage == CurrentStage::RealAnimation(id) {
                     changed |= ui.memory_mut(|memory| self.init_stage(*stage, memory));
                 }
             }
@@ -1121,15 +1266,21 @@ impl Scene {
         if self.animation_stages.len() != 0 {
             changed |= self.select_stage_ui(ui);
             ui.separator();
-            if let Some(stage) = self.current_stage {
-                if let Some(stage) = self.animation_stages.get_original(stage) {
-                    with_swapped!(x => (self.uniforms, data.formulas_cache);
-                        changed |= stage.user_egui(ui, &mut x, &mut self.matrices, &mut self.cameras, &mut self.elements_descriptions, egui::Id::new("control_egui 2")));
-                } else {
-                    self.current_stage = None;
+            match self.current_stage {
+                CurrentStage::Animation(stage) => {
+                    if let Some(stage) = self.animation_stages.get_original(stage) {
+                        with_swapped!(x => (self.uniforms, data.formulas_cache);
+                            changed |= stage.user_egui(ui, &mut x, &mut self.matrices, &mut self.cameras, &mut self.elements_descriptions, egui::Id::new("control_egui 2")));
+                    } else {
+                        self.current_stage = CurrentStage::Dev;
+                    }
                 }
-            } else {
-                ui.label("Select any stage");
+                CurrentStage::Dev => {
+                    ui.label("Select any stage");
+                }
+                CurrentStage::RealAnimation(_id) => {
+                    ui.label("Animation is being played");
+                }
             }
         }
 
