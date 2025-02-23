@@ -136,6 +136,22 @@ impl Cam {
         })
     }
 
+    pub fn get_easy(&self) -> Option<CalculatedCam> {
+        if let CamLookAt::Coordinate(pos) = self.look_at {
+            Some(CalculatedCam {
+                look_at: pos,
+                alpha: self.alpha,
+                beta: self.beta,
+                r: self.r,
+                in_subspace: self.in_subspace,
+                free_movement: self.free_movement,
+                matrix: self.matrix,
+            })
+        } else {
+            None
+        }
+    }
+
     pub fn set_this_cam(&mut self, ui: &mut Ui, self_id: CameraId) {
         ui.memory_mut(|memory| {
             memory
@@ -317,42 +333,46 @@ impl StorageElem2 for Cam {
                 .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
                 .0
         });
-        if ui
-            .add_enabled(id != Some(self_id), Button::new("Set this cam as current"))
-            .clicked()
-        {
-            self.set_this_cam(ui, self_id);
-            changed.uniform = true;
-        }
-
-        let id = ui.memory_mut(|memory| {
-            memory
-                .data
-                .get_persisted_mut_or_default::<CurrentCam>(egui::Id::new("CurrentCam"))
-                .0
+        ui.horizontal(|ui| {
+            if ui
+                .add_enabled(id != Some(self_id), Button::new("Set this cam as current"))
+                .clicked()
+            {
+                self.set_this_cam(ui, self_id);
+                changed.uniform = true;
+            }
+            if ui
+                .add_enabled(id.is_some(), Button::new("Return original camera"))
+                .clicked()
+            {
+                Self::set_original_cam(ui);
+                changed.uniform = true;
+            }
         });
-        if ui
-            .add_enabled(id.is_some(), Button::new("Return original camera"))
-            .clicked()
-        {
-            Self::set_original_cam(ui);
-            changed.uniform = true;
-        }
 
         ui.separator();
 
-        if ui.add(Button::new("Copy current cam")).clicked() {
-            self.alpha = current_cam.alpha;
-            self.beta = current_cam.beta;
-            self.r = current_cam.r;
-            self.matrix = current_cam.matrix;
-            self.free_movement = current_cam.free_movement;
-            self.in_subspace = current_cam.in_subspace;
-            if matches!(self.look_at, CamLookAt::Coordinate(_)) {
-                self.look_at = CamLookAt::Coordinate(current_cam.look_at);
+        ui.horizontal(|ui| {
+            if ui.button("Copy from current cam").clicked() {
+                self.alpha = current_cam.alpha;
+                self.beta = current_cam.beta;
+                self.r = current_cam.r;
+                self.matrix = current_cam.matrix;
+                self.free_movement = current_cam.free_movement;
+                self.in_subspace = current_cam.in_subspace;
+                if matches!(self.look_at, CamLookAt::Coordinate(_)) {
+                    self.look_at = CamLookAt::Coordinate(current_cam.look_at);
+                }
+                changed.uniform = true;
             }
-            changed.uniform = true;
-        }
+            if ui.button("Copy to current cam").clicked() {
+                ui.memory_mut(|memory| {
+                    memory
+                        .data
+                        .insert_persisted(egui::Id::new("OverrideCam"), self.get_easy().unwrap());
+                });
+            }
+        });
 
         changed
     }

@@ -103,7 +103,7 @@ pub struct Scene {
     pub use_time: bool,
 
     #[serde(default)]
-    run_animations: bool,
+    pub run_animations: bool,
 }
 
 // In case of panic
@@ -1062,7 +1062,13 @@ impl Scene {
                 animation.uniforms.init_stage(&mut self.uniforms);
                 animation.matrices.init_stage(&mut self.matrices);
 
-                if let Some(cam) = animation.cam_start {
+                let cam_start = if animation.use_prev_cam {
+                    self.get_prev_animation_end_cam(id)
+                        .unwrap_or(animation.cam_start)
+                } else {
+                    animation.cam_start
+                };
+                if let Some(cam) = cam_start {
                     memory
                         .data
                         .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(Some(cam)));
@@ -1190,7 +1196,9 @@ impl Scene {
                 let cam2 = with_swapped!(x => (self.uniforms, data.formulas_cache);
                     self.cameras.get_original(cam2).unwrap().get(&self.matrices, &x).unwrap());
 
-                let t = data.formulas_cache.get_time() % 1.;
+                let t = animation
+                    .cam_easing
+                    .ease(data.formulas_cache.get_time() % 1.);
 
                 let cam = CalculatedCam {
                     look_at: cam1.look_at.lerp(cam2.look_at, t),

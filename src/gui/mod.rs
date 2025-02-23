@@ -1,6 +1,7 @@
 pub mod animation;
 pub mod combo_box;
 pub mod common;
+pub mod easing;
 pub mod glsl;
 pub mod intersection_material;
 pub mod material;

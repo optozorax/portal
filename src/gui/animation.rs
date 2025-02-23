@@ -3,6 +3,7 @@ use crate::gui::camera::CameraId;
 use crate::gui::camera::CurrentCam;
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
+use crate::gui::easing::Easing;
 use crate::gui::eng_rus::EngRusText;
 use crate::gui::matrix::Matrix;
 use crate::gui::storage2::GetHelper;
@@ -961,6 +962,9 @@ pub struct RealAnimation {
     pub use_prev_cam: bool,
     pub cam_start: Option<CameraId>,
     pub cam_end: Option<CameraId>,
+
+    #[serde(default)]
+    pub cam_easing: Easing,
 }
 
 impl Default for RealAnimation {
@@ -973,6 +977,7 @@ impl Default for RealAnimation {
             use_prev_cam: false,
             cam_start: None,
             cam_end: None,
+            cam_easing: Easing::Linear,
         }
     }
 }
@@ -1008,6 +1013,14 @@ impl StorageElem2 for RealAnimation {
             ui.label("Duration: ");
             changed.uniform |= egui_f64_positive(ui, &mut self.duration);
         });
+
+        changed.uniform |= egui_combo_box(
+            ui,
+            "Camera easing:",
+            100.,
+            &mut self.cam_easing,
+            data_id.with("cam_easing"),
+        );
 
         ui.separator();
 

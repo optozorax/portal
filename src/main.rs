@@ -243,12 +243,6 @@ impl RotateAroundCam {
             self.r = clamp(self.r, 0.01, 100.);
         }
 
-        if is_something_changed {
-            memory
-                .data
-                .insert_persisted(egui::Id::new("CalculatedCam"), self.get_calculated_cam());
-        }
-
         self.previous_mouse = mouse_pos;
 
         is_something_changed
@@ -983,6 +977,11 @@ impl SceneRenderer {
             self.teleport_camera(self.prev_cam.clone());
         }
         self.prev_cam = self.cam.clone();
+
+        memory.data.insert_persisted(
+            egui::Id::new("CalculatedCam"),
+            self.cam.get_calculated_cam(),
+        );
     }
 
     fn egui_rendering_settings(&mut self, ui: &mut Ui) -> WhatChanged {
@@ -1054,7 +1053,7 @@ impl SceneRenderer {
         let count = (duration_seconds * fps as f32 * motion_blur_frames as f32) as usize;
         for (i, t) in (0..=count).map(|i| (i, i as f64 / count as f64)) {
             self.aa_start = (i % motion_blur_frames) as i32;
-            self.update(memory, t);
+            self.update(memory, t * duration_seconds as f64);
             self.draw_texture(width as f32, height as f32, true);
             self.render_target
                 .texture
@@ -1655,8 +1654,8 @@ async fn render() {
     // let animation_stage = "anim";
 
     let scene_name = "cylinder";
-    let output_name = "cylinder1";
-    let animation_stage = "id1";
+    let output_name = "cylinder_3";
+    let animation_stage = "3";
 
     // let scene_name = "portal_in_portal_cone";
     // let output_name = "portal_in_portal_cone";
@@ -1665,14 +1664,15 @@ async fn render() {
     let aa_count = 4;
     let render_depth = 100;
     // let offset_after_material = 0.0000020;
-    let duration = 3.;
+    let duration = 3.0;
     let fps = 60;
-    let motion_blur_frames = 5;
+    let motion_blur_frames = 20;
 
     let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
     let scene = ron::from_str(scene_content).unwrap();
     let mut memory = egui::Memory::default();
     let mut renderer = SceneRenderer::new(scene, width, height).await;
+    renderer.scene.run_animations = false;
     renderer.aa_count = aa_count;
     renderer.render_depth = render_depth;
     // renderer.offset_after_material = offset_after_material;

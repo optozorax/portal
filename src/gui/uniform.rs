@@ -1,5 +1,6 @@
 use crate::gui::combo_box::*;
 use crate::gui::common::*;
+use crate::gui::easing::*;
 use crate::gui::storage2::*;
 use crate::gui::unique_id::UniqueId;
 use core::cell::RefCell;
@@ -764,6 +765,13 @@ impl StorageElem2 for AnyUniform {
                 "atan2" => args.first()?.atan2(*args.get(1)?),
 
                 "time" => formulas_cache.get_time(),
+
+                // easings
+                "easing_linear" => easing_linear(*args.first()?),
+                "easing_in" => easing_in(*args.first()?),
+                "easing_out" => easing_out(*args.first()?),
+                "easing_in_out" => easing_in_out(*args.first()?),
+                "easing_in_out_fast" => easing_in_out_fast(*args.first()?),
 
                 // Free variables
                 _ => get_helper
