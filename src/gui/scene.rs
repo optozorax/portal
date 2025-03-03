@@ -2,6 +2,7 @@ use crate::gui::camera::CalculatedCam;
 use crate::gui::camera::CameraId;
 use crate::gui::camera::CurrentCam;
 use crate::gui::glsl::*;
+use crate::gui::scenes::ShowHiddenScenes;
 use crate::gui::storage2::Storage2;
 
 use crate::code_generation::*;
@@ -173,11 +174,7 @@ impl Scene {
                     }
                 }
             }
-            let response = ui.radio(self.current_stage.is_dev(), "dev");
-            if response.clicked() && self.current_stage.is_dev() {
-                self.current_stage = CurrentStage::Dev;
-                changed |= ui.memory_mut(|memory| self.init_stage(self.current_stage, memory));
-            }
+            changed |= self.dev_stage_button(ui);
 
             ui.checkbox(&mut self.use_time, "Use time");
         });
@@ -280,7 +277,7 @@ impl Scene {
         ui.collapsing("Select stage", |ui| {
             changed |= self.dev_stage_button(ui);
             ui.separator();
-            changed |= self.select_stage_ui(ui);
+            changed |= self.select_stage_ui(ui, true);
             ui.separator();
             changed |= self.select_animation_ui(ui);
             ui.separator();
@@ -580,6 +577,7 @@ impl Scene {
             .into_iter()
             .filter(|(name, _)| !name.starts_with('_'))
         {
+            #[allow(unreachable_patterns)]
             result.add_string(format!(
                 "uniform {} {};\n",
                 match kind {
@@ -1127,6 +1125,14 @@ impl Scene {
         matches!(self.current_stage, CurrentStage::RealAnimation(_))
     }
 
+    pub fn get_current_animation_name(&self) -> Option<&str> {
+        if let CurrentStage::RealAnimation(id) = self.current_stage {
+            Some(self.animations.get_name(id)??)
+        } else {
+            None
+        }
+    }
+
     pub fn get_current_animation_duration(&self) -> Option<f64> {
         if let CurrentStage::RealAnimation(id) = self.current_stage {
             Some(self.animations.get_original(id)?.duration)
@@ -1217,7 +1223,17 @@ impl Scene {
         }
     }
 
-    pub fn select_stage_ui(&mut self, ui: &mut Ui) -> WhatChanged {
+    pub fn select_stage_ui(&mut self, ui: &mut Ui, show_hidden_override: bool) -> WhatChanged {
+        let show_hidden =
+            ui.memory_mut(|memory| {
+                *memory
+                    .data
+                    .get_persisted_mut_or_default::<ShowHiddenScenes>(egui::Id::new(
+                        "ShowHiddenScenes",
+                    ))
+            })
+            .0 || show_hidden_override;
+
         let mut changed = WhatChanged::default();
         let mut current_stage = self.current_stage;
         changed.uniform |= check_changed(&mut current_stage, |stage| {
@@ -1229,10 +1245,15 @@ impl Scene {
                 .collect::<Vec<_>>();
             for id in elements {
                 let stage_value = self.animation_stages.get_original(id).unwrap();
-                let text = stage_value.name.text(ui);
-                ui.radio_value(stage, CurrentStage::Animation(id), text);
-                if *stage != previous && *stage == CurrentStage::Animation(id) {
-                    changed |= ui.memory_mut(|memory| self.init_stage(*stage, memory));
+                if !stage_value.hidden || show_hidden {
+                    let mut text = stage_value.name.text(ui).to_owned();
+                    if stage_value.hidden {
+                        text = "* ".to_owned() + &text;
+                    }
+                    ui.radio_value(stage, CurrentStage::Animation(id), text);
+                    if *stage != previous && *stage == CurrentStage::Animation(id) {
+                        changed |= ui.memory_mut(|memory| self.init_stage(*stage, memory));
+                    }
                 }
             }
         });
@@ -1272,7 +1293,7 @@ impl Scene {
         );
 
         if self.animation_stages.len() != 0 {
-            changed |= self.select_stage_ui(ui);
+            changed |= self.select_stage_ui(ui, false);
             ui.separator();
             match self.current_stage {
                 CurrentStage::Animation(stage) => {

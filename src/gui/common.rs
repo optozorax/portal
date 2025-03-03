@@ -303,8 +303,7 @@ pub fn egui_with_enabled_by(ui: &mut Ui, by: bool, f: impl FnOnce(&mut Ui)) {
 }
 
 pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::Response {
-    #[derive(Clone, Copy, Eq, PartialEq, Debug, Default)]
-    #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
+    #[derive(Clone, Copy, Eq, PartialEq, Debug, Default, serde::Deserialize, serde::Serialize)]
     enum State {
         #[default]
         View,

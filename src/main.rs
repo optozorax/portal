@@ -1752,6 +1752,16 @@ async fn main() {
 
     macroquad::input::simulate_mouse_with_touch(false);
 
+    // Always show hidden scenes on native (mostly for me to code)
+    #[cfg(not(target_arch = "wasm32"))]
+    egui_macroquad::ui(|ctx| {
+        ctx.memory_mut(|memory| {
+            memory
+                .data
+                .insert_persisted(egui::Id::new("ShowHiddenScenes"), ShowHiddenScenes(true))
+        });
+    });
+
     loop {
         clear_background(BLACK);
 

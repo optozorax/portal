@@ -9,8 +9,7 @@ pub struct EngRusText {
     pub rus: String,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug, Default)]
-#[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Default, serde::Deserialize, serde::Serialize)]
 pub enum EngRusSettings {
     #[default]
     Eng,

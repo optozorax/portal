@@ -397,10 +397,6 @@ impl Scenes {
                 .0
         });
 
-        // Always show hidden scenes on native (mostly for me to code)
-        #[cfg(not(target_arch = "wasm32"))]
-        let show_hidden = true;
-
         ui.set_width(170.);
         let mut result = None;
         for SceneSection {

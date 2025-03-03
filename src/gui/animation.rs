@@ -400,6 +400,9 @@ pub struct AnimationStage {
     original_cam_button: bool,
     pub set_cam: Option<Option<CameraId>>,
     cams: HashMap<CameraId, bool>,
+
+    #[serde(default)]
+    pub hidden: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -652,6 +655,10 @@ impl StorageElem2 for AnimationStage {
     ) -> WhatChanged {
         let mut changed = WhatChanged::default();
         self.name.egui_singleline(ui);
+        ui.separator();
+
+        egui_bool_named(ui, &mut self.hidden, "Hidden");
+
         ui.separator();
 
         ui.checkbox(&mut self.original_cam_button, "Original cam button");
