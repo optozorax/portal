@@ -1149,7 +1149,16 @@ impl Scene {
             .zip(self.animations.visible_elements().map(|(id, _)| id).skip(1))
         {
             if b == id {
-                return Some(self.animations.get_original(a).unwrap().cam_end);
+                let prev = self.animations.get_original(a).unwrap();
+                if prev.use_start_cam_as_end {
+                    if prev.use_prev_cam {
+                        return self.get_prev_animation_end_cam(a);
+                    } else {
+                        return Some(prev.cam_start);
+                    }
+                } else {
+                    return Some(prev.cam_end);
+                }
             }
         }
         None

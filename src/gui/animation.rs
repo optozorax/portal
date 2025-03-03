@@ -967,6 +967,8 @@ pub struct RealAnimation {
 
     #[serde(default)]
     pub use_prev_cam: bool,
+    #[serde(default)]
+    pub use_start_cam_as_end: bool,
     pub cam_start: Option<CameraId>,
     pub cam_end: Option<CameraId>,
 
@@ -982,6 +984,7 @@ impl Default for RealAnimation {
             uniforms: Default::default(),
             matrices: Default::default(),
             use_prev_cam: false,
+            use_start_cam_as_end: false,
             cam_start: None,
             cam_end: None,
             cam_easing: Easing::Linear,
@@ -1043,6 +1046,11 @@ impl StorageElem2 for RealAnimation {
 
         ui.separator();
         changed.uniform |= egui_bool_named(ui, &mut self.use_prev_cam, "Use prev end cam");
+        changed.uniform |= egui_bool_named(
+            ui,
+            &mut self.use_start_cam_as_end,
+            "Use start cam and end cam",
+        );
         if !self.use_prev_cam {
             changed |= cams.inline(
                 "Start cam:",
@@ -1055,14 +1063,18 @@ impl StorageElem2 for RealAnimation {
         } else {
             self.cam_start = None;
         }
-        changed |= cams.inline(
-            "End cam:",
-            65.0,
-            &mut self.cam_end,
-            ui,
-            matrices,
-            data_id.with("cam_end"),
-        );
+        if !self.use_start_cam_as_end {
+            changed |= cams.inline(
+                "End cam:",
+                65.0,
+                &mut self.cam_end,
+                ui,
+                matrices,
+                data_id.with("cam_end"),
+            );
+        } else {
+            self.cam_end = None;
+        }
 
         ui.separator();
         changed |= self.matrices.egui(

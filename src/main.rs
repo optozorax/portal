@@ -1103,11 +1103,7 @@ impl SceneRenderer {
         println!("ffmpeg status: {}", command.status);
     }
 
-    fn render_all_animations(
-        &mut self,
-        fps: usize,
-        motion_blur_frames: usize,
-    ) {
+    fn render_all_animations(&mut self, fps: usize, motion_blur_frames: usize) {
         let mut memory = egui::Memory::default();
 
         drop(std::fs::create_dir("video"));
