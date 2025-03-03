@@ -154,11 +154,7 @@ impl RotateAroundCam {
         self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
     }
 
-    fn process_mouse_and_keys(
-        &mut self,
-        mouse_over_canvas: bool,
-        memory: &mut egui::Memory,
-    ) -> bool {
+    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool) -> bool {
         let mut is_something_changed = self.is_something_changed;
 
         let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
@@ -557,10 +553,13 @@ struct SceneRenderer {
     darken_by_distance: bool,
     render_target: macroquad::prelude::RenderTarget,
     external_ray_render_target: macroquad::prelude::RenderTarget,
+    width: u32,
+    height: u32,
+    scene_name: String,
 }
 
 impl SceneRenderer {
-    async fn new(mut scene: Scene, max_width: u32, max_height: u32) -> Self {
+    async fn new(mut scene: Scene, max_width: u32, max_height: u32, scene_name: &str) -> Self {
         let mut data: Data = Data {
             reload_textures: true,
             for_prefer_variable: cfg!(not(target_arch = "wasm32")),
@@ -657,6 +656,9 @@ impl SceneRenderer {
             darken_by_distance: true,
             render_target: macroquad::prelude::render_target(max_width, max_height),
             external_ray_render_target: macroquad::prelude::render_target(2, 3),
+            width: max_width,
+            height: max_height,
+            scene_name: scene_name.to_owned(),
         };
 
         result
@@ -667,6 +669,7 @@ impl SceneRenderer {
         result.cam.prev_cam_pos = result.cam.get_cam_pos();
         result.offset_after_material = result.scene.cam.offset_after_material;
         result.reload_textures().await;
+        result.scene.run_animations = false;
         result
     }
 
@@ -1051,14 +1054,19 @@ impl SceneRenderer {
     ) {
         drop(std::fs::create_dir("anim"));
         let count = (duration_seconds * fps as f32 * motion_blur_frames as f32) as usize;
-        for (i, t) in (0..=count).map(|i| (i, i as f64 / count as f64)) {
+        for (i, t) in (0..count).map(|i| (i, i as f64 / count as f64)) {
             self.aa_start = (i % motion_blur_frames) as i32;
             self.update(memory, t * duration_seconds as f64);
             self.draw_texture(width as f32, height as f32, true);
-            self.render_target
-                .texture
-                .get_texture_data()
-                .export_png(&format!("anim/frame_{i}.png"));
+            let texture_data = self.render_target.texture.get_texture_data();
+            texture_data.export_png(&format!("anim/frame_{i}.png"));
+
+            if i == 0 {
+                texture_data.export_png(&format!("video/{output_name}.start.png"));
+            }
+            if i == count - 1 {
+                texture_data.export_png(&format!("video/{output_name}.end.png"));
+            }
 
             print!("\r{i}/{count} done      ");
 
@@ -1093,6 +1101,38 @@ impl SceneRenderer {
             .expect("failed to execute process");
         std::fs::remove_dir_all("anim").unwrap();
         println!("ffmpeg status: {}", command.status);
+    }
+
+    fn render_all_animations(
+        &mut self,
+        fps: usize,
+        motion_blur_frames: usize,
+    ) {
+        let mut memory = egui::Memory::default();
+
+        drop(std::fs::create_dir("video"));
+        drop(std::fs::create_dir(format!("video/{}", self.scene_name)));
+
+        for i in 0..self.scene.animations_len() {
+            self.scene
+                .init_animation_by_position(i, &mut memory)
+                .unwrap();
+            self.update(&mut memory, 0.);
+            let duration = self.scene.get_current_animation_duration().unwrap();
+            self.render_animation(
+                duration as f32,
+                fps,
+                motion_blur_frames,
+                &format!(
+                    "{}/{}",
+                    self.scene_name,
+                    self.scene.get_current_animation_name().unwrap()
+                ),
+                &mut memory,
+                self.width,
+                self.height,
+            );
+        }
     }
 }
 
@@ -1153,7 +1193,7 @@ impl Window {
         let scene = ron::from_str(scene_content).unwrap();
 
         Window {
-            renderer: SceneRenderer::new(scene, 4000, 4000).await,
+            renderer: SceneRenderer::new(scene, 4000, 4000, scene_name).await,
             render_scale: 0.5,
             should_recompile: false,
             dpi_set: false,
@@ -1577,11 +1617,7 @@ First, predefined library is included, then uniforms, then user library, then in
             is_something_changed = true;
         }
 
-        let cam_changed = ctx.memory_mut(|memory| {
-            self.renderer
-                .cam
-                .process_mouse_and_keys(mouse_over_canvas, memory)
-        });
+        let cam_changed = self.renderer.cam.process_mouse_and_keys(mouse_over_canvas);
         if changed.uniform
             || self.renderer.scene.use_time
             || cam_changed
@@ -1646,16 +1682,25 @@ fn window_conf() -> Conf {
 }
 
 async fn render() {
+    let scene_name = "portal_in_portal";
+
     // let (width, height) = (3840, 2160);
     let (width, height) = (854, 480);
 
+    let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
+    let scene = ron::from_str(scene_content).unwrap();
+    let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
+    renderer.aa_count = 10;
+    renderer.render_depth = 100;
+    renderer.render_all_animations(60, 1);
+
+    /*
     // let scene_name = "monoportal_in_monoportal";
     // let output_name = "monoportal_anim";
     // let animation_stage = "anim";
 
-    let scene_name = "cylinder";
-    let output_name = "cylinder_3";
-    let animation_stage = "3";
+    let output_name = "triple_tiling_4";
+    let animation_stage = "test";
 
     // let scene_name = "portal_in_portal_cone";
     // let output_name = "portal_in_portal_cone";
@@ -1666,12 +1711,9 @@ async fn render() {
     // let offset_after_material = 0.0000020;
     let duration = 3.0;
     let fps = 60;
-    let motion_blur_frames = 20;
+    let motion_blur_frames = 60;
 
-    let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
-    let scene = ron::from_str(scene_content).unwrap();
     let mut memory = egui::Memory::default();
-    let mut renderer = SceneRenderer::new(scene, width, height).await;
     renderer.scene.run_animations = false;
     renderer.aa_count = aa_count;
     renderer.render_depth = render_depth;
@@ -1686,6 +1728,7 @@ async fn render() {
         width,
         height,
     );
+    */
 }
 
 #[macroquad::main(window_conf)]
