@@ -103,8 +103,11 @@ pub struct Scene {
     #[serde(default)]
     pub use_time: bool,
 
-    #[serde(default)]
+    #[serde(skip)]
     pub run_animations: bool,
+
+    #[serde(skip)]
+    pub animation_stage_edit_state: bool,
 }
 
 // In case of panic
@@ -177,6 +180,8 @@ impl Scene {
             changed |= self.dev_stage_button(ui);
 
             ui.checkbox(&mut self.use_time, "Use time");
+
+            ui.checkbox(&mut self.animation_stage_edit_state, "Animation stage edit state");
         });
 
         ui.separator();
@@ -1172,6 +1177,10 @@ impl Scene {
     }
 
     pub fn update(&mut self, memory: &mut egui::Memory, data: &mut Data, mut time: f64) {
+        if self.animation_stage_edit_state {
+            drop(self.init_stage(self.current_stage, memory));
+        }
+
         if self.run_animations {
             time = time % self.total_animation_duration();
             for id in self

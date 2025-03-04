@@ -1618,6 +1618,7 @@ First, predefined library is included, then uniforms, then user library, then in
             || self.renderer.scene.use_time
             || cam_changed
             || self.renderer.scene.is_current_stage_real_animation()
+            || self.renderer.scene.animation_stage_edit_state
         {
             ctx.memory_mut(|memory| {
                 self.renderer
