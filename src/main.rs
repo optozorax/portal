@@ -947,6 +947,7 @@ impl SceneRenderer {
             self.cam.look_at = calculated_cam.look_at;
             self.cam.teleport_matrix = calculated_cam.matrix;
             self.cam.in_subspace = calculated_cam.in_subspace;
+            self.cam.free_movement = calculated_cam.free_movement;
 
             if self.cam.free_movement {
                 self.cam.look_at = self.cam.get_pos_vec() + self.cam.look_at;

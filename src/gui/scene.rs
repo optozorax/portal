@@ -47,7 +47,7 @@ impl Default for CamSettings {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Copy)]
-enum CurrentStage {
+pub enum CurrentStage {
     #[serde(alias = "None")]
     #[default]
     Dev,
@@ -59,7 +59,7 @@ enum CurrentStage {
 }
 
 impl CurrentStage {
-    fn is_dev(&self) -> bool {
+    pub fn is_dev(&self) -> bool {
         CurrentStage::Dev == *self
     }
 }
@@ -274,7 +274,7 @@ impl Scene {
                 .animation_stages
                 .egui(ui, &mut x, "Animation stages"));
 
-        with_swapped!(x => (self.animation_stages, self.cameras, self.animations_filters, self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
+        with_swapped!(x => (self.animation_stages.visible_elements_vec(), self.animations.visible_elements_vec(), self.cameras, self.animations_filters, self.user_uniforms, self.matrices, self.uniforms, data.formulas_cache);
             changed |= self
                 .animations
                 .egui(ui, &mut x, "Animations"));
@@ -1058,9 +1058,7 @@ impl Scene {
             }
             CurrentStage::RealAnimation(id) => {
                 let animation = self.animations.get_original(id).unwrap();
-                if let Some(stage_id) = animation.animation_stage {
-                    drop(self.init_stage(CurrentStage::Animation(stage_id), memory));
-                }
+                drop(self.init_stage(animation.animation_stage, memory));
                 let animation = self.animations.get_original(id).unwrap().clone();
                 animation.uniforms.init_stage(&mut self.uniforms);
                 animation.matrices.init_stage(&mut self.matrices);
@@ -1214,7 +1212,12 @@ impl Scene {
             } else {
                 animation.cam_start
             };
-            if let Some((cam1, cam2)) = cam_start.zip(animation.cam_end) {
+            let cam_end = if animation.use_start_cam_as_end {
+                cam_start
+            } else {
+                animation.cam_end
+            };
+            if let Some((cam1, cam2)) = cam_start.zip(cam_end) {
                 let cam1 = with_swapped!(x => (self.uniforms, data.formulas_cache);
                     self.cameras.get_original(cam1).unwrap().get(&self.matrices, &x).unwrap());
                 let cam2 = with_swapped!(x => (self.uniforms, data.formulas_cache);

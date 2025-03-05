@@ -1,3 +1,4 @@
+use crate::gui::scene::CurrentStage;
 use crate::gui::camera::Cam;
 use crate::gui::camera::CameraId;
 use crate::gui::camera::CurrentCam;
@@ -960,7 +961,7 @@ pub struct RealAnimation {
     #[serde(default)]
     pub duration: f64,
 
-    pub animation_stage: Option<<AnimationStage as StorageElem2>::IdWrapper>,
+    pub animation_stage: CurrentStage,
 
     pub uniforms: RealAnimationStageChanging<AnyUniform>,
     pub matrices: RealAnimationStageChanging<Matrix>,
@@ -980,7 +981,7 @@ impl Default for RealAnimation {
     fn default() -> Self {
         Self {
             duration: 1.0,
-            animation_stage: None,
+            animation_stage: CurrentStage::Dev,
             uniforms: Default::default(),
             matrices: Default::default(),
             use_prev_cam: false,
@@ -999,7 +1000,8 @@ impl StorageElem2 for RealAnimation {
     const SAFE_TO_RENAME: bool = true;
 
     type Input = hlist![
-        Storage2<AnimationStage>,
+        Vec<(AnimationId, String)>,
+        Vec<(RealAnimationId, String)>,
         Storage2<Cam>,
         AnimationFilters,
         GlobalUserUniforms,
@@ -1012,7 +1014,7 @@ impl StorageElem2 for RealAnimation {
     fn egui(
         &mut self,
         ui: &mut Ui,
-        (animation_stages, (cams, (filters, (global, (matrices, input))))): &mut Self::Input,
+        (animation_stages, (real_animations, (cams, (filters, (global, (matrices, input)))))): &mut Self::Input,
         _: &mut InlineHelper<Self>,
         mut data_id: egui::Id,
         _: Self::IdWrapper,
@@ -1034,13 +1036,37 @@ impl StorageElem2 for RealAnimation {
 
         ui.separator();
 
-        for (id, name) in animation_stages.visible_elements() {
-            let mut enabled = self.animation_stage == Some(id);
+        {
+            let mut enabled = self.animation_stage == CurrentStage::Dev;
             changed.uniform |= check_changed(&mut enabled, |enabled| {
-                drop(ui.radio_value(enabled, true, name))
+                drop(ui.radio_value(enabled, true, "dev"));
             });
             if enabled {
-                self.animation_stage = Some(id);
+                self.animation_stage = CurrentStage::Dev;
+            }
+        }
+
+        ui.separator();
+
+        for (id, name) in animation_stages {
+            let mut enabled = self.animation_stage == CurrentStage::Animation(*id);
+            changed.uniform |= check_changed(&mut enabled, |enabled| {
+                drop(ui.radio_value(enabled, true, name.clone()))
+            });
+            if enabled {
+                self.animation_stage = CurrentStage::Animation(*id);
+            }
+        }
+
+        ui.separator();
+
+        for (id, name) in real_animations {
+            let mut enabled = self.animation_stage == CurrentStage::RealAnimation(*id);
+            changed.uniform |= check_changed(&mut enabled, |enabled| {
+                drop(ui.radio_value(enabled, true, name.clone()))
+            });
+            if enabled {
+                self.animation_stage = CurrentStage::RealAnimation(*id);
             }
         }
 
@@ -1107,7 +1133,7 @@ impl StorageElem2 for RealAnimation {
     fn remove<F: FnMut(Self::IdWrapper, &mut Self::Input)>(
         &self,
         _: F,
-        (_, (_, (_, (_, (matrices, input))))): &mut Self::Input,
+        (_, (_, (_, (_, (_, (matrices, input)))))): &mut Self::Input,
     ) {
         self.matrices.remove(matrices, input);
         let hpat![uniforms, formulas_cache] = input;
@@ -1117,7 +1143,7 @@ impl StorageElem2 for RealAnimation {
     fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
         &self,
         _: F,
-        (_, (_, (_, (_, (matrices, input))))): &Self::Input,
+        (_, (_, (_, (_, (_, (matrices, input)))))): &Self::Input,
         _: Self::IdWrapper,
     ) -> usize {
         self.matrices.errors_count(matrices, input) + {
