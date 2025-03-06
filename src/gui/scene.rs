@@ -1058,7 +1058,11 @@ impl Scene {
             }
             CurrentStage::RealAnimation(id) => {
                 let animation = self.animations.get_original(id).unwrap();
-                drop(self.init_stage(animation.animation_stage, memory));
+                if animation.animation_stage != CurrentStage::RealAnimation(id) {
+                    drop(self.init_stage(animation.animation_stage, memory));
+                } else {
+                    crate::error!(format, "Initialization recursion!", );
+                }
                 let animation = self.animations.get_original(id).unwrap().clone();
                 animation.uniforms.init_stage(&mut self.uniforms);
                 animation.matrices.init_stage(&mut self.matrices);
@@ -1240,6 +1244,12 @@ impl Scene {
                 memory
                     .data
                     .insert_persisted(egui::Id::new("OverrideCam"), cam);
+
+                if t == 0. {
+                    memory
+                        .data
+                        .insert_persisted(egui::Id::new("do_not_teleport_one_frame"), true);
+                }
             }
         }
     }

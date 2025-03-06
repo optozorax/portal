@@ -717,6 +717,7 @@ impl SceneRenderer {
     fn teleport_camera(&mut self, prev_cam: RotateAroundCam) {
         if self.cam.do_not_teleport_one_frame {
             self.cam.do_not_teleport_one_frame = false;
+            self.cam.prev_cam_pos = self.cam.get_cam_pos();
             return;
         }
 
@@ -963,6 +964,16 @@ impl SceneRenderer {
             }
         }
 
+        if memory
+            .data
+            .get_persisted::<bool>(egui::Id::new("do_not_teleport_one_frame"))
+            .unwrap_or(false) {
+            self.cam.do_not_teleport_one_frame = true;
+            memory
+                .data
+                .remove::<bool>(egui::Id::new("do_not_teleport_one_frame"));
+        }
+
         if let Some(override_cam) = memory
             .data
             .get_persisted::<CalculatedCam>(egui::Id::new("OverrideCam"))
@@ -1038,10 +1049,12 @@ impl SceneRenderer {
         changed
     }
 
+    /*
     fn use_animation_stage(&mut self, name: &str, memory: &mut egui::Memory) {
         self.scene.init_animation_by_name(name, memory).unwrap();
         self.update(memory, 0.);
     }
+    */
 
     fn render_animation(
         &mut self,
