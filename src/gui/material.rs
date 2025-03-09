@@ -18,6 +18,9 @@ pub enum Material {
         grid: bool,
         grid_scale: f64,
         grid_coef: f64, // 0..1
+
+        #[serde(default)]
+        grid2: bool,
     },
     Reflect {
         add_to_color: [f64; 3],
@@ -39,6 +42,7 @@ impl Default for Material {
             grid: true,
             grid_scale: 4.0,
             grid_coef: 0.3,
+            grid2: false,
         }
     }
 }
@@ -84,6 +88,7 @@ impl StorageElem2 for Material {
                 grid,
                 grid_scale,
                 grid_coef,
+                grid2,
             } => {
                 ui.horizontal(|ui| {
                     ui.label("Color");
@@ -132,6 +137,9 @@ impl StorageElem2 for Material {
                             ),
                         )
                     });
+                    ui.separator();
+                    changed |=
+                        check_changed(grid2, |grid| drop(ui.add(Checkbox::new(grid, "Grid 2"))));
                 });
             }
             Reflect { add_to_color } => {

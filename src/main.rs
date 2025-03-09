@@ -1,3 +1,4 @@
+use macroquad::prelude::Image;
 use gesture_recognizer::*;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use macroquad::prelude::is_key_down;
@@ -136,6 +137,7 @@ impl RotateAroundCam {
             in_subspace: self.in_subspace,
             free_movement: self.free_movement,
             matrix: self.teleport_matrix,
+            override_matrix: true,
         }
     }
 
@@ -154,7 +156,7 @@ impl RotateAroundCam {
         self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
     }
 
-    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool) -> bool {
+    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool, egui_using_keyboard: bool) -> bool {
         let mut is_something_changed = self.is_something_changed;
 
         let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
@@ -168,12 +170,12 @@ impl RotateAroundCam {
             is_something_changed = true;
         }
 
-        if is_key_pressed(macroquad::input::KeyCode::Q) {
+        if !egui_using_keyboard && is_key_pressed(macroquad::input::KeyCode::Q) {
             self.change_free_movement();
             is_something_changed = true;
         }
 
-        if self.free_movement {
+        if !egui_using_keyboard && self.free_movement {
             let move_speed = 0.03;
 
             let dir = self.get_pos_vec();
@@ -535,6 +537,75 @@ impl RotateAroundCam {
     }
 }
 
+pub fn average_images(images: Vec<Image>) -> Image {
+    let first = &images[0];
+    let width = first.width;
+    let height = first.height;
+    
+    // Ensure all images have the same dimensions
+    if !images.iter().all(|img| img.width == width && img.height == height) {
+        panic!();
+    }
+    
+    // Gamma value for sRGB
+    let gamma: f32 = 2.2;
+    
+    // Create a buffer to store the sum of linear RGB values
+    let pixel_count = width as usize * height as usize;
+    let mut sum_r = vec![0.0; pixel_count];
+    let mut sum_g = vec![0.0; pixel_count];
+    let mut sum_b = vec![0.0; pixel_count];
+    
+    // Convert each image's RGB values to linear space and sum them
+    for image in &images {
+        for y in 0..height as usize {
+            for x in 0..width as usize {
+                let pixel_idx = y * width as usize + x;
+                let byte_idx = pixel_idx * 4;
+                
+                if byte_idx + 2 < image.bytes.len() {
+                    // Convert sRGB values to linear space
+                    let r = (image.bytes[byte_idx] as f32 / 255.0).powf(gamma);
+                    let g = (image.bytes[byte_idx + 1] as f32 / 255.0).powf(gamma);
+                    let b = (image.bytes[byte_idx + 2] as f32 / 255.0).powf(gamma);
+                    
+                    sum_r[pixel_idx] += r;
+                    sum_g[pixel_idx] += g;
+                    sum_b[pixel_idx] += b;
+                }
+            }
+        }
+    }
+    
+    // Calculate the average and convert back to sRGB space
+    let img_count = images.len() as f32;
+    let mut result_bytes = Vec::with_capacity(pixel_count * 4);
+    
+    for pixel_idx in 0..pixel_count {
+        // Average in linear space
+        let avg_r = sum_r[pixel_idx] / img_count;
+        let avg_g = sum_g[pixel_idx] / img_count;
+        let avg_b = sum_b[pixel_idx] / img_count;
+        
+        // Convert back to sRGB space
+        let r = (avg_r.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
+        let g = (avg_g.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
+        let b = (avg_b.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
+        
+        // Add RGBA values (A is always 255)
+        result_bytes.push(r);
+        result_bytes.push(g);
+        result_bytes.push(b);
+        result_bytes.push(255);
+    }
+    
+    Image {
+        bytes: result_bytes,
+        width,
+        height,
+    }
+}
+
 struct SceneRenderer {
     scene: Scene,
     cam: RotateAroundCam,
@@ -779,7 +850,7 @@ impl SceneRenderer {
                 self.cam.prev_cam_pos = self.cam.get_cam_pos();
                 Some(())
             };
-            if res(0.001) == None && res(0.0001) == None && res(0.00001) == None {
+            if res(0.0001) == None && res(0.00001) == None && res(0.000001) == None {
                 self.cam = prev_cam;
             }
         } else {
@@ -843,6 +914,7 @@ impl SceneRenderer {
             .set_uniform("_teleport_external_ray", 1 as i32);
         self.material.set_uniform("_external_ray_a", a.as_f32());
         self.material.set_uniform("_external_ray_b", b.as_f32());
+        self.material.set_uniform("teleport_light_u", 1 as i32);
 
         macroquad::prelude::set_camera(&macroquad::prelude::Camera2D {
             zoom: macroquad::prelude::vec2(
@@ -982,6 +1054,13 @@ impl SceneRenderer {
             self.cam.beta = override_cam.beta;
             self.cam.r = override_cam.r;
             self.cam.look_at = override_cam.look_at;
+            self.cam.in_subspace = override_cam.in_subspace;
+            self.cam.free_movement = override_cam.free_movement;
+
+            if override_cam.override_matrix {
+                self.cam.teleport_matrix = override_cam.matrix;
+                self.cam.do_not_teleport_one_frame = true;
+            }
 
             memory
                 .data
@@ -1049,12 +1128,10 @@ impl SceneRenderer {
         changed
     }
 
-    /*
     fn use_animation_stage(&mut self, name: &str, memory: &mut egui::Memory) {
         self.scene.init_animation_by_name(name, memory).unwrap();
         self.update(memory, 0.);
     }
-    */
 
     fn render_animation(
         &mut self,
@@ -1067,19 +1144,26 @@ impl SceneRenderer {
         height: u32,
     ) {
         drop(std::fs::create_dir("anim"));
-        let count = (duration_seconds * fps as f32 * motion_blur_frames as f32) as usize;
-        for (i, t) in (0..count).map(|i| (i, i as f64 / count as f64)) {
-            self.aa_start = (i % motion_blur_frames) as i32;
-            self.update(memory, t * duration_seconds as f64);
-            self.draw_texture(width as f32, height as f32, true);
-            let texture_data = self.render_target.texture.get_texture_data();
-            texture_data.export_png(&format!("anim/frame_{i}.png"));
+        let count = (duration_seconds * fps as f32) as usize;
+        let exposure = 0.5; // number from 0 to 1
+        for i in 0..count {
+            let mut images = vec![];
+            for j in 0..motion_blur_frames {
+                let t = (i as f64 / count as f64) + j as f64 / motion_blur_frames as f64 / count as f64 * exposure;
+                self.aa_start = j as i32;
+                self.update(memory, t * duration_seconds as f64);
+                self.draw_texture(width as f32, height as f32, true);
+                images.push(self.render_target.texture.get_texture_data());
+            }
+            let result = average_images(images);
+            
+            result.export_png(&format!("anim/frame_{i}.png"));
 
             if i == 0 {
-                texture_data.export_png(&format!("video/{output_name}.start.png"));
+                result.export_png(&format!("video/{output_name}.start.png"));
             }
-            if i == count - 1 {
-                texture_data.export_png(&format!("video/{output_name}.end.png"));
+            if i == count-1 {
+                result.export_png(&format!("video/{output_name}.end.png"));
             }
 
             print!("\r{i}/{count} done      ");
@@ -1093,16 +1177,9 @@ impl SceneRenderer {
         drop(std::fs::create_dir("video"));
         let command = std::process::Command::new("ffmpeg")
             .arg("-framerate")
-            .arg((fps * motion_blur_frames).to_string())
+            .arg((fps).to_string())
             .arg("-i")
             .arg("anim/frame_%d.png")
-            .arg("-vf")
-            .arg(format!(
-                "tmix=frames={}:weights='{}',fps={}",
-                motion_blur_frames,
-                (0..motion_blur_frames).map(|_| "1 ").collect::<String>(),
-                fps,
-            ))
             .arg("-c:v")
             .arg("libx264")
             .arg("-b:v")
@@ -1610,6 +1687,7 @@ First, predefined library is included, then uniforms, then user library, then in
         }
 
         let mouse_over_canvas = !ctx.wants_pointer_input() && !ctx.is_pointer_over_area();
+        let egui_using_keyboard = ctx.wants_keyboard_input();
 
         self.renderer.cam.current_dpi = ctx.pixels_per_point() as f64;
         self.renderer.cam.current_render_scale = self.render_scale;
@@ -1627,7 +1705,7 @@ First, predefined library is included, then uniforms, then user library, then in
             is_something_changed = true;
         }
 
-        let cam_changed = self.renderer.cam.process_mouse_and_keys(mouse_over_canvas);
+        let cam_changed = self.renderer.cam.process_mouse_and_keys(mouse_over_canvas, egui_using_keyboard);
         if changed.uniform
             || self.renderer.scene.use_time
             || cam_changed
@@ -1693,53 +1771,41 @@ fn window_conf() -> Conf {
 }
 
 async fn render() {
-    let scene_name = "portal_in_portal";
+    let scene_name = "cylinder_spherical";
 
     // let (width, height) = (3840, 2160);
     let (width, height) = (854, 480);
+
+    let fps = 30;
+    let motion_blur_frames = 60;
 
     let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
     let scene = ron::from_str(scene_content).unwrap();
     let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
     renderer.aa_count = 10;
     renderer.render_depth = 100;
-    renderer.render_all_animations(60, 1);
 
-    /*
-    // let scene_name = "monoportal_in_monoportal";
-    // let output_name = "monoportal_anim";
-    // let animation_stage = "anim";
+    if false {
+        renderer.render_all_animations(fps, motion_blur_frames);
+    }
 
-    let output_name = "triple_tiling_4";
-    let animation_stage = "test";
+    if true {
+        drop(std::fs::create_dir("video"));
+        drop(std::fs::create_dir(format!("video/{}", renderer.scene_name)));
 
-    // let scene_name = "portal_in_portal_cone";
-    // let output_name = "portal_in_portal_cone";
-    // let animation_stage = "test";
-
-    let aa_count = 4;
-    let render_depth = 100;
-    // let offset_after_material = 0.0000020;
-    let duration = 3.0;
-    let fps = 60;
-    let motion_blur_frames = 60;
-
-    let mut memory = egui::Memory::default();
-    renderer.scene.run_animations = false;
-    renderer.aa_count = aa_count;
-    renderer.render_depth = render_depth;
-    // renderer.offset_after_material = offset_after_material;
-    renderer.use_animation_stage(animation_stage, &mut memory);
-    renderer.render_animation(
-        duration,
-        fps,
-        motion_blur_frames,
-        output_name,
-        &mut memory,
-        width,
-        height,
-    );
-    */
+        let animation_stage = "anim.2";
+        let mut memory = egui::Memory::default();
+        renderer.use_animation_stage(animation_stage, &mut memory);
+        renderer.render_animation(
+            renderer.scene.get_current_animation_duration().unwrap() as f32,
+            fps,
+            motion_blur_frames,
+            &format!("{scene_name}/{animation_stage}"),
+            &mut memory,
+            width,
+            height,
+        );
+    }
 }
 
 #[macroquad::main(window_conf)]

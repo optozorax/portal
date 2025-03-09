@@ -108,6 +108,9 @@ pub struct Scene {
 
     #[serde(skip)]
     pub animation_stage_edit_state: bool,
+
+    #[serde(skip)]
+    prev_t_raw: f64,
 }
 
 // In case of panic
@@ -647,11 +650,12 @@ impl Scene {
                         grid,
                         grid_scale,
                         grid_coef,
+                        grid2,
                     } => {
                         material_processing.add_string(
                             format!(
-                                "return material_simple(hit, r, vec3({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e});\n",
-                                color[0], color[1], color[2], normal_coef, grid, grid_scale, grid_coef,
+                                "return material_simple2(hit, r, vec3({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e}, {});\n",
+                                color[0], color[1], color[2], normal_coef, grid, grid_scale, grid_coef, grid2
                             )
                         );
                     }
@@ -1221,15 +1225,18 @@ impl Scene {
             } else {
                 animation.cam_end
             };
-            if let Some((cam1, cam2)) = cam_start.zip(cam_end) {
+            if let Some((cam1id, cam2id)) = cam_start.zip(cam_end) {
                 let cam1 = with_swapped!(x => (self.uniforms, data.formulas_cache);
-                    self.cameras.get_original(cam1).unwrap().get(&self.matrices, &x).unwrap());
+                    self.cameras.get_original(cam1id).unwrap().get(&self.matrices, &x).unwrap());
                 let cam2 = with_swapped!(x => (self.uniforms, data.formulas_cache);
-                    self.cameras.get_original(cam2).unwrap().get(&self.matrices, &x).unwrap());
+                    self.cameras.get_original(cam2id).unwrap().get(&self.matrices, &x).unwrap());
 
+                let t_raw = data.formulas_cache.get_time() % 1.;
                 let t = animation
                     .cam_easing
-                    .ease(data.formulas_cache.get_time() % 1.);
+                    .ease(t_raw);
+
+                let override_matrix = t_raw < self.prev_t_raw || t_raw == 0.;
 
                 let cam = CalculatedCam {
                     look_at: cam1.look_at.lerp(cam2.look_at, t),
@@ -1238,18 +1245,15 @@ impl Scene {
                     r: lerp(cam1.r..=cam2.r, t),
                     in_subspace: cam1.in_subspace,
                     free_movement: cam1.free_movement,
-                    matrix: DMat4::IDENTITY,
+                    matrix: cam1.matrix,
+                    override_matrix,
                 };
 
                 memory
                     .data
                     .insert_persisted(egui::Id::new("OverrideCam"), cam);
 
-                if t == 0. {
-                    memory
-                        .data
-                        .insert_persisted(egui::Id::new("do_not_teleport_one_frame"), true);
-                }
+                self.prev_t_raw = t_raw;
             }
         }
     }

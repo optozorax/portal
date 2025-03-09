@@ -180,6 +180,84 @@ vec3 color_grid(vec3 start, vec2 uv) {
     return start * mix(mix(0.7, 1.1, step(uv.x, 0.5)), mix(1.1, 0.7, step(uv.x, 0.5)), step(uv.y, 0.5));
 }
 
+// // Diagonal-like
+// vec3 color_grid2(vec3 start, vec2 uv) {
+//     if (_grid_disable == 1) return start;
+//     uv = vec2(uv.x + uv.y, -uv.x + uv.y);
+//     uv = fract(uv * 0.25);
+//     return start * mix(0.7, 1.1, step(uv.x, 0.5)) * mix(0.7, 1.1, step(uv.y, 0.5));
+// }
+
+// thanks https://www.shadertoy.com/view/slccWf
+float circle_sdf(vec2 position) {
+    vec2 s = vec2(2.0, sqrt(3.0) * 2.0);
+    position /= s;    
+    vec2 d1 = (fract(position) - 0.5) * s;
+    vec2 d2 = (fract(position + 0.5) - 0.5) * s;
+    return sqrt(min(dot(d1, d1), dot(d2, d2))) - 1.0;
+}
+vec3 color_grid2(vec3 start, vec2 uv) {
+    float d = circle_sdf(uv);
+    float val = 0.7;
+    if (d < -0.2) val = 1.1;
+    return start * val;
+}
+
+// // thanks https://www.shadertoy.com/view/7ltfRM
+// float rhombus(vec2 position) {
+//     position /= vec2(2.0, sqrt(3.0));
+//     position.y -= 0.5;
+//     vec2 position1 = position;
+//     position1.x -= fract(floor(position1.y) * 0.5);
+//     position1 = abs(fract(position1) - 0.5);
+//     vec2 position2 = position;
+//     position2.y -= 2.0 / 3.0;
+//     position2.x -= fract(floor(position2.y) * 0.5);
+//     position2 = abs(fract(position2) - 0.5);
+//     float d1 = abs(1.0 - max(position1.x + position1.y * 1.5, position1.x * 2.0));
+//     float d2 = abs(1.0 - max(position2.x + position2.y * 1.5, position2.x * 2.0));
+//     return min(d1, d2) ;
+// }
+// vec3 color_grid2(vec3 start, vec2 uv) {
+//     float d = rhombus(uv) / 0.5;
+//     float val = 0.7;
+//     if (d < 0.25) val = 1.1;
+//     return start * val;
+// }
+
+// // thanks https://www.shadertoy.com/view/7ldcWM
+// float triangle(vec2 position) {
+//     position *= vec2(0.5, sqrt(3.0) * 0.5);
+//     float d1 = abs(fract(position.x + position.y + 0.5) - 0.5);
+//     float d2 = abs(fract(position.x - position.y + 0.5) - 0.5);
+//     float d3 = abs(fract(position.x * 2.0 + 0.5) - 0.5);
+//     return min(min(d1, d2), d3);
+// }
+// vec3 color_grid2(vec3 start, vec2 uv) {
+//     float d = triangle(uv) / 0.5;
+//     float val = 0.7;
+//     if (d < 0.2) val = 1.1;
+//     return start * val;
+// }
+
+// // thanks https://www.shadertoy.com/view/4dKfDV
+// vec3 hexagon_pattern( vec2 p ) {
+//     vec2 q = vec2( p.x*2.0*0.5773503, p.y + p.x*0.5773503 );
+//     vec2 pi = floor(q);
+//     vec2 pf = fract(q);
+//     float v = mod(pi.x + pi.y, 3.0);
+//     float ca = step(1.0,v);
+//     float cb = step(2.0,v);
+//     vec2  ma = step(pf.xy,pf.yx);
+//     return vec3( pi + ca - cb*ma, dot( ma, 1.0-pf.yx + ca*(pf.x+pf.y-1.0) + cb*(pf.yx-2.0*pf.xy) ) );
+// }
+// vec3 color_grid2(vec3 start, vec2 uv) {
+//     float scale = 1.0;
+//     vec3 h = hexagon_pattern(uv / scale);
+//     float val = 0.5 + mod(h.x+2.0*h.y,3.0)/2.0 * 0.6;
+//     return start * val;
+// }
+
 // Adds color `b` to color `a` with coef, that must lie in [0..1]. If coef == 0, then result is `a`, if coef == 1.0, then result is `b`.
 vec3 color_add_weighted(vec3 a, vec3 b, float coef) {
     return a*(1.0 - coef) + b*coef;
@@ -213,16 +291,30 @@ MaterialProcessing material_next(vec3 mul_color, Ray new_ray) {
 }
 
 // Function to easy write simple material.
+MaterialProcessing material_simple2(
+    SurfaceIntersection hit, Ray r,
+    vec3 color, float normal_coef, 
+    bool grid, float grid_scale, float grid_coef,
+    bool grid2
+) {
+    color = color_add_weighted(color, color * color_normal(hit.n, r.d), normal_coef);
+    if (grid) {
+        if (grid2) {
+            color = color_add_weighted(color, color_grid2(color, vec2(hit.u, hit.v) * grid_scale), grid_coef);
+        } else {
+            color = color_add_weighted(color, color_grid(color, vec2(hit.u, hit.v) * grid_scale), grid_coef);
+        }
+    }
+    return material_final(color);
+}
+
+// For backwards compatibility in scenes
 MaterialProcessing material_simple(
     SurfaceIntersection hit, Ray r,
     vec3 color, float normal_coef, 
     bool grid, float grid_scale, float grid_coef
 ) {
-    color = color_add_weighted(color, color * color_normal(hit.n, r.d), normal_coef);
-    if (grid) {
-        color = color_add_weighted(color, color_grid(color, vec2(hit.u, hit.v) * grid_scale), grid_coef);
-    }
-    return material_final(color);
+    return material_simple2(hit, r, color, normal_coef, grid, grid_scale, grid_coef, false);
 }
 
 // Function to easy write reflect material.

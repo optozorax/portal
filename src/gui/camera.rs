@@ -28,6 +28,7 @@ pub struct CalculatedCam {
     pub free_movement: bool,
     pub in_subspace: bool,
     pub matrix: DMat4,
+    pub override_matrix: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
@@ -46,6 +47,7 @@ impl Default for CalculatedCam {
             in_subspace: false,
             free_movement: false,
             matrix: DMat4::IDENTITY,
+            override_matrix: false,
         }
     }
 }
@@ -133,6 +135,7 @@ impl Cam {
             in_subspace: self.in_subspace,
             free_movement: self.free_movement,
             matrix: self.matrix,
+            override_matrix: true,
         })
     }
 
@@ -146,6 +149,7 @@ impl Cam {
                 in_subspace: self.in_subspace,
                 free_movement: self.free_movement,
                 matrix: self.matrix,
+                override_matrix: true,
             })
         } else {
             None
@@ -282,7 +286,13 @@ impl StorageElem2 for Cam {
         if almost_identity(&self.matrix) {
             ui.monospace("Matrix: IDENTITY");
         } else {
-            ui.monospace(format!("Matrix: {:.3}", matrix_hash(&self.matrix)));
+            ui.horizontal(|ui| {
+                ui.monospace(format!("Matrix: {:.3}", matrix_hash(&self.matrix)));
+                if ui.button("Make IDENTITY").clicked() {
+                    self.matrix = DMat4::IDENTITY;
+                    changed.uniform = true;
+                }
+            });
         }
         if self.free_movement {
             ui.monospace("FREE movement");

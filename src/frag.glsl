@@ -35,11 +35,11 @@ MaterialProcessing material_process(Ray r, SceneIntersection i) {
     if (i.in_subspace) { r.in_subspace = !r.in_subspace; }
     if (i.material == 0) {
     } else if (i.material == DEBUG_RED) {
-        return material_simple(hit, r, color(0.9, 0.2, 0.2), 0.5, false, 1., 0.);
+        return material_simple2(hit, r, color(0.9, 0.2, 0.2), 0.5, false, 1., 0., false);
     } else if (i.material == DEBUG_GREEN) {
-        return material_simple(hit, r, color(0.2, 0.9, 0.2), 0.5, false, 1., 0.);
+        return material_simple2(hit, r, color(0.2, 0.9, 0.2), 0.5, false, 1., 0., false);
     } else if (i.material == DEBUG_BLUE) {
-        return material_simple(hit, r, color(0.2, 0.2, 0.9), 0.5, false, 1., 0.);
+        return material_simple2(hit, r, color(0.2, 0.2, 0.9), 0.5, false, 1., 0., false);
 
 //%material_processing//%
 
