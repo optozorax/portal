@@ -1,4 +1,3 @@
-use crate::gui::scene::CurrentStage;
 use crate::gui::camera::Cam;
 use crate::gui::camera::CameraId;
 use crate::gui::camera::CurrentCam;
@@ -7,6 +6,7 @@ use crate::gui::common::*;
 use crate::gui::easing::Easing;
 use crate::gui::eng_rus::EngRusText;
 use crate::gui::matrix::Matrix;
+use crate::gui::scene::CurrentStage;
 use crate::gui::storage2::GetHelper;
 use crate::gui::storage2::*;
 use crate::gui::uniform::*;
@@ -471,14 +471,14 @@ impl GlobalUserUniforms {
             ui,
             uniforms,
             &mut elements_descriptions.uniforms,
-            |elem, ui| elem.user_egui(ui),
+            |elem, ui| elem.user_egui(ui, id.with("1")),
             false,
         );
         changed |= self.matrices.user_egui(
             ui,
             matrices,
             &mut elements_descriptions.matrices,
-            |elem, ui| elem.user_egui(ui, id),
+            |elem, ui| elem.user_egui(ui, id.with("2")),
             true,
         );
         changed
@@ -608,7 +608,7 @@ impl AnimationStage {
             ui,
             &mut input.0,
             &mut elements_descriptions.uniforms,
-            |elem, ui| elem.user_egui(ui),
+            |elem, ui| elem.user_egui(ui, id.with("1")),
             false,
         );
         ui.separator();
@@ -750,7 +750,7 @@ impl StorageElem2 for AnimationStage {
 }
 
 impl AnyUniform {
-    pub fn user_egui(&mut self, ui: &mut Ui) -> WhatChanged {
+    pub fn user_egui(&mut self, ui: &mut Ui, data_id: egui::Id) -> WhatChanged {
         use AnyUniform::*;
         let mut result = WhatChanged::default();
         match self {
@@ -772,7 +772,7 @@ impl AnyUniform {
             Formula(_) => {
                 drop(ui.label("Internal error, formulas are not allowed to be accessed by user."))
             }
-            TrefoilSpecial(arr) => result |= arr.egui(ui),
+            TrefoilSpecial(arr) => result |= arr.egui(ui, data_id),
         }
         result
     }

@@ -20,7 +20,82 @@ pub struct Formula(pub String);
 pub struct TrefoilSpecial(pub [(bool, u8, u8); 18]);
 
 impl TrefoilSpecial {
-    pub fn egui(&mut self, ui: &mut egui::Ui) -> WhatChanged {
+    pub fn index_to_name(index: u8) -> String {
+        (index / 3 + 1).to_string() + ["a", "b", "c"][index as usize % 3]
+    }
+
+    pub fn name_to_index(name: &str) -> Option<u8> {
+        if name.as_bytes().len() != 2 {
+            return None;
+        }
+        let number = name.as_bytes()[0];
+        let letter = name.as_bytes()[1];
+
+        if !(b'a' <= letter && letter <= b'c') || !(b'1' <= number && number <= b'6') {
+            return None;
+        }
+
+        Some((letter - b'a') + (number - b'1') * 3)
+    }
+
+    const COLORS: [&str; 6] = ["R", "G", "B", "Y", "V", "S"];
+
+    pub fn color_to_name(color: u8) -> &'static str {
+        Self::COLORS[color as usize]
+    }
+
+    pub fn name_to_color(name: &str) -> Option<u8> {
+        match name {
+            "R" => Some(0),
+            "G" => Some(1),
+            "B" => Some(2),
+            "Y" => Some(3),
+            "V" => Some(4),
+            "S" => Some(5),
+            _ => None,
+        }
+    }
+
+    pub fn encode(&self) -> String {
+        self.0
+            .iter()
+            .enumerate()
+            .flat_map(|(index, (enabled, to, color))| {
+                if !enabled {
+                    return None;
+                }
+
+                Some(format!(
+                    "{} {} {}",
+                    Self::index_to_name(index as u8),
+                    Self::index_to_name(*to),
+                    Self::color_to_name(*color)
+                ))
+            })
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+
+    pub fn decode(input: &str) -> Option<Self> {
+        let mut result = TrefoilSpecial::default();
+        for s in input.split(",") {
+            if s.is_empty() {
+                continue;
+            }
+            let strs = s.split(" ").collect::<Vec<_>>();
+            if strs.len() != 3 {
+                return None;
+            }
+            let index = Self::name_to_index(strs[0])?;
+            let to = Self::name_to_index(strs[1])?;
+            let color = Self::name_to_color(strs[2])?;
+
+            result.0[index as usize] = (true, to, color);
+        }
+        Some(result)
+    }
+
+    pub fn egui(&mut self, ui: &mut egui::Ui, data_id: egui::Id) -> WhatChanged {
         let mut changed = WhatChanged::default();
         ui.vertical(|ui| {
             let n_to_name = |n| format!("{}{}", n / 3 + 1, ["a", "b", "c"][n % 3]);
@@ -62,9 +137,8 @@ impl TrefoilSpecial {
                             ui.separator();
                             ui.separator();
                             ui.separator();
-                            const COLORS: [&str; 6] = ["R", "G", "B", "Y", "V", "G"];
                             changed.uniform |= check_changed(color, |color| {
-                                for (i, c) in COLORS.iter().enumerate() {
+                                for (i, c) in Self::COLORS.iter().enumerate() {
                                     if ui.selectable_label(*color == i as u8, *c).clicked() {
                                         *color = i as u8;
                                     }
@@ -97,8 +171,56 @@ impl TrefoilSpecial {
             for unused in unused_vals {
                 ui.label(format!("Unused value {}", n_to_name(unused)));
             }
+
+            ui.separator();
+
+            let mut current_data = ui.memory_mut(|memory| {
+                memory
+                    .data
+                    .get_persisted_mut_or_default::<String>(data_id.with("trefoil"))
+                    .clone()
+            });
+
+            let mut representation = self.encode();
+            ui.horizontal(|ui| {
+                ui.label("Textual representation:");
+                ui.text_edit_singleline(&mut representation);
+            });
+            ui.horizontal(|ui| {
+                ui.label("New value:");
+                let correct = Self::decode(&current_data).is_some() || current_data.is_empty();
+                egui_with_red_field(ui, !correct, |ui| {
+                    ui.text_edit_singleline(&mut current_data);
+                });
+                if ui.button("Enter").clicked() {
+                    if let Some(new_value) = Self::decode(&current_data) {
+                        *self = new_value;
+                        current_data.clear();
+                        changed.uniform = true;
+                    }
+                }
+            });
+
+            ui.memory_mut(|memory| {
+                memory
+                    .data
+                    .insert_persisted(data_id.with("trefoil"), current_data);
+            });
         });
         changed
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trefoil() {
+        let text = "1a 2a G,1b 3b B,2a 1a S";
+        let trefoil = TrefoilSpecial::decode(text).unwrap();
+        let encoded = trefoil.encode();
+        assert_eq!(text, encoded);
     }
 }
 
@@ -699,7 +821,7 @@ impl StorageElem2 for AnyUniform {
             Angle(a) => drop(ui.vertical_centered(|ui| result.uniform |= egui_angle_f64(ui, a))),
             Progress(a) => drop(ui.vertical_centered(|ui| result.uniform |= egui_0_1(ui, a))),
             Formula(x) => drop(ui.vertical_centered(|ui| result |= x.egui(ui, formulas_cache))),
-            TrefoilSpecial(arr) => result |= arr.egui(ui),
+            TrefoilSpecial(arr) => result |= arr.egui(ui, data_id),
         }
         result
     }
