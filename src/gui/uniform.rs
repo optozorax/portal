@@ -172,6 +172,12 @@ impl TrefoilSpecial {
                 ui.label(format!("Unused value {}", n_to_name(unused)));
             }
 
+            for (index, (enabled, _, _)) in self.0.iter().enumerate() {
+                if *enabled && !self.check_part(index as u8) {
+                    ui.label(format!("Broken around {}", n_to_name(index)));
+                }
+            }
+
             ui.separator();
 
             let mut current_data = ui.memory_mut(|memory| {
@@ -208,6 +214,41 @@ impl TrefoilSpecial {
             });
         });
         changed
+    }
+}
+
+impl TrefoilSpecial {
+    fn part_teleport(&self, index: u8) -> u8 {
+        if self.0[index as usize].0 {
+            self.0[index as usize].1
+        } else {
+            // We do this for self-hiding portals, which have parts that teleports to itself and can be disabled
+            index
+        }
+    }
+
+    fn part_rot_clockwise(&self, index: u8) -> u8 {
+        (index / 3) * 3 + ((index % 3) + 1) % 3
+    }
+
+    fn part_rot_counter_clockwise(&self, index: u8) -> u8 {
+        (index / 3) * 3 + ((index % 3) + 2) % 3
+    }
+
+    fn check_part(&self, index: u8) -> bool {
+        let first = index;
+        let first = self.part_rot_clockwise(first);
+        let first = self.part_teleport(first);
+        let first = self.part_rot_counter_clockwise(first);
+        let first = self.part_teleport(first);
+
+        let second = index;
+        let second = self.part_teleport(second);
+        let second = self.part_rot_counter_clockwise(second);
+        let second = self.part_teleport(second);
+        let second = self.part_rot_clockwise(second);
+
+        first == second
     }
 }
 
