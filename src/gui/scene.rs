@@ -184,7 +184,10 @@ impl Scene {
 
             ui.checkbox(&mut self.use_time, "Use time");
 
-            ui.checkbox(&mut self.animation_stage_edit_state, "Animation stage edit state");
+            ui.checkbox(
+                &mut self.animation_stage_edit_state,
+                "Animation stage edit state",
+            );
         });
 
         ui.separator();
@@ -1065,7 +1068,7 @@ impl Scene {
                 if animation.animation_stage != CurrentStage::RealAnimation(id) {
                     drop(self.init_stage(animation.animation_stage, memory));
                 } else {
-                    crate::error!(format, "Initialization recursion!", );
+                    crate::error!(format, "Initialization recursion!",);
                 }
                 let animation = self.animations.get_original(id).unwrap().clone();
                 animation.uniforms.init_stage(&mut self.uniforms);
@@ -1232,9 +1235,7 @@ impl Scene {
                     self.cameras.get_original(cam2id).unwrap().get(&self.matrices, &x).unwrap());
 
                 let t_raw = data.formulas_cache.get_time() % 1.;
-                let t = animation
-                    .cam_easing
-                    .ease(t_raw);
+                let t = animation.cam_easing.ease(t_raw);
 
                 let override_matrix = t_raw < self.prev_t_raw || t_raw == 0.;
 

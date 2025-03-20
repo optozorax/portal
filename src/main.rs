@@ -1,8 +1,8 @@
-use macroquad::prelude::Image;
 use gesture_recognizer::*;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use macroquad::prelude::is_key_down;
 use macroquad::prelude::is_key_pressed;
+use macroquad::prelude::Image;
 use portal::gui::camera::CalculatedCam;
 use portal::gui::camera::CameraId;
 use portal::gui::camera::CurrentCam;
@@ -156,7 +156,11 @@ impl RotateAroundCam {
         self.beta = clamp(self.beta + dbeta, Self::BETA_MIN, Self::BETA_MAX);
     }
 
-    fn process_mouse_and_keys(&mut self, mouse_over_canvas: bool, egui_using_keyboard: bool) -> bool {
+    fn process_mouse_and_keys(
+        &mut self,
+        mouse_over_canvas: bool,
+        egui_using_keyboard: bool,
+    ) -> bool {
         let mut is_something_changed = self.is_something_changed;
 
         let mouse_pos: DVec2 = glam::Vec2::from(<[f32; 2]>::from(mouse_position_local())).as_f64();
@@ -541,34 +545,37 @@ pub fn average_images(images: Vec<Image>) -> Image {
     let first = &images[0];
     let width = first.width;
     let height = first.height;
-    
+
     // Ensure all images have the same dimensions
-    if !images.iter().all(|img| img.width == width && img.height == height) {
+    if !images
+        .iter()
+        .all(|img| img.width == width && img.height == height)
+    {
         panic!();
     }
-    
+
     // Gamma value for sRGB
     let gamma: f32 = 2.2;
-    
+
     // Create a buffer to store the sum of linear RGB values
     let pixel_count = width as usize * height as usize;
     let mut sum_r = vec![0.0; pixel_count];
     let mut sum_g = vec![0.0; pixel_count];
     let mut sum_b = vec![0.0; pixel_count];
-    
+
     // Convert each image's RGB values to linear space and sum them
     for image in &images {
         for y in 0..height as usize {
             for x in 0..width as usize {
                 let pixel_idx = y * width as usize + x;
                 let byte_idx = pixel_idx * 4;
-                
+
                 if byte_idx + 2 < image.bytes.len() {
                     // Convert sRGB values to linear space
                     let r = (image.bytes[byte_idx] as f32 / 255.0).powf(gamma);
                     let g = (image.bytes[byte_idx + 1] as f32 / 255.0).powf(gamma);
                     let b = (image.bytes[byte_idx + 2] as f32 / 255.0).powf(gamma);
-                    
+
                     sum_r[pixel_idx] += r;
                     sum_g[pixel_idx] += g;
                     sum_b[pixel_idx] += b;
@@ -576,29 +583,29 @@ pub fn average_images(images: Vec<Image>) -> Image {
             }
         }
     }
-    
+
     // Calculate the average and convert back to sRGB space
     let img_count = images.len() as f32;
     let mut result_bytes = Vec::with_capacity(pixel_count * 4);
-    
+
     for pixel_idx in 0..pixel_count {
         // Average in linear space
         let avg_r = sum_r[pixel_idx] / img_count;
         let avg_g = sum_g[pixel_idx] / img_count;
         let avg_b = sum_b[pixel_idx] / img_count;
-        
+
         // Convert back to sRGB space
         let r = (avg_r.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
         let g = (avg_g.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
         let b = (avg_b.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
-        
+
         // Add RGBA values (A is always 255)
         result_bytes.push(r);
         result_bytes.push(g);
         result_bytes.push(b);
         result_bytes.push(255);
     }
-    
+
     Image {
         bytes: result_bytes,
         width,
@@ -1039,7 +1046,8 @@ impl SceneRenderer {
         if memory
             .data
             .get_persisted::<bool>(egui::Id::new("do_not_teleport_one_frame"))
-            .unwrap_or(false) {
+            .unwrap_or(false)
+        {
             self.cam.do_not_teleport_one_frame = true;
             memory
                 .data
@@ -1149,20 +1157,21 @@ impl SceneRenderer {
         for i in 0..count {
             let mut images = vec![];
             for j in 0..motion_blur_frames {
-                let t = (i as f64 / count as f64) + j as f64 / motion_blur_frames as f64 / count as f64 * exposure;
+                let t = (i as f64 / count as f64)
+                    + j as f64 / motion_blur_frames as f64 / count as f64 * exposure;
                 self.aa_start = j as i32;
                 self.update(memory, t * duration_seconds as f64);
                 self.draw_texture(width as f32, height as f32, true);
                 images.push(self.render_target.texture.get_texture_data());
             }
             let result = average_images(images);
-            
+
             result.export_png(&format!("anim/frame_{i}.png"));
 
             if i == 0 {
                 result.export_png(&format!("video/{output_name}.start.png"));
             }
-            if i == count-1 {
+            if i == count - 1 {
                 result.export_png(&format!("video/{output_name}.end.png"));
             }
 
@@ -1723,7 +1732,10 @@ First, predefined library is included, then uniforms, then user library, then in
             is_something_changed = true;
         }
 
-        let cam_changed = self.renderer.cam.process_mouse_and_keys(mouse_over_canvas, egui_using_keyboard);
+        let cam_changed = self
+            .renderer
+            .cam
+            .process_mouse_and_keys(mouse_over_canvas, egui_using_keyboard);
         if changed.uniform
             || self.renderer.scene.use_time
             || cam_changed

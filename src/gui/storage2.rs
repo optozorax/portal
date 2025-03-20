@@ -225,7 +225,9 @@ impl<T: StorageElem2> Storage2<T> {
     }
 
     pub fn visible_elements_vec(&self) -> Vec<(T::IdWrapper, String)> {
-        self.visible_elements().map(|(id, s)| (id, s.to_owned())).collect()
+        self.visible_elements()
+            .map(|(id, s)| (id, s.to_owned()))
+            .collect()
     }
 
     pub fn egui(&mut self, ui: &mut Ui, input: &mut T::Input, name: &str) -> WhatChanged {
