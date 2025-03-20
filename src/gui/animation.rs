@@ -1075,7 +1075,7 @@ impl StorageElem2 for RealAnimation {
         changed.uniform |= egui_bool_named(
             ui,
             &mut self.use_start_cam_as_end,
-            "Use start cam and end cam",
+            "Use start cam as end cam",
         );
         if !self.use_prev_cam {
             changed |= cams.inline(

@@ -1183,14 +1183,27 @@ impl SceneRenderer {
             .arg("-c:v")
             .arg("libx264")
             .arg("-b:v")
-            .arg("20M")
+            .arg("50M")
             .arg("-pix_fmt")
-            .arg("yuv420p")
+            .arg("yuv444p")
+            .arg("-profile:v")
+            .arg("high444")
+            .arg("-crf")
+            .arg("17")
+            .arg("-color_primaries")
+            .arg("bt709")
+            .arg("-color_trc")
+            .arg("bt709")
+            .arg("-colorspace")
+            .arg("bt709")
             .arg("-y")
             .arg(format!("video/{}.mp4", output_name))
             .output()
             .expect("failed to execute process");
         std::fs::remove_dir_all("anim").unwrap();
+        if command.status.code() != Some(0) {
+            println!("ffmpeg error:\n{}\n\n{}", std::str::from_utf8(&command.stdout).unwrap(), std::str::from_utf8(&command.stderr).unwrap());
+        }
         println!("ffmpeg status: {}", command.status);
     }
 
@@ -1200,12 +1213,17 @@ impl SceneRenderer {
         drop(std::fs::create_dir("video"));
         drop(std::fs::create_dir(format!("video/{}", self.scene_name)));
 
-        for i in 0..self.scene.animations_len() {
+        let len = self.scene.animations_len();
+        for i in 0..len {
             self.scene
                 .init_animation_by_position(i, &mut memory)
                 .unwrap();
             self.update(&mut memory, 0.);
             let duration = self.scene.get_current_animation_duration().unwrap();
+
+            let name = self.scene.get_current_animation_name().unwrap();
+            println!("Rendering animation {name}, {i}/{len}");
+
             self.render_animation(
                 duration as f32,
                 fps,
@@ -1213,7 +1231,7 @@ impl SceneRenderer {
                 &format!(
                     "{}/{}",
                     self.scene_name,
-                    self.scene.get_current_animation_name().unwrap()
+                    name
                 ),
                 &mut memory,
                 self.width,
@@ -1771,40 +1789,62 @@ fn window_conf() -> Conf {
 }
 
 async fn render() {
-    let scene_name = "cylinder_spherical";
+    // let scene_name = "cylinder_spherical";
 
-    // let (width, height) = (3840, 2160);
-    let (width, height) = (854, 480);
+    for scene_name in [
+        "half_spheres",
+        "cylinder_spherical",
+        "moving_doorway",
+        "non_linear",
+        "portal_in_portal",
+        "portal_in_portal_1x_attempt",
+        "plus_ultra",
+        "speed_model",
+        "surface_portal2",
+        "triple_portal",
+        "triple_portal2",
+    ] {
+        println!("Rendering scene {scene_name}");
 
-    let fps = 30;
-    let motion_blur_frames = 60;
+        let (width, height) = (3840, 2160);
+        // let (width, height) = (854, 480);
 
-    let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
-    let scene = ron::from_str(scene_content).unwrap();
-    let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
-    renderer.aa_count = 10;
-    renderer.render_depth = 100;
+        let fps = 60;
+        let mut motion_blur_frames = 1;
+        if scene_name == "cylinder_spherical" || scene_name == "triple_portal2" {
+            motion_blur_frames = 10;
+        }
 
-    if false {
-        renderer.render_all_animations(fps, motion_blur_frames);
-    }
+        let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
+        let scene = ron::from_str(scene_content).unwrap();
+        let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
+        renderer.aa_count = 4;
+        renderer.render_depth = 50;
 
-    if true {
-        drop(std::fs::create_dir("video"));
-        drop(std::fs::create_dir(format!("video/{}", renderer.scene_name)));
+        if true {
+            renderer.render_all_animations(fps, motion_blur_frames);
+        }
 
-        let animation_stage = "anim.2";
-        let mut memory = egui::Memory::default();
-        renderer.use_animation_stage(animation_stage, &mut memory);
-        renderer.render_animation(
-            renderer.scene.get_current_animation_duration().unwrap() as f32,
-            fps,
-            motion_blur_frames,
-            &format!("{scene_name}/{animation_stage}"),
-            &mut memory,
-            width,
-            height,
-        );
+        if false {
+            drop(std::fs::create_dir("video"));
+            drop(std::fs::create_dir(format!(
+                "video/{}",
+                renderer.scene_name
+            )));
+
+            let animation_stage = "ellipse.11";
+            let mut memory = egui::Memory::default();
+            renderer.use_animation_stage(animation_stage, &mut memory);
+            renderer.render_animation(
+                renderer.scene.get_current_animation_duration().unwrap() as f32,
+                fps,
+                motion_blur_frames,
+                &format!("{scene_name}/{animation_stage}"),
+                &mut memory,
+                width,
+                height,
+            );
+        }
     }
 }
 
