@@ -654,11 +654,12 @@ impl Scene {
                         grid_scale,
                         grid_coef,
                         grid2,
+                        grid3,
                     } => {
                         material_processing.add_string(
                             format!(
-                                "return material_simple2(hit, r, vec3({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e}, {});\n",
-                                color[0], color[1], color[2], normal_coef, grid, grid_scale, grid_coef, grid2
+                                "return material_simple2(hit, r, vec3({:e}, {:e}, {:e}), {:e}, {}, {:e}, {:e}, {}, {});\n",
+                                color[0], color[1], color[2], normal_coef, grid, grid_scale, grid_coef, grid2, grid3
                             )
                         );
                     }

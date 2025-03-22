@@ -258,6 +258,21 @@ vec3 color_grid2(vec3 start, vec2 uv) {
 //     return start * val;
 // }
 
+vec3 color_grid3(vec3 start, vec2 uv) {
+    if (_grid_disable == 1) return start;
+    uv = fract(uv * 0.5) - vec2(0.5, 0.5);
+    float dist = max(abs(uv.x), abs(uv.y)) * 2.;
+    if (dist < 0.95) {
+        return start;
+    } else {
+        if (uv.x > uv.y) {
+            return start * 0.7;
+        } else {
+            return start * 1.2;
+        }
+    }
+}
+
 // Adds color `b` to color `a` with coef, that must lie in [0..1]. If coef == 0, then result is `a`, if coef == 1.0, then result is `b`.
 vec3 color_add_weighted(vec3 a, vec3 b, float coef) {
     return a*(1.0 - coef) + b*coef;
@@ -295,11 +310,13 @@ MaterialProcessing material_simple2(
     SurfaceIntersection hit, Ray r,
     vec3 color, float normal_coef, 
     bool grid, float grid_scale, float grid_coef,
-    bool grid2
+    bool grid2, bool grid3
 ) {
     color = color_add_weighted(color, color * color_normal(hit.n, r.d), normal_coef);
     if (grid) {
-        if (grid2) {
+        if (grid3) {
+            color = color_add_weighted(color, color_grid3(color, vec2(hit.u, hit.v) * grid_scale), grid_coef);
+        } else if (grid2) {
             color = color_add_weighted(color, color_grid2(color, vec2(hit.u, hit.v) * grid_scale), grid_coef);
         } else {
             color = color_add_weighted(color, color_grid(color, vec2(hit.u, hit.v) * grid_scale), grid_coef);
@@ -314,7 +331,7 @@ MaterialProcessing material_simple(
     vec3 color, float normal_coef, 
     bool grid, float grid_scale, float grid_coef
 ) {
-    return material_simple2(hit, r, color, normal_coef, grid, grid_scale, grid_coef, false);
+    return material_simple2(hit, r, color, normal_coef, grid, grid_scale, grid_coef, false, false);
 }
 
 // Function to easy write reflect material.
