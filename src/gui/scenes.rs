@@ -390,7 +390,11 @@ impl Scenes {
     }
 
     pub fn get_all_scenes_links(&self) -> Vec<String> {
-        self.0.iter().flat_map(|x| x.scenes.iter()).map(|x| x.link.to_owned()).collect()
+        self.0
+            .iter()
+            .flat_map(|x| x.scenes.iter())
+            .map(|x| x.link.to_owned())
+            .collect()
     }
 
     pub fn egui(&self, ui: &mut Ui) -> Option<(&'static str, &'static str, &'static str)> {

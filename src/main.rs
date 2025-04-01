@@ -857,7 +857,11 @@ impl SceneRenderer {
                 self.cam.prev_cam_pos = self.cam.get_cam_pos();
                 Some(())
             };
-            if res(0.0001) == None && res(0.00001) == None && res(0.000001) == None {
+            if res(0.001) == None
+                && res(0.0001) == None
+                && res(0.00001) == None
+                && res(0.000001) == None
+            {
                 self.cam = prev_cam;
             }
         } else {
@@ -966,6 +970,7 @@ impl SceneRenderer {
     }
 
     fn draw_full_screen(&mut self) {
+        self.scene.set_uniforms(&mut self.material, &mut self.data);
         self.set_uniforms(screen_width(), screen_height());
         gl_use_material(&self.material);
         draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
@@ -1211,7 +1216,11 @@ impl SceneRenderer {
             .expect("failed to execute process");
         std::fs::remove_dir_all("anim").unwrap();
         if command.status.code() != Some(0) {
-            println!("ffmpeg error:\n{}\n\n{}", std::str::from_utf8(&command.stdout).unwrap(), std::str::from_utf8(&command.stderr).unwrap());
+            println!(
+                "ffmpeg error:\n{}\n\n{}",
+                std::str::from_utf8(&command.stdout).unwrap(),
+                std::str::from_utf8(&command.stderr).unwrap()
+            );
         }
         println!("ffmpeg status: {}", command.status);
     }
@@ -1237,11 +1246,7 @@ impl SceneRenderer {
                 duration as f32,
                 fps,
                 motion_blur_frames,
-                &format!(
-                    "{}/{}",
-                    self.scene_name,
-                    name
-                ),
+                &format!("{}/{}", self.scene_name, name),
                 &mut memory,
                 self.width,
                 self.height,
@@ -1801,29 +1806,53 @@ fn window_conf() -> Conf {
 }
 
 async fn render() {
-    // let scene_name = "cylinder_spherical";
+    let (width, height) = (3840, 2160);
+    // let (width, height) = (854, 480);
+
+    // render all scenes as a pictures
+    /*
+    for scene_name in Scenes::default().get_all_scenes_links() {
+        if scene_name == "empty" {
+            continue;
+        }
+        println!("Rendering scene {scene_name}");
+
+        let scene_content = Scenes::default().get_by_link(&scene_name).unwrap().0;
+        let scene = ron::from_str(scene_content).unwrap();
+        let mut renderer = SceneRenderer::new(scene, width, height, &scene_name).await;
+
+        renderer.cam.use_panini_projection = true;
+        renderer.cam.view_angle = deg2rad(250.);
+
+        renderer.draw_texture(width as f32, height as f32, true);
+        renderer.render_target.texture.get_texture_data().export_png(&format!("anim/{scene_name}.png"));
+    }
+    return;
+    */
 
     for scene_name in [
-        "half_spheres",
-        "cylinder_spherical",
-        "moving_doorway",
-        "non_linear",
         "portal_in_portal",
-        "portal_in_portal_1x_attempt",
-        "plus_ultra",
-        "speed_model",
-        "surface_portal2",
-        "triple_portal",
-        "triple_portal2",
+        "non_linear",
+        "half_spheres",
+        // "cylinder_spherical",
+        // "moving_doorway",
+        // "portal_in_portal_1x_attempt",
+        // "plus_ultra",
+        // "speed_model",
+        // "surface_portal2",
+        // "triple_portal",
+        // "triple_portal2",
     ] {
         println!("Rendering scene {scene_name}");
 
-        let (width, height) = (3840, 2160);
-        // let (width, height) = (854, 480);
-
         let fps = 60;
         let mut motion_blur_frames = 1;
-        if scene_name == "cylinder_spherical" || scene_name == "triple_portal2" {
+        if scene_name == "cylinder_spherical"
+            || scene_name == "triple_portal2"
+            || scene_name == "portal_in_portal"
+            || scene_name == "half_spheres"
+            || scene_name == "non_linear"
+        {
             motion_blur_frames = 10;
         }
 
@@ -1838,24 +1867,25 @@ async fn render() {
         }
 
         if false {
-            drop(std::fs::create_dir("video"));
-            drop(std::fs::create_dir(format!(
-                "video/{}",
-                renderer.scene_name
-            )));
+            for animation_stage in ["axiom.4.1"] {
+                drop(std::fs::create_dir("video"));
+                drop(std::fs::create_dir(format!(
+                    "video/{}",
+                    renderer.scene_name
+                )));
 
-            let animation_stage = "ellipse.11";
-            let mut memory = egui::Memory::default();
-            renderer.use_animation_stage(animation_stage, &mut memory);
-            renderer.render_animation(
-                renderer.scene.get_current_animation_duration().unwrap() as f32,
-                fps,
-                motion_blur_frames,
-                &format!("{scene_name}/{animation_stage}"),
-                &mut memory,
-                width,
-                height,
-            );
+                let mut memory = egui::Memory::default();
+                renderer.use_animation_stage(animation_stage, &mut memory);
+                renderer.render_animation(
+                    renderer.scene.get_current_animation_duration().unwrap() as f32,
+                    fps,
+                    motion_blur_frames,
+                    &format!("{scene_name}/{animation_stage}"),
+                    &mut memory,
+                    width,
+                    height,
+                );
+            }
         }
     }
 }
