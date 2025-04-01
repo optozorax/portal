@@ -51,6 +51,11 @@ pub enum Matrix {
         otherwise: Option<MatrixId>,
     },
     Sqrt(Option<MatrixId>),
+    Lerp {
+        t: ParametrizeOrNot,
+        first: Option<MatrixId>,
+        second: Option<MatrixId>,
+    },
 }
 
 impl Default for Matrix {
@@ -66,7 +71,9 @@ impl Default for Matrix {
 
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
-        &["Simple", "Mul", "Teleport", "Param.", "Exact", "If", "Sqrt"]
+        &[
+            "Simple", "Mul", "Teleport", "Param.", "Exact", "If", "Sqrt", "Lerp",
+        ]
     }
     fn get_number(&self) -> usize {
         use Matrix::*;
@@ -78,6 +85,7 @@ impl ComboBoxChoosable for Matrix {
             Exact { .. } => 4,
             If { .. } => 5,
             Sqrt { .. } => 6,
+            Lerp { .. } => 7,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -192,6 +200,11 @@ impl ComboBoxChoosable for Matrix {
                 otherwise: None,
             },
             6 => Sqrt(None),
+            7 => Lerp {
+                t: ParametrizeOrNot::No(1.5),
+                first: None,
+                second: None,
+            },
             _ => unreachable!(),
         };
     }
@@ -395,6 +408,20 @@ impl StorageElem2 for Matrix {
                 changed |=
                     inline_helper.inline("Mat to sqrt:", 45., mat, ui, input, data_id.with(0));
             }
+            Lerp { t, first, second } => {
+                let hpat![uniforms, formulas_cache] = input;
+                changed.uniform |= t.egui(
+                    ui,
+                    "t:",
+                    1.0,
+                    egui_0_1,
+                    uniforms,
+                    formulas_cache,
+                    data_id.with(4),
+                );
+                changed |= inline_helper.inline("First:", 45., first, ui, input, data_id.with(0));
+                changed |= inline_helper.inline("Second:", 45., second, ui, input, data_id.with(1));
+            }
         }
         /*
         // POSTPONE
@@ -506,6 +533,20 @@ impl StorageElem2 for Matrix {
                     None?
                 }
             }
+            Lerp { t, first, second } => {
+                let t = t.get(uniforms, formulas_cache)?;
+                let first = get_helper.get((*first)?)?;
+                let second = get_helper.get((*second)?)?;
+
+                let (fs, fr, ft) = first.to_scale_rotation_translation();
+                let (ss, sr, st) = second.to_scale_rotation_translation();
+
+                DMat4::from_scale_rotation_translation(
+                    fs.lerp(ss, t),
+                    fr.lerp(sr, t),
+                    ft.lerp(st, t),
+                )
+            }
         })
     }
 
@@ -578,6 +619,16 @@ impl StorageElem2 for Matrix {
                     f(*x, input);
                 }
             }
+            Lerp { t, first, second } => {
+                let hpat![uniforms, formulas_cache] = input;
+                t.remove_as_field(uniforms, formulas_cache);
+                if let Some(x) = first {
+                    f(*x, input);
+                }
+                if let Some(x) = second {
+                    f(*x, input);
+                }
+            }
         }
     }
 
@@ -627,6 +678,11 @@ impl StorageElem2 for Matrix {
                     + otherwise.map(f).unwrap_or(1)
             }
             Sqrt(mat) => mat.map(&mut f).unwrap_or(1),
+            Lerp { t, first, second } => {
+                t.errors_count(uniforms, formulas_cache)
+                    + first.map(&mut f).unwrap_or(1)
+                    + second.map(f).unwrap_or(1)
+            }
         }
         // POSTPONE
         /*
