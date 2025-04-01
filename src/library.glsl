@@ -262,7 +262,9 @@ vec3 color_grid3(vec3 start, vec2 uv) {
     if (_grid_disable == 1) return start;
     uv = fract(uv * 0.5) - vec2(0.5, 0.5);
     float dist = max(abs(uv.x), abs(uv.y)) * 2.;
-    if (dist < 0.95) {
+    if (dist > 0.985) {
+        return start * 0.4;
+    } else if (dist < 0.94) {
         return start;
     } else {
         if (uv.x > uv.y) {
