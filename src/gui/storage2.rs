@@ -256,6 +256,8 @@ impl<T: StorageElem2> Storage2<T> {
         let mut to_delete = None;
         let mut to_move_up = None;
         let mut to_move_down = None;
+        let mut to_move_up_5 = None;
+        let mut to_move_down_5 = None;
 
         let mut storage_order = Vec::new();
         std::mem::swap(&mut storage_order, &mut self.storage_order);
@@ -290,6 +292,30 @@ impl<T: StorageElem2> Storage2<T> {
                                 {
                                     to_delete = Some(pos);
                                 }
+                                ui.separator();
+                                if ui
+                                    .add_enabled(
+                                        pos + 5 < len,
+                                        Button::new(
+                                            RichText::new("⏷⁵").color(ui.visuals().hyperlink_color),
+                                        ), // down
+                                    )
+                                    .clicked()
+                                {
+                                    to_move_down_5 = Some(pos);
+                                }
+                                if ui
+                                    .add_enabled(
+                                        pos >= 5,
+                                        Button::new(
+                                            RichText::new("⏶⁵").color(ui.visuals().hyperlink_color),
+                                        ), // up
+                                    )
+                                    .clicked()
+                                {
+                                    to_move_up_5 = Some(pos);
+                                }
+                                ui.separator();
                                 if ui
                                     .add_enabled(
                                         pos + 1 != len,
@@ -312,6 +338,7 @@ impl<T: StorageElem2> Storage2<T> {
                                 {
                                     to_move_up = Some(pos);
                                 }
+                                ui.separator();
                                 let mut name_response = egui_with_red_field(ui, name_error, |ui| {
                                     ui.text_edit_singleline(name)
                                 });
@@ -354,6 +381,14 @@ impl<T: StorageElem2> Storage2<T> {
             self.storage_order.swap(pos, pos - 1);
         } else if let Some(pos) = to_move_down {
             self.storage_order.swap(pos, pos + 1);
+        } else if let Some(pos) = to_move_up_5 {
+            for i in 0..5 {
+                self.storage_order.swap(pos - i, pos - 1 - i);
+            }
+        } else if let Some(pos) = to_move_down_5 {
+            for i in 0..5 {
+                self.storage_order.swap(pos + i, pos + 1 + i);
+            }
         }
 
         if ui
