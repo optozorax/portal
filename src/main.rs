@@ -1167,18 +1167,20 @@ impl SceneRenderer {
                 self.aa_start = j as i32;
                 self.update(memory, t * duration_seconds as f64);
                 self.draw_texture(width as f32, height as f32, true);
+
+                if i == 0 && j == 0 {
+                    self.render_target.texture.get_texture_data().export_png(&format!("video/{output_name}.start.png"));
+                }
+
+                if i == count - 1 && j == motion_blur_frames - 1 {
+                    self.render_target.texture.get_texture_data().export_png(&format!("video/{output_name}.end.png"));
+                }
+
                 images.push(self.render_target.texture.get_texture_data());
             }
             let result = average_images(images);
 
             result.export_png(&format!("anim/frame_{i}.png"));
-
-            if i == 0 {
-                result.export_png(&format!("video/{output_name}.start.png"));
-            }
-            if i == count - 1 {
-                result.export_png(&format!("video/{output_name}.end.png"));
-            }
 
             print!("\r{i}/{count} done      ");
 
@@ -1834,14 +1836,14 @@ async fn render() {
         "portal_in_portal",
         "non_linear",
         "half_spheres",
-        // "cylinder_spherical",
-        // "moving_doorway",
-        // "portal_in_portal_1x_attempt",
-        // "plus_ultra",
-        // "speed_model",
-        // "surface_portal2",
-        // "triple_portal",
-        // "triple_portal2",
+        "cylinder_spherical",
+        "moving_doorway",
+        "portal_in_portal_1x_attempt",
+        "plus_ultra",
+        "speed_model",
+        "surface_portal2",
+        "triple_portal",
+        "triple_portal2",
     ] {
         println!("Rendering scene {scene_name}");
 
