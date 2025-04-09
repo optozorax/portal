@@ -143,7 +143,7 @@ impl Default for Scenes {
                         name: "Triple portal fully in itself",
                         link: "triple_portal2",
                         content: include_str!("../../scenes/triple_portal2.ron"),
-                        hidden: true,
+                        hidden: false,
                     },
                     Scene {
                         name: "\"Triple portal\"",
@@ -173,7 +173,7 @@ impl Default for Scenes {
                         name: "Cylinder spherical",
                         link: "cylinder_spherical",
                         content: include_str!("../../scenes/cylinder_spherical.ron"),
-                        hidden: true,
+                        hidden: false,
                     },
                     Scene {
                         name: "Trefoil knot",
@@ -353,7 +353,7 @@ impl Default for Scenes {
                         name: "Half-spheres",
                         link: "half_spheres",
                         content: include_str!("../../scenes/half_spheres.ron"),
-                        hidden: true,
+                        hidden: false,
                     },
                     Scene {
                         name: "Monoportal",
