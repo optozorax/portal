@@ -1,6 +1,8 @@
 Welcome to the *Portal Explorer* — here you can view all portals shown in my YouTube videos:
 • [What happens if you put a portal in a portal? Simulation and explanation](https://youtu.be/1zgBwQVr-wI)
 • [Portal with 3 parts: is this possible?](https://youtu.be/DTcfaHfDCEc)
+• [Portals with an impossible shape (cylinder, Mobius strip, knot)](https://youtu.be/3z3aC-1MGoE)
+• [Why do portals create pocket dimensions when you put a small portal into a bigger portal?](https://youtu.be/IhEaw3Kuhf0)
 
 You can enable russian language in last item of the menu.
 
@@ -9,7 +11,8 @@ You can enable russian language in last item of the menu.
 To open somescene, use `Load` in the menu and select what you're interested in.
 
 Here are the most interesting scenes:
-• `Portal in portal` > `Ellipse portal in portal`
+• `Portal in portal` > `Half-spheres`
+• `Portal in portal` > `Ellipse`
 • `Triple portal` > `Triple portal`
 • `Advanced` > `Cylinder`
 • `Advanced` > `Trefoil knot`
@@ -25,7 +28,7 @@ Rotating and scaling use standang gestures.
 
 If you want to zoom in on the interface, you can change it in the menu `Rendering options` > `DPI`, or using a three-finger gesture. If this doesn't work (for example, you have a three-finger system gesture to take a screenshot), then slowly add your fingers one at a time.
 
-If you have a weak phone, or the demo is just very slow (for example, on a very heavy `Trefoil knot` scene), then you can reduce the resolution of the image through the `Rendering options` > `Lower resolution` option, which will significantly increase FPS. Similarly to the scale, this can be changed through a 4-finger gesture.
+If you have a weak phone, or the demo is just very slow (for example, on a very heavy `Trefoil knot` scene), then you can reduce the resolution of the image through the `Rendering options` > `Lower resolution` option, which will significantly increase FPS. Similarly to the scale, this can be changed through a 4-finger gesture. Also you can lower rendering depth: `Rendering options` > `Render depth`.
 
 # I have a black screen! What to do?
 
