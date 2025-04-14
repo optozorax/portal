@@ -111,6 +111,9 @@ pub struct Scene {
 
     #[serde(skip)]
     prev_t_raw: f64,
+
+    #[serde(default)]
+    skybox: Option<String>,
 }
 
 // In case of panic
@@ -248,6 +251,16 @@ impl Scene {
                 .egui(ui, &mut data.errors, "Intersection with material");
 
         changed |= self.textures.egui(ui, &mut data.texture_errors, "Textures");
+
+        ui.collapsing("Skybox", |ui| {
+            changed.shader |= egui_option(
+                ui,
+                &mut self.skybox,
+                "Skybox texture",
+                || String::new(),
+                |ui, t| ui.text_edit_singleline(t).changed(),
+            );
+        });
 
         changed |= self.library.egui(ui, &mut data.errors, "User GLSL code");
 
@@ -442,6 +455,7 @@ impl Scene {
 
         result.extend(vec![
             ("_camera".to_owned(), UniformType::Mat4),
+            ("_camera_mul_inv".to_owned(), UniformType::Mat4),
             ("_camera_in_subspace".to_owned(), UniformType::Int1),
             ("_resolution".to_owned(), UniformType::Float2),
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
@@ -956,6 +970,19 @@ impl Scene {
         storages.insert("predefined_library".to_owned(), {
             let mut result = StringStorage::default();
             result.add_string(LIBRARY);
+            result
+        });
+
+        storages.insert("skybox_processing".to_owned(), {
+            let mut result = StringStorage::default();
+            if let Some(skybox_texture) = &self.skybox {
+                result.add_string("vec4 rd2 = _camera_mul_inv * r.d;");
+                result.add_string("float u = atan(rd2.z, rd2.x);");
+                result.add_string("float v = atan(sqrt(rd2.x * rd2.x + rd2.z * rd2.z), rd2.y);");
+                result.add_string(format!("vec3 not_found_color = texture({skybox_texture}_tex, vec2((u/PI+1.)/2., v/PI)).rgb;"));
+            } else {
+                result.add_string("vec3 not_found_color = color(0.6, 0.6, 0.6);");
+            }
             result
         });
 

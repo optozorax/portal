@@ -875,6 +875,10 @@ impl SceneRenderer {
         self.material.set_uniform("_resolution", (width, height));
         self.material
             .set_uniform("_camera", self.cam.get_matrix().as_f32());
+        self.material.set_uniform(
+            "_camera_mul_inv",
+            self.cam.teleport_matrix.inverse().as_f32(),
+        );
         self.material
             .set_uniform("_camera_in_subspace", self.cam.in_subspace as i32);
         self.material
@@ -1169,11 +1173,17 @@ impl SceneRenderer {
                 self.draw_texture(width as f32, height as f32, true);
 
                 if i == 0 && j == 0 {
-                    self.render_target.texture.get_texture_data().export_png(&format!("video/{output_name}.start.png"));
+                    self.render_target
+                        .texture
+                        .get_texture_data()
+                        .export_png(&format!("video/{output_name}.start.png"));
                 }
 
                 if i == count - 1 && j == motion_blur_frames - 1 {
-                    self.render_target.texture.get_texture_data().export_png(&format!("video/{output_name}.end.png"));
+                    self.render_target
+                        .texture
+                        .get_texture_data()
+                        .export_png(&format!("video/{output_name}.end.png"));
                 }
 
                 images.push(self.render_target.texture.get_texture_data());

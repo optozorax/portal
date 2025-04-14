@@ -66,8 +66,11 @@ uniform int _ray_tracing_depth;
 uniform float _t_end;
 uniform float _t_start;
 uniform int _darken_by_distance;
+uniform mat4 _camera_mul_inv;
 
 vec3 ray_tracing(Ray r) {
+    //%skybox_processing//%
+
     vec3 current_color = vec3(1.);
     float all_t = 0.;
     for (int j = 0; j < 10000; j++) { if (j >= _ray_tracing_depth) break; // !FOR_NUMBER!
@@ -108,7 +111,7 @@ vec3 ray_tracing(Ray r) {
             if (r.in_subspace) {
                 return color(0., 0., 0.);
             } else {
-                return current_color * color(0.6, 0.6, 0.6);
+                return current_color * not_found_color;
             }
         }
     }
