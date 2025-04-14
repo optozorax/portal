@@ -56,6 +56,7 @@ pub enum Matrix {
         first: Option<MatrixId>,
         second: Option<MatrixId>,
     },
+    Camera,
 }
 
 impl Default for Matrix {
@@ -72,7 +73,7 @@ impl Default for Matrix {
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
         &[
-            "Simple", "Mul", "Teleport", "Param.", "Exact", "If", "Sqrt", "Lerp",
+            "Simple", "Mul", "Teleport", "Param.", "Exact", "If", "Sqrt", "Lerp", "Camera",
         ]
     }
     fn get_number(&self) -> usize {
@@ -86,6 +87,7 @@ impl ComboBoxChoosable for Matrix {
             If { .. } => 5,
             Sqrt { .. } => 6,
             Lerp { .. } => 7,
+            Camera => 8,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -205,6 +207,7 @@ impl ComboBoxChoosable for Matrix {
                 first: None,
                 second: None,
             },
+            8 => Camera,
             _ => unreachable!(),
         };
     }
@@ -422,6 +425,7 @@ impl StorageElem2 for Matrix {
                 changed |= inline_helper.inline("First:", 45., first, ui, input, data_id.with(0));
                 changed |= inline_helper.inline("Second:", 45., second, ui, input, data_id.with(1));
             }
+            Camera => {}
         }
         /*
         // POSTPONE
@@ -547,6 +551,7 @@ impl StorageElem2 for Matrix {
                     ft.lerp(st, t),
                 )
             }
+            Camera => formulas_cache.get_camera_matrix(),
         })
     }
 
@@ -629,6 +634,7 @@ impl StorageElem2 for Matrix {
                     f(*x, input);
                 }
             }
+            Camera => {}
         }
     }
 
@@ -683,6 +689,7 @@ impl StorageElem2 for Matrix {
                     + first.map(&mut f).unwrap_or(1)
                     + second.map(f).unwrap_or(1)
             }
+            Camera => 0,
         }
         // POSTPONE
         /*

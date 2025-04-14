@@ -533,7 +533,7 @@ impl FormulasCacheInner {
 }
 
 #[derive(Default)]
-pub struct FormulasCache(RefCell<FormulasCacheInner>, f64);
+pub struct FormulasCache(RefCell<FormulasCacheInner>, f64, DMat4);
 
 impl Debug for FormulasCache {
     fn fmt(&self, _: &mut Formatter<'_>) -> fmt::Result {
@@ -575,6 +575,14 @@ impl FormulasCache {
 
     pub fn set_time(&mut self, time: f64) {
         self.1 = time;
+    }
+
+    pub fn set_camera_matrix(&mut self, mat: DMat4) {
+        self.2 = mat;
+    }
+
+    pub fn get_camera_matrix(&self) -> DMat4 {
+        self.2
     }
 }
 

@@ -72,6 +72,7 @@ struct RotateAroundCam {
     zoom_mode: bool,
 
     do_not_teleport_one_frame: bool,
+    send_camera_object_matrix: bool,
 }
 
 impl RotateAroundCam {
@@ -125,6 +126,7 @@ impl RotateAroundCam {
             zoom_mode: false,
 
             do_not_teleport_one_frame: false,
+            send_camera_object_matrix: true,
         }
     }
 
@@ -418,6 +420,12 @@ impl RotateAroundCam {
         ui.horizontal(|ui| {
             ui.label("Inside subspace:");
             changed |= check_changed(&mut self.in_subspace, |is_use| {
+                ui.add(egui::Checkbox::new(is_use, ""));
+            });
+        });
+        ui.horizontal(|ui| {
+            ui.label("Send matrix for camera object:");
+            changed |= check_changed(&mut self.send_camera_object_matrix, |is_use| {
                 ui.add(egui::Checkbox::new(is_use, ""));
             });
         });
@@ -1001,7 +1009,13 @@ impl SceneRenderer {
     }
 
     fn update(&mut self, memory: &mut egui::Memory, time: f64) {
-        self.scene.update(memory, &mut self.data, time);
+        self.scene.update(
+            memory,
+            &mut self.data,
+            time,
+            self.cam.get_matrix(),
+            self.cam.send_camera_object_matrix,
+        );
 
         let current_cam = memory
             .data
