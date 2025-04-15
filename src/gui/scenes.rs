@@ -103,6 +103,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/support_portals.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Inverted surface",
+                        link: "inverted_surface",
+                        content: include_str!("../../scenes/inverted_surface.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
