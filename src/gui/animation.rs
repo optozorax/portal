@@ -1036,39 +1036,47 @@ impl StorageElem2 for RealAnimation {
 
         ui.separator();
 
-        {
-            let mut enabled = self.animation_stage == CurrentStage::Dev;
-            changed.uniform |= check_changed(&mut enabled, |enabled| {
-                drop(ui.radio_value(enabled, true, "dev"));
+        let current_text = match self.animation_stage {
+            CurrentStage::Dev => "dev".to_owned(),
+            CurrentStage::Animation(id) => (|| {
+                for (id2, name) in &*animation_stages {
+                    if id == *id2 {
+                        return name.clone();
+                    }
+                }
+                "??? animation".to_owned()
+            })(),
+            CurrentStage::RealAnimation(id) => (|| {
+                for (id2, name) in &*real_animations {
+                    if id == *id2 {
+                        return name.clone();
+                    }
+                }
+                "??? real animation".to_owned()
+            })(),
+        };
+
+        egui::ComboBox::from_label("From stage")
+            .selected_text(current_text)
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.animation_stage, CurrentStage::Dev, "dev");
+                ui.separator();
+                for (id, name) in animation_stages {
+                    changed.uniform |= check_changed(&mut self.animation_stage, |enabled| {
+                        ui.selectable_value(enabled, CurrentStage::Animation(*id), name.clone());
+                    });
+                }
+                ui.separator();
+                for (id, name) in real_animations {
+                    changed.uniform |= check_changed(&mut self.animation_stage, |enabled| {
+                        ui.selectable_value(
+                            enabled,
+                            CurrentStage::RealAnimation(*id),
+                            name.clone(),
+                        );
+                    });
+                }
             });
-            if enabled {
-                self.animation_stage = CurrentStage::Dev;
-            }
-        }
-
-        ui.separator();
-
-        for (id, name) in animation_stages {
-            let mut enabled = self.animation_stage == CurrentStage::Animation(*id);
-            changed.uniform |= check_changed(&mut enabled, |enabled| {
-                drop(ui.radio_value(enabled, true, name.clone()))
-            });
-            if enabled {
-                self.animation_stage = CurrentStage::Animation(*id);
-            }
-        }
-
-        ui.separator();
-
-        for (id, name) in real_animations {
-            let mut enabled = self.animation_stage == CurrentStage::RealAnimation(*id);
-            changed.uniform |= check_changed(&mut enabled, |enabled| {
-                drop(ui.radio_value(enabled, true, name.clone()))
-            });
-            if enabled {
-                self.animation_stage = CurrentStage::RealAnimation(*id);
-            }
-        }
 
         ui.separator();
         changed.uniform |= egui_bool_named(ui, &mut self.use_prev_cam, "Use prev end cam");
