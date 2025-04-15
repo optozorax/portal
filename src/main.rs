@@ -506,7 +506,7 @@ impl RotateAroundCam {
             let is_use = self.use_panini_projection;
             ui.label("Panini parameter:");
             changed |= check_changed(&mut self.panini_param, |param| {
-                egui_with_enabled_by(ui, is_use, |ui| {
+                ui.add_enabled_ui(is_use, |ui| {
                     ui.add(egui::Slider::new(param, 0.0..=1.0));
                 });
             });

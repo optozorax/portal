@@ -295,13 +295,6 @@ pub fn egui_with_red_field<Res>(
     result
 }
 
-pub fn egui_with_enabled_by(ui: &mut Ui, by: bool, f: impl FnOnce(&mut Ui)) {
-    let previous = ui.is_enabled();
-    ui.set_enabled(by);
-    f(ui);
-    ui.set_enabled(previous);
-}
-
 pub fn view_edit(ui: &mut Ui, text: &mut String, id_source: impl Hash) -> egui::Response {
     #[derive(Clone, Copy, Eq, PartialEq, Debug, Default, serde::Deserialize, serde::Serialize)]
     enum State {

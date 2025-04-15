@@ -1102,12 +1102,7 @@ impl Scene {
                 animation.uniforms.init_stage(&mut self.uniforms);
                 animation.matrices.init_stage(&mut self.matrices);
 
-                let cam_start = if animation.use_prev_cam {
-                    self.get_prev_animation_end_cam(id)
-                        .unwrap_or(animation.cam_start)
-                } else {
-                    animation.cam_start
-                };
+                let cam_start = self.get_start_cam(&animation, id);
                 if let Some(cam) = cam_start {
                     memory
                         .data
@@ -1183,27 +1178,47 @@ impl Scene {
         }
     }
 
-    pub fn get_prev_animation_end_cam(&self, id: RealAnimationId) -> Option<Option<CameraId>> {
-        for (a, b) in self
-            .animations
-            .visible_elements()
-            .map(|(id, _)| id)
-            .zip(self.animations.visible_elements().map(|(id, _)| id).skip(1))
-        {
-            if b == id {
-                let prev = self.animations.get_original(a).unwrap();
-                if prev.use_start_cam_as_end {
-                    if prev.use_prev_cam {
-                        return self.get_prev_animation_end_cam(a);
-                    } else {
-                        return Some(prev.cam_start);
-                    }
-                } else {
-                    return Some(prev.cam_end);
+    pub fn get_start_cam(&self, anim: &RealAnimation, id: RealAnimationId) -> Option<CameraId> {
+        if anim.use_prev_cam {
+            for (a, b) in self
+                .animations
+                .visible_elements()
+                .map(|(id, _)| id)
+                .zip(self.animations.visible_elements().map(|(id, _)| id).skip(1))
+            {
+                if b == id {
+                    let prev = self.animations.get_original(a).unwrap();
+                    return self.get_end_cam(prev, a);
                 }
             }
+            None
+        } else if let Some(get_end_cam) = anim.use_any_cam_as_start {
+            let any_id = anim.cam_any_start?;
+            let any = self.animations.get_original(any_id).unwrap();
+            if get_end_cam {
+                self.get_end_cam(any, any_id)
+            } else {
+                self.get_start_cam(any, any_id)
+            }
+        } else {
+            anim.cam_start
         }
-        None
+    }
+
+    pub fn get_end_cam(&self, anim: &RealAnimation, id: RealAnimationId) -> Option<CameraId> {
+        if anim.use_start_cam_as_end {
+            self.get_start_cam(anim, id)
+        } else if let Some(get_end_cam) = anim.use_any_cam_as_end {
+            let any_id = anim.cam_any_end?;
+            let any = self.animations.get_original(any_id).unwrap();
+            if get_end_cam {
+                self.get_end_cam(any, any_id)
+            } else {
+                self.get_start_cam(any, any_id)
+            }
+        } else {
+            anim.cam_end
+        }
     }
 
     pub fn total_animation_duration(&self) -> f64 {
@@ -1255,17 +1270,8 @@ impl Scene {
 
         if let CurrentStage::RealAnimation(id) = self.current_stage {
             let animation = self.animations.get_original(id).unwrap();
-            let cam_start = if animation.use_prev_cam {
-                self.get_prev_animation_end_cam(id)
-                    .unwrap_or(animation.cam_start)
-            } else {
-                animation.cam_start
-            };
-            let cam_end = if animation.use_start_cam_as_end {
-                cam_start
-            } else {
-                animation.cam_end
-            };
+            let cam_start = self.get_start_cam(animation, id);
+            let cam_end = self.get_end_cam(animation, id);
             if let Some((cam1id, cam2id)) = cam_start.zip(cam_end) {
                 let cam1 = with_swapped!(x => (self.uniforms, data.formulas_cache);
                     self.cameras.get_original(cam1id).unwrap().get(&self.matrices, &x).unwrap());

@@ -974,6 +974,15 @@ pub struct RealAnimation {
     pub cam_end: Option<CameraId>,
 
     #[serde(default)]
+    pub use_any_cam_as_start: Option<bool>,
+    #[serde(default)]
+    pub use_any_cam_as_end: Option<bool>,
+    #[serde(default)]
+    pub cam_any_start: Option<RealAnimationId>,
+    #[serde(default)]
+    pub cam_any_end: Option<RealAnimationId>,
+
+    #[serde(default)]
     pub cam_easing: Easing,
 }
 
@@ -989,6 +998,52 @@ impl Default for RealAnimation {
             cam_start: None,
             cam_end: None,
             cam_easing: Easing::Linear,
+            use_any_cam_as_start: None,
+            use_any_cam_as_end: None,
+            cam_any_start: None,
+            cam_any_end: None,
+        }
+    }
+}
+
+fn get_real_animation_name(
+    id: Option<RealAnimationId>,
+    real_animations: &Vec<(RealAnimationId, String)>,
+) -> String {
+    if let Some(id) = id {
+        for (id2, name) in real_animations {
+            if id == *id2 {
+                return name.clone();
+            }
+        }
+        "???".to_owned()
+    } else {
+        "None".to_owned()
+    }
+}
+
+fn get_stage_name(
+    current_stage: CurrentStage,
+    animation_stages: &Vec<(AnimationId, String)>,
+    real_animations: &Vec<(RealAnimationId, String)>,
+) -> String {
+    match current_stage {
+        CurrentStage::Dev => "dev".to_owned(),
+        CurrentStage::Animation(id) => {
+            for (id2, name) in animation_stages {
+                if id == *id2 {
+                    return name.clone();
+                }
+            }
+            "??? animation".to_owned()
+        }
+        CurrentStage::RealAnimation(id) => {
+            for (id2, name) in real_animations {
+                if id == *id2 {
+                    return name.clone();
+                }
+            }
+            "??? real animation".to_owned()
         }
     }
 }
@@ -1036,56 +1091,133 @@ impl StorageElem2 for RealAnimation {
 
         ui.separator();
 
-        let current_text = match self.animation_stage {
-            CurrentStage::Dev => "dev".to_owned(),
-            CurrentStage::Animation(id) => (|| {
-                for (id2, name) in &*animation_stages {
-                    if id == *id2 {
-                        return name.clone();
+        ui.horizontal(|ui| {
+            ui.label("From stage: ");
+            egui::ComboBox::new(data_id.with("from stage"), "")
+                .selected_text(get_stage_name(
+                    self.animation_stage,
+                    &*animation_stages,
+                    &*real_animations,
+                ))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.animation_stage, CurrentStage::Dev, "dev");
+                    ui.separator();
+                    for (id, name) in &*animation_stages {
+                        changed.uniform |= check_changed(&mut self.animation_stage, |enabled| {
+                            ui.selectable_value(
+                                enabled,
+                                CurrentStage::Animation(*id),
+                                name.clone(),
+                            );
+                        });
                     }
-                }
-                "??? animation".to_owned()
-            })(),
-            CurrentStage::RealAnimation(id) => (|| {
-                for (id2, name) in &*real_animations {
-                    if id == *id2 {
-                        return name.clone();
+                    ui.separator();
+                    for (id, name) in &*real_animations {
+                        changed.uniform |= check_changed(&mut self.animation_stage, |enabled| {
+                            ui.selectable_value(
+                                enabled,
+                                CurrentStage::RealAnimation(*id),
+                                name.clone(),
+                            );
+                        });
                     }
-                }
-                "??? real animation".to_owned()
-            })(),
-        };
-
-        egui::ComboBox::from_label("From stage")
-            .selected_text(current_text)
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut self.animation_stage, CurrentStage::Dev, "dev");
-                ui.separator();
-                for (id, name) in animation_stages {
-                    changed.uniform |= check_changed(&mut self.animation_stage, |enabled| {
-                        ui.selectable_value(enabled, CurrentStage::Animation(*id), name.clone());
-                    });
-                }
-                ui.separator();
-                for (id, name) in real_animations {
-                    changed.uniform |= check_changed(&mut self.animation_stage, |enabled| {
-                        ui.selectable_value(
-                            enabled,
-                            CurrentStage::RealAnimation(*id),
-                            name.clone(),
-                        );
-                    });
-                }
-            });
+                });
+        });
 
         ui.separator();
-        changed.uniform |= egui_bool_named(ui, &mut self.use_prev_cam, "Use prev end cam");
-        changed.uniform |= egui_bool_named(
-            ui,
-            &mut self.use_start_cam_as_end,
-            "Use start cam as end cam",
-        );
-        if !self.use_prev_cam {
+
+        if self.use_any_cam_as_start.is_some() {
+            self.use_prev_cam = false;
+        }
+        ui.add_enabled_ui(!self.use_any_cam_as_start.is_some(), |ui| {
+            changed.uniform |= egui_bool_named(ui, &mut self.use_prev_cam, "Use prev end cam");
+        });
+
+        if self.use_any_cam_as_end.is_some() {
+            self.use_start_cam_as_end = false;
+        }
+        ui.add_enabled_ui(!self.use_any_cam_as_end.is_some(), |ui| {
+            changed.uniform |= egui_bool_named(
+                ui,
+                &mut self.use_start_cam_as_end,
+                "Use start cam as end cam",
+            );
+        });
+
+        if self.use_prev_cam {
+            self.use_any_cam_as_start = None;
+        }
+        ui.add_enabled_ui(!self.use_prev_cam, |ui| {
+            ui.horizontal(|ui| {
+                changed.uniform |= egui_option(
+                    ui,
+                    &mut self.use_any_cam_as_start,
+                    "Use any cam as start",
+                    || false,
+                    |ui, t| {
+                        ui.separator();
+                        let mut changed = false;
+                        changed |= ui.selectable_value(t, false, "Start").changed();
+                        changed |= ui.selectable_value(t, true, "End").changed();
+                        changed
+                    },
+                );
+                if self.use_any_cam_as_start.is_some() {
+                    ui.separator();
+                    egui::ComboBox::new(data_id.with("combo1"), "")
+                        .selected_text(get_real_animation_name(
+                            self.cam_any_start,
+                            &*real_animations,
+                        ))
+                        .show_ui(ui, |ui| {
+                            for (id, name) in &*real_animations {
+                                changed.uniform |=
+                                    check_changed(&mut self.cam_any_start, |value| {
+                                        ui.selectable_value(value, Some(*id), name.clone());
+                                    });
+                            }
+                        });
+                } else {
+                    self.cam_any_start = None;
+                }
+            });
+        });
+
+        if self.use_start_cam_as_end {
+            self.use_any_cam_as_end = None;
+        }
+        ui.add_enabled_ui(!self.use_start_cam_as_end, |ui| {
+            ui.horizontal(|ui| {
+                changed.uniform |= egui_option(
+                    ui,
+                    &mut self.use_any_cam_as_end,
+                    "Use any cam as end",
+                    || false,
+                    |ui, t| {
+                        ui.separator();
+                        let mut changed = false;
+                        changed |= ui.selectable_value(t, false, "Start").changed();
+                        changed |= ui.selectable_value(t, true, "End").changed();
+                        changed
+                    },
+                );
+                if self.use_any_cam_as_end.is_some() {
+                    ui.separator();
+                    egui::ComboBox::new(data_id.with("combo2"), "")
+                        .selected_text(get_real_animation_name(self.cam_any_end, &*real_animations))
+                        .show_ui(ui, |ui| {
+                            for (id, name) in &*real_animations {
+                                changed.uniform |= check_changed(&mut self.cam_any_end, |value| {
+                                    ui.selectable_value(value, Some(*id), name.clone());
+                                });
+                            }
+                        });
+                } else {
+                    self.cam_any_end = None;
+                }
+            });
+        });
+        if !self.use_prev_cam && !self.use_any_cam_as_start.is_some() {
             changed |= cams.inline(
                 "Start cam:",
                 65.0,
@@ -1097,7 +1229,7 @@ impl StorageElem2 for RealAnimation {
         } else {
             self.cam_start = None;
         }
-        if !self.use_start_cam_as_end {
+        if !self.use_start_cam_as_end && !self.use_any_cam_as_end.is_some() {
             changed |= cams.inline(
                 "End cam:",
                 65.0,
@@ -1109,6 +1241,8 @@ impl StorageElem2 for RealAnimation {
         } else {
             self.cam_end = None;
         }
+
+        ui.separator();
 
         ui.separator();
         changed |= self.matrices.egui(
