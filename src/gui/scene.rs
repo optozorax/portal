@@ -992,8 +992,12 @@ impl Scene {
         for line in res.storage.lines() {
             let number_for = line.contains("!FOR_NUMBER!");
             let variable_for = line.contains("!FOR_VARIABLE!");
+            let antialiasing_line = line.contains("!ANTIALIASING!");
+            let camera_teleportation_line = line.contains("!CAMERA_TELEPORTATION!");
             if (number_for && data.for_prefer_variable)
                 || (variable_for && !data.for_prefer_variable)
+                || (antialiasing_line && data.disable_antialiasing)
+                || (camera_teleportation_line && data.disable_camera_teleportation)
             {
                 // skip line
             } else {
@@ -1228,12 +1232,7 @@ impl Scene {
             .sum()
     }
 
-    pub fn update(
-        &mut self,
-        memory: &mut egui::Memory,
-        data: &mut Data,
-        mut time: f64,
-    ) {
+    pub fn update(&mut self, memory: &mut egui::Memory, data: &mut Data, mut time: f64) {
         if self.animation_stage_edit_state {
             drop(self.init_stage(self.current_stage, memory));
         }

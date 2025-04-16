@@ -73,6 +73,9 @@ pub struct Data {
     pub generated_code_show_text: bool,
 
     pub for_prefer_variable: bool,
+
+    pub disable_antialiasing: bool,
+    pub disable_camera_teleportation: bool,
 }
 
 pub fn add_line_numbers(s: &str) -> String {

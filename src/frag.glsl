@@ -308,14 +308,16 @@ void main() {
     vec3 result = vec3(0.);
 
     if (_teleport_external_ray == 0) {
-        for (int a = 0; a < 16; a++) { if (a >= _aa_count) break; // !FOR_NUMBER!
-        for (int a = _aa_start; a < _aa_count + _aa_start; a++) { // !FOR_VARIABLE!
+        int a = 0;
+        for (int a = 0; a < 16; a++) { if (a >= _aa_count) break; // !FOR_NUMBER! !ANTIALIASING!
+        for (int a = _aa_start; a < _aa_count + _aa_start; a++) { // !FOR_VARIABLE! !ANTIALIASING!
             vec2 offset = quasi_random(a);
             result += get_color(uv_screen + offset * pixel_size * 2.);
-        }
+        } // !ANTIALIASING!
         result = sqrt(result/float(_aa_count));
     } else {
-        ExternalRayTeleportation teleported = teleport_external_ray(Ray(vec4(_external_ray_a, 1.), vec4(_external_ray_b - _external_ray_a, 0.), 1., _camera_in_subspace == 1));
+        ExternalRayTeleportation teleported;
+        teleported = teleport_external_ray(Ray(vec4(_external_ray_a, 1.), vec4(_external_ray_b - _external_ray_a, 0.), 1., _camera_in_subspace == 1)); // !CAMERA_TELEPORTATION!
 
         float val = 0.;
         if (int(uv.y) == 0) { val = teleported.pos.x; } else

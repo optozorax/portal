@@ -1009,13 +1009,11 @@ impl SceneRenderer {
     }
 
     fn update(&mut self, memory: &mut egui::Memory, time: f64) {
-        self.scene.update(
-            memory,
-            &mut self.data,
-            time,
-        );
+        self.scene.update(memory, &mut self.data, time);
         if self.cam.send_camera_object_matrix {
-            self.data.formulas_cache.set_camera_matrix(self.cam.get_matrix());
+            self.data
+                .formulas_cache
+                .set_camera_matrix(self.cam.get_matrix());
         }
 
         let current_cam = memory
@@ -1110,7 +1108,9 @@ impl SceneRenderer {
         );
 
         if self.cam.send_camera_object_matrix {
-            self.data.formulas_cache.set_camera_matrix(self.cam.get_matrix());
+            self.data
+                .formulas_cache
+                .set_camera_matrix(self.cam.get_matrix());
         }
     }
 
@@ -1118,6 +1118,12 @@ impl SceneRenderer {
         let mut changed = WhatChanged::default();
         ui.label("Improve compilation speed time: (uncheck if not compiles on your machine, disabled option uses for-cycles on numbers instead of variables)");
         changed.shader |= egui_bool(ui, &mut self.data.for_prefer_variable);
+        ui.separator();
+        ui.label("Improve compilation speed time 2: (disables antialiasing code)");
+        changed.shader |= egui_bool(ui, &mut self.data.disable_antialiasing);
+        ui.separator();
+        ui.label("Improve compilation speed time 3: (disables camera teleportation code)");
+        changed.shader |= egui_bool(ui, &mut self.data.disable_camera_teleportation);
         ui.separator();
         ui.label("Offset after material:");
         changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
