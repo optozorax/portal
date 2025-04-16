@@ -1233,8 +1233,6 @@ impl Scene {
         memory: &mut egui::Memory,
         data: &mut Data,
         mut time: f64,
-        camera: DMat4,
-        send_camera: bool,
     ) {
         if self.animation_stage_edit_state {
             drop(self.init_stage(self.current_stage, memory));
@@ -1264,9 +1262,6 @@ impl Scene {
             time = (time % duration) / duration;
         }
         data.formulas_cache.set_time(time);
-        if send_camera {
-            data.formulas_cache.set_camera_matrix(camera);
-        }
 
         if let CurrentStage::RealAnimation(id) = self.current_stage {
             let animation = self.animations.get_original(id).unwrap();

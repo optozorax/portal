@@ -1013,9 +1013,10 @@ impl SceneRenderer {
             memory,
             &mut self.data,
             time,
-            self.cam.get_matrix(),
-            self.cam.send_camera_object_matrix,
         );
+        if self.cam.send_camera_object_matrix {
+            self.data.formulas_cache.set_camera_matrix(self.cam.get_matrix());
+        }
 
         let current_cam = memory
             .data
@@ -1085,11 +1086,11 @@ impl SceneRenderer {
             self.cam.beta = override_cam.beta;
             self.cam.r = override_cam.r;
             self.cam.look_at = override_cam.look_at;
-            self.cam.in_subspace = override_cam.in_subspace;
             self.cam.free_movement = override_cam.free_movement;
 
             if override_cam.override_matrix {
                 self.cam.teleport_matrix = override_cam.matrix;
+                self.cam.in_subspace = override_cam.in_subspace;
                 self.cam.do_not_teleport_one_frame = true;
             }
 
@@ -1107,6 +1108,10 @@ impl SceneRenderer {
             egui::Id::new("CalculatedCam"),
             self.cam.get_calculated_cam(),
         );
+
+        if self.cam.send_camera_object_matrix {
+            self.data.formulas_cache.set_camera_matrix(self.cam.get_matrix());
+        }
     }
 
     fn egui_rendering_settings(&mut self, ui: &mut Ui) -> WhatChanged {
