@@ -769,7 +769,7 @@ impl AnyUniform {
                     result |= value.user_egui(ui, 0.01, 0..=2);
                 });
             }
-            Formula(_) => {
+            Formula(_) | FormulaInt(_) => {
                 drop(ui.label("Internal error, formulas are not allowed to be accessed by user."))
             }
             TrefoilSpecial(arr) => result |= arr.egui(ui, data_id),

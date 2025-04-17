@@ -273,6 +273,7 @@ pub enum AnyUniform {
     Angle(f64),
     Progress(f64),
     Formula(Formula),
+    FormulaInt(Formula),
     TrefoilSpecial(TrefoilSpecial),
 }
 
@@ -589,7 +590,7 @@ impl FormulasCache {
 impl ComboBoxChoosable for AnyUniform {
     fn variants() -> &'static [&'static str] {
         &[
-            "bool", "int", "float", "angle", "progress", "formula", "trefoil",
+            "bool", "int", "float", "angle", "progress", "formula", "trefoil", "formula_int",
         ]
     }
     fn get_number(&self) -> usize {
@@ -602,6 +603,7 @@ impl ComboBoxChoosable for AnyUniform {
             Progress { .. } => 4,
             Formula { .. } => 5,
             TrefoilSpecial { .. } => 6,
+            FormulaInt { .. } => 7,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -614,7 +616,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Float(value) => value.get_value() >= 1.0,
                 Angle(a) => *a >= 1.0,
                 Progress(a) => *a >= 1.0,
-                Formula { .. } => false,
+                Formula { .. } | FormulaInt { .. } => false,
                 TrefoilSpecial { .. } => false,
             }),
             1 => match self {
@@ -623,7 +625,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Float(value) => AnyUniform::int(value.get_value() as i32),
                 Angle(a) => AnyUniform::int(rad2deg(*a) as i32),
                 Progress(a) => AnyUniform::int(*a as i32),
-                Formula { .. } => AnyUniform::int(0),
+                Formula { .. } | FormulaInt { .. } => AnyUniform::int(0),
                 TrefoilSpecial { .. } => AnyUniform::int(0),
             },
             2 => match self {
@@ -632,7 +634,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Angle(a) => AnyUniform::float(*a),
                 Progress(a) => AnyUniform::float(*a),
                 Float { .. } => self.clone(),
-                Formula { .. } => AnyUniform::float(0.0),
+                Formula { .. } | FormulaInt { .. } => AnyUniform::float(0.0),
                 TrefoilSpecial { .. } => AnyUniform::float(0.0),
             },
             3 => Angle(match self {
@@ -647,7 +649,7 @@ impl ComboBoxChoosable for AnyUniform {
                 Float(value) => {
                     macroquad::math::clamp(value.get_value(), 0., std::f64::consts::TAU)
                 }
-                Formula { .. } => 0.0,
+                Formula { .. } | FormulaInt { .. } => 0.0,
                 TrefoilSpecial { .. } => 0.0,
             }),
             4 => Progress(0.5),
@@ -657,10 +659,19 @@ impl ComboBoxChoosable for AnyUniform {
                 Angle(a) => F(a.to_string()),
                 Progress(a) => F(a.to_string()),
                 Float(value) => F(value.get_value().to_string()),
-                Formula(f) => f.clone(),
+                Formula(f) | FormulaInt(f) => f.clone(),
                 TrefoilSpecial(_) => F("0".to_string()),
             }),
             6 => TrefoilSpecial(Default::default()),
+            7 => FormulaInt(match self {
+                Bool(b) => F((*b as i32).to_string()),
+                Int(value) => F(value.get_value().to_string()),
+                Angle(a) => F(a.to_string()),
+                Progress(a) => F(a.to_string()),
+                Float(value) => F(value.get_value().to_string()),
+                Formula(f) | FormulaInt(f) => f.clone(),
+                TrefoilSpecial(_) => F("0".to_string()),
+            }),
             _ => unreachable!(),
         };
     }
@@ -869,7 +880,7 @@ impl StorageElem2 for AnyUniform {
             Bool(x) => drop(ui.vertical_centered(|ui| result.uniform |= egui_bool(ui, x))),
             Angle(a) => drop(ui.vertical_centered(|ui| result.uniform |= egui_angle_f64(ui, a))),
             Progress(a) => drop(ui.vertical_centered(|ui| result.uniform |= egui_0_1(ui, a))),
-            Formula(x) => drop(ui.vertical_centered(|ui| result |= x.egui(ui, formulas_cache))),
+            Formula(x) | FormulaInt(x) => drop(ui.vertical_centered(|ui| result |= x.egui(ui, formulas_cache))),
             TrefoilSpecial(arr) => result |= arr.egui(ui, data_id),
         }
         result
@@ -943,6 +954,9 @@ impl StorageElem2 for AnyUniform {
                 "easing_out" => easing_out(*args.first()?),
                 "easing_in_out" => easing_in_out(*args.first()?),
                 "easing_in_out_fast" => easing_in_out_fast(*args.first()?),
+                "easing_in_out_middle" => easing_in_out_middle(*args.first()?, *args.get(1)?),
+
+                "lerp" => lerp((*args.first()?)..=(*args.get(1)?), *args.get(2)?),
 
                 // Free variables
                 _ => get_helper
@@ -963,8 +977,11 @@ impl StorageElem2 for AnyUniform {
             AnyUniform::Progress(a) => AnyUniformResult::Float(*a),
             AnyUniform::Float(value) => AnyUniformResult::Float(value.get_value()),
             AnyUniform::Formula(f) => {
-                AnyUniformResult::Float(formulas_cache.eval_unsafe(&f.0, &mut cb)?.ok()?)
-            }
+                AnyUniformResult::Float(formulas_cache.eval_unsafe(&f.0, &mut cb)?.ok()?)    
+            },
+            AnyUniform::FormulaInt(f) => {
+                AnyUniformResult::Int(formulas_cache.eval_unsafe(&f.0, &mut cb)?.ok()? as i32)
+            },
             AnyUniform::TrefoilSpecial(t) => AnyUniformResult::TrefoilSpecial(*t),
         })
     }
