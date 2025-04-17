@@ -49,6 +49,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/digits_debug.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Teleportation degrees (for video)",
+                        link: "teleportation_degrees",
+                        content: include_str!("../../scenes/teleportation_degrees.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
