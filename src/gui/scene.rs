@@ -374,7 +374,7 @@ impl Scene {
 
     pub fn compile_all_formulas(&self, cache: &FormulasCache) {
         for id in self.uniforms.all_ids() {
-            if let AnyUniform::Formula(f) = self.uniforms.get_original(id).unwrap() {
+            if let AnyUniform::Formula(f) | AnyUniform::FormulaInt(f) = self.uniforms.get_original(id).unwrap() {
                 cache.compile(&f.0);
             }
         }
