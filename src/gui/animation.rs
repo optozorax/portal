@@ -13,7 +13,7 @@ use crate::gui::uniform::*;
 use crate::gui::unique_id::UniqueId;
 use egui::*;
 use glam::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -53,29 +53,29 @@ impl<T: StorageElem2> Default for Animation<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StageChanging<T: StorageElem2>(HashMap<T::IdWrapper, Animation<T>>);
+pub struct StageChanging<T: StorageElem2>(BTreeMap<T::IdWrapper, Animation<T>>);
 
 impl<T: StorageElem2> Default for StageChanging<T> {
     fn default() -> Self {
-        StageChanging(HashMap::new())
+        StageChanging(BTreeMap::new())
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DevStageChanging<T: StorageElem2>(HashMap<T::IdWrapper, T>);
+pub struct DevStageChanging<T: StorageElem2>(BTreeMap<T::IdWrapper, T>);
 
 impl<T: StorageElem2> Default for DevStageChanging<T> {
     fn default() -> Self {
-        DevStageChanging(HashMap::new())
+        DevStageChanging(BTreeMap::new())
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AnimationFilter<T: StorageElem2>(HashMap<T::IdWrapper, bool>);
+pub struct AnimationFilter<T: StorageElem2>(BTreeMap<T::IdWrapper, bool>);
 
 impl<T: StorageElem2> Default for AnimationFilter<T> {
     fn default() -> Self {
-        Self(HashMap::new())
+        Self(BTreeMap::new())
     }
 }
 
@@ -238,11 +238,11 @@ impl<T: StorageElem2> DevStageChanging<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlobalStage<T: StorageElem2>(HashMap<T::IdWrapper, bool>);
+pub struct GlobalStage<T: StorageElem2>(BTreeMap<T::IdWrapper, bool>);
 
 impl<T: StorageElem2> Default for GlobalStage<T> {
     fn default() -> Self {
-        Self(HashMap::new())
+        Self(BTreeMap::new())
     }
 }
 
@@ -318,11 +318,11 @@ impl<T: StorageElem2> AnimationFilter<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementsDescription<T: StorageElem2>(HashMap<T::IdWrapper, ValueToUser>);
+pub struct ElementsDescription<T: StorageElem2>(BTreeMap<T::IdWrapper, ValueToUser>);
 
 impl<T: StorageElem2> Default for ElementsDescription<T> {
     fn default() -> Self {
-        Self(HashMap::new())
+        Self(BTreeMap::new())
     }
 }
 
@@ -400,7 +400,7 @@ pub struct AnimationStage {
 
     original_cam_button: bool,
     pub set_cam: Option<Option<CameraId>>,
-    cams: HashMap<CameraId, bool>,
+    cams: BTreeMap<CameraId, bool>,
 
     #[serde(default)]
     pub hidden: bool,
@@ -860,11 +860,11 @@ impl<T: StorageElem2> RealAnimationPart<T> {
 //----------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RealAnimationStageChanging<T: StorageElem2>(HashMap<T::IdWrapper, RealAnimationPart<T>>);
+pub struct RealAnimationStageChanging<T: StorageElem2>(BTreeMap<T::IdWrapper, RealAnimationPart<T>>);
 
 impl<T: StorageElem2> Default for RealAnimationStageChanging<T> {
     fn default() -> Self {
-        RealAnimationStageChanging(HashMap::new())
+        RealAnimationStageChanging(BTreeMap::new())
     }
 }
 

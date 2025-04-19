@@ -5,7 +5,6 @@ use egui::*;
 use glam::*;
 use std::any::Any;
 use std::any::TypeId;
-use std::collections::HashMap;
 use std::hash::Hash;
 
 use std::collections::BTreeMap;
@@ -29,7 +28,7 @@ pub fn rad2deg(rad: f64) -> f64 {
 }
 
 #[derive(Debug, Default)]
-pub struct ShaderErrors(HashMap<TypeId, HashMap<UniqueId, Vec<(usize, String)>>>);
+pub struct ShaderErrors(BTreeMap<TypeId, BTreeMap<UniqueId, Vec<(usize, String)>>>);
 
 #[derive(Debug, Default)]
 pub struct TextureErrors(pub BTreeMap<String, macroquad::Error>);
