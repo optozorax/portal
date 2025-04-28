@@ -385,6 +385,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/self_intersect.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Matryoshka",
+                        link: "matryoshka",
+                        content: include_str!("../../scenes/matryoshka.ron"),
+                        hidden: true,
+                    },
                 ],
             },
         ])
