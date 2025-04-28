@@ -200,6 +200,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Borromean rings",
+                        link: "borromean_rings",
+                        content: include_str!("../../scenes/borromean_rings.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Spherical geometry model",
                         link: "spherical_geometry",
                         content: include_str!("../../scenes/spherical_geometry.ron"),
