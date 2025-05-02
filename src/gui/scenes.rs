@@ -50,6 +50,12 @@ impl Default for Scenes {
                         hidden: true,
                     },
                     Scene {
+                        name: "Wheatley texture",
+                        link: "wheatley_texture",
+                        content: include_str!("../../scenes/wheatley_texture.ron"),
+                        hidden: true,
+                    },
+                    Scene {
                         name: "Teleportation degrees (for video)",
                         link: "teleportation_degrees",
                         content: include_str!("../../scenes/teleportation_degrees.ron"),
