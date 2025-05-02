@@ -389,5 +389,5 @@ pub fn matrix_hash(mat: &DMat4) -> f64 {
 }
 
 pub fn almost_identity(mat: &DMat4) -> bool {
-    matrix_hash(&(*mat - DMat4::IDENTITY)).abs() < 0.001
+    matrix_hash(&(*mat - DMat4::IDENTITY)).abs() < 0.00001
 }

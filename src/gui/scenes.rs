@@ -368,7 +368,7 @@ impl Default for Scenes {
                         hidden: true,
                     },
                     Scene {
-                        name: "Infinite cones to emulate plus ultra",
+                        name: "Infinite planes to emulate plus ultra",
                         link: "portal_in_portal_cone",
                         content: include_str!("../../scenes/portal_in_portal_cone.ron"),
                         hidden: true,
