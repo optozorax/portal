@@ -38,6 +38,12 @@ impl Default for Scenes {
                         hidden: true,
                     },
                     Scene {
+                        name: "White room",
+                        link: "white_room",
+                        content: include_str!("../../scenes/white_room.ron"),
+                        hidden: true,
+                    },
+                    Scene {
                         name: "Analytical approach (for video)",
                         link: "analytical_approach",
                         content: include_str!("../../scenes/analytical_approach.ron"),

@@ -1,3 +1,5 @@
+use portal::gui::uniform::AnyUniform;
+use portal::gui::uniform::ClampedValue;
 use gesture_recognizer::*;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use macroquad::prelude::is_key_down;
@@ -39,6 +41,8 @@ struct RotateAroundCam {
     view_angle: f64,
     use_panini_projection: bool,
     panini_param: f64,
+
+    use_360_camera: bool,
 
     inverse_x: bool,
     inverse_y: bool,
@@ -95,6 +99,8 @@ impl RotateAroundCam {
 
             use_panini_projection: false,
             panini_param: 1.0,
+
+            use_360_camera: false,
 
             inverse_x: false,
             inverse_y: false,
@@ -494,6 +500,15 @@ impl RotateAroundCam {
         ui.separator();
 
         ui.horizontal(|ui| {
+            ui.label("360 camera:");
+            changed |= check_changed(&mut self.use_360_camera, |is_use| {
+                ui.add(egui::Checkbox::new(is_use, ""));
+            });
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
             ui.label("Panini projection:");
             changed |= check_changed(&mut self.use_panini_projection, |is_use| {
                 ui.add(egui::Checkbox::new(is_use, ""));
@@ -642,6 +657,8 @@ struct SceneRenderer {
     width: u32,
     height: u32,
     scene_name: String,
+    current_fps: usize, 
+    current_motion_blur_frames: usize,
 }
 
 impl SceneRenderer {
@@ -745,6 +762,8 @@ impl SceneRenderer {
             width: max_width,
             height: max_height,
             scene_name: scene_name.to_owned(),
+            current_fps: 60,
+            current_motion_blur_frames: 1,
         };
 
         result
@@ -896,6 +915,10 @@ impl SceneRenderer {
         self.material.set_uniform(
             "_use_panini_projection",
             self.cam.use_panini_projection as i32,
+        );
+        self.material.set_uniform(
+            "_use_360_camera",
+            self.cam.use_360_camera as i32,
         );
         self.material
             .set_uniform("_ray_tracing_depth", self.render_depth);
@@ -1170,8 +1193,49 @@ impl SceneRenderer {
         changed
     }
 
+    fn update_inner_variables(&mut self, animation_name: &str) -> Option<()> {
+        if [
+            "v2.face.2",
+            "v2.face.3",
+            "v2.face.4",
+            "v2.face.5",
+            "v2.inside.1",
+            "v2.inside.3",
+            "v2.intro.1",
+            "v2.normal.2",
+            "v2.normal.3",
+            "v2.rod.2",
+            "v2.rod.3",
+            "v2.spiral.3",
+            "v2.spiral.4",
+            "v2.spiral.5",
+            "v2.spiral.6",
+        ].contains(&animation_name) {
+            let id = self.scene.uniforms.find_id("subspace_degree")?;
+            *self.scene.uniforms.get_original_mut(id).unwrap() = AnyUniform::Int(ClampedValue::new(100));
+        }
+        if [
+            // cone
+            "v2.rotated.0",
+            "v2.spiral.0",
+            // teleportation_degrees
+            "v2.screenshot.5",
+            "v2.screenshot.6",
+        ].contains(&animation_name) {
+            self.render_depth = 1000;
+        }
+        if [
+            // plus_ultra
+            "v2.screenshot.3",
+        ].contains(&animation_name) {
+            self.current_fps = 600;
+        }
+        Some(())
+    }
+
     fn use_animation_stage(&mut self, name: &str, memory: &mut egui::Memory) {
         self.scene.init_animation_by_name(name, memory).unwrap();
+        self.update_inner_variables(name);
         self.update(memory, 0.);
     }
 
@@ -1186,7 +1250,7 @@ impl SceneRenderer {
         height: u32,
     ) {
         drop(std::fs::create_dir("anim"));
-        let count = (duration_seconds * fps as f32) as usize;
+        let count = ((duration_seconds * fps as f32) as usize).max(1);
         let exposure = 0.5; // number from 0 to 1
         for i in 0..count {
             let mut images = vec![];
@@ -1234,7 +1298,7 @@ impl SceneRenderer {
             .arg("-c:v")
             .arg("libx264")
             .arg("-b:v")
-            .arg("50M")
+            .arg("100M")
             .arg("-pix_fmt")
             .arg("yuv444p")
             .arg("-profile:v")
@@ -1276,13 +1340,20 @@ impl SceneRenderer {
             self.update(&mut memory, 0.);
             let duration = self.scene.get_current_animation_duration().unwrap();
 
-            let name = self.scene.get_current_animation_name().unwrap();
+            let name = self.scene.get_current_animation_name().unwrap().to_owned();
+            self.current_fps = fps;
+            self.current_motion_blur_frames = motion_blur_frames;
+            self.update_inner_variables(&name);
+
+            if !name.starts_with("v2.") {
+                continue;
+            }
             println!("Rendering animation {name}, {i}/{len}");
 
             self.render_animation(
                 duration as f32,
-                fps,
-                motion_blur_frames,
+                self.current_fps,
+                self.current_motion_blur_frames,
                 &format!("{}/{}", self.scene_name, name),
                 &mut memory,
                 self.width,
@@ -1390,7 +1461,11 @@ impl Window {
         let mut is_something_changed = false;
 
         if !self.dpi_set {
+            #[cfg(target_arch = "wasm32")]
             ctx.set_pixels_per_point(1.7);
+
+            #[cfg(not(target_arch = "wasm32"))]
+            ctx.set_pixels_per_point(1.3);
             self.dpi_set = true;
         }
 
@@ -1847,9 +1922,9 @@ async fn render() {
     // let (width, height) = (854, 480);
 
     // render all scenes as a pictures
-    /*
+    let (width, height) = (4000, 2000);
     for scene_name in Scenes::default().get_all_scenes_links() {
-        if scene_name == "empty" {
+        if scene_name != "white_room" {
             continue;
         }
         println!("Rendering scene {scene_name}");
@@ -1858,53 +1933,45 @@ async fn render() {
         let scene = ron::from_str(scene_content).unwrap();
         let mut renderer = SceneRenderer::new(scene, width, height, &scene_name).await;
 
-        renderer.cam.use_panini_projection = true;
-        renderer.cam.view_angle = deg2rad(250.);
+        renderer.cam.use_360_camera = true;
+        renderer.aa_count = 16;
 
         renderer.draw_texture(width as f32, height as f32, true);
         renderer.render_target.texture.get_texture_data().export_png(&format!("anim/{scene_name}.png"));
     }
     return;
-    */
 
     for scene_name in [
-        "portal_in_portal",
-        "non_linear",
-        "half_spheres",
-        "cylinder_spherical",
-        "moving_doorway",
-        "portal_in_portal_1x_attempt",
-        "plus_ultra",
-        "speed_model",
-        "surface_portal2",
-        "triple_portal",
-        "triple_portal2",
+        // "portal_in_portal",
+        // "half_spheres",
+        // "portal_in_portal_1x_attempt",
+        // "plus_ultra",
+        // "inverted_surface",
+        // "portal_in_portal_cone",
+        // "spherical_geometry",
+        "teleportation_degrees",
     ] {
         println!("Rendering scene {scene_name}");
 
         let fps = 60;
-        let mut motion_blur_frames = 1;
-        if scene_name == "cylinder_spherical"
-            || scene_name == "triple_portal2"
-            || scene_name == "portal_in_portal"
-            || scene_name == "half_spheres"
-            || scene_name == "non_linear"
-        {
-            motion_blur_frames = 10;
-        }
+        let motion_blur_frames = 1;
 
         let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
         let scene = ron::from_str(scene_content).unwrap();
         let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
-        renderer.aa_count = 4;
+        renderer.aa_count = 1;
         renderer.render_depth = 50;
 
         if true {
+        // if false {
             renderer.render_all_animations(fps, motion_blur_frames);
         }
 
+        // if true {
         if false {
-            for animation_stage in ["axiom.4.1"] {
+            for animation_stage in [
+                "v2.rod.1",
+            ] {
                 drop(std::fs::create_dir("video"));
                 drop(std::fs::create_dir(format!(
                     "video/{}",
@@ -1912,11 +1979,13 @@ async fn render() {
                 )));
 
                 let mut memory = egui::Memory::default();
+                renderer.current_fps = fps;
+                renderer.current_motion_blur_frames = motion_blur_frames;
                 renderer.use_animation_stage(animation_stage, &mut memory);
                 renderer.render_animation(
                     renderer.scene.get_current_animation_duration().unwrap() as f32,
-                    fps,
-                    motion_blur_frames,
+                    renderer.current_fps,
+                    renderer.current_motion_blur_frames,
                     &format!("{scene_name}/{animation_stage}"),
                     &mut memory,
                     width,
@@ -1932,6 +2001,7 @@ async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     color_backtrace::install();
 
+    // if true {
     if false {
         render().await;
         return;

@@ -221,6 +221,7 @@ ExternalRayTeleportation teleport_external_ray(Ray r) {
 uniform mat4 _camera;
 uniform float _view_angle;
 uniform int _use_panini_projection;
+uniform int _use_360_camera;
 uniform float _panini_param;
 uniform int _aa_count;
 uniform int _aa_start;
@@ -285,6 +286,10 @@ vec3 get_color(vec2 image_position) {
     vec4 d;
     if (_use_panini_projection == 1) {
         d = normalize(_camera * vec4(PaniniProjection(vec2(image_position.x, image_position.y), _view_angle, _panini_param), 0.));
+    } else if (_use_360_camera == 1) {
+        float u = (image_position.x + 2.) * PI2;
+        float v = (image_position.y + 1.) * PI2;
+        d = vec4(cos(u) * sin(v), cos(v), sin(u) * sin(v), 0.);
     } else {
         float h = tan(_view_angle / 2.);
         d = normalize(_camera * vec4(image_position.x * h, image_position.y * h, 1.0, 0.));

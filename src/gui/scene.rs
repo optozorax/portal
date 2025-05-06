@@ -466,6 +466,7 @@ impl Scene {
             ("_t_end".to_owned(), UniformType::Float1),
             ("_view_angle".to_owned(), UniformType::Float1),
             ("_use_panini_projection".to_owned(), UniformType::Int1),
+            ("_use_360_camera".to_owned(), UniformType::Int1),
             ("_angle_color_disable".to_owned(), UniformType::Int1),
             ("_darken_by_distance".to_owned(), UniformType::Int1),
             ("_grid_disable".to_owned(), UniformType::Int1),
@@ -979,7 +980,7 @@ impl Scene {
                 result.add_string("vec4 rd2 = _camera_mul_inv * r.d;");
                 result.add_string("float u = atan(rd2.z, rd2.x);");
                 result.add_string("float v = atan(sqrt(rd2.x * rd2.x + rd2.z * rd2.z), rd2.y);");
-                result.add_string(format!("vec3 not_found_color = texture({skybox_texture}_tex, vec2((u/PI+1.)/2., v/PI)).rgb;"));
+                result.add_string(format!("vec3 not_found_color = sqrvec(texture({skybox_texture}_tex, vec2((u/PI+1.)/2., v/PI)).rgb);"));
             } else {
                 result.add_string("vec3 not_found_color = color(0.6, 0.6, 0.6);");
             }
