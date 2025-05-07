@@ -407,7 +407,7 @@ impl Default for Scenes {
                         name: "Matryoshka",
                         link: "matryoshka",
                         content: include_str!("../../scenes/matryoshka.ron"),
-                        hidden: true,
+                        hidden: false,
                     },
                 ],
             },
