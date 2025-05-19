@@ -241,6 +241,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/sphere_to_sphere.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Sphere intersection",
+                        link: "sphere_intersection",
+                        content: include_str!("../../scenes/sphere_intersection.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
