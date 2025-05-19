@@ -1,3 +1,4 @@
+use std::time::Instant;
 use crate::gui::storage2::Wrapper;
 use crate::gui::uniform::FormulasCache;
 use crate::gui::unique_id::UniqueId;
@@ -390,4 +391,10 @@ pub fn matrix_hash(mat: &DMat4) -> f64 {
 
 pub fn almost_identity(mat: &DMat4) -> bool {
     matrix_hash(&(*mat - DMat4::IDENTITY)).abs() < 0.00001
+}
+
+pub fn measure_time<F: FnOnce()>(f: F) -> String {
+    let now = Instant::now();
+    f();
+    format!("{:?}", now.elapsed())
 }
