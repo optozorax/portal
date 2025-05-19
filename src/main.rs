@@ -1,3 +1,4 @@
+use once_cell::sync::Lazy;
 use portal::gui::uniform::AnyUniform;
 use portal::gui::uniform::ClampedValue;
 use gesture_recognizer::*;
@@ -564,76 +565,88 @@ impl RotateAroundCam {
     }
 }
 
-pub fn average_images(images: Vec<Image>) -> Image {
-    let first = &images[0];
-    let width = first.width;
-    let height = first.height;
+/// ----------------------------------------------------------
+///  2¹ᐟγ  with γ = 2  ⇒  linear   = (srgb/255)²
+///  Our integer  "linear units"  are in   0 … 65 025 (=255²)
+///
+///  We therefore need two tables:
+///    • L_TO_S[c]   : 0 … 65 025  → 0 … 255   (√ + rounding)
+///    • S_TO_L[c]   : 0 … 255     → 0 … 65 025 (square)
+/// -----------------------------------------------------------
 
-    // Ensure all images have the same dimensions
-    if !images
-        .iter()
-        .all(|img| img.width == width && img.height == height)
-    {
-        panic!();
+/// 0 … 65 025  →  0 … 255  (rounded √)
+static L_TO_S: Lazy<[u8; 65_026]> = Lazy::new(|| {
+    let mut t = [0u8; 65_026];
+    for (i, v) in t.iter_mut().enumerate() {
+        *v = ((i as f32).sqrt() + 0.5) as u8;
+    }
+    t
+});
+
+/// 0 … 255  →  0 … 65 025  (square) – still fine as a genuine `const`
+const S_TO_L: [u16; 256] = {
+    let mut t = [0u16; 256];
+    let mut i = 0;
+    while i < 256 {
+        t[i] = (i * i) as u16;
+        i += 1;
+    }
+    t
+};
+
+pub fn average_images(mut images: Vec<Image>) -> Image {
+    use std::num::NonZeroUsize;
+
+    assert!(!images.is_empty(), "empty slice");
+
+    if images.len() == 1 {
+        return images.pop().unwrap();
     }
 
-    // Gamma value for sRGB
-    let gamma: f32 = 2.2;
+    let w = images[0].width  as usize;
+    let h = images[0].height as usize;
+    let px = NonZeroUsize::new(w * h).expect("zero-sized image");
 
-    // Create a buffer to store the sum of linear RGB values
-    let pixel_count = width as usize * height as usize;
-    let mut sum_r = vec![0.0; pixel_count];
-    let mut sum_g = vec![0.0; pixel_count];
-    let mut sum_b = vec![0.0; pixel_count];
+    // ---- Fast dimension check ------------------------------------------------
+    if !images.iter().all(|im| im.width as usize == w && im.height as usize == h) {
+        panic!("all images must have identical dimensions");
+    }
 
-    // Convert each image's RGB values to linear space and sum them
-    for image in &images {
-        for y in 0..height as usize {
-            for x in 0..width as usize {
-                let pixel_idx = y * width as usize + x;
-                let byte_idx = pixel_idx * 4;
+    // ---- Accumulators (u32 → cannot overflow: 65 025 * N_images < 4 G) -------
+    let mut sum_r = vec![0u32; px.get()];
+    let mut sum_g = vec![0u32; px.get()];
+    let mut sum_b = vec![0u32; px.get()];
 
-                if byte_idx + 2 < image.bytes.len() {
-                    // Convert sRGB values to linear space
-                    let r = (image.bytes[byte_idx] as f32 / 255.0).powf(gamma);
-                    let g = (image.bytes[byte_idx + 1] as f32 / 255.0).powf(gamma);
-                    let b = (image.bytes[byte_idx + 2] as f32 / 255.0).powf(gamma);
-
-                    sum_r[pixel_idx] += r;
-                    sum_g[pixel_idx] += g;
-                    sum_b[pixel_idx] += b;
-                }
-            }
+    // ---- Hot loop ------------------------------------------------------------
+    for img in &images {
+        for (idx, px_rgba) in img.bytes.chunks_exact(4).enumerate() {
+            // Unsafe unchecked table read is another ~5 % but keep it safe for now
+            sum_r[idx] += S_TO_L[px_rgba[0] as usize] as u32;
+            sum_g[idx] += S_TO_L[px_rgba[1] as usize] as u32;
+            sum_b[idx] += S_TO_L[px_rgba[2] as usize] as u32;
         }
     }
 
-    // Calculate the average and convert back to sRGB space
-    let img_count = images.len() as f32;
-    let mut result_bytes = Vec::with_capacity(pixel_count * 4);
+    let n = images.len() as u32;
 
-    for pixel_idx in 0..pixel_count {
-        // Average in linear space
-        let avg_r = sum_r[pixel_idx] / img_count;
-        let avg_g = sum_g[pixel_idx] / img_count;
-        let avg_b = sum_b[pixel_idx] / img_count;
+    // ---- Produce output ------------------------------------------------------
+    let mut out = vec![0u8; px.get() * 4];
 
-        // Convert back to sRGB space
-        let r = (avg_r.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
-        let g = (avg_g.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
-        let b = (avg_b.powf(1.0 / gamma) * 255.0).round().min(255.0) as u8;
+    out.chunks_exact_mut(4)
+        .enumerate()
+        .for_each(|(idx, dst)| {
+            // integer average in linear space
+            let lr = (sum_r[idx] / n) as usize;
+            let lg = (sum_g[idx] / n) as usize;
+            let lb = (sum_b[idx] / n) as usize;
 
-        // Add RGBA values (A is always 255)
-        result_bytes.push(r);
-        result_bytes.push(g);
-        result_bytes.push(b);
-        result_bytes.push(255);
-    }
+            dst[0] = L_TO_S[lr];  // back to sRGB (γ=2 ⇒ √)
+            dst[1] = L_TO_S[lg];
+            dst[2] = L_TO_S[lb];
+            dst[3] = 255;         // opaque
+        });
 
-    Image {
-        bytes: result_bytes,
-        width,
-        height,
-    }
+    Image { bytes: out, width: w as u16, height: h as u16 }
 }
 
 struct SceneRenderer {
@@ -1210,9 +1223,19 @@ impl SceneRenderer {
             "v2.spiral.4",
             "v2.spiral.5",
             "v2.spiral.6",
+            "v2.spiral.7",
+            "v2.spiral.9",
         ].contains(&animation_name) {
             let id = self.scene.uniforms.find_id("subspace_degree")?;
-            *self.scene.uniforms.get_original_mut(id).unwrap() = AnyUniform::Int(ClampedValue::new(100));
+            *self.scene.uniforms.get_original_mut(id).unwrap() = AnyUniform::Int(ClampedValue::new(500));
+        }
+        if [
+            "v2.spiral.4",
+            "v2.spiral.5",
+            "v2.spiral.6",
+        ].contains(&animation_name) {
+            let id = self.scene.uniforms.find_id("subspace_degree")?;
+            *self.scene.uniforms.get_original_mut(id).unwrap() = AnyUniform::Int(ClampedValue::new(1000));
         }
         if [
             // cone
@@ -1222,7 +1245,7 @@ impl SceneRenderer {
             "v2.screenshot.5",
             "v2.screenshot.6",
         ].contains(&animation_name) {
-            self.render_depth = 1000;
+            self.render_depth = 100;
         }
         if [
             // plus_ultra
@@ -1230,6 +1253,9 @@ impl SceneRenderer {
         ].contains(&animation_name) {
             self.current_fps = 600;
         }
+        // if self.scene_name == "inverted_surface" {
+        //     self.offset_after_material = 0.00015;
+        // }
         Some(())
     }
 
@@ -1248,7 +1274,15 @@ impl SceneRenderer {
         memory: &mut egui::Memory,
         width: u32,
         height: u32,
+        skip_existing: bool,
     ) {
+        if matches!(std::fs::exists(&format!("video/{}.mp4", output_name)), Ok(true)) {
+            if skip_existing {
+                println!("Skip `{output_name}`, because it's already exists");
+                return;
+            }
+        }
+
         drop(std::fs::create_dir("anim"));
         let count = ((duration_seconds * fps as f32) as usize).max(1);
         let exposure = 0.5; // number from 0 to 1
@@ -1277,7 +1311,7 @@ impl SceneRenderer {
 
                 images.push(self.render_target.texture.get_texture_data());
             }
-            let result = average_images(images);
+            let result = std::hint::black_box(average_images(images));
 
             result.export_png(&format!("anim/frame_{i}.png"));
 
@@ -1326,7 +1360,7 @@ impl SceneRenderer {
         println!("ffmpeg status: {}", command.status);
     }
 
-    fn render_all_animations(&mut self, fps: usize, motion_blur_frames: usize) {
+    fn render_all_animations(&mut self, fps: usize, motion_blur_frames: usize, skip_existing: bool) {
         let mut memory = egui::Memory::default();
 
         drop(std::fs::create_dir("video"));
@@ -1358,6 +1392,7 @@ impl SceneRenderer {
                 &mut memory,
                 self.width,
                 self.height,
+                skip_existing,
             );
         }
     }
@@ -1922,55 +1957,57 @@ async fn render() {
     // let (width, height) = (854, 480);
 
     // render all scenes as a pictures
+    /*
     let (width, height) = (4000, 2000);
     for scene_name in Scenes::default().get_all_scenes_links() {
-        if scene_name != "white_room" {
+        if scene_name != "room" {
             continue;
         }
         println!("Rendering scene {scene_name}");
-
         let scene_content = Scenes::default().get_by_link(&scene_name).unwrap().0;
         let scene = ron::from_str(scene_content).unwrap();
         let mut renderer = SceneRenderer::new(scene, width, height, &scene_name).await;
-
         renderer.cam.use_360_camera = true;
-        renderer.aa_count = 16;
-
+        renderer.aa_count = 256;
+        renderer.cam.r = 0.;
         renderer.draw_texture(width as f32, height as f32, true);
         renderer.render_target.texture.get_texture_data().export_png(&format!("anim/{scene_name}.png"));
     }
     return;
+    */
 
     for scene_name in [
-        // "portal_in_portal",
-        // "half_spheres",
-        // "portal_in_portal_1x_attempt",
-        // "plus_ultra",
-        // "inverted_surface",
-        // "portal_in_portal_cone",
-        // "spherical_geometry",
+        "inverted_surface",
+        "portal_in_portal_cone",
+        "spherical_geometry",
         "teleportation_degrees",
+        "portal_in_portal",
+        "half_spheres",
+        "portal_in_portal_1x_attempt",
+        "plus_ultra",
     ] {
         println!("Rendering scene {scene_name}");
 
         let fps = 60;
         let motion_blur_frames = 1;
+        let skip_existing = true;
 
         let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
         let scene = ron::from_str(scene_content).unwrap();
         let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
-        renderer.aa_count = 1;
+        renderer.aa_count = 4;
         renderer.render_depth = 50;
 
         if true {
         // if false {
-            renderer.render_all_animations(fps, motion_blur_frames);
+            renderer.render_all_animations(fps, motion_blur_frames, skip_existing);
         }
 
         // if true {
         if false {
             for animation_stage in [
-                "v2.rod.1",
+                "v2.screenshot.0",
+                // "v2.screenshot.8",
             ] {
                 drop(std::fs::create_dir("video"));
                 drop(std::fs::create_dir(format!(
@@ -1990,6 +2027,7 @@ async fn render() {
                     &mut memory,
                     width,
                     height,
+                    false,
                 );
             }
         }
