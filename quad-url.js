@@ -60,7 +60,6 @@ params_register_js_plugin = function (importObject) {
         let value = get_js_object(value_rs);
         let params = new URLSearchParams(window.location.search);
         params.set(name, value);
-        // todo убрать вопрос если пусто
         set_url(params.toString(), null);
     }
     importObject.env.quad_url_delete_program_parameter = function (name_rs) {
@@ -81,5 +80,5 @@ miniquad_add_plugin({
     register_plugin: params_register_js_plugin,
     on_init: params_set_mem,
     name: "quad_url",
-    version: "0.1.1"
+    version: 65538
 });

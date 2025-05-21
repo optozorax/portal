@@ -8,20 +8,92 @@
 
 "use strict";
 
-const version = "0.4.0";
+const version = 2;
 
 const canvas = document.querySelector("#glcanvas");
-const gl = canvas.getContext("webgl");
-if (gl === null) {
-    alert("Unable to initialize WebGL. Your browser or machine may not support it.");
-}
+var gl;
 
 var clipboard = null;
 
 var plugins = [];
 var wasm_memory;
+var animation_frame_timeout;
 
 var high_dpi = false;
+// if true, requestAnimationFrame will only be called from "schedule_update"
+// if false, requestAnimationFrame will be called at the end of each frame
+var blocking_event_loop = false;
+
+function init_webgl(version) {
+    if (version == 1) {
+        gl = canvas.getContext("webgl2");
+
+        function acquireVertexArrayObjectExtension(ctx) {
+            // Extension available in WebGL 1 from Firefox 25 and WebKit 536.28/desktop Safari 6.0.3 onwards. Core feature in WebGL 2.
+            var ext = ctx.getExtension('OES_vertex_array_object');
+            if (ext) {
+                ctx['createVertexArray'] = function () { return ext['createVertexArrayOES'](); };
+                ctx['deleteVertexArray'] = function (vao) { ext['deleteVertexArrayOES'](vao); };
+                ctx['bindVertexArray'] = function (vao) { ext['bindVertexArrayOES'](vao); };
+                ctx['isVertexArray'] = function (vao) { return ext['isVertexArrayOES'](vao); };
+            }
+            else {
+                // alert("Unable to get OES_vertex_array_object exbtension");
+            }
+        }
+
+
+        function acquireInstancedArraysExtension(ctx) {
+            // Extension available in WebGL 1 from Firefox 26 and Google Chrome 30 onwards. Core feature in WebGL 2.
+            var ext = ctx.getExtension('ANGLE_instanced_arrays');
+            if (ext) {
+                ctx['vertexAttribDivisor'] = function (index, divisor) { ext['vertexAttribDivisorANGLE'](index, divisor); };
+                ctx['drawArraysInstanced'] = function (mode, first, count, primcount) { ext['drawArraysInstancedANGLE'](mode, first, count, primcount); };
+                ctx['drawElementsInstanced'] = function (mode, count, type, indices, primcount) { ext['drawElementsInstancedANGLE'](mode, count, type, indices, primcount); };
+            }
+        }
+
+        function acquireDisjointTimerQueryExtension(ctx) {
+            var ext = ctx.getExtension('EXT_disjoint_timer_query');
+            if (ext) {
+                ctx['createQuery'] = function () { return ext['createQueryEXT'](); };
+                ctx['beginQuery'] = function (target, query) { return ext['beginQueryEXT'](target, query); };
+                ctx['endQuery'] = function (target) { return ext['endQueryEXT'](target); };
+                ctx['deleteQuery'] = function (query) { ext['deleteQueryEXT'](query); };
+                ctx['getQueryObject'] = function (query, pname) { return ext['getQueryObjectEXT'](query, pname); };
+            }
+        }
+
+        function acquireDrawBuffers(ctx) {
+            var ext = ctx.getExtension('WEBGL_draw_buffers');
+            if (ext) {
+                ctx['drawBuffers'] = function (bufs) { return ext['drawBuffersWEBGL'](bufs); };
+            }
+        }
+
+        try {
+            gl.getExtension("EXT_shader_texture_lod");
+            gl.getExtension("OES_standard_derivatives");
+        } catch (e) {
+            console.warn(e);
+        }
+
+        acquireVertexArrayObjectExtension(gl);
+        acquireInstancedArraysExtension(gl);
+        acquireDisjointTimerQueryExtension(gl);
+        acquireDrawBuffers(gl);
+
+        // https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_depth_texture
+        if (gl.getExtension('WEBGL_depth_texture') == null) {
+            // alert("Cant initialize WEBGL_depth_texture extension");
+        }
+    } else {
+        gl = canvas.getContext("webgl2");
+    }
+    if (gl === null) {
+        alert("Unable to initialize WebGL. Your browser or machine may not support it.");
+    }
+}
 
 canvas.focus();
 
@@ -29,68 +101,16 @@ canvas.requestPointerLock = canvas.requestPointerLock ||
     canvas.mozRequestPointerLock ||
     // pointer lock in any form is not supported on iOS safari 
     // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API#browser_compatibility
-    (function () {});
+    (function () { });
 document.exitPointerLock = document.exitPointerLock ||
     document.mozExitPointerLock ||
     // pointer lock in any form is not supported on iOS safari
-    (function () {});
+    (function () { });
 
 function assert(flag, message) {
     if (flag == false) {
         alert(message)
     }
-}
-
-function acquireVertexArrayObjectExtension(ctx) {
-    // Extension available in WebGL 1 from Firefox 25 and WebKit 536.28/desktop Safari 6.0.3 onwards. Core feature in WebGL 2.
-    var ext = ctx.getExtension('OES_vertex_array_object');
-    if (ext) {
-        ctx['createVertexArray'] = function () { return ext['createVertexArrayOES'](); };
-        ctx['deleteVertexArray'] = function (vao) { ext['deleteVertexArrayOES'](vao); };
-        ctx['bindVertexArray'] = function (vao) { ext['bindVertexArrayOES'](vao); };
-        ctx['isVertexArray'] = function (vao) { return ext['isVertexArrayOES'](vao); };
-    }
-    else {
-        alert("Unable to get OES_vertex_array_object extension");
-    }
-}
-
-
-function acquireInstancedArraysExtension(ctx) {
-    // Extension available in WebGL 1 from Firefox 26 and Google Chrome 30 onwards. Core feature in WebGL 2.
-    var ext = ctx.getExtension('ANGLE_instanced_arrays');
-    if (ext) {
-        ctx['vertexAttribDivisor'] = function (index, divisor) { ext['vertexAttribDivisorANGLE'](index, divisor); };
-        ctx['drawArraysInstanced'] = function (mode, first, count, primcount) { ext['drawArraysInstancedANGLE'](mode, first, count, primcount); };
-        ctx['drawElementsInstanced'] = function (mode, count, type, indices, primcount) { ext['drawElementsInstancedANGLE'](mode, count, type, indices, primcount); };
-    }
-}
-
-function acquireDisjointTimerQueryExtension(ctx) {
-    var ext = ctx.getExtension('EXT_disjoint_timer_query');
-    if (ext) {
-        ctx['createQuery'] = function () { return ext['createQueryEXT'](); };
-        ctx['beginQuery'] = function (target, query) { return ext['beginQueryEXT'](target, query); };
-        ctx['endQuery'] = function (target) { return ext['endQueryEXT'](target); };
-        ctx['deleteQuery'] = function (query) { ext['deleteQueryEXT'](query); };
-        ctx['getQueryObject'] = function (query, pname) { return ext['getQueryObjectEXT'](query, pname); };
-    }
-}
-
-try {
-    gl.getExtension("EXT_shader_texture_lod");
-    gl.getExtension("OES_standard_derivatives");
-} catch (e) {
-    console.warn(e);
-}
-
-acquireVertexArrayObjectExtension(gl);
-acquireInstancedArraysExtension(gl);
-acquireDisjointTimerQueryExtension(gl);
-
-// https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_depth_texture
-if (gl.getExtension('WEBGL_depth_texture') == null) {
-    alert("Cant initialize WEBGL_depth_texture extension");
 }
 
 function getArray(ptr, arr, n) {
@@ -416,7 +436,12 @@ function resize(canvas, on_resize) {
 
 function animation() {
     wasm_exports.frame();
-    window.requestAnimationFrame(animation);
+    if (!window.blocking_event_loop) {
+        if (animation_frame_timeout) {
+            window.cancelAnimationFrame(animation_frame_timeout);
+        }
+        animation_frame_timeout = window.requestAnimationFrame(animation);
+    }
 }
 
 const SAPP_EVENTTYPE_TOUCHES_BEGAN = 10;
@@ -562,7 +587,7 @@ function into_sapp_keycode(key_code) {
     console.log("Unsupported keyboard key: ", key_code)
 }
 
-function dpi_scale()  {
+function dpi_scale() {
     if (high_dpi) {
         return window.devicePixelRatio || 1.0;
     } else {
@@ -669,7 +694,7 @@ var importObject = {
             gl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, type,
                 pixels ? getArray(pixels, Uint8Array, texture_size(format, width, height)) : null);
         },
-        glReadPixels: function(x, y, width, height, format, type, pixels) {
+        glReadPixels: function (x, y, width, height, format, type, pixels) {
             var pixelData = getArray(pixels, Uint8Array, texture_size(format, width, height));
             gl.readPixels(x, y, width, height, format, type, pixelData);
         },
@@ -759,6 +784,9 @@ var importObject = {
         glVertexAttribPointer: function (index, size, type, normalized, stride, ptr) {
             gl.vertexAttribPointer(index, size, type, !!normalized, stride, ptr);
         },
+        glVertexAttribIPointer: function (index, size, type, stride, ptr) {
+            gl.vertexAttribIPointer(index, size, type, stride, ptr);
+        },
         glGetUniformLocation: function (program, name) {
             GL.validateGLObjectID(GL.programs, program, 'glGetUniformLocation', 'program');
             name = UTF8ToString(name);
@@ -793,6 +821,9 @@ var importObject = {
         glGenFramebuffers: function (n, ids) {
             _glGenObject(n, ids, 'createFramebuffer', GL.framebuffers, 'glGenFramebuffers');
         },
+        glGenRenderbuffers: function (n, ids) {
+            _glGenObject(n, ids, 'createRenderbuffer', GL.renderbuffers, 'glGenRenderbuffers');
+        },
         glBindVertexArray: function (vao) {
             gl.bindVertexArray(GL.vaos[vao]);
         },
@@ -801,7 +832,11 @@ var importObject = {
 
             gl.bindFramebuffer(target, GL.framebuffers[framebuffer]);
         },
+        glBindRenderbuffer: function (target, renderbuffer) {
+            GL.validateGLObjectID(GL.renderbuffers, renderbuffer, 'glBindRenderbuffer', 'renderbuffer');
 
+            gl.bindRenderbuffer(target, GL.renderbuffers[renderbuffer]);
+        },
         glGenBuffers: function (n, buffers) {
             _glGenObject(n, buffers, 'createBuffer', GL.buffers, 'glGenBuffers');
         },
@@ -836,6 +871,9 @@ var importObject = {
         glDrawArrays: function (mode, first, count) {
             gl.drawArrays(mode, first, count);
         },
+        glDrawBuffers: function (n, bufs) {
+            gl.drawBuffers(getArray(bufs, Int32Array, n));
+        },
         glCreateProgram: function () {
             var id = GL.getNewId(GL.programs);
             var program = gl.createProgram();
@@ -847,6 +885,11 @@ var importObject = {
             GL.validateGLObjectID(GL.programs, program, 'glAttachShader', 'program');
             GL.validateGLObjectID(GL.shaders, shader, 'glAttachShader', 'shader');
             gl.attachShader(GL.programs[program], GL.shaders[shader]);
+        },
+        glDetachShader: function (program, shader) {
+            GL.validateGLObjectID(GL.programs, program, 'glDetachShader', 'program');
+            GL.validateGLObjectID(GL.shaders, shader, 'glDetachShader', 'shader');
+            gl.detachShader(GL.programs[program], GL.shaders[shader]);
         },
         glLinkProgram: function (program) {
             GL.validateGLObjectID(GL.programs, program, 'glLinkProgram', 'program');
@@ -959,7 +1002,7 @@ var importObject = {
                 array[i] = log.charCodeAt(i);
             }
         },
-        glGetString: function(id) {
+        glGetString: function (id) {
             // getParameter returns "any": it could be GLenum, String or whatever,
             // depending on the id.
             var parameter = gl.getParameter(id).toString();
@@ -1009,7 +1052,18 @@ var importObject = {
         glDrawElementsInstanced: function (mode, count, type, indices, primcount) {
             gl.drawElementsInstanced(mode, count, type, indices, primcount);
         },
-        glDeleteShader: function (shader) { gl.deleteShader(shader) },
+        glDeleteShader: function (shader) {
+            var id = GL.shaders[shader];
+            if (id == null) { return }
+            gl.deleteShader(id);
+            GL.shaders[shader] = null
+        },
+        glDeleteProgram: function (program) {
+            var id = GL.programs[program];
+            if (id == null) { return }
+            gl.deleteProgram(id);
+            GL.programs[program] = null
+        },
         glDeleteBuffers: function (n, buffers) {
             for (var i = 0; i < n; i++) {
                 var id = getArray(buffers + i * 4, Uint32Array, 1)[0];
@@ -1036,6 +1090,20 @@ var importObject = {
                 gl.deleteFramebuffer(buffer);
                 buffer.name = 0;
                 GL.framebuffers[id] = null;
+            }
+        },
+        glDeleteRenderbuffers: function (n, renderbuffers) {
+            for (var i = 0; i < n; i++) {
+                var id = getArray(renderbuffers + i * 4, Uint32Array, 1)[0];
+                var buffer = GL.renderbuffers[id];
+
+                // From spec: "glDeleteRenderbuffers silently ignores 0's and names that do not
+                // correspond to existing renderbuffer objects."
+                if (!buffer) continue;
+
+                gl.deleteRenderbuffer(buffer);
+                buffer.name = 0;
+                GL.renderbuffers[id] = null;
             }
         },
         glDeleteTextures: function (n, textures) {
@@ -1080,17 +1148,37 @@ var importObject = {
             let result = gl.getQueryObject(GL.timerQueries[id], pname);
             let heap = getArray(ptr, Uint32Array, 2);
             heap[0] = result;
-            heap[1] = (result - heap[0])/4294967296;
+            heap[1] = (result - heap[0]) / 4294967296;
         },
         glGenerateMipmap: function (index) {
             gl.generateMipmap(index);
         },
+        glRenderbufferStorageMultisample: function(target, samples, internalformat, width, height) {
+            gl.renderbufferStorageMultisample(target, samples, internalformat, width, height);
+        },
+        glFramebufferRenderbuffer: function(target, attachment, renderbuffertarget, renderbuffer) {
+            GL.validateGLObjectID(GL.renderbuffers, renderbuffer, 'glFramebufferRenderbuffer', 'renderbuffer');
+            gl.framebufferRenderbuffer(target, attachment, renderbuffertarget, GL.renderbuffers[renderbuffer]);
+        },
+        glCheckFramebufferStatus: function(target) {
+            return gl.checkFramebufferStatus(target);
+        },
+        glReadBuffer: function(source) {
+            gl.readBuffer(source)
+        },
+        glBlitFramebuffer: function(srcX0, srcY0, srcX1, srcY1,
+                                    dstX0, dstY0, dstX1, dstY1,
+                                    mask, filter) {
+            gl.blitFramebuffer(srcX0, srcY0, srcX1, srcY1,
+                               dstX0, dstY0, dstX1, dstY1,
+                               mask, filter);
+        },
 
-        setup_canvas_size: function(high_dpi) {
+        setup_canvas_size: function (high_dpi) {
             window.high_dpi = high_dpi;
             resize(canvas);
         },
-        run_animation_loop: function (ptr) {
+        run_animation_loop: function (blocking) {
             canvas.onmousemove = function (event) {
                 var relative_position = mouse_relative_position(event.clientX, event.clientY);
                 var x = relative_position.x;
@@ -1223,20 +1311,20 @@ var importObject = {
             window.onresize = function () {
                 resize(canvas, wasm_exports.resize);
             };
-            window.addEventListener("copy", function(event) {
+            window.addEventListener("copy", function (e) {
                 if (clipboard != null) {
                     event.clipboardData.setData('text/plain', clipboard);
                     event.preventDefault();
                 }
             });
-            window.addEventListener("cut", function(e) {
+            window.addEventListener("cut", function (e) {
                 if (clipboard != null) {
                     event.clipboardData.setData('text/plain', clipboard);
                     event.preventDefault();
                 }
             });
 
-            window.addEventListener("paste", function(e) {
+            window.addEventListener("paste", function (e) {
                 e.stopPropagation();
                 e.preventDefault();
                 var clipboardData = e.clipboardData || window.clipboardData;
@@ -1251,11 +1339,11 @@ var importObject = {
                 }
             });
 
-            window.ondragover = function(e) {
+            window.ondragover = function (e) {
                 e.preventDefault();
             };
 
-            window.ondrop = async function(e) {
+            window.ondrop = async function (e) {
                 e.preventDefault();
 
                 wasm_exports.on_files_dropped_start();
@@ -1279,9 +1367,9 @@ var importObject = {
             };
 
             let lastFocus = document.hasFocus();
-            var checkFocus = function() {
+            var checkFocus = function () {
                 let hasFocus = document.hasFocus();
-                if(lastFocus == hasFocus){
+                if (lastFocus == hasFocus) {
                     wasm_exports.focus(hasFocus);
                     lastFocus = hasFocus;
                 }
@@ -1290,6 +1378,7 @@ var importObject = {
             window.addEventListener("focus", checkFocus);
             window.addEventListener("blur", checkFocus);
 
+            window.blocking_event_loop = blocking;
             window.requestAnimationFrame(animation);
         },
 
@@ -1299,22 +1388,22 @@ var importObject = {
             FS.unique_id += 1;
             var xhr = new XMLHttpRequest();
             xhr.open('GET', url, true);
-            xhr.responseType = 'arraybuffer'; 
+            xhr.responseType = 'arraybuffer';
 
-            xhr.onreadystatechange = function() {
-            // looks like readyState === 4 will be fired on either successful or unsuccessful load:
-        // https://stackoverflow.com/a/19247992
+            xhr.onreadystatechange = function () {
+                // looks like readyState === 4 will be fired on either successful or unsuccessful load:
+                // https://stackoverflow.com/a/19247992
                 if (this.readyState === 4) {
-                    if(this.status === 200) {  
+                    if (this.status === 200) {
                         var uInt8Array = new Uint8Array(this.response);
-    
+
                         FS.loaded_files[file_id] = uInt8Array;
                         wasm_exports.file_loaded(file_id);
                     } else {
                         FS.loaded_files[file_id] = null;
                         wasm_exports.file_loaded(file_id);
                     }
-                } 
+                }
             };
             xhr.send();
 
@@ -1344,26 +1433,33 @@ var importObject = {
                 document.exitPointerLock();
             }
         },
-        sapp_set_cursor: function(ptr, len) {
+        sapp_set_cursor: function (ptr, len) {
             canvas.style.cursor = UTF8ToString(ptr, len);
         },
-        sapp_is_fullscreen: function() {
+        sapp_is_fullscreen: function () {
             let fullscreenElement = document.fullscreenElement;
 
             return fullscreenElement != null && fullscreenElement.id == canvas.id;
         },
-        sapp_set_fullscreen: function(fullscreen) {
+        sapp_set_fullscreen: function (fullscreen) {
             if (!fullscreen) {
                 document.exitFullscreen();
             } else {
                 canvas.requestFullscreen();
             }
         },
-        sapp_set_window_size: function(new_width, new_height) {
+        sapp_set_window_size: function (new_width, new_height) {
             canvas.width = new_width;
             canvas.height = new_height;
             resize(canvas, wasm_exports.resize);
-        }
+        },
+        sapp_schedule_update: function () {
+            if (animation_frame_timeout) {
+                window.cancelAnimationFrame(animation_frame_timeout);
+            }
+            animation_frame_timeout = window.requestAnimationFrame(animation);
+        },
+        init_webgl
     }
 };
 
@@ -1377,14 +1473,6 @@ function register_plugins(plugins) {
             plugins[i].register_plugin(importObject);
         }
     }
-}
-
-function u32_to_semver(crate_version) {
-    let major_version = (crate_version >> 24) & 0xff;
-    let minor_version = (crate_version >> 16) & 0xff;
-    let patch_version = crate_version & 0xffff;
-
-    return major_version + "." + minor_version + "." + patch_version;
 }
 
 function init_plugins(plugins) {
@@ -1405,15 +1493,15 @@ function init_plugins(plugins) {
             if (wasm_exports[version_func] == undefined) {
                 console.log("Plugin " + plugins[i].name + " is present in JS bundle, but is not used in the rust code.");
             } else {
-                var crate_version = u32_to_semver(wasm_exports[version_func]());
+                var crate_version = wasm_exports[version_func]();
 
                 if (plugins[i].version != crate_version) {
                     console.error("Plugin " + plugins[i].name + " version mismatch" +
-                                  "js version: " + plugins[i].version + ", crate version: " + crate_version)
+                        "js version: " + plugins[i].version + ", crate version: " + crate_version)
                 }
             }
         }
-     }
+    }
 }
 
 
@@ -1430,7 +1518,7 @@ function add_missing_functions_stabs(obj) {
     for (const i in imports) {
         if (importObject["env"][imports[i].name] == undefined) {
             console.warn("No " + imports[i].name + " function in gl.js");
-            importObject["env"][imports[i].name] = function() {
+            importObject["env"][imports[i].name] = function () {
                 console.warn("Missed function: " + imports[i].name);
             };
         }
@@ -1453,17 +1541,16 @@ function load(wasm_path) {
                     wasm_memory = obj.exports.memory;
                     wasm_exports = obj.exports;
 
-                    var crate_version = u32_to_semver(wasm_exports.crate_version());
+                    var crate_version = wasm_exports.crate_version();
                     if (version != crate_version) {
                         console.error(
                             "Version mismatch: gl.js version is: " + version +
-                                ", miniquad crate version is: " + crate_version);
+                            ", miniquad crate version is: " + crate_version);
                     }
                     init_plugins(plugins);
                     obj.exports.main();
                 })
             .catch(err => {
-                console.error("WASM failed to load, probably incompatible gl.js version");
                 console.error(err);
             })
     } else {
@@ -1478,11 +1565,11 @@ function load(wasm_path) {
                 wasm_memory = obj.exports.memory;
                 wasm_exports = obj.exports;
 
-                var crate_version = u32_to_semver(wasm_exports.crate_version());
+                var crate_version = wasm_exports.crate_version();
                 if (version != crate_version) {
                     console.error(
                         "Version mismatch: gl.js version is: " + version +
-                            ", rust sapp-wasm crate version is: " + crate_version);
+                        ", rust sapp-wasm crate version is: " + crate_version);
                 }
                 init_plugins(plugins);
                 obj.exports.main();

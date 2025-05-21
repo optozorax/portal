@@ -115,7 +115,7 @@ function register_plugin(importObject) {
         return js_objects[js_object][field_name];
     }
 }
-miniquad_add_plugin({ register_plugin, version: "0.1.5", name: "sapp_jsutils" });
+miniquad_add_plugin({ register_plugin, version: 1, name: "sapp_jsutils" });
 
 // Its like https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder, 
 // but works on more browsers
@@ -182,5 +182,3 @@ function consume_js_object(id) {
 function get_js_object(id) {
     return js_objects[id];
 }
-
-
