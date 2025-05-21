@@ -478,7 +478,7 @@ impl RotateAroundCam {
                 ui.add(
                     DragValue::new(&mut current)
                         .speed(1.0)
-                        .clamp_range(rad2deg(Self::BETA_MIN)..=rad2deg(Self::BETA_MAX))
+                        .range(rad2deg(Self::BETA_MIN)..=rad2deg(Self::BETA_MAX))
                         .suffix("°")
                         .min_decimals(0)
                         .max_decimals(1),
@@ -491,7 +491,7 @@ impl RotateAroundCam {
                 ui.add(
                     DragValue::new(r)
                         .speed(0.01)
-                        .clamp_range(0.01..=1000.0)
+                        .range(0.01..=1000.0)
                         .min_decimals(0)
                         .max_decimals(2),
                 );
@@ -535,7 +535,7 @@ impl RotateAroundCam {
                 egui::Slider::new(&mut current, if is_use { 2.0..=250.0 } else { 2.0..=140.0 })
                     .text("View angle")
                     .suffix("°")
-                    .clamp_to_range(true),
+                    .clamping(egui::widgets::SliderClamping::Always),
             );
             *m = deg2rad(current);
         });
@@ -672,6 +672,7 @@ struct SceneRenderer {
     scene_name: String,
     current_fps: usize, 
     current_motion_blur_frames: usize,
+    texture_storage: Vec<Texture2D>,
 }
 
 impl SceneRenderer {
@@ -738,8 +739,8 @@ impl SceneRenderer {
                                 "#,
                     },
                     macroquad::prelude::MaterialParams {
-                        uniforms: vec![(
-                            "Center".to_owned(),
+                        uniforms: vec![macroquad::prelude::UniformDesc::new(
+                            "Center",
                             macroquad::prelude::UniformType::Float2,
                         )],
                         textures: scene.textures(),
@@ -777,6 +778,7 @@ impl SceneRenderer {
             scene_name: scene_name.to_owned(),
             current_fps: 60,
             current_motion_blur_frames: 1,
+            texture_storage: vec![],
         };
 
         result
@@ -793,6 +795,7 @@ impl SceneRenderer {
 
     async fn reload_textures(&mut self) {
         if self.data.reload_textures {
+            self.texture_storage.clear();
             self.data.reload_textures = false;
             self.data.texture_errors.0.clear();
             for (id, name) in self.scene.textures.visible_elements() {
@@ -801,7 +804,9 @@ impl SceneRenderer {
                     Ok(bytes) => {
                         let texture = Texture2D::from_file_with_format(&bytes[..], None);
 
-                        self.material.set_texture(&TextureName::name(name), texture);
+                        self.material.set_texture(&TextureName::name(name), texture.clone());
+
+                        self.texture_storage.push(texture);
                     }
                     Err(file) => {
                         self.data.texture_errors.0.insert(name.to_string(), file);
@@ -1168,7 +1173,7 @@ impl SceneRenderer {
             ui.add(
                 egui::Slider::new(offset, MIN..=MAX)
                     .logarithmic(true)
-                    .clamp_to_range(true)
+                    .clamping(egui::widgets::SliderClamping::Always)
                     .largest_finite(MAX)
                     .smallest_positive(MIN),
             );
@@ -1177,7 +1182,7 @@ impl SceneRenderer {
         ui.separator();
         ui.label("Render depth:");
         changed.uniform |= check_changed(&mut self.render_depth, |depth| {
-            ui.add(egui::Slider::new(depth, 0..=1000).clamp_to_range(true));
+            ui.add(egui::Slider::new(depth, 0..=1000).clamping(egui::widgets::SliderClamping::Always));
         });
         ui.label("(Max count of ray bounce after portal, reflect, refract)");
         ui.separator();
@@ -1198,7 +1203,7 @@ impl SceneRenderer {
         ui.separator();
         ui.label("Antialiasing count:");
         changed.uniform |= check_changed(&mut self.aa_count, |count| {
-            ui.add(egui::Slider::new(count, 1..=16).clamp_to_range(true));
+            ui.add(egui::Slider::new(count, 1..=16).clamping(egui::widgets::SliderClamping::Always));
         });
         ui.separator();
         ui.label("Disable small black border:");
@@ -1617,17 +1622,17 @@ impl Window {
                     .default_width(700.)
                     .show(ctx, |ui| {
                         egui::CollapsingHeader::new("code")
-                            .id_source(0)
+                            .id_salt(0)
                             .show(ui, |ui| {
                                 ui.monospace(add_line_numbers(code));
                             });
                         egui::CollapsingHeader::new("message")
-                            .id_source(1)
+                            .id_salt(1)
                             .show(ui, |ui| {
                                 ui.monospace(message);
                             });
                         egui::CollapsingHeader::new("message to copy")
-                            .id_source(2)
+                            .id_salt(2)
                             .show(ui, |ui| {
                                 let mut clone = message.clone();
                                 ui.add(
@@ -1817,7 +1822,7 @@ First, predefined library is included, then uniforms, then user library, then in
                     ui.separator();
                     ui.label("Lower rendering resolution ratio (can significantly increase FPS):");
                     changed.uniform |= check_changed(&mut self.render_scale, |scale| {
-                        ui.add(egui::Slider::new(scale, 0.01..=1.0).clamp_to_range(true));
+                        ui.add(egui::Slider::new(scale, 0.01..=1.0).clamping(egui::widgets::SliderClamping::Always));
                     });
                     ui.label("(Render scale can be changed using four fingers, add one finger at a time to prevent triggering system four-finger gestures)");
                     ui.separator();

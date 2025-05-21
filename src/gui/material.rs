@@ -105,7 +105,7 @@ impl StorageElem2 for Material {
                             ui.add(
                                 DragValue::new(normal_coef)
                                     .speed(0.01)
-                                    .clamp_range(0.0..=1.0)
+                                    .range(0.0..=1.0)
                                     .min_decimals(0)
                                     .max_decimals(2),
                             ),
@@ -115,6 +115,7 @@ impl StorageElem2 for Material {
                 ui.horizontal(|ui| {
                     changed |=
                         check_changed(grid, |grid| drop(ui.add(Checkbox::new(grid, "Grid"))));
+                    #[allow(deprecated)]
                     ui.set_enabled(*grid);
                     ui.separator();
                     ui.label("Grid scale");
@@ -123,7 +124,7 @@ impl StorageElem2 for Material {
                             ui.add(
                                 DragValue::new(grid_scale)
                                     .speed(0.01)
-                                    .clamp_range(0.0..=1000.0)
+                                    .range(0.0..=1000.0)
                                     .min_decimals(0)
                                     .max_decimals(2),
                             ),
@@ -136,7 +137,7 @@ impl StorageElem2 for Material {
                             ui.add(
                                 DragValue::new(grid_coef)
                                     .speed(0.01)
-                                    .clamp_range(0.0..=1.0)
+                                    .range(0.0..=1.0)
                                     .min_decimals(0)
                                     .max_decimals(2),
                             ),
@@ -171,7 +172,7 @@ impl StorageElem2 for Material {
                             ui.add(
                                 DragValue::new(r)
                                     .speed(0.01)
-                                    .clamp_range(0.0..=10.0)
+                                    .range(0.0..=10.0)
                                     .min_decimals(0)
                                     .max_decimals(2),
                             ),

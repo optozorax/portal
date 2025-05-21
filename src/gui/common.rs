@@ -199,7 +199,7 @@ pub fn egui_0_1(ui: &mut Ui, value: &mut f64) -> bool {
     check_changed(value, |value| {
         ui.add(
             Slider::new(value, 0.0..=1.0)
-                .clamp_to_range(true)
+                .clamping(egui::widgets::SliderClamping::Always)
                 .min_decimals(0)
                 .max_decimals(2),
         );
@@ -211,7 +211,7 @@ pub fn egui_f64_positive(ui: &mut Ui, value: &mut f64) -> bool {
         ui.add(
             DragValue::new(value)
                 .speed(0.01)
-                .clamp_range(0.0..=1000.0)
+                .range(0.0..=1000.0)
                 .min_decimals(0)
                 .max_decimals(2),
         );

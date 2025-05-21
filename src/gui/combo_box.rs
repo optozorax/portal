@@ -49,7 +49,7 @@ pub fn egui_combo_box<T: ComboBoxChoosable>(
 
     ui.horizontal(|ui| {
         egui_label(ui, label, size);
-        egui::ComboBox::from_id_source(data_id)
+        egui::ComboBox::from_id_salt(data_id)
             .selected_text(T::variants()[current_type])
             .show_ui(ui, |ui| {
                 for (pos, name) in T::variants().iter().enumerate() {

@@ -805,7 +805,7 @@ impl<T: egui::emath::Numeric> ClampedValue<T> {
         let ClampedValue { min, max, value } = self;
         if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
             result.uniform |= check_changed(value, |value| {
-                ui.add(Slider::new(value, *min..=*max).clamp_to_range(true));
+                ui.add(Slider::new(value, *min..=*max).clamping(egui::widgets::SliderClamping::Always));
             });
         } else {
             result.uniform |= check_changed(value, |value| {

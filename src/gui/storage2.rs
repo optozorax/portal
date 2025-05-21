@@ -243,7 +243,7 @@ impl<T: StorageElem2> Storage2<T> {
         };
         let mut changed = WhatChanged::default();
         egui::CollapsingHeader::new(header)
-            .id_source(name)
+            .id_salt(name)
             .default_open(false)
             .show(ui, |ui| {
                 changed |= self.egui_inner(ui, input, data_id);
@@ -281,7 +281,7 @@ impl<T: StorageElem2> Storage2<T> {
                 };
 
                 egui::CollapsingHeader::new(header_name)
-                    .id_source(id)
+                    .id_salt(id)
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             egui_label(ui, "Name:", 45.);

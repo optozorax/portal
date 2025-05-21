@@ -264,7 +264,7 @@ impl StorageElem2 for Cam {
                 ui.add(
                     DragValue::new(&mut current)
                         .speed(1.0)
-                        .clamp_range(rad2deg(BETA_MIN)..=rad2deg(BETA_MAX))
+                        .range(rad2deg(BETA_MIN)..=rad2deg(BETA_MAX))
                         .suffix("°")
                         .min_decimals(0)
                         .max_decimals(1),
@@ -277,7 +277,7 @@ impl StorageElem2 for Cam {
                 ui.add(
                     DragValue::new(r)
                         .speed(0.01)
-                        .clamp_range(0.01..=1000.0)
+                        .range(0.01..=1000.0)
                         .min_decimals(0)
                         .max_decimals(2),
                 );

@@ -1,3 +1,4 @@
+use macroquad::prelude::UniformDesc;
 use crate::gui::camera::CalculatedCam;
 use crate::gui::camera::CameraId;
 use crate::gui::camera::CurrentCam;
@@ -360,7 +361,7 @@ impl Scene {
 }
 
 pub trait UniformStruct {
-    fn uniforms(&self) -> Vec<(String, UniformType)>;
+    fn uniforms(&self) -> Vec<macroquad::prelude::UniformDesc>;
     fn set_uniforms(&self, material: &mut macroquad::material::Material);
 }
 
@@ -380,7 +381,7 @@ impl Scene {
         }
     }
 
-    pub fn uniforms(&self, data: &Data) -> Option<Vec<(String, UniformType)>> {
+    pub fn uniforms(&self, data: &Data) -> Option<Vec<macroquad::prelude::UniformDesc>> {
         self.compile_all_formulas(&data.formulas_cache);
 
         let mut result = Vec::new();
@@ -476,6 +477,8 @@ impl Scene {
             ("_external_ray_a".to_owned(), UniformType::Float3),
             ("_external_ray_b".to_owned(), UniformType::Float3),
         ]);
+
+        let result = result.into_iter().map(|x| macroquad::prelude::UniformDesc::new(&x.0, x.1)).collect();
 
         Some(result)
     }
@@ -598,15 +601,15 @@ impl Scene {
 impl Scene {
     pub fn generate_uniforms_declarations(&self, data: &Data) -> Option<StringStorage> {
         let mut result = StringStorage::default();
-        for (name, kind) in self
+        for UniformDesc { name, uniform_type, .. } in self
             .uniforms(data)?
             .into_iter()
-            .filter(|(name, _)| !name.starts_with('_'))
+            .filter(|UniformDesc { name, .. }| !name.starts_with('_'))
         {
             #[allow(unreachable_patterns)]
             result.add_string(format!(
                 "uniform {} {};\n",
-                match kind {
+                match uniform_type {
                     UniformType::Mat4 => "mat4",
                     UniformType::Float1 => "float",
                     UniformType::Int1 => "int",

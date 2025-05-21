@@ -5,41 +5,22 @@ authors = ["ilya sheprut <optozorax@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-macroquad = "0.4.4"
-egui-macroquad = { path = "../../egui-macroquad" } # egui-macroquad 0.16.0
+macroquad = "0.4.14"
+egui-macroquad = "0.17.2"
 glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
 ron = "0.6.4"
-egui = "0.25.0"
+egui = "0.31.1"
 fasteval = "0.2.4"
-quad-url = "0.1.0"
-egui_demo_lib = "0.25.0"
+quad-url = "0.1.2"
+egui_demo_lib = "0.31.0"
 gesture-recognizer = { git = "https://github.com/optozorax/gesture-recognizer" }
 argmin = "0.9.0"
 finitediff = { version = "0.1.4", features = ["ndarray"] }
 ndarray = "0.15.6"
 argmin-math = { version = "0.3", features = ["ndarray_latest-nolinalg-serde"] }
 nalgebra = "0.32.2"
+once_cell = "1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 color-backtrace = "0.5.0"
-
-# [patch.crates-io]
-# miniquad = { path = '/home/zorax/testing/miniquad' }
-
-## cargo clean; cargo build --release; strip target/release/portal; upx --best --lzma target/release/portal; ll target/release
-## result native size is ~1MB
-## cargo build --release --target wasm32-unknown-unknown; wasm-strip target/wasm32-unknown-unknown/release/portal.wasm; ll target/wasm32-unknown-unknown/release/
-## result wasm size is ~3.5MB, so, not recommend to use this for wasm
-# [profile.release]
-# opt-level = 'z'
-# panic = 'abort'
-# lto = true
-
-## cargo build --release; strip target/release/portal; upx --best --lzma target/release/portal; ll target/release
-## result native size is ~3.5MB
-## cargo build --release --target wasm32-unknown-unknown; wasm-strip target/wasm32-unknown-unknown/release/portal.wasm; ll target/wasm32-unknown-unknown/release/
-## result wasm size is ~3.5MB
-# [profile.release]
-# opt-level = 2
-# lto = true
