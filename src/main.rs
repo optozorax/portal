@@ -94,7 +94,7 @@ impl RotateAroundCam {
 
             from: None,
 
-            mouse_sensitivity: 1.4,
+            mouse_sensitivity: 2.0,
             scale_factor: 1.1,
             view_angle: deg2rad(90.),
 
@@ -543,7 +543,7 @@ impl RotateAroundCam {
         ui.separator();
 
         changed |= check_changed(&mut self.mouse_sensitivity, |m| {
-            ui.add(egui::Slider::new(m, 0.0..=3.0).text("Mouse sensivity"));
+            ui.add(egui::Slider::new(m, 0.0..=4.0).text("Mouse sensivity"));
         });
         changed |= check_changed(&mut self.scale_factor, |m| {
             ui.add(egui::Slider::new(m, 1.0..=2.0).text("Wheel R multiplier"));
