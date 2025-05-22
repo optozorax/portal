@@ -247,6 +247,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/sphere_intersection.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Recursive space",
+                        link: "recursive_space",
+                        content: include_str!("../../scenes/recursive_space.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
