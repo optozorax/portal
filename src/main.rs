@@ -1,11 +1,9 @@
-use once_cell::sync::Lazy;
-use portal::gui::uniform::AnyUniform;
-use portal::gui::uniform::ClampedValue;
 use gesture_recognizer::*;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use macroquad::prelude::is_key_down;
 use macroquad::prelude::is_key_pressed;
 use macroquad::prelude::Image;
+use once_cell::sync::Lazy;
 use portal::gui::camera::CalculatedCam;
 use portal::gui::camera::CameraId;
 use portal::gui::camera::CurrentCam;
@@ -13,6 +11,8 @@ use portal::gui::camera::OriginalCam;
 use portal::gui::eng_rus::EngRusSettings;
 use portal::gui::eng_rus::EngRusText;
 use portal::gui::scenes::ShowHiddenScenes;
+use portal::gui::uniform::AnyUniform;
+use portal::gui::uniform::ClampedValue;
 use portal::with_swapped;
 use std::f64::consts::PI;
 
@@ -603,12 +603,15 @@ pub fn average_images(mut images: Vec<Image>) -> Image {
         return images.pop().unwrap();
     }
 
-    let w = images[0].width  as usize;
+    let w = images[0].width as usize;
     let h = images[0].height as usize;
     let px = NonZeroUsize::new(w * h).expect("zero-sized image");
 
     // ---- Fast dimension check ------------------------------------------------
-    if !images.iter().all(|im| im.width as usize == w && im.height as usize == h) {
+    if !images
+        .iter()
+        .all(|im| im.width as usize == w && im.height as usize == h)
+    {
         panic!("all images must have identical dimensions");
     }
 
@@ -632,21 +635,23 @@ pub fn average_images(mut images: Vec<Image>) -> Image {
     // ---- Produce output ------------------------------------------------------
     let mut out = vec![0u8; px.get() * 4];
 
-    out.chunks_exact_mut(4)
-        .enumerate()
-        .for_each(|(idx, dst)| {
-            // integer average in linear space
-            let lr = (sum_r[idx] / n) as usize;
-            let lg = (sum_g[idx] / n) as usize;
-            let lb = (sum_b[idx] / n) as usize;
+    out.chunks_exact_mut(4).enumerate().for_each(|(idx, dst)| {
+        // integer average in linear space
+        let lr = (sum_r[idx] / n) as usize;
+        let lg = (sum_g[idx] / n) as usize;
+        let lb = (sum_b[idx] / n) as usize;
 
-            dst[0] = L_TO_S[lr];  // back to sRGB (γ=2 ⇒ √)
-            dst[1] = L_TO_S[lg];
-            dst[2] = L_TO_S[lb];
-            dst[3] = 255;         // opaque
-        });
+        dst[0] = L_TO_S[lr]; // back to sRGB (γ=2 ⇒ √)
+        dst[1] = L_TO_S[lg];
+        dst[2] = L_TO_S[lb];
+        dst[3] = 255; // opaque
+    });
 
-    Image { bytes: out, width: w as u16, height: h as u16 }
+    Image {
+        bytes: out,
+        width: w as u16,
+        height: h as u16,
+    }
 }
 
 struct SceneRenderer {
@@ -670,7 +675,7 @@ struct SceneRenderer {
     width: u32,
     height: u32,
     scene_name: String,
-    current_fps: usize, 
+    current_fps: usize,
     current_motion_blur_frames: usize,
     texture_storage: Vec<Texture2D>,
 }
@@ -804,7 +809,8 @@ impl SceneRenderer {
                     Ok(bytes) => {
                         let texture = Texture2D::from_file_with_format(&bytes[..], None);
 
-                        self.material.set_texture(&TextureName::name(name), texture.clone());
+                        self.material
+                            .set_texture(&TextureName::name(name), texture.clone());
 
                         self.texture_storage.push(texture);
                     }
@@ -934,10 +940,8 @@ impl SceneRenderer {
             "_use_panini_projection",
             self.cam.use_panini_projection as i32,
         );
-        self.material.set_uniform(
-            "_use_360_camera",
-            self.cam.use_360_camera as i32,
-        );
+        self.material
+            .set_uniform("_use_360_camera", self.cam.use_360_camera as i32);
         self.material
             .set_uniform("_ray_tracing_depth", self.render_depth);
         self.material.set_uniform("_aa_count", self.aa_count);
@@ -1182,7 +1186,9 @@ impl SceneRenderer {
         ui.separator();
         ui.label("Render depth:");
         changed.uniform |= check_changed(&mut self.render_depth, |depth| {
-            ui.add(egui::Slider::new(depth, 0..=1000).clamping(egui::widgets::SliderClamping::Always));
+            ui.add(
+                egui::Slider::new(depth, 0..=1000).clamping(egui::widgets::SliderClamping::Always),
+            );
         });
         ui.label("(Max count of ray bounce after portal, reflect, refract)");
         ui.separator();
@@ -1203,7 +1209,9 @@ impl SceneRenderer {
         ui.separator();
         ui.label("Antialiasing count:");
         changed.uniform |= check_changed(&mut self.aa_count, |count| {
-            ui.add(egui::Slider::new(count, 1..=16).clamping(egui::widgets::SliderClamping::Always));
+            ui.add(
+                egui::Slider::new(count, 1..=16).clamping(egui::widgets::SliderClamping::Always),
+            );
         });
         ui.separator();
         ui.label("Disable small black border:");
@@ -1230,17 +1238,17 @@ impl SceneRenderer {
             "v2.spiral.6",
             "v2.spiral.7",
             "v2.spiral.9",
-        ].contains(&animation_name) {
+        ]
+        .contains(&animation_name)
+        {
             let id = self.scene.uniforms.find_id("subspace_degree")?;
-            *self.scene.uniforms.get_original_mut(id).unwrap() = AnyUniform::Int(ClampedValue::new(500));
+            *self.scene.uniforms.get_original_mut(id).unwrap() =
+                AnyUniform::Int(ClampedValue::new(500));
         }
-        if [
-            "v2.spiral.4",
-            "v2.spiral.5",
-            "v2.spiral.6",
-        ].contains(&animation_name) {
+        if ["v2.spiral.4", "v2.spiral.5", "v2.spiral.6"].contains(&animation_name) {
             let id = self.scene.uniforms.find_id("subspace_degree")?;
-            *self.scene.uniforms.get_original_mut(id).unwrap() = AnyUniform::Int(ClampedValue::new(1000));
+            *self.scene.uniforms.get_original_mut(id).unwrap() =
+                AnyUniform::Int(ClampedValue::new(1000));
         }
         if [
             // cone
@@ -1249,13 +1257,17 @@ impl SceneRenderer {
             // teleportation_degrees
             "v2.screenshot.5",
             "v2.screenshot.6",
-        ].contains(&animation_name) {
+        ]
+        .contains(&animation_name)
+        {
             self.render_depth = 100;
         }
         if [
             // plus_ultra
             "v2.screenshot.3",
-        ].contains(&animation_name) {
+        ]
+        .contains(&animation_name)
+        {
             self.current_fps = 600;
         }
         // if self.scene_name == "inverted_surface" {
@@ -1281,7 +1293,10 @@ impl SceneRenderer {
         height: u32,
         skip_existing: bool,
     ) {
-        if matches!(std::fs::exists(&format!("video/{}.mp4", output_name)), Ok(true)) {
+        if matches!(
+            std::fs::exists(&format!("video/{}.mp4", output_name)),
+            Ok(true)
+        ) {
             if skip_existing {
                 println!("Skip `{output_name}`, because it's already exists");
                 return;
@@ -1365,7 +1380,12 @@ impl SceneRenderer {
         println!("ffmpeg status: {}", command.status);
     }
 
-    fn render_all_animations(&mut self, fps: usize, motion_blur_frames: usize, skip_existing: bool) {
+    fn render_all_animations(
+        &mut self,
+        fps: usize,
+        motion_blur_frames: usize,
+        skip_existing: bool,
+    ) {
         let mut memory = egui::Memory::default();
 
         drop(std::fs::create_dir("video"));
@@ -2004,7 +2024,7 @@ async fn render() {
         renderer.render_depth = 50;
 
         if true {
-        // if false {
+            // if false {
             renderer.render_all_animations(fps, motion_blur_frames, skip_existing);
         }
 

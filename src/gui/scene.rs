@@ -1,10 +1,10 @@
-use macroquad::prelude::UniformDesc;
 use crate::gui::camera::CalculatedCam;
 use crate::gui::camera::CameraId;
 use crate::gui::camera::CurrentCam;
 use crate::gui::glsl::*;
 use crate::gui::scenes::ShowHiddenScenes;
 use crate::gui::storage2::Storage2;
+use macroquad::prelude::UniformDesc;
 
 use crate::code_generation::*;
 use crate::gui::animation::*;
@@ -375,7 +375,9 @@ impl Scene {
 
     pub fn compile_all_formulas(&self, cache: &FormulasCache) {
         for id in self.uniforms.all_ids() {
-            if let AnyUniform::Formula(f) | AnyUniform::FormulaInt(f) = self.uniforms.get_original(id).unwrap() {
+            if let AnyUniform::Formula(f) | AnyUniform::FormulaInt(f) =
+                self.uniforms.get_original(id).unwrap()
+            {
                 cache.compile(&f.0);
             }
         }
@@ -478,7 +480,10 @@ impl Scene {
             ("_external_ray_b".to_owned(), UniformType::Float3),
         ]);
 
-        let result = result.into_iter().map(|x| macroquad::prelude::UniformDesc::new(&x.0, x.1)).collect();
+        let result = result
+            .into_iter()
+            .map(|x| macroquad::prelude::UniformDesc::new(&x.0, x.1))
+            .collect();
 
         Some(result)
     }
@@ -601,7 +606,9 @@ impl Scene {
 impl Scene {
     pub fn generate_uniforms_declarations(&self, data: &Data) -> Option<StringStorage> {
         let mut result = StringStorage::default();
-        for UniformDesc { name, uniform_type, .. } in self
+        for UniformDesc {
+            name, uniform_type, ..
+        } in self
             .uniforms(data)?
             .into_iter()
             .filter(|UniformDesc { name, .. }| !name.starts_with('_'))

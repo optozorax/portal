@@ -860,7 +860,9 @@ impl<T: StorageElem2> RealAnimationPart<T> {
 //----------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RealAnimationStageChanging<T: StorageElem2>(BTreeMap<T::IdWrapper, RealAnimationPart<T>>);
+pub struct RealAnimationStageChanging<T: StorageElem2>(
+    BTreeMap<T::IdWrapper, RealAnimationPart<T>>,
+);
 
 impl<T: StorageElem2> Default for RealAnimationStageChanging<T> {
     fn default() -> Self {

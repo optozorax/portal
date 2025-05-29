@@ -590,7 +590,14 @@ impl FormulasCache {
 impl ComboBoxChoosable for AnyUniform {
     fn variants() -> &'static [&'static str] {
         &[
-            "bool", "int", "float", "angle", "progress", "formula", "trefoil", "formula_int",
+            "bool",
+            "int",
+            "float",
+            "angle",
+            "progress",
+            "formula",
+            "trefoil",
+            "formula_int",
         ]
     }
     fn get_number(&self) -> usize {
@@ -805,7 +812,9 @@ impl<T: egui::emath::Numeric> ClampedValue<T> {
         let ClampedValue { min, max, value } = self;
         if let Some((min, max)) = min.as_ref().zip(max.as_ref()) {
             result.uniform |= check_changed(value, |value| {
-                ui.add(Slider::new(value, *min..=*max).clamping(egui::widgets::SliderClamping::Always));
+                ui.add(
+                    Slider::new(value, *min..=*max).clamping(egui::widgets::SliderClamping::Always),
+                );
             });
         } else {
             result.uniform |= check_changed(value, |value| {
@@ -880,7 +889,9 @@ impl StorageElem2 for AnyUniform {
             Bool(x) => drop(ui.vertical_centered(|ui| result.uniform |= egui_bool(ui, x))),
             Angle(a) => drop(ui.vertical_centered(|ui| result.uniform |= egui_angle_f64(ui, a))),
             Progress(a) => drop(ui.vertical_centered(|ui| result.uniform |= egui_0_1(ui, a))),
-            Formula(x) | FormulaInt(x) => drop(ui.vertical_centered(|ui| result |= x.egui(ui, formulas_cache))),
+            Formula(x) | FormulaInt(x) => {
+                drop(ui.vertical_centered(|ui| result |= x.egui(ui, formulas_cache)))
+            }
             TrefoilSpecial(arr) => result |= arr.egui(ui, data_id),
         }
         result
@@ -976,11 +987,11 @@ impl StorageElem2 for AnyUniform {
             AnyUniform::Progress(a) => AnyUniformResult::Float(*a),
             AnyUniform::Float(value) => AnyUniformResult::Float(value.get_value()),
             AnyUniform::Formula(f) => {
-                AnyUniformResult::Float(formulas_cache.eval_unsafe(&f.0, &mut cb)?.ok()?)    
-            },
+                AnyUniformResult::Float(formulas_cache.eval_unsafe(&f.0, &mut cb)?.ok()?)
+            }
             AnyUniform::FormulaInt(f) => {
                 AnyUniformResult::Int(formulas_cache.eval_unsafe(&f.0, &mut cb)?.ok()? as i32)
-            },
+            }
             AnyUniform::TrefoilSpecial(t) => AnyUniformResult::TrefoilSpecial(*t),
         })
     }
