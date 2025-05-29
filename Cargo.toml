@@ -5,8 +5,8 @@ authors = ["ilya sheprut <optozorax@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-macroquad = "0.4.4"
-egui-macroquad = { path = "../../egui-macroquad" } # egui-macroquad 0.16.0
+macroquad = { path = "../macroquad" }
+egui-macroquad = { path = "../egui-macroquad" } # egui-macroquad 0.16.0
 glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
 ron = "0.6.4"
@@ -24,8 +24,8 @@ nalgebra = "0.32.2"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 color-backtrace = "0.5.0"
 
-# [patch.crates-io]
-# miniquad = { path = '/home/zorax/testing/miniquad' }
+[patch.crates-io]
+miniquad = { path = '../miniquad-0.4.0-alpha.10_double' }
 
 ## cargo clean; cargo build --release; strip target/release/portal; upx --best --lzma target/release/portal; ll target/release
 ## result native size is ~1MB
