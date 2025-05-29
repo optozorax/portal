@@ -57,6 +57,7 @@ pub enum Matrix {
         second: Option<MatrixId>,
     },
     Camera,
+    Inv(Option<MatrixId>),
 }
 
 impl Default for Matrix {
@@ -73,7 +74,7 @@ impl Default for Matrix {
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
         &[
-            "Simple", "Mul", "Teleport", "Param.", "Exact", "If", "Sqrt", "Lerp", "Camera",
+            "Simple", "Mul", "Teleport", "Param.", "Exact", "If", "Sqrt", "Lerp", "Camera", "Inv",
         ]
     }
     fn get_number(&self) -> usize {
@@ -88,6 +89,7 @@ impl ComboBoxChoosable for Matrix {
             Sqrt { .. } => 6,
             Lerp { .. } => 7,
             Camera => 8,
+            Inv { .. } => 9,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -208,6 +210,7 @@ impl ComboBoxChoosable for Matrix {
                 second: None,
             },
             8 => Camera,
+            9 => Inv(None),
             _ => unreachable!(),
         };
     }
@@ -426,6 +429,10 @@ impl StorageElem2 for Matrix {
                 changed |= inline_helper.inline("Second:", 45., second, ui, input, data_id.with(1));
             }
             Camera => {}
+            Inv(mat) => {
+                changed |=
+                    inline_helper.inline("Mat to invert:", 45., mat, ui, input, data_id.with(0));
+            }
         }
         /*
         // POSTPONE
@@ -552,6 +559,7 @@ impl StorageElem2 for Matrix {
                 )
             }
             Camera => formulas_cache.get_camera_matrix(),
+            Inv(mat) => get_helper.get((*mat)?)?.inverse(),
         })
     }
 
@@ -635,6 +643,11 @@ impl StorageElem2 for Matrix {
                 }
             }
             Camera => {}
+            Inv(mat) => {
+                if let Some(x) = mat {
+                    f(*x, input);
+                }
+            }
         }
     }
 
@@ -690,6 +703,7 @@ impl StorageElem2 for Matrix {
                     + second.map(f).unwrap_or(1)
             }
             Camera => 0,
+            Inv(mat) => mat.map(&mut f).unwrap_or(1),
         }
         // POSTPONE
         /*
