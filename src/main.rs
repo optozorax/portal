@@ -685,6 +685,7 @@ impl SceneRenderer {
         let mut data: Data = Data {
             reload_textures: true,
             for_prefer_variable: cfg!(not(target_arch = "wasm32")),
+            use_300_version: cfg!(not(target_arch = "wasm32")),
             ..Default::default()
         };
 
@@ -1161,14 +1162,20 @@ impl SceneRenderer {
 
     fn egui_rendering_settings(&mut self, ui: &mut Ui) -> WhatChanged {
         let mut changed = WhatChanged::default();
-        ui.label("Improve compilation speed time: (uncheck if not compiles on your machine, disabled option uses for-cycles on numbers instead of variables)");
-        changed.shader |= egui_bool(ui, &mut self.data.for_prefer_variable);
+        ui.label("Render depth:");
+        changed.uniform |= check_changed(&mut self.render_depth, |depth| {
+            ui.add(
+                egui::Slider::new(depth, 0..=1000).clamping(egui::widgets::SliderClamping::Always),
+            );
+        });
+        ui.label("(Max count of ray bounce after portal, reflect, refract)");
         ui.separator();
-        ui.label("Improve compilation speed time 2: (disables antialiasing code)");
-        changed.shader |= egui_bool(ui, &mut self.data.disable_antialiasing);
-        ui.separator();
-        ui.label("Improve compilation speed time 3: (disables camera teleportation code)");
-        changed.shader |= egui_bool(ui, &mut self.data.disable_camera_teleportation);
+        ui.label("Antialiasing count:");
+        changed.uniform |= check_changed(&mut self.aa_count, |count| {
+            ui.add(
+                egui::Slider::new(count, 1..=16).clamping(egui::widgets::SliderClamping::Always),
+            );
+        });
         ui.separator();
         ui.label("Offset after material:");
         changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
@@ -1183,14 +1190,6 @@ impl SceneRenderer {
             );
         });
         ui.label("(Ofsetting after ray being teleported, reflected, refracted)");
-        ui.separator();
-        ui.label("Render depth:");
-        changed.uniform |= check_changed(&mut self.render_depth, |depth| {
-            ui.add(
-                egui::Slider::new(depth, 0..=1000).clamping(egui::widgets::SliderClamping::Always),
-            );
-        });
-        ui.label("(Max count of ray bounce after portal, reflect, refract)");
         ui.separator();
         ui.label("Darkening by distance:");
         changed.uniform |= egui_bool(ui, &mut self.darken_by_distance);
@@ -1207,15 +1206,20 @@ impl SceneRenderer {
         changed.uniform |= egui_bool(ui, &mut self.grid_disable);
         ui.label("(If you want extreme small gif)");
         ui.separator();
-        ui.label("Antialiasing count:");
-        changed.uniform |= check_changed(&mut self.aa_count, |count| {
-            ui.add(
-                egui::Slider::new(count, 1..=16).clamping(egui::widgets::SliderClamping::Always),
-            );
-        });
-        ui.separator();
         ui.label("Disable small black border:");
         changed.uniform |= egui_bool(ui, &mut self.black_border_disable);
+        ui.separator();
+        ui.label("Improve compilation speed time 1: (uses for loops on numbers instead of variables, may not compile)");
+        changed.shader |= egui_bool(ui, &mut self.data.for_prefer_variable);
+        ui.separator();
+        ui.label("Improve compilation speed time 2: (disables antialiasing code)");
+        changed.shader |= egui_bool(ui, &mut self.data.disable_antialiasing);
+        ui.separator();
+        ui.label("Improve compilation speed time 3: (disables camera teleportation code)");
+        changed.shader |= egui_bool(ui, &mut self.data.disable_camera_teleportation);
+        ui.separator();
+        ui.label("Improve compilation speed time 4: (uses 300 glsl version instead of 100)");
+        changed.shader |= egui_bool(ui, &mut self.data.use_300_version);
         changed
     }
 
@@ -1837,9 +1841,6 @@ First, predefined library is included, then uniforms, then user library, then in
                 .open(&mut render_options_opened)
                 .vscroll(true)
                 .show(ctx, |ui| {
-
-                    changed |= self.renderer.egui_rendering_settings(ui);
-                    ui.separator();
                     ui.label("Lower rendering resolution ratio (can significantly increase FPS):");
                     changed.uniform |= check_changed(&mut self.render_scale, |scale| {
                         ui.add(egui::Slider::new(scale, 0.01..=1.0).clamping(egui::widgets::SliderClamping::Always));
@@ -1858,7 +1859,9 @@ First, predefined library is included, then uniforms, then user library, then in
                         }
                         ui.label(format!(" ({})", ui.ctx().pixels_per_point()));
                     });
-                    ui.label("(DPI can be changed using three fingers, add one finger at a time to prevent triggering system three-finger gestures)")
+                    ui.label("(DPI can be changed using three fingers, add one finger at a time to prevent triggering system three-finger gestures)");
+                    ui.separator();
+                    changed |= self.renderer.egui_rendering_settings(ui);
                 });
             self.render_options_opened = render_options_opened;
         }

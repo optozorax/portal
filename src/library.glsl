@@ -1,4 +1,5 @@
-#version 100
+#version 100 // !GLSL100!
+#version 300 es // !GLSL300!
 // Version can't be changed to upper versions because of WebGL.
 
 precision highp float;
@@ -22,9 +23,9 @@ float sqr(float a) {
     return a*a;
 }
 
-vec4 texture(sampler2D tex, vec2 pos) {
-    return texture2D(tex, pos);
-}
+vec4 texture(sampler2D tex, vec2 pos) { // !GLSL100!
+    return texture2D(tex, pos); // !GLSL100!
+} // !GLSL100!
 
 vec3 sqrvec(vec3 v) {
     return vec3(sqr(v.x), sqr(v.y), sqr(v.z));

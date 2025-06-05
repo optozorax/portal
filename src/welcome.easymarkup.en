@@ -18,6 +18,12 @@ Here are the most interesting scenes:
 • `Advanced` > `Trefoil knot`
 • `Mobius band` > `Mobius portal`
 
+# Long loading
+
+If some scenes take too long to load, try this: open `Rendering options` > `Improve compilation speed` (at the bottom). First, try options 1, 2, and 4. If that combination doesn't work, try enabling all four options. After this, scenes should load in a reasonable amount of time. If not, I'm sorry - optimizing further is beyond my abilities. :(
+
+This issue occurs because scenes use shader code for rendering, and some have very heavy shaders. The GLSL compiler tries to inline everything, eliminating all functions and unrolling all loops, which is why loading can take so long. Macs have a better compiler, so all scenes load almost instantly on them.
+
 # Opening on a smartphone
 
 ⚠ Attention! If you have weak smartphone, then you shouldn't open most interesting scenes, because your phone can freeze on shader compilation of that scenes, these scenes has very heavy shaders. But if your smartphone can handle it, then some scenes can load for very long time (2 minutes for `Trefoil knot`).

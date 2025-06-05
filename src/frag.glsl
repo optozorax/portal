@@ -225,10 +225,15 @@ uniform int _use_360_camera;
 uniform float _panini_param;
 uniform int _aa_count;
 uniform int _aa_start;
-varying vec2 uv; // absolute coordinates, integer values, from 0
-varying vec2 uv_screen;
-varying float pixel_size;
-// varying vec4 out_Color;
+// absolute coordinates, integer values, from 0
+varying vec2 uv; // !GLSL100!
+in vec2 uv; // !GLSL300!
+varying vec2 uv_screen; // !GLSL100!
+in vec2 uv_screen; // !GLSL300!
+varying float pixel_size; // !GLSL100!
+in float pixel_size; // !GLSL300!
+
+layout(location=0) out vec4 FragColor; // !GLSL300!
 
 uniform int _teleport_external_ray;
 uniform vec3 _external_ray_a;
@@ -343,5 +348,6 @@ void main() {
         }
     }
 
-    gl_FragColor = vec4(result, 1.);
+    gl_FragColor = vec4(result, 1.); // !GLSL100!
+    FragColor = vec4(result, 1.); // !GLSL300!
 }

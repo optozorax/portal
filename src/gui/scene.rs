@@ -1005,10 +1005,14 @@ impl Scene {
             let variable_for = line.contains("!FOR_VARIABLE!");
             let antialiasing_line = line.contains("!ANTIALIASING!");
             let camera_teleportation_line = line.contains("!CAMERA_TELEPORTATION!");
+            let glsl_100 = line.contains("!GLSL100!");
+            let glsl_300 = line.contains("!GLSL300!");
             if (number_for && data.for_prefer_variable)
                 || (variable_for && !data.for_prefer_variable)
                 || (antialiasing_line && data.disable_antialiasing)
                 || (camera_teleportation_line && data.disable_camera_teleportation)
+                || (glsl_100 && data.use_300_version)
+                || (glsl_300 && !data.use_300_version)
             {
                 // skip line
             } else {
@@ -1016,7 +1020,7 @@ impl Scene {
             }
             res_storage += "\n";
         }
-        res.storage = res_storage;
+        res.storage = res_storage.trim().to_string();
 
         Some(res)
     }
@@ -1033,7 +1037,11 @@ impl Scene {
         Some(
             load_material(
                 macroquad::prelude::ShaderSource::Glsl {
-                    vertex: VERTEX_SHADER,
+                    vertex: if data.use_300_version {
+                        VERTEX_SHADER_300
+                    } else {
+                        VERTEX_SHADER_100
+                    },
                     fragment: &code.storage,
                 },
                 MaterialParams {
@@ -1406,13 +1414,39 @@ const FRAGMENT_SHADER: &str = include_str!("../frag.glsl");
 
 pub const LIBRARY: &str = include_str!("../library.glsl");
 
-const VERTEX_SHADER: &str = "#version 100
+const VERTEX_SHADER_100: &str = "#version 100
 attribute vec3 position;
 attribute vec2 texcoord;
 
-varying lowp vec2 uv;
-varying lowp vec2 uv_screen;
+varying vec2 uv;
+varying vec2 uv_screen;
 varying float pixel_size;
+
+uniform mat4 Model;
+uniform mat4 Projection;
+
+uniform vec2 Center;
+uniform vec2 _resolution;
+
+void main() {
+    vec4 res = Projection * Model * vec4(position, 1);
+
+    float coef = min(_resolution.x, _resolution.y);
+    uv_screen = (position.xy - _resolution/2.) / coef * 2.;
+    uv = position.xy;
+    pixel_size = 1. / coef;
+
+    gl_Position = res;
+}
+";
+
+const VERTEX_SHADER_300: &str = "#version 300 es
+in vec3 position;
+in vec2 texcoord;
+
+out vec2 uv;
+out vec2 uv_screen;
+out float pixel_size;
 
 uniform mat4 Model;
 uniform mat4 Projection;
