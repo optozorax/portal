@@ -335,7 +335,11 @@ impl Scene {
 
         #[cfg(not(target_arch = "wasm32"))]
         match ron::to_string(self) {
-            Ok(result) => std::fs::write("scene_dump.ron", result).unwrap(),
+            Ok(result) => {
+                drop(std::fs::write("scene_dump_temp.ron", result));
+                drop(std::fs::remove_file("scene_dump.ron"));
+                drop(std::fs::rename("scene_dump_temp.ron", "scene_dump.ron"));
+            },
             Err(err) => crate::error!(format, "errors while serializing scene: {:?}", err),
         }
 
