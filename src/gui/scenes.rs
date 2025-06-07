@@ -73,6 +73,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/teleportation_degrees.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Spheres (for video)",
+                        link: "spheres_anim",
+                        content: include_str!("../../scenes/spheres_anim.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
