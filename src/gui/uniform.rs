@@ -965,6 +965,7 @@ impl StorageElem2 for AnyUniform {
                 "easing_out" => easing_out(*args.first()?),
                 "easing_in_out" => easing_in_out(*args.first()?),
                 "easing_in_out_fast" => easing_in_out_fast(*args.first()?),
+                "easing_plus_minus" => easing_plus_minus(*args.first()?),
 
                 "lerp" => lerp((*args.first()?)..=(*args.get(1)?), *args.get(2)?),
 

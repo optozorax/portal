@@ -23,6 +23,13 @@ pub fn easing_in_out_fast(t: f64) -> f64 {
     easing_in_out(easing_in_out(t))
 }
 
+pub fn easing_plus_minus(mut t: f64) -> f64 {
+    // https://www.desmos.com/calculator/1ti1uakaov
+    t *= 2. * PI;
+    let t2 = 2. * t;
+    t.sin() * (3. - t.cos() - t2.cos() - t.cos() * t2.cos()) / 4.
+}
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Easing {
     #[default]
