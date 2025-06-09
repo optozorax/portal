@@ -13,10 +13,15 @@
 
 # Author
 
-[Telegram channel](https://t.me/optozorax_dev) — main place where I wrote about my projects, on Russian.
-[Twitter](https://twitter.com/optozorax) — also write here sometimes, on English.
+English:
+[YouTube](https://www.youtube.com/@optozorax_en)
+[Discord](https://discord.gg/Nr3BT4gFEX)
+[Mastodon](https://mathstodon.xyz/@optozorax)
 [GitHub](https://github.com/optozorax)
-[YouTube](https://www.youtube.com/channel/UCIsVwdLhYrrs3K8MOXEZdhQ)
+
+Russian:
+[YouTube](https://www.youtube.com/@optozorax)
+[Telegram channel](https://t.me/optozorax_dev)
 [Blog](https://optozorax.github.io)
 
 ---
@@ -30,7 +35,11 @@ Formulas: [fasteval](https://github.com/likebike/fasteval)
 
 ---
 
-# Links to used code
+# Links to used glsl code
 
 Capsule rendering: [@shadertoy](https://www.shadertoy.com/view/Xt3SzX)
 Panini projection: [@shadertoy](https://www.shadertoy.com/view/Wt3fzB)
+Box intersection: [@shadertoy](https://www.shadertoy.com/view/ld23DV)
+Circle sdf: [@shadertoy](https://www.shadertoy.com/view/slccWf)
+Capsule intersection: [@shadertoy](https://www.shadertoy.com/view/Xt3SzX)
+Cylinder intersection: [@shadertoy](https://www.shadertoy.com/view/4lcSRn)

@@ -13,11 +13,16 @@
 
 # Автор
 
-[Канал в телеграме](https://t.me/optozorax_dev) — главное место где я пишу, на русском.
-[Твиттер](https://twitter.com/optozorax) — иногда пишу здесь на английском.
+На русском:
+[YouTube](https://www.youtube.com/@optozorax)
+[Telegram channel](https://t.me/optozorax_dev)
+[Blog](https://optozorax.github.io)
+
+На английском:
+[YouTube](https://www.youtube.com/@optozorax_en)
+[Discord](https://discord.gg/Nr3BT4gFEX)
+[Mastodon](https://mathstodon.xyz/@optozorax)
 [GitHub](https://github.com/optozorax)
-[YouTube](https://www.youtube.com/channel/UCIsVwdLhYrrs3K8MOXEZdhQ)
-[Блог](https://optozorax.github.io)
 
 ---
 
@@ -32,5 +37,9 @@
 
 # Ссылки на использованный код
 
-Рендеринг капсулы: [@shadertoy](https://www.shadertoy.com/view/Xt3SzX)
-Проекция Панини: [@shadertoy](https://www.shadertoy.com/view/Wt3fzB)
+Capsule rendering: [@shadertoy](https://www.shadertoy.com/view/Xt3SzX)
+Panini projection: [@shadertoy](https://www.shadertoy.com/view/Wt3fzB)
+Box intersection: [@shadertoy](https://www.shadertoy.com/view/ld23DV)
+Circle sdf: [@shadertoy](https://www.shadertoy.com/view/slccWf)
+Capsule intersection: [@shadertoy](https://www.shadertoy.com/view/Xt3SzX)
+Cylinder intersection: [@shadertoy](https://www.shadertoy.com/view/4lcSRn)
