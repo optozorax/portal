@@ -349,6 +349,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/recursive_room.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Double pentagon",
+                        link: "double_pentagon",
+                        content: include_str!("../../scenes/double_pentagon.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
