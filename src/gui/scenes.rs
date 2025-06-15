@@ -355,6 +355,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/double_pentagon.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Cone point",
+                        link: "cone",
+                        content: include_str!("../../scenes/cone.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
