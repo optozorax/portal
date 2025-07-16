@@ -967,6 +967,20 @@ impl StorageElem2 for AnyUniform {
                 "easing_in_out_fast" => easing_in_out_fast(*args.first()?),
                 "easing_plus_minus" => easing_plus_minus(*args.first()?),
 
+                "bump" => {
+                    let x = *args.first()?;
+                    let pos = *args.get(1)?;
+                    let size = *args.get(2)?;
+
+                    let x = (x - pos) / size;
+
+                    if x.abs() < 1. {
+                        0.5 * (1. + (std::f64::consts::PI * x).cos())
+                    } else {
+                        0.
+                    }
+                }
+
                 "lerp" => lerp((*args.first()?)..=(*args.get(1)?), *args.get(2)?),
 
                 // Free variables
