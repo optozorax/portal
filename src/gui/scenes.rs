@@ -445,6 +445,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/matryoshka.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Portal leaving Pocket Dimension using Supportal",
+                        link: "leave_dimension",
+                        content: include_str!("../../scenes/leave_dimension.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
