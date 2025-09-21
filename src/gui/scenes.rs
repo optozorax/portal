@@ -176,12 +176,6 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "Flat triple portal",
-                        link: "flat_triple_portal",
-                        content: include_str!("../../scenes/flat_triple_portal.ron"),
-                        hidden: false,
-                    },
-                    Scene {
                         name: "Triple portal fully in itself",
                         link: "triple_portal2",
                         content: include_str!("../../scenes/triple_portal2.ron"),
@@ -227,12 +221,6 @@ impl Default for Scenes {
                         name: "Hopf Link portal",
                         link: "hopf_link",
                         content: include_str!("../../scenes/hopf_link.ron"),
-                        hidden: false,
-                    },
-                    Scene {
-                        name: "Borromean rings",
-                        link: "borromean_rings",
-                        content: include_str!("../../scenes/borromean_rings.ron"),
                         hidden: false,
                     },
                     Scene {
@@ -445,10 +433,28 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/matryoshka.ron"),
                         hidden: false,
                     },
+                ],
+            },
+            SceneSection {
+                name: "Community scenes",
+                hidden: false,
+                scenes: vec![
                     Scene {
-                        name: "Portal leaving Pocket Dimension using Supportal",
+                        name: "Borromean rings (by Frisk256)",
+                        link: "borromean_rings",
+                        content: include_str!("../../scenes/borromean_rings.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Portal leaving Pocket Dimension using Supportal (by AiQube)",
                         link: "leave_dimension",
                         content: include_str!("../../scenes/leave_dimension.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Flat triple portal (by AiQube)",
+                        link: "flat_triple_portal",
+                        content: include_str!("../../scenes/flat_triple_portal.ron"),
                         hidden: false,
                     },
                 ],
