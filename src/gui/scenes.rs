@@ -457,6 +457,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/flat_triple_portal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Triangular Prism Portal (by AiQube)",
+                        link: "triangular_prism_portal",
+                        content: include_str!("../../scenes/triangular_prism_portal.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
