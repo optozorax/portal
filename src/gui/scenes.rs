@@ -176,6 +176,12 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Flat triple portal",
+                        link: "flat_triple_portal",
+                        content: include_str!("../../scenes/flat_triple_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Triple portal fully in itself",
                         link: "triple_portal2",
                         content: include_str!("../../scenes/triple_portal2.ron"),
