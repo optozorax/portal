@@ -463,6 +463,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/triangular_prism_portal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Zeno Portal (by Frisk256)",
+                        link: "zeno_portal",
+                        content: include_str!("../../scenes/zeno_portal.ron"),
+                        hidden: false,
+                    }
                 ],
             },
         ])
