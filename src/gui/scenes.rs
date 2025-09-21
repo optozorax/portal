@@ -457,6 +457,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/flat_triple_portal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "pocket dimension in pocket dimension (by cuongvd)",
+                        link: "pocketdimensioninpocketdimension",
+                        content: include_str!("../../scenes/pocketdimensioninpocketdimension.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
