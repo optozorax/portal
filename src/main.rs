@@ -1242,6 +1242,7 @@ impl SceneRenderer {
             "v2.spiral.6",
             "v2.spiral.7",
             "v2.spiral.9",
+            "v2.spaaaace.0",
         ]
         .contains(&animation_name)
         {
@@ -1311,6 +1312,11 @@ impl SceneRenderer {
         let count = ((duration_seconds * fps as f32) as usize).max(1);
         let exposure = 0.5; // number from 0 to 1
         for i in 0..count {
+            let name = format!("anim/frame_{i}.png");
+            if std::fs::exists(&name).unwrap() {
+                continue;
+            }
+
             let mut images = vec![];
             for j in 0..motion_blur_frames {
                 let t = (i as f64 / count as f64)
@@ -1337,7 +1343,7 @@ impl SceneRenderer {
             }
             let result = std::hint::black_box(average_images(images));
 
-            result.export_png(&format!("anim/frame_{i}.png"));
+            result.export_png(&name);
 
             print!("\r{i}/{count} done      ");
 
@@ -1389,6 +1395,7 @@ impl SceneRenderer {
         fps: usize,
         motion_blur_frames: usize,
         skip_existing: bool,
+        starts_with: Option<&str>
     ) {
         let mut memory = egui::Memory::default();
 
@@ -1408,8 +1415,10 @@ impl SceneRenderer {
             self.current_motion_blur_frames = motion_blur_frames;
             self.update_inner_variables(&name);
 
-            if !name.starts_with("v2.") {
-                continue;
+            if let Some(starts_with) = starts_with {
+                if !name.starts_with(starts_with) {
+                    continue;
+                }
             }
             println!("Rendering animation {name}, {i}/{len}");
 
@@ -1981,7 +1990,8 @@ fn window_conf() -> Conf {
 }
 
 async fn render() {
-    let (width, height) = (3840, 2160);
+    // let (width, height) = (3840, 2160);
+    let (width, height) = (3840, 3840);
     // let (width, height) = (854, 480);
 
     // render all scenes as a pictures
@@ -2005,37 +2015,40 @@ async fn render() {
     */
 
     for scene_name in [
-        "inverted_surface",
-        "portal_in_portal_cone",
-        "spherical_geometry",
-        "teleportation_degrees",
-        "portal_in_portal",
-        "half_spheres",
-        "portal_in_portal_1x_attempt",
         "plus_ultra",
+
+        // "sphere_to_sphere",
+        // "half_spheres",
+        // "recursive_space",
+        // "sphere_intersection",
+        // "spheres_anim",
+        // "teleportation_degrees",
+        // "triple_portal_ish",
+        // "monoportal_rotating",
     ] {
         println!("Rendering scene {scene_name}");
 
         let fps = 60;
-        let motion_blur_frames = 1;
+        let motion_blur_frames = 5;
         let skip_existing = true;
+        let starts_with = Some("v3.");
 
         let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
         let scene = ron::from_str(scene_content).unwrap();
         let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
         renderer.aa_count = 4;
-        renderer.render_depth = 50;
-
-        if true {
-            // if false {
-            renderer.render_all_animations(fps, motion_blur_frames, skip_existing);
-        }
+        renderer.render_depth = 150;
+        renderer.cam.view_angle *= 1.5;
 
         // if true {
         if false {
+            renderer.render_all_animations(fps, motion_blur_frames, skip_existing, starts_with);
+        }
+
+        if true {
+        // if false {
             for animation_stage in [
-                "v2.screenshot.0",
-                // "v2.screenshot.8",
+                "v2.screenshot.5",
             ] {
                 drop(std::fs::create_dir("video"));
                 drop(std::fs::create_dir(format!(
