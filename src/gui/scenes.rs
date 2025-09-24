@@ -458,7 +458,25 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "pocket dimension in pocket dimension (by cuongvd)",
+                        name: "Triangular Prism Portal (by AiQube)",
+                        link: "triangular_prism_portal",
+                        content: include_str!("../../scenes/triangular_prism_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Zeno Portal (by Frisk256)",
+                        link: "zeno_portal",
+                        content: include_str!("../../scenes/zeno_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Octahedral Portal (by cuongvd)",
+                        link: "octahedral_portal",
+                        content: include_str!("../../scenes/octahedral_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Pocket dimension in pocket dimension (by cuongvd)",
                         link: "pocketdimensioninpocketdimension",
                         content: include_str!("../../scenes/pocketdimensioninpocketdimension.ron"),
                         hidden: false,
