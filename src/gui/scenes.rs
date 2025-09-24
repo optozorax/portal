@@ -474,7 +474,13 @@ impl Default for Scenes {
                         link: "octahedral_portal",
                         content: include_str!("../../scenes/octahedral_portal.ron"),
                         hidden: false,
-                    }
+                    },
+                    Scene {
+                        name: "Pocket dimension in pocket dimension (by cuongvd)",
+                        link: "pocket_dimension_in_pocket_dimension",
+                        content: include_str!("../../scenes/pocket_dimension_in_pocket_dimension.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
