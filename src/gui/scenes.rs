@@ -468,6 +468,12 @@ impl Default for Scenes {
                         link: "zeno_portal",
                         content: include_str!("../../scenes/zeno_portal.ron"),
                         hidden: false,
+                    },
+                    Scene {
+                        name: "Octahedral Portal (by cuongvd)",
+                        link: "octahedral_portal",
+                        content: include_str!("../../scenes/octahedral_portal.ron"),
+                        hidden: false,
                     }
                 ],
             },
