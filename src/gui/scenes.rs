@@ -481,6 +481,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/pocket_dimension_in_pocket_dimension.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Borromean rings pocket dimension (by cuongvd)",
+                        link: "borromean_rings_pocket_dimension",
+                        content: include_str!("../../scenes/borromean_rings_pocket_dimension.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
