@@ -493,6 +493,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/2n_rotating_monoportal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "All Pocket Dimenions with Negatie Monopotals",
+                        link: "all_dimension",
+                        content: include_str!("../../scenes/all_dimension.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
