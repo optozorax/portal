@@ -487,6 +487,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/borromean_rings_pocket_dimension.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "2n Rotating Monoportal (by cuongvd)",
+                        link: "2n_rotating_monoportal",
+                        content: include_str!("../../scenes/2n_rotating_monoportal.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
