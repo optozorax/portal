@@ -494,13 +494,13 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "All Pocket Dimenions with Negatie Monopotals",
+                        name: "All Pocket Dimenions with Negatie Monopotals (by AiQube)",
                         link: "all_dimension",
                         content: include_str!("../../scenes/all_dimension.ron"),
                         hidden: false,
                     },
                     Scene {
-                        name: "Flower Monoportal made from Triple Portal",
+                        name: "Flower Monoportal made from Triple Portal (by AiQube)",
                         link: "flower_monoportal",
                         content: include_str!("../../scenes/flower_monoportal.ron"),
                         hidden: false,
