@@ -499,6 +499,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/all_dimension.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Flower Monoportal made from Triple Portal",
+                        link: "flower_monoportal",
+                        content: include_str!("../../scenes/flower_monoportal.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
