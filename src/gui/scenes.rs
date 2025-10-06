@@ -493,6 +493,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/2n_rotating_monoportal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Wormholes using 1 way portal (by cuongvd)",
+                        link: "wormholes_using_1_way_portal",
+                        content: include_str!("../../scenes/wormholes_using_1_way_portal.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
