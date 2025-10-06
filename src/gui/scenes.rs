@@ -505,6 +505,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/flower_monoportal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Time Portal (by AiQube)",
+                        link: "time_portal",
+                        content: include_str!("../../scenes/time_portal.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
