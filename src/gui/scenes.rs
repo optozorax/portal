@@ -476,6 +476,18 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Cubic Portal (by cuongvd)",
+                        link: "cubic_portal",
+                        content: include_str!("../../scenes/cubic_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Tetrahedral Portal (by cuongvd)",
+                        link: "tetrahedral_portal",
+                        content: include_str!("../../scenes/tetrahedral_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Pocket dimension in pocket dimension (by cuongvd)",
                         link: "pocket_dimension_in_pocket_dimension",
                         content: include_str!("../../scenes/pocket_dimension_in_pocket_dimension.ron"),
