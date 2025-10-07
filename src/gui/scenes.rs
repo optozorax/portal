@@ -507,8 +507,8 @@ impl Default for Scenes {
                     },
                     Scene {
                         name: "Time Portal Plus Ultra (by cuongvd and AiQube)",
-                        link: "time_portal_in_portal",
-                        content: include_str!("../../scenes/time_portal_in_portal.ron"),
+                        link: "time_portal_plus_ultra",
+                        content: include_str!("../../scenes/time_portal_plus_ultra.ron"),
                         hidden: false,
                     },
                 ],
