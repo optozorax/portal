@@ -505,6 +505,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/2n_rotating_monoportal.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Time Portal Plus Ultra (by cuongvd and AiQube)",
+                        link: "time_portal_in_portal",
+                        content: include_str!("../../scenes/time_portal_in_portal.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
