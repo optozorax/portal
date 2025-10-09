@@ -476,6 +476,18 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Cubic Portal (by cuongvd)",
+                        link: "cubic_portal",
+                        content: include_str!("../../scenes/cubic_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Tetrahedral Portal (by cuongvd)",
+                        link: "tetrahedral_portal",
+                        content: include_str!("../../scenes/tetrahedral_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Pocket dimension in pocket dimension (by cuongvd)",
                         link: "pocket_dimension_in_pocket_dimension",
                         content: include_str!("../../scenes/pocket_dimension_in_pocket_dimension.ron"),
@@ -498,6 +510,11 @@ impl Default for Scenes {
                         link: "wormholes_using_1_way_portal",
                         content: include_str!("../../scenes/wormholes_using_1_way_portal.ron"),
                         hidden: false,
+                    },
+                    Scene {
+                        name: "Time Portal Plus Ultra (by cuongvd and AiQube)",
+                        link: "time_portal_plus_ultra",
+                        content: include_str!("../../scenes/time_portal_plus_ultra.ron"),
                     },
                 ],
             },
