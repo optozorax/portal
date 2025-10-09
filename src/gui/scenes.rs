@@ -506,6 +506,24 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "All Pocket Dimenions with Negatie Monopotals (by AiQube)",
+                        link: "all_dimension",
+                        content: include_str!("../../scenes/all_dimension.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Flower Monoportal made from Triple Portal (by AiQube)",
+                        link: "flower_monoportal",
+                        content: include_str!("../../scenes/flower_monoportal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
+                        name: "Time Portal (by AiQube)",
+                        link: "time_portal",
+                        content: include_str!("../../scenes/time_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Wormholes using 1 way portal (by cuongvd)",
                         link: "wormholes_using_1_way_portal",
                         content: include_str!("../../scenes/wormholes_using_1_way_portal.ron"),
@@ -515,6 +533,7 @@ impl Default for Scenes {
                         name: "Time Portal Plus Ultra (by cuongvd and AiQube)",
                         link: "time_portal_plus_ultra",
                         content: include_str!("../../scenes/time_portal_plus_ultra.ron"),
+                        hidden: false,
                     },
                 ],
             },
