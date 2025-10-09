@@ -541,6 +541,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/nested_infinite_pocket_dimension.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Pocket dimension using spherical portals (by cuongvd)",
+                        link: "spherical_pocket_dimension",
+                        content: include_str!("../../scenes/spherical_pocket_dimension.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
