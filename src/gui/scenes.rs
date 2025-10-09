@@ -506,10 +506,15 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
+                        name: "Wormholes using 1 way portal (by cuongvd)",
+                        link: "wormholes_using_1_way_portal",
+                        content: include_str!("../../scenes/wormholes_using_1_way_portal.ron"),
+                        hidden: false,
+                    },
+                    Scene {
                         name: "Time Portal Plus Ultra (by cuongvd and AiQube)",
                         link: "time_portal_plus_ultra",
                         content: include_str!("../../scenes/time_portal_plus_ultra.ron"),
-                        hidden: false,
                     },
                 ],
             },
