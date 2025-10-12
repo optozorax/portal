@@ -506,12 +506,6 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "Offsetting n-monoportal (by cuongvd)",
-                        link: "offsetting_n_monoportal",
-                        content: include_str!("../../scenes/offsetting_n_monoportal.ron"),
-                        hidden: false,
-                    },
-                    Scene {
                         name: "k-offsetting n-monoportal (by cuongvd)",
                         link: "k_offsetting_n_monoportal",
                         content: include_str!("../../scenes/k_offsetting_n_monoportal.ron"),
