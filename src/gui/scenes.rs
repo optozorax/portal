@@ -559,6 +559,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/large_fully_in_small_using_surfaces.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Offsetting Doorway (by (NotAi)Qube)",
+                        link: "offsetting_doorway",
+                        content: include_str!("../../scenes/offsetting_doorway.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
