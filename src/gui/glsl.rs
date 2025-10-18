@@ -72,6 +72,13 @@ impl StorageElem2 for LibraryCode {
             0
         }
     }
+
+    fn duplicate_inline<F>(&self, _map_self: &mut F, _input: &mut Self::Input) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper,
+    {
+        self.clone()
+    }
 }
 
 impl Default for MaterialCode {

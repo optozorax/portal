@@ -717,6 +717,101 @@ impl StorageElem2 for Matrix {
         }
         */
     }
+
+    fn duplicate_inline<F>(&self, map_self: &mut F, input: &mut Self::Input) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper,
+    {
+        use Matrix::*;
+        match self {
+            Mul { to, what } => Mul {
+                to: to.map(|id| map_self(id, input)),
+                what: what.map(|id| map_self(id, input)),
+            },
+            Teleport {
+                first_portal,
+                second_portal,
+                what,
+            } => Teleport {
+                first_portal: first_portal.map(|id| map_self(id, input)),
+                second_portal: second_portal.map(|id| map_self(id, input)),
+                what: what.map(|id| map_self(id, input)),
+            },
+            Simple {
+                offset,
+                scale,
+                rotate,
+                mirror,
+            } => Simple {
+                offset: *offset,
+                scale: *scale,
+                rotate: *rotate,
+                mirror: *mirror,
+            },
+            Parametrized {
+                offset,
+                rotate,
+                mirror,
+                scale,
+            } => {
+                let hpat![uniforms, formulas_cache] = input;
+                use crate::gui::unique_id::UniqueId;
+                use std::collections::BTreeMap;
+                let mut u_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+                Parametrized {
+                    offset: offset.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    rotate: rotate.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    mirror: mirror.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    scale: scale.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                }
+            }
+            Exact { i, j, k, pos } => {
+                let hpat![uniforms, formulas_cache] = input;
+                use crate::gui::unique_id::UniqueId;
+                use std::collections::BTreeMap;
+                let mut u_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+                Exact {
+                    i: i.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    j: j.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    k: k.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    pos: pos.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                }
+            }
+            If {
+                condition,
+                then,
+                otherwise,
+            } => {
+                let hpat![uniforms, formulas_cache] = input;
+                use crate::gui::unique_id::UniqueId;
+                use std::collections::BTreeMap;
+                let mut u_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+                If {
+                    condition: condition.duplicate_as_field(
+                        uniforms,
+                        formulas_cache,
+                        &mut u_visited,
+                    ),
+                    then: then.map(|id| map_self(id, input)),
+                    otherwise: otherwise.map(|id| map_self(id, input)),
+                }
+            }
+            Sqrt(mat) => Sqrt(mat.map(|id| map_self(id, input))),
+            Lerp { t, first, second } => {
+                let hpat![uniforms, formulas_cache] = input;
+                use crate::gui::unique_id::UniqueId;
+                use std::collections::BTreeMap;
+                let mut u_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+                Lerp {
+                    t: t.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    first: first.map(|id| map_self(id, input)),
+                    second: second.map(|id| map_self(id, input)),
+                }
+            }
+            Camera => Camera,
+            Inv(mat) => Inv(mat.map(|id| map_self(id, input))),
+        }
+    }
 }
 
 fn mat_sqrt(mat: &DMat4) -> Option<DMat4> {

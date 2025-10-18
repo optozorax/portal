@@ -403,4 +403,11 @@ impl StorageElem2 for Cam {
     ) -> usize {
         matches!(self.look_at, CamLookAt::MatrixCenter(None)) as usize
     }
+
+    fn duplicate_inline<F>(&self, _map_self: &mut F, _input: &mut Self::Input) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper,
+    {
+        self.clone()
+    }
 }

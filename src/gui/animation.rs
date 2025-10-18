@@ -747,6 +747,61 @@ impl StorageElem2 for AnimationStage {
             self.uniforms.errors_count(uniforms, formulas_cache)
         }
     }
+
+    fn duplicate_inline<F>(
+        &self,
+        _map_self: &mut F,
+        (_cams, (_filters, (_global, (matrices, input)))): &mut Self::Input,
+    ) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper,
+    {
+        let mut new = self.clone();
+        use crate::gui::unique_id::UniqueId;
+        use std::collections::BTreeMap;
+
+        // Duplicate inline matrices used in stage changes
+        {
+            let mut m_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+            for part in new.matrices.0.values_mut() {
+                use crate::gui::animation::Animation::*;
+                match part {
+                    Changed(ref mut opt) | ChangedAndToUser(ref mut opt) => {
+                        if let Some(id) = *opt {
+                            let nid =
+                                matrices.duplicate_as_field_with_visited(id, input, &mut m_visited);
+                            *opt = Some(nid);
+                        }
+                    }
+                    ProvidedToUser | FromDev => {}
+                }
+            }
+        }
+
+        // Duplicate inline uniforms used in stage changes
+        {
+            let hpat![uniforms, formulas_cache] = input;
+            let mut u_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+            for part in new.uniforms.0.values_mut() {
+                use crate::gui::animation::Animation::*;
+                match part {
+                    Changed(ref mut opt) | ChangedAndToUser(ref mut opt) => {
+                        if let Some(id) = *opt {
+                            let nid = uniforms.duplicate_as_field_with_visited(
+                                id,
+                                formulas_cache,
+                                &mut u_visited,
+                            );
+                            *opt = Some(nid);
+                        }
+                    }
+                    ProvidedToUser | FromDev => {}
+                }
+            }
+        }
+
+        new
+    }
 }
 
 impl AnyUniform {
@@ -1294,5 +1349,60 @@ impl StorageElem2 for RealAnimation {
             let hpat![uniforms, formulas_cache] = input;
             self.uniforms.errors_count(uniforms, formulas_cache)
         }
+    }
+
+    fn duplicate_inline<F>(
+        &self,
+        _map_self: &mut F,
+        (_animation_stages, (_real_animations, (_cams, (_filters, (_global, (matrices, input)))))): &mut Self::Input,
+    ) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper,
+    {
+        let mut new = self.clone();
+        use crate::gui::unique_id::UniqueId;
+        use std::collections::BTreeMap;
+
+        // Duplicate inline matrices used in real animation changes
+        {
+            let mut m_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+            for part in new.matrices.0.values_mut() {
+                use crate::gui::animation::RealAnimationPart::*;
+                match part {
+                    Changed(ref mut opt) => {
+                        if let Some(id) = *opt {
+                            let nid =
+                                matrices.duplicate_as_field_with_visited(id, input, &mut m_visited);
+                            *opt = Some(nid);
+                        }
+                    }
+                    CopyPrev => {}
+                }
+            }
+        }
+
+        // Duplicate inline uniforms used in real animation changes
+        {
+            let hpat![uniforms, formulas_cache] = input;
+            let mut u_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+            for part in new.uniforms.0.values_mut() {
+                use crate::gui::animation::RealAnimationPart::*;
+                match part {
+                    Changed(ref mut opt) => {
+                        if let Some(id) = *opt {
+                            let nid = uniforms.duplicate_as_field_with_visited(
+                                id,
+                                formulas_cache,
+                                &mut u_visited,
+                            );
+                            *opt = Some(nid);
+                        }
+                    }
+                    CopyPrev => {}
+                }
+            }
+        }
+
+        new
     }
 }

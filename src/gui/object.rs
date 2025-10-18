@@ -442,4 +442,85 @@ impl StorageElem2 for Object {
 
         result
     }
+
+    fn duplicate_inline<F>(&self, _map_self: &mut F, input: &mut Self::Input) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper,
+    {
+        use Object::*;
+        use ObjectType::*;
+        let (_, (matrices, uniforms_input)) = input;
+        use crate::gui::unique_id::UniqueId;
+        use std::collections::BTreeMap;
+        let mut m_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+        match self.clone() {
+            DebugMatrix(a) => DebugMatrix(a.map(|id| {
+                matrices.duplicate_as_field_with_visited(id, uniforms_input, &mut m_visited)
+            })),
+            Flat {
+                kind,
+                is_inside,
+                in_subspace,
+            } => {
+                let kind = match kind {
+                    Simple(a) => Simple(a.map(|id| {
+                        matrices.duplicate_as_field_with_visited(id, uniforms_input, &mut m_visited)
+                    })),
+                    Portal(a, b) => Portal(
+                        a.map(|id| {
+                            matrices.duplicate_as_field_with_visited(
+                                id,
+                                uniforms_input,
+                                &mut m_visited,
+                            )
+                        }),
+                        b.map(|id| {
+                            matrices.duplicate_as_field_with_visited(
+                                id,
+                                uniforms_input,
+                                &mut m_visited,
+                            )
+                        }),
+                    ),
+                };
+                Flat {
+                    kind,
+                    is_inside,
+                    in_subspace,
+                }
+            }
+            Complex {
+                kind,
+                intersect,
+                in_subspace,
+            } => {
+                let kind = match kind {
+                    Simple(a) => Simple(a.map(|id| {
+                        matrices.duplicate_as_field_with_visited(id, uniforms_input, &mut m_visited)
+                    })),
+                    Portal(a, b) => Portal(
+                        a.map(|id| {
+                            matrices.duplicate_as_field_with_visited(
+                                id,
+                                uniforms_input,
+                                &mut m_visited,
+                            )
+                        }),
+                        b.map(|id| {
+                            matrices.duplicate_as_field_with_visited(
+                                id,
+                                uniforms_input,
+                                &mut m_visited,
+                            )
+                        }),
+                    ),
+                };
+                Complex {
+                    kind,
+                    intersect,
+                    in_subspace,
+                }
+            }
+        }
+    }
 }

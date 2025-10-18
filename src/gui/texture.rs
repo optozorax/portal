@@ -74,4 +74,11 @@ impl StorageElem2 for TextureName {
     ) -> usize {
         texture_errors.0.get(&self.0).is_some() as usize
     }
+
+    fn duplicate_inline<F>(&self, _map_self: &mut F, _input: &mut Self::Input) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper,
+    {
+        self.clone()
+    }
 }

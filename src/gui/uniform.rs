@@ -366,6 +366,19 @@ impl TVec3 {
             + self.y.errors_count(uniforms, formulas_cache)
             + self.z.errors_count(uniforms, formulas_cache)
     }
+
+    pub fn duplicate_as_field(
+        &self,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+        visited: &mut std::collections::BTreeMap<UniqueId, UniqueId>,
+    ) -> Self {
+        Self {
+            x: self.x.duplicate_as_field(uniforms, formulas_cache, visited),
+            y: self.y.duplicate_as_field(uniforms, formulas_cache, visited),
+            z: self.z.duplicate_as_field(uniforms, formulas_cache, visited),
+        }
+    }
 }
 
 impl ParametrizeOrNot {
@@ -441,6 +454,24 @@ impl ParametrizeOrNot {
             Yes(Some(id)) => uniforms.errors_inline(*id, formulas_cache),
             Yes(None) => 1,
             No(_) => 0,
+        }
+    }
+
+    pub fn duplicate_as_field(
+        &self,
+        uniforms: &mut Storage2<AnyUniform>,
+        formulas_cache: &mut FormulasCache,
+        visited: &mut std::collections::BTreeMap<UniqueId, UniqueId>,
+    ) -> Self {
+        use ParametrizeOrNot::*;
+        match self {
+            Yes(Some(id)) => Yes(Some(uniforms.duplicate_as_field_with_visited(
+                *id,
+                formulas_cache,
+                visited,
+            ))),
+            Yes(None) => Yes(None),
+            No(f) => No(*f),
         }
     }
 }
@@ -1024,5 +1055,12 @@ impl StorageElem2 for AnyUniform {
         } else {
             0
         }
+    }
+
+    fn duplicate_inline<F>(&self, _map_self: &mut F, _input: &mut Self::Input) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper,
+    {
+        self.clone()
     }
 }
