@@ -251,6 +251,95 @@ impl<T: StorageElem2> Storage2<T> {
         changed
     }
 
+    fn make_unique_copy_name(&self, original: &str) -> String {
+        let mut idx = 0usize;
+        loop {
+            let candidate = if idx == 0 {
+                format!("{} (copy)", original)
+            } else {
+                format!("{} (copy {})", original, idx + 1)
+            };
+            let used = self
+                .storage
+                .values()
+                .any(|s| matches!(s, StorageInner::Named(_, n) if n == &candidate));
+            if !used {
+                return candidate;
+            }
+            idx += 1;
+        }
+    }
+
+    /// Duplicate a named element (deep copy inline children) and insert after original.
+    pub fn duplicate_named(
+        &mut self,
+        id: T::IdWrapper,
+        input: &mut T::Input,
+    ) -> Option<T::IdWrapper> {
+        let uid = id.un_wrap();
+        let (value, name) = match self.storage.get(&uid) {
+            Some(StorageInner::Named(v, n)) => (v.clone(), n.clone()),
+            _ => return None,
+        };
+
+        // Same-type visited map to preserve shared subgraphs and avoid cycles
+        let mut visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+        let mut map_self = |child_id: T::IdWrapper, input: &mut T::Input| {
+            self.duplicate_as_field_with_visited(child_id, input, &mut visited)
+        };
+        let new_value = value.duplicate_inline(&mut map_self, input);
+
+        let new_name = self.make_unique_copy_name(&name);
+        let new_id = self.ids.get_unique();
+        self.storage
+            .insert(new_id, StorageInner::Named(new_value, new_name));
+
+        // Insert into order after original if possible
+        if let Some(pos) = self.storage_order.iter().position(|x| *x == uid) {
+            self.storage_order.insert(pos + 1, new_id);
+        } else {
+            self.storage_order.push(new_id);
+        }
+
+        Some(T::IdWrapper::wrap(new_id))
+    }
+
+    /// Duplicate an id used as a field (deep copy only if it is inline).
+    pub fn duplicate_as_field(&mut self, id: T::IdWrapper, input: &mut T::Input) -> T::IdWrapper {
+        let mut visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+        self.duplicate_as_field_with_visited(id, input, &mut visited)
+    }
+
+    pub fn duplicate_as_field_with_visited(
+        &mut self,
+        id: T::IdWrapper,
+        input: &mut T::Input,
+        visited: &mut BTreeMap<UniqueId, UniqueId>,
+    ) -> T::IdWrapper {
+        let uid = id.un_wrap();
+        match self.storage.get(&uid) {
+            Some(StorageInner::Named(_, _)) => id, // keep named references shared
+            Some(StorageInner::Inline(v)) => {
+                if let Some(&new_uid) = visited.get(&uid) {
+                    return T::IdWrapper::wrap(new_uid);
+                }
+
+                let value = v.clone();
+                let mut map_self = |child_id: T::IdWrapper, input: &mut T::Input| {
+                    self.duplicate_as_field_with_visited(child_id, input, visited)
+                };
+                let new_value = value.duplicate_inline(&mut map_self, input);
+
+                let new_uid = self.ids.get_unique();
+                visited.insert(uid, new_uid);
+                self.storage
+                    .insert(new_uid, StorageInner::Inline(new_value));
+                T::IdWrapper::wrap(new_uid)
+            }
+            None => id, // shouldn't happen; keep as-is
+        }
+    }
+
     fn egui_inner(&mut self, ui: &mut Ui, input: &mut T::Input, data_id: egui::Id) -> WhatChanged {
         let mut changed = WhatChanged::default();
         let mut to_delete = None;
@@ -258,6 +347,7 @@ impl<T: StorageElem2> Storage2<T> {
         let mut to_move_down = None;
         let mut to_move_up_5 = None;
         let mut to_move_down_5 = None;
+        let mut to_duplicate = None;
 
         let mut storage_order = Vec::new();
         std::mem::swap(&mut storage_order, &mut self.storage_order);
@@ -291,6 +381,15 @@ impl<T: StorageElem2> Storage2<T> {
                                     .clicked()
                                 {
                                     to_delete = Some(pos);
+                                }
+                                if ui
+                                    .add(Button::new(
+                                        RichText::new("Duplicate")
+                                            .color(ui.visuals().hyperlink_color),
+                                    ))
+                                    .clicked()
+                                {
+                                    to_duplicate = Some(pos);
                                 }
                                 ui.separator();
                                 if ui
@@ -377,6 +476,11 @@ impl<T: StorageElem2> Storage2<T> {
         if let Some(pos) = to_delete {
             changed.shader = true;
             self.remove_by_pos(pos, input);
+        } else if let Some(pos) = to_duplicate {
+            changed.shader = true;
+            if let Some(old_id) = self.storage_order.get(pos).copied() {
+                let _ = self.duplicate_named(T::IdWrapper::wrap(old_id), input);
+            }
         } else if let Some(pos) = to_move_up {
             self.storage_order.swap(pos, pos - 1);
         } else if let Some(pos) = to_move_down {
@@ -654,6 +758,11 @@ pub trait StorageElem2: Sized + Default + Clone + Serialize {
         input: &Self::Input,
         self_id: Self::IdWrapper,
     ) -> usize;
+
+    /// Create a deep duplicate of `self`, remapping inline same-type references via `map_self`.
+    fn duplicate_inline<F>(&self, map_self: &mut F, input: &mut Self::Input) -> Self
+    where
+        F: FnMut(Self::IdWrapper, &mut Self::Input) -> Self::IdWrapper;
 }
 
 impl<T: StorageElem2> From<StorageWithNames<T>> for Storage2<T> {
