@@ -556,12 +556,6 @@ impl Default for Scenes {
                         hidden: false,
                     },
                     Scene {
-                        name: "Larger Portal in Smaller One using flipped Surface Portals (by (NotAi)Qube)",
-                        link: "large_fully_in_small_using_surfaces",
-                        content: include_str!("../../scenes/large_fully_in_small_using_surfaces.ron"),
-                        hidden: false,
-                    },
-                    Scene {
                         name: "Offsetting Doorway (by (NotAi)Qube)",
                         link: "offsetting_doorway",
                         content: include_str!("../../scenes/offsetting_doorway.ron"),
