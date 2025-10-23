@@ -95,8 +95,15 @@ pub struct LibraryCode(pub GlslCode);
 impl GlslCode {
     pub fn egui(&mut self, ui: &mut Ui) -> WhatChanged {
         WhatChanged::from_shader(
-            ui.add(TextEdit::multiline(&mut self.0).font(TextStyle::Monospace))
-                .changed(),
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.add(
+                    egui::TextEdit::multiline(&mut self.0)
+                        .font(egui::TextStyle::Monospace)
+                        .code_editor()
+                        .lock_focus(true)
+                        .desired_width(f32::INFINITY)
+                ).changed()
+            }).inner
         )
     }
 }
