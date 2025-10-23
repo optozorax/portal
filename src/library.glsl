@@ -361,9 +361,9 @@ MaterialProcessing material_refract(
     return material_next(add_to_color, r);
 }
 
-MaterialProcessing material_teleport_transformed(Ray r) {
+MaterialProcessing material_teleport_transformed(Ray r,vec3 n) {
     // todo add add_gray_after_teleportation
-    r.o += r.d * _offset_after_material;
+    r.o += r.d * _offset_after_material / abs(dot(r.d.xyz,n));
     r = normalize_ray(r);
     return material_next(vec3(1.), r);
 }
@@ -373,7 +373,7 @@ MaterialProcessing material_teleport(
     SurfaceIntersection hit, Ray r,
     mat4 teleport_matrix
 ) {
-    return material_teleport_transformed(transform(teleport_matrix, r));
+    return material_teleport_transformed(transform(teleport_matrix, r),hit.n);
 }
 
 MaterialProcessing material_change_subspace(Ray r) {
