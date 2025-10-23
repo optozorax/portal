@@ -561,6 +561,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/offsetting_doorway.ron"),
                         hidden: false,
                     },
+                    Scene {
+                        name: "Time portal Spacetime (by Frisk256)",
+                        link: "time_portal_spacetime",
+                        content: include_str!("../../scenes/time_portal_spacetime.ron"),
+                        hidden: false,
+                    },
                 ],
             },
         ])
