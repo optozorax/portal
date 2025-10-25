@@ -8,10 +8,11 @@
     <title>PortalLab</title>
 
     <!-- config for our rust wasm binary. go to https://trunkrs.dev/assets/#rust for more customization -->
+    <!-- Explicitly select the binary to avoid multiple-artifact ambiguity. -->
     
 <script type="module">
-import init, * as bindings from 'https://optozorax.github.io/portal/portal_lab/portal_lab.js';
-const wasm = await init({ module_or_path: 'https://optozorax.github.io/portal/portal_lab/portal_lab_bg.wasm' });
+import init, * as bindings from 'https://optozorax.github.io/portal/portal_lab/portal_lab_app.js';
+const wasm = await init({ module_or_path: 'https://optozorax.github.io/portal/portal_lab/portal_lab_app_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -125,7 +126,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
         }
     </style>
-<link rel="modulepreload" href="https://optozorax.github.io/portal/portal_lab/portal_lab.js" crossorigin="anonymous" integrity="sha384-Iqmf6lbd7QZaj2wDgnVL/zt+LHIZLxXbKA/jmaM20utAXuBt8Irqic1tYjIiCm/J"><link rel="preload" href="https://optozorax.github.io/portal/portal_lab/portal_lab_bg.wasm" crossorigin="anonymous" integrity="sha384-9Ay8LVl9qr+EmNBiov67Ta5kA7r6ORaNkus1f1nd2S0q+qZ/TzCOr1q7P7AHFipG" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="https://optozorax.github.io/portal/portal_lab/portal_lab_app.js" crossorigin="anonymous" integrity="sha384-6nWwq5BkJ9F/oD4F3erN3Wclisufa3folFCToaMqEt/skawC0o3w1FdX1+tDuJLu"><link rel="preload" href="https://optozorax.github.io/portal/portal_lab/portal_lab_app_bg.wasm" crossorigin="anonymous" integrity="sha384-e0bHK5npMhgtZjWTgr6pUrA+LKZwxSlq7vQsF/DDuasIehsANib3Z8LCKIankfxE" as="fetch" type="application/wasm"></head>
 
 <body>
     <!-- The WASM code will resize the canvas dynamically -->

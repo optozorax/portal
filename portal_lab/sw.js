@@ -2,8 +2,8 @@ var cacheName = 'portal-lab-pwa';
 var filesToCache = [
   './',
   './index.html',
-  './portal_lab.js',
-  './portal_lab_bg.wasm',
+  './portal_lab_app.js',
+  './portal_lab_app_bg.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */
