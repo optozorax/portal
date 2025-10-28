@@ -1399,7 +1399,7 @@ impl SceneRenderer {
         fps: usize,
         motion_blur_frames: usize,
         skip_existing: bool,
-        starts_with: Option<&str>
+        starts_with: Option<&str>,
     ) {
         let mut memory = egui::Memory::default();
 
@@ -1994,8 +1994,8 @@ fn window_conf() -> Conf {
 }
 
 async fn render() {
-    // let (width, height) = (3840, 2160);
-    let (width, height) = (3840, 3840);
+    let (width, height) = (3840, 2160);
+    // let (width, height) = (3840, 3840);
     // let (width, height) = (854, 480);
 
     // render all scenes as a pictures
@@ -2019,7 +2019,8 @@ async fn render() {
     */
 
     for scene_name in [
-        "plus_ultra",
+        "background_animation",
+        // "plus_ultra",
 
         // "sphere_to_sphere",
         // "half_spheres",
@@ -2033,27 +2034,25 @@ async fn render() {
         println!("Rendering scene {scene_name}");
 
         let fps = 60;
-        let motion_blur_frames = 5;
+        let motion_blur_frames = 1;
         let skip_existing = true;
-        let starts_with = Some("v3.");
+        let starts_with = Some("anim");
 
         let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
         let scene = ron::from_str(scene_content).unwrap();
         let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
         renderer.aa_count = 4;
         renderer.render_depth = 150;
-        renderer.cam.view_angle *= 1.5;
+        // renderer.cam.view_angle *= 1.5;
 
-        // if true {
-        if false {
+        if true {
+            // if false {
             renderer.render_all_animations(fps, motion_blur_frames, skip_existing, starts_with);
         }
 
-        if true {
-        // if false {
-            for animation_stage in [
-                "v2.screenshot.5",
-            ] {
+        // if true {
+        if false {
+            for animation_stage in ["v2.screenshot.5"] {
                 drop(std::fs::create_dir("video"));
                 drop(std::fs::create_dir(format!(
                     "video/{}",
