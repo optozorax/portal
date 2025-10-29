@@ -1804,10 +1804,16 @@ First, predefined library is included, then uniforms, then user library, then in
                             }
                         };
                         let mut content_mut = content.clone();
-                        ui.add(
-                            egui::TextEdit::multiline(&mut content_mut)
-                                .font(egui::TextStyle::Monospace),
-                        );
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            ui.add(
+                                egui::TextEdit::multiline(&mut content_mut)
+                                    .font(egui::TextStyle::Monospace)
+                                    .code_editor()
+                                    .desired_rows(10)
+                                    .lock_focus(true)
+                                    .desired_width(f32::INFINITY),
+                            )
+                        });
                     });
             }
             if !not_remove_export {
@@ -1867,10 +1873,17 @@ First, predefined library is included, then uniforms, then user library, then in
                                 }
                             }
                         }
-                        ui.add(
-                            egui::TextEdit::multiline(content)
-                                .font(egui::TextStyle::Monospace),
-                        );
+
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            ui.add(
+                                egui::TextEdit::multiline(content)
+                                    .font(egui::TextStyle::Monospace)
+                                    .code_editor()
+                                    .desired_rows(10)
+                                    .lock_focus(true)
+                                    .desired_width(f32::INFINITY),
+                            )
+                        });
 
                         if let Some(err) = &self.import_window_errors {
                             ui.horizontal_wrapped(|ui| {

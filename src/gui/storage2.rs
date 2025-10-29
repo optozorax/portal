@@ -731,9 +731,7 @@ impl<T: StorageElem2> Storage2<T> {
 
     /// Compute a mapping from old UniqueId to a new, hash-derived UniqueId for each element.
     /// If an element is named, its name is mixed into the hash when `include_name_in_hash` is true.
-    pub fn hash_id_map(
-        &self,
-    ) -> std::collections::BTreeMap<UniqueId, UniqueId>
+    pub fn hash_id_map(&self) -> std::collections::BTreeMap<UniqueId, UniqueId>
     where
         T: Serialize,
     {
