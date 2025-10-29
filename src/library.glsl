@@ -363,7 +363,7 @@ MaterialProcessing material_refract(
 
 MaterialProcessing material_teleport_transformed(Ray r,vec3 n) {
     // todo add add_gray_after_teleportation
-    r.o += r.d * _offset_after_material / abs(dot(r.d.xyz,n));
+    r.o += r.d * _offset_after_material;
     r = normalize_ray(r);
     return material_next(vec3(1.), r);
 }
