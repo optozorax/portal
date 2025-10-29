@@ -1,1 +1,83 @@
-(desc:(eng:"",rus:""),cam:(look_at:(0,0,0),alpha:6.938366474309146,beta:1.1746915435791017,r:3.8500000000000574,offset_after_material:0.000025),uniforms:(ids:(available:[],max:1),storage:{(0):Named(Bool(false),"teleport_light")},storage_order:[(0)]),matrices:(ids:(available:[(0)],max:2),storage:{(1):Inline(Simple(offset:(0,0,0),scale:1,rotate:(4.71238898038469,0,0),mirror:(false,false,false)))},storage_order:[]),objects:(ids:(available:[],max:1),storage:{(0):Named(Complex(kind:Simple(Some(((1)))),intersect:(("return intersect_box(vec3(1.), r, companion_cube_M);")),in_subspace:Normal),"companion_cube")},storage_order:[(0)]),cameras:(ids:(available:[],max:0),storage:{},storage_order:[]),textures:(ids:(available:[],max:0),storage:{},storage_order:[]),materials:(ids:(available:[],max:1),storage:{(0):Named(Complex(code:(("return material_simple(hit, r, companion_cube_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);"))),"companion_cube")},storage_order:[(0)]),intersection_materials:(ids:(available:[],max:0),storage:{},storage_order:[]),library:(ids:(available:[],max:2),storage:{(0):Named((("vec3 companion_cube_color(float u, float v) {\r\n  float mul = 1.;\r\n  float dist = sqrt(u * u + v * v);\r\n  float circle_size = 0.6;\r\n  float circle_border = 0.03;\r\n  if (dist < circle_size + circle_border && dist > circle_size) { mul = 0.4; }\r\n  if (dist > circle_size + circle_border) { mul = (PI + atan(u, v))/(2.0*PI); }\r\n\r\n  if (dist < circle_size) {\r\n    float scale = 3.;\r\n    float x = u * scale;\r\n    float y = v * scale + 0.26;\r\n    float temp1 = x*x + y*y - 1.;\r\n    if (temp1 * temp1 * temp1 - x * x * y * y * y < 0.) {\r\n      return vec3(222., 35., 138.) / 255.;\r\n    }\r\n  }\r\n\r\n  return color_grid3(vec3(9.176470588235294e-1, 9.176470588235294e-1, 9.176470588235294e-1) * mul, vec2(u + 1., v + 1.));\r\n}")),"companion_cube"),(1):Named((("SceneIntersection intersect_box(vec3 rad, Ray r, int material) {\r\n  vec3 m = 1.0/r.d.xyz;\r\n  vec3 n = m*r.o.xyz;\r\n  vec3 k = abs(m)*rad;\r\n  vec3 t1 = -n - k;\r\n  vec3 t2 = -n + k;\r\n\r\n  float tN = max( max( t1.x, t1.y ), t1.z );\r\n  float tF = min( min( t2.x, t2.y ), t2.z );\r\n\r\n  float t = tN;\r\n  if (tN < 0.0 && tF > 0.0) t = tF;\r\n\r\n  if(tN > tF) return scene_intersection_none;\r\n\r\n  if(t < 0.0) return scene_intersection_none;\r\n\r\n  vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\r\n\r\n  vec3 pos = (r.o + r.d * t).xyz;\r\n\r\n  vec2 uv = vec2(pos.x, pos.y);\r\n  if (pos.z < 0.) uv.x = -uv.x;\r\n  if (abs(abs(pos.x) - rad.x) < 0.0001) {\r\n    uv = vec2(pos.y, pos.z);\r\n    if (pos.x < 0.) uv.x = -uv.x;\r\n  }\r\n  if (abs(abs(pos.y) - rad.y) < 0.0001) {\r\n    uv = vec2(pos.x, pos.z);\r\n    if (pos.y > 0.) uv.x = -uv.x;\r\n  }\r\n\r\n  return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);\r\n}")),"box")},storage_order:[(0),(1)]),animations_filters:(uniforms:({((0)):false,((1)):false,((2)):false,((6)):false,((7)):false,((8)):false}),matrices:({((0)):false}),cameras:({})),elements_descriptions:(uniforms:({}),matrices:({}),cameras:({})),user_uniforms:(uniforms:({}),matrices:({})),animation_stages:(ids:(available:[],max:0),storage:{},storage_order:[]),current_stage:Dev,dev_stage:(uniforms:({((0)):Bool(false)}),matrices:({((0)):Simple(offset:(0,0,0),scale:1,rotate:(0,0,0),mirror:(false,false,false))})),animations:(ids:(available:[],max:0),storage:{},storage_order:[]),use_time:false,skybox:None)
+(
+    desc: (
+        eng: "",
+        rus: "",
+    ),
+    cam: (
+        look_at: (0, 0, 0),
+        alpha: 6.938366474309146,
+        beta: 1.1746915435791017,
+        r: 3.8500000000000574,
+        offset_after_material: 0.000025,
+    ),
+    uniforms: ([
+        (
+            name: "teleport_light",
+            data: Bool(false),
+        ),
+    ]),
+    matrices: ([]),
+    objects: ([
+        (
+            name: "companion_cube",
+            data: Complex(
+                kind: Simple(Some(Inline(Simple(
+                    offset: (0, 0, 0),
+                    scale: 1,
+                    rotate: (4.71238898038469, 0, 0),
+                    mirror: (false, false, false),
+                )))),
+                intersect: (("return intersect_box(vec3(1.), r, companion_cube_M);")),
+                in_subspace: Normal,
+            ),
+        ),
+    ]),
+    cameras: ([]),
+    textures: ([]),
+    materials: ([
+        (
+            name: "companion_cube",
+            data: Complex(
+                code: (("return material_simple(hit, r, companion_cube_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);")),
+            ),
+        ),
+    ]),
+    intersection_materials: ([]),
+    library: ([
+        (
+            name: "companion_cube",
+            data: (("vec3 companion_cube_color(float u, float v) {\r\n  float mul = 1.;\r\n  float dist = sqrt(u * u + v * v);\r\n  float circle_size = 0.6;\r\n  float circle_border = 0.03;\r\n  if (dist < circle_size + circle_border && dist > circle_size) { mul = 0.4; }\r\n  if (dist > circle_size + circle_border) { mul = (PI + atan(u, v))/(2.0*PI); }\r\n\r\n  if (dist < circle_size) {\r\n    float scale = 3.;\r\n    float x = u * scale;\r\n    float y = v * scale + 0.26;\r\n    float temp1 = x*x + y*y - 1.;\r\n    if (temp1 * temp1 * temp1 - x * x * y * y * y < 0.) {\r\n      return vec3(222., 35., 138.) / 255.;\r\n    }\r\n  }\r\n\r\n  return color_grid3(vec3(9.176470588235294e-1, 9.176470588235294e-1, 9.176470588235294e-1) * mul, vec2(u + 1., v + 1.));\r\n}")),
+        ),
+        (
+            name: "box",
+            data: (("SceneIntersection intersect_box(vec3 rad, Ray r, int material) {\r\n  vec3 m = 1.0/r.d.xyz;\r\n  vec3 n = m*r.o.xyz;\r\n  vec3 k = abs(m)*rad;\r\n  vec3 t1 = -n - k;\r\n  vec3 t2 = -n + k;\r\n\r\n  float tN = max( max( t1.x, t1.y ), t1.z );\r\n  float tF = min( min( t2.x, t2.y ), t2.z );\r\n\r\n  float t = tN;\r\n  if (tN < 0.0 && tF > 0.0) t = tF;\r\n\r\n  if(tN > tF) return scene_intersection_none;\r\n\r\n  if(t < 0.0) return scene_intersection_none;\r\n\r\n  vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\r\n\r\n  vec3 pos = (r.o + r.d * t).xyz;\r\n\r\n  vec2 uv = vec2(pos.x, pos.y);\r\n  if (pos.z < 0.) uv.x = -uv.x;\r\n  if (abs(abs(pos.x) - rad.x) < 0.0001) {\r\n    uv = vec2(pos.y, pos.z);\r\n    if (pos.x < 0.) uv.x = -uv.x;\r\n  }\r\n  if (abs(abs(pos.y) - rad.y) < 0.0001) {\r\n    uv = vec2(pos.x, pos.z);\r\n    if (pos.y > 0.) uv.x = -uv.x;\r\n  }\r\n\r\n  return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);\r\n}")),
+        ),
+    ]),
+    animations_filters: (
+        uniforms: {
+            "teleport_light": false,
+        },
+        matrices: {},
+        cameras: {},
+    ),
+    elements_descriptions: (
+        uniforms: {},
+        matrices: {},
+        cameras: {},
+    ),
+    user_uniforms: (
+        uniforms: {},
+        matrices: {},
+    ),
+    animation_stages: ([]),
+    current_stage: Dev,
+    dev_stage: (
+        uniforms: {
+            "teleport_light": Bool(false),
+        },
+        matrices: {},
+    ),
+    animations: ([]),
+    use_time: false,
+    skybox: None,
+)

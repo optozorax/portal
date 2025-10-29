@@ -21,6 +21,7 @@ ndarray = "0.15.6"
 argmin-math = { version = "0.3", features = ["ndarray_latest-nolinalg-serde"] }
 nalgebra = "0.32.2"
 once_cell = "1"
+similar = "2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 color-backtrace = "0.5.0"

@@ -12,6 +12,12 @@ impl fmt::Display for UniqueId {
     }
 }
 
+impl UniqueId {
+    pub fn from_usize(v: usize) -> Self {
+        Self(v)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Serialize, Deserialize)]
 pub struct UniqueIds {
     available: VecDeque<UniqueId>,

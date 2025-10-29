@@ -3,6 +3,8 @@ use crate::gui::storage::StorageWithNames;
 use crate::gui::unique_id::*;
 use egui::*;
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash as StdHash, Hasher};
 
 use std::collections::BTreeMap;
 
@@ -100,6 +102,20 @@ impl<'a, T: StorageElem2> InlineHelper<'a, T> {
 }
 
 impl<T: StorageElem2> Storage2<T> {
+    /// Insert a new named element and place it at the end of visible order.
+    pub fn insert_named_with_order(&mut self, name: String, value: T) -> T::IdWrapper {
+        let id = self.ids.get_unique();
+        self.storage_order.push(id);
+        self.storage.insert(id, StorageInner::Named(value, name));
+        T::IdWrapper::wrap(id)
+    }
+
+    /// Insert a new inline element and return its id (not visible in order).
+    pub fn insert_inline(&mut self, value: T) -> T::IdWrapper {
+        let id = self.ids.get_unique();
+        self.storage.insert(id, StorageInner::Inline(value));
+        T::IdWrapper::wrap(id)
+    }
     pub fn get(&self, id: T::IdWrapper, input: &T::GetInput) -> Option<T::GetType> {
         let mut visited = vec![];
         self.get_inner(id, &mut visited, input)
@@ -519,7 +535,7 @@ impl<T: StorageElem2> Storage2<T> {
 
         ui.vertical(|ui| {
             if let Some(id_inner) = id {
-                if self.storage.get(&id_inner.un_wrap()).is_none() {
+                if !self.storage.contains_key(&id_inner.un_wrap()) {
                     crate::error!(format, "id {:?} transformed to `None`", id_inner);
                     *id = None;
                     changed.uniform = true;
@@ -644,7 +660,7 @@ impl<T: StorageElem2> Storage2<T> {
         let mut changed = WhatChanged::default();
         ui.vertical(|ui| {
             if let Some(id_inner) = id {
-                if self.storage.get(&id_inner.un_wrap()).is_none() {
+                if !self.storage.contains_key(&id_inner.un_wrap()) {
                     crate::error!(format, "id {:?} transformed to `None`", id_inner);
                     *id = None;
                     changed.uniform = true;
@@ -712,6 +728,71 @@ impl<T: StorageElem2> Storage2<T> {
     pub fn len(&self) -> usize {
         self.storage_order.len()
     }
+
+    /// Compute a mapping from old UniqueId to a new, hash-derived UniqueId for each element.
+    /// If an element is named, its name is mixed into the hash when `include_name_in_hash` is true.
+    pub fn hash_id_map(
+        &self,
+    ) -> std::collections::BTreeMap<UniqueId, UniqueId>
+    where
+        T: Serialize,
+    {
+        let mut map = std::collections::BTreeMap::new();
+        for (old_id, inner) in &self.storage {
+            let mut hasher = DefaultHasher::new();
+            match inner {
+                StorageInner::Named(_, name) => {
+                    name.hash(&mut hasher);
+                }
+                StorageInner::Inline(value) => {
+                    let s = ron::to_string(value).unwrap_or_default();
+                    s.hash(&mut hasher);
+                }
+            }
+            let h = hasher.finish() as usize;
+            map.insert(*old_id, UniqueId::from_usize(h));
+        }
+        map
+    }
+
+    /// Build a new Storage2 by remapping each element's id and transforming its value.
+    /// Collisions are resolved by keeping the first encountered element (later ones are dropped).
+    pub fn remap_ids_and_values(
+        &self,
+        remap_id: &impl Fn(UniqueId) -> UniqueId,
+        remap_value: &impl Fn(&T) -> T,
+    ) -> Storage2<T> {
+        let mut new = Storage2::<T> {
+            ids: Default::default(),
+            storage: std::collections::BTreeMap::new(),
+            storage_order: Vec::new(),
+        };
+
+        // Insert values with remapped ids
+        for (old_id, inner) in &self.storage {
+            let nid = remap_id(*old_id);
+            if new.storage.contains_key(&nid) {
+                // merge by dropping duplicates
+                continue;
+            }
+            let mapped = match inner {
+                StorageInner::Named(v, name) => StorageInner::Named(remap_value(v), name.clone()),
+                StorageInner::Inline(v) => StorageInner::Inline(remap_value(v)),
+            };
+            new.storage.insert(nid, mapped);
+        }
+
+        // Rebuild visible order: map and deduplicate while preserving first occurrence
+        let mut seen = std::collections::BTreeSet::new();
+        for oid in &self.storage_order {
+            let nid = remap_id(*oid);
+            if seen.insert(nid) {
+                new.storage_order.push(nid);
+            }
+        }
+
+        new
+    }
 }
 
 pub trait Wrapper:
@@ -766,7 +847,13 @@ pub trait StorageElem2: Sized + Default + Clone + Serialize {
 }
 
 impl<T: StorageElem2> From<StorageWithNames<T>> for Storage2<T> {
-    fn from(_: StorageWithNames<T>) -> Storage2<T> {
-        todo!()
+    fn from(src: StorageWithNames<T>) -> Storage2<T> {
+        // Not used directly in UI; provide a simple conversion preserving order.
+        let StorageWithNames { names, storage } = src;
+        let mut result: Storage2<T> = Default::default();
+        for (name, value) in names.into_iter().zip(storage.into_iter()) {
+            result.insert_named_with_order(name, value);
+        }
+        result
     }
 }

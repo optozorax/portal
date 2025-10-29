@@ -6,7 +6,7 @@ use egui::*;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct TextureName(pub String);
 
 impl TextureName {
@@ -72,7 +72,7 @@ impl StorageElem2 for TextureName {
         texture_errors: &Self::Input,
         _: Self::IdWrapper,
     ) -> usize {
-        texture_errors.0.get(&self.0).is_some() as usize
+        texture_errors.0.contains_key(&self.0) as usize
     }
 
     fn duplicate_inline<F>(&self, _map_self: &mut F, _input: &mut Self::Input) -> Self

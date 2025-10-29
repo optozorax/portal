@@ -6,6 +6,9 @@ use crate::gui::scenes::ShowHiddenScenes;
 use crate::gui::storage2::Storage2;
 use macroquad::prelude::UniformDesc;
 
+use super::scene_serialized::{
+    deserialize_scene_new_format, serialize_scene_new_format, SerializedScene,
+};
 use crate::code_generation::*;
 use crate::gui::animation::*;
 use crate::gui::camera::Cam;
@@ -74,32 +77,32 @@ pub struct Scene {
     pub uniforms: Storage2<AnyUniform>,
 
     pub matrices: Storage2<Matrix>,
-    objects: Storage2<Object>,
+    pub objects: Storage2<Object>,
 
     pub cameras: Storage2<Cam>,
 
     pub textures: Storage2<TextureName>,
 
-    materials: Storage2<Material>,
+    pub materials: Storage2<Material>,
 
     #[serde(default)]
-    intersection_materials: Storage2<IntersectionMaterial>,
+    pub intersection_materials: Storage2<IntersectionMaterial>,
 
-    library: Storage2<LibraryCode>,
+    pub library: Storage2<LibraryCode>,
 
-    animations_filters: AnimationFilters,
+    pub animations_filters: AnimationFilters,
 
-    elements_descriptions: ElementsDescriptions,
+    pub elements_descriptions: ElementsDescriptions,
 
-    user_uniforms: GlobalUserUniforms,
-    animation_stages: Storage2<AnimationStage>,
+    pub user_uniforms: GlobalUserUniforms,
+    pub animation_stages: Storage2<AnimationStage>,
 
-    current_stage: CurrentStage,
+    pub current_stage: CurrentStage,
 
-    dev_stage: DevStage,
+    pub dev_stage: DevStage,
 
     #[serde(default)]
-    animations: Storage2<RealAnimation>,
+    pub animations: Storage2<RealAnimation>,
 
     #[serde(default)]
     pub use_time: bool,
@@ -114,20 +117,29 @@ pub struct Scene {
     prev_t_raw: f64,
 
     #[serde(default)]
-    skybox: Option<String>,
+    pub skybox: Option<String>,
 }
 
 // In case of panic
 impl Drop for Scene {
     fn drop(&mut self) {
-        match ron::to_string(self) {
-            Ok(result) => crate::error!(format, "scene:\n\n{}", result),
-            Err(err) => crate::error!(format, "errors while serializing scene: {:?}", err),
-        }
+        // match ron::to_string(self) {
+        //     Ok(result) => crate::error!(format, "scene:\n\n{}", result),
+        //     Err(err) => crate::error!(format, "errors while serializing scene: {:?}", err),
+        // }
     }
 }
 
 impl Scene {
+    pub fn to_serialized(&self) -> SerializedScene {
+        serialize_scene_new_format(self)
+    }
+
+    pub fn from_serialized(ser: SerializedScene) -> Self {
+        let mut scene: Scene = Default::default();
+        deserialize_scene_new_format(ser, &mut scene);
+        scene
+    }
     pub fn init(&mut self, data: &mut Data, memory: &mut egui::Memory) {
         data.errors = Default::default();
         data.show_error_window = false;
@@ -258,7 +270,7 @@ impl Scene {
                 ui,
                 &mut self.skybox,
                 "Skybox texture",
-                || String::new(),
+                String::new,
                 |ui, t| ui.text_edit_singleline(t).changed(),
             );
         });
@@ -843,8 +855,8 @@ impl Scene {
                     }
                     Flat { kind, is_inside: _, in_subspace } => {
                         match in_subspace {
-                            SubspaceType::Normal => result.add_string(format!("if (r.in_subspace == false) {{")),
-                            SubspaceType::Subspace => result.add_string(format!("if (r.in_subspace == true) {{")),
+                            SubspaceType::Normal => result.add_string("if (r.in_subspace == false) {"),
+                            SubspaceType::Subspace => result.add_string("if (r.in_subspace == true) {"),
                             SubspaceType::Both => {},
                         }
                         match kind {
@@ -887,14 +899,14 @@ impl Scene {
                             }
                         };
                         match in_subspace {
-                            SubspaceType::Normal | SubspaceType::Subspace => result.add_string(format!("}}")),
+                            SubspaceType::Normal | SubspaceType::Subspace => result.add_string("}"),
                             SubspaceType::Both => {},
                         }
                     },
                     Complex { kind, intersect: _, in_subspace } => {
                         match in_subspace {
-                            SubspaceType::Normal => result.add_string(format!("if (r.in_subspace == false) {{")),
-                            SubspaceType::Subspace => result.add_string(format!("if (r.in_subspace == true) {{")),
+                            SubspaceType::Normal => result.add_string("if (r.in_subspace == false) {"),
+                            SubspaceType::Subspace => result.add_string("if (r.in_subspace == true) {"),
                             SubspaceType::Both => {},
                         }
                         match kind {
@@ -937,7 +949,7 @@ impl Scene {
                             }
                         };
                         match in_subspace {
-                            SubspaceType::Normal | SubspaceType::Subspace => result.add_string(format!("}}")),
+                            SubspaceType::Normal | SubspaceType::Subspace => result.add_string("}"),
                             SubspaceType::Both => {},
                         }
                     },
@@ -1020,7 +1032,7 @@ impl Scene {
             {
                 // skip line
             } else {
-                res_storage += &line;
+                res_storage += line;
             }
             res_storage += "\n";
         }
@@ -1261,7 +1273,7 @@ impl Scene {
         }
 
         if self.run_animations {
-            time = time % self.total_animation_duration();
+            time %= self.total_animation_duration();
             for id in self
                 .animations
                 .visible_elements()

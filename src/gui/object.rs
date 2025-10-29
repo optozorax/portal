@@ -187,7 +187,7 @@ impl Wrapper for ObjectId {
 }
 
 impl Object {
-    pub fn get_name(id: MatrixId, storage: &Storage2<Matrix>) -> Option<MatrixName> {
+    pub fn get_name(id: MatrixId, storage: &Storage2<Matrix>) -> Option<MatrixName<'_>> {
         storage.get_name(id).map(|name| {
             name.map(|name| MatrixName(Cow::Borrowed(name)))
                 .unwrap_or_else(|| MatrixName(Cow::Owned(format!("id{}", id.un_wrap()))))

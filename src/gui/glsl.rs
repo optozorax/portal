@@ -6,10 +6,10 @@ use egui::*;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct MaterialCode(pub GlslCode);
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Hash)]
 pub struct GlslCode(pub String);
 
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -89,27 +89,30 @@ impl Default for MaterialCode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Hash)]
 pub struct LibraryCode(pub GlslCode);
 
 impl GlslCode {
     pub fn egui(&mut self, ui: &mut Ui) -> WhatChanged {
         WhatChanged::from_shader(
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.add(
-                    egui::TextEdit::multiline(&mut self.0)
-                        .font(egui::TextStyle::Monospace)
-                        .code_editor()
-                        .lock_focus(true)
-                        .desired_width(f32::INFINITY)
-                ).changed()
-            }).inner
+            egui::ScrollArea::vertical()
+                .show(ui, |ui| {
+                    ui.add(
+                        egui::TextEdit::multiline(&mut self.0)
+                            .font(egui::TextStyle::Monospace)
+                            .code_editor()
+                            .lock_focus(true)
+                            .desired_width(f32::INFINITY),
+                    )
+                    .changed()
+                })
+                .inner,
         )
     }
 }
 
 // Code must return integer - material. NOT_INSIDE if not inside. TELEPORT is should be teleported by current matrix.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct IsInsideCode(pub GlslCode);
 
 impl Default for IsInsideCode {
@@ -121,7 +124,7 @@ impl Default for IsInsideCode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct IntersectCode(pub GlslCode);
 
 impl Default for IntersectCode {
@@ -149,7 +152,7 @@ return SceneIntersection(grid_gray_M, SurfaceIntersection(true, t, u, v, n), fal
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct IntersectionMaterialCode(pub GlslCode);
 
 impl Default for IntersectionMaterialCode {

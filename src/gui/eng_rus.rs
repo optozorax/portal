@@ -3,7 +3,7 @@ use crate::gui::common::view_edit;
 use egui::Ui;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Hash)]
 pub struct EngRusText {
     pub eng: String,
     pub rus: String,

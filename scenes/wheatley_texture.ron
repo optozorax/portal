@@ -1,1 +1,79 @@
-(desc:(eng:"",rus:""),cam:(look_at:(0,0,0),alpha:8.215865606465513,beta:1.3959216133740295,r:3.500000000000051,offset_after_material:0.000025),uniforms:(ids:(available:[(0),(1),(2),(3),(4),(5),(6)],max:8),storage:{(7):Named(Bool(true),"teleport_light")},storage_order:[(7)]),matrices:(ids:(available:[(0)],max:2),storage:{(1):Inline(Simple(offset:(0,0,0),scale:1,rotate:(1.5707963267948966,1.5707963267948966,0),mirror:(false,false,false)))},storage_order:[]),objects:(ids:(available:[],max:1),storage:{(0):Named(Complex(kind:Simple(Some(((1)))),intersect:(("vec3 op = -r.o.xyz;\nfloat b = dot(op, r.d.xyz);\nfloat det = b*b - dot(op, op) + 1.0;\nif (det < 0.) return scene_intersection_none;\n\ndet = sqrt(det);\nfloat t = b - det;\nif (t < 0.) t = b + det;\nif (t < 0.) return scene_intersection_none;\n\nvec4 pos = r.o + r.d * t;\nvec3 n = normalize(pos.xyz);\n\nfloat u = atan(pos.z, pos.x) / PI;\nfloat v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y) / PI;\n\nreturn SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u, v, n), false);")),in_subspace:Normal),"wheatley")},storage_order:[(0)]),cameras:(ids:(available:[],max:0),storage:{},storage_order:[]),textures:(ids:(available:[],max:0),storage:{},storage_order:[]),materials:(ids:(available:[],max:1),storage:{(0):Named(Complex(code:(("return material_simple(hit, r, wheatley_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);"))),"wheatley")},storage_order:[(0)]),intersection_materials:(ids:(available:[],max:0),storage:{},storage_order:[]),library:(ids:(available:[],max:1),storage:{(0):Named((("vec3 rgb(int r, int g, int b) {\n  float r1 = float(r) / 255.;\n  float g1 = float(g) / 255.;\n  float b1 = float(b) / 255.;\n  return vec3(r1 * r1, g1 * g1, b1 * b1);\n}\n\nfloat dot_sph_dist(float u, float v, vec3 pos) {\r\n  vec3 pos2 = vec3(\r\n    sin(v*PI)*cos(u*PI),\r\n    sin(v*PI)*sin(u*PI),\r\n    cos(v*PI)\n  );\r\n  return dot(pos2, pos);\r\n}\n\nvec3 wheatley_color(float u, float v) {\r\n  float x = sin(v*PI)*cos(u*PI);\r\n  float y = sin(v*PI)*sin(u*PI);\r\n  float z = cos(v*PI);\r\n  vec3 pos = vec3(x, y, z);\r\n\r\n  vec3 color = vec3(1.);\r\n\r\n  float eye_size = 0.12;\r\n  float white_size = 0.05;\r\n  float light_blue_size = 0.3;\r\n  float blue_size = 0.6;\r\n  float eyelid_size = 0.3;\r\n  float border_size = 0.005;\r\n  float around_eye_size = 0.1;\r\n  float vertical_lines = 0.4;\r\n  float ass_size = 0.2;\r\n  float side_size = 0.75;\r\n  float straps_size = 0.006;\r\n  float side_corner_size = 0.32;\r\n\r\n  vec3 white = rgb(255, 255, 255);\r\n  vec3 light_blue = rgb(152, 253, 252);\r\n  vec3 blue = rgb(34, 68, 207);\r\n  vec3 black = rgb(0, 0, 0);\r\n  vec3 gray = rgb(128, 128, 128);\r\n  vec3 dark = rgb(50, 50, 50);\r\n  vec3 darker = rgb(20, 20, 20);\r\n\r\n  float eye = v / eye_size;\r\n  if (0. < eye && eye < white_size) color = white;\r\n  eye = (eye - white_size) / (1. - white_size);\r\n\r\n  if (0. < eye && eye < light_blue_size) color = mix(white, light_blue, eye/light_blue_size);\r\n  eye = (eye - light_blue_size) / (1. - light_blue_size);\r\n\r\n  if (0. < eye && eye < blue_size) color = mix(light_blue, blue, eye/blue_size);\r\n  eye = (eye - blue_size) / (1. - blue_size);\r\n\r\n  if (0. < eye && eye < 1.) color = color = mix(blue, black, eye);\r\n\r\n  if (v < eye_size && abs(x) < sin(eye_size*PI) && abs(x) > sin((eye_size * (1. - eyelid_size))*PI)) color = white;\r\n\r\n  if (v < eye_size && abs(x) < sin((eye_size * (1. - eyelid_size))*PI) && abs(x) > sin((eye_size * (1. - eyelid_size) - border_size)*PI)) color = black;\r\n\r\n  if (v > eye_size && v < eye_size + border_size) color = black;\r\n\r\n  if (v > eye_size + around_eye_size && v < eye_size + border_size + around_eye_size) color = black;\r\n\r\n  if (abs(y) < sin(border_size*PI)/2. && v > eye_size && v < eye_size + around_eye_size) color = black;\r\n\r\n  if (abs(y) > vertical_lines && abs(y) < vertical_lines + sin(border_size*PI) && v > eye_size + around_eye_size) color = black;\r\n\r\n  if (v > 1. - ass_size) {\r\n    color = dark;\r\n    if (abs(x*x) < straps_size || abs(y*y) < straps_size) color = darker;\r\n\r\n    if (abs(x - side_corner_size*0.7) < border_size * PI / 2. && -y > side_corner_size*0.7 - border_size * PI/2.) color = black;\r\n    if (abs(-y - side_corner_size*0.7) < border_size * PI / 2. && x > side_corner_size*0.7 - border_size * PI / 2.) color = black;\r\n  }\r\n  if (v > 1. - ass_size && v < 1. - ass_size + border_size) color = black;\r\n\r\n  if (abs(y*y) > side_size) {\r\n    color = dark;\r\n    if (abs(x*x) < straps_size || abs(y*y) < straps_size) color = darker;\r\n  }\r\n  if (abs(y*y) > side_size && abs(y*y) < side_size + sin(border_size * PI)) color = black;\r\n\r\n  if (v > eye_size && v < eye_size + around_eye_size) {\r\n    if (abs(x - side_corner_size) < border_size * PI / 2. && y > side_corner_size - border_size * PI/2.) color = black;\r\n    if (abs(y - side_corner_size) < border_size * PI / 2. && x > side_corner_size - border_size * PI / 2.) color = black;\r\n  }\r\n\r\n  float dot1 = dot_sph_dist(- around_eye_size, -eye_size - around_eye_size/2., pos);\r\n  if (dot1 > 1. - 0.001 && dot1 < 1. - 0.001 + 0.0005) color = black;\r\n\r\n  if (dot_sph_dist(0.2, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n  if (dot_sph_dist(0.27, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n  if (dot_sph_dist(0.34, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n\r\n  return color;\r\n}")),"wheatley")},storage_order:[(0)]),animations_filters:(uniforms:({((0)):false,((1)):false,((2)):false,((6)):false,((7)):false,((8)):false}),matrices:({((0)):false}),cameras:({})),elements_descriptions:(uniforms:({}),matrices:({}),cameras:({})),user_uniforms:(uniforms:({}),matrices:({})),animation_stages:(ids:(available:[],max:0),storage:{},storage_order:[]),current_stage:Dev,dev_stage:(uniforms:({((0)):Float((min:Some(0),max:None,value:4)),((1)):Float((min:Some(0),max:None,value:4)),((2)):Float((min:Some(0),max:None,value:4)),((6)):Progress(0),((7)):Bool(true),((8)):Bool(false)}),matrices:({((0)):Simple(offset:(0,0,0),scale:1,rotate:(0,0,0),mirror:(false,false,false))})),animations:(ids:(available:[],max:0),storage:{},storage_order:[]),use_time:false,skybox:None)
+(
+    desc: (
+        eng: "",
+        rus: "",
+    ),
+    cam: (
+        look_at: (0, 0, 0),
+        alpha: 8.215865606465513,
+        beta: 1.3959216133740295,
+        r: 3.500000000000051,
+        offset_after_material: 0.000025,
+    ),
+    uniforms: ([
+        (
+            name: "teleport_light",
+            data: Bool(true),
+        ),
+    ]),
+    matrices: ([]),
+    objects: ([
+        (
+            name: "wheatley",
+            data: Complex(
+                kind: Simple(Some(Inline(Simple(
+                    offset: (0, 0, 0),
+                    scale: 1,
+                    rotate: (1.5707963267948966, 1.5707963267948966, 0),
+                    mirror: (false, false, false),
+                )))),
+                intersect: (("vec3 op = -r.o.xyz;\nfloat b = dot(op, r.d.xyz);\nfloat det = b*b - dot(op, op) + 1.0;\nif (det < 0.) return scene_intersection_none;\n\ndet = sqrt(det);\nfloat t = b - det;\nif (t < 0.) t = b + det;\nif (t < 0.) return scene_intersection_none;\n\nvec4 pos = r.o + r.d * t;\nvec3 n = normalize(pos.xyz);\n\nfloat u = atan(pos.z, pos.x) / PI;\nfloat v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y) / PI;\n\nreturn SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u, v, n), false);")),
+                in_subspace: Normal,
+            ),
+        ),
+    ]),
+    cameras: ([]),
+    textures: ([]),
+    materials: ([
+        (
+            name: "wheatley",
+            data: Complex(
+                code: (("return material_simple(hit, r, wheatley_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);")),
+            ),
+        ),
+    ]),
+    intersection_materials: ([]),
+    library: ([
+        (
+            name: "wheatley",
+            data: (("vec3 rgb(int r, int g, int b) {\n  float r1 = float(r) / 255.;\n  float g1 = float(g) / 255.;\n  float b1 = float(b) / 255.;\n  return vec3(r1 * r1, g1 * g1, b1 * b1);\n}\n\nfloat dot_sph_dist(float u, float v, vec3 pos) {\r\n  vec3 pos2 = vec3(\r\n    sin(v*PI)*cos(u*PI),\r\n    sin(v*PI)*sin(u*PI),\r\n    cos(v*PI)\n  );\r\n  return dot(pos2, pos);\r\n}\n\nvec3 wheatley_color(float u, float v) {\r\n  float x = sin(v*PI)*cos(u*PI);\r\n  float y = sin(v*PI)*sin(u*PI);\r\n  float z = cos(v*PI);\r\n  vec3 pos = vec3(x, y, z);\r\n\r\n  vec3 color = vec3(1.);\r\n\r\n  float eye_size = 0.12;\r\n  float white_size = 0.05;\r\n  float light_blue_size = 0.3;\r\n  float blue_size = 0.6;\r\n  float eyelid_size = 0.3;\r\n  float border_size = 0.005;\r\n  float around_eye_size = 0.1;\r\n  float vertical_lines = 0.4;\r\n  float ass_size = 0.2;\r\n  float side_size = 0.75;\r\n  float straps_size = 0.006;\r\n  float side_corner_size = 0.32;\r\n\r\n  vec3 white = rgb(255, 255, 255);\r\n  vec3 light_blue = rgb(152, 253, 252);\r\n  vec3 blue = rgb(34, 68, 207);\r\n  vec3 black = rgb(0, 0, 0);\r\n  vec3 gray = rgb(128, 128, 128);\r\n  vec3 dark = rgb(50, 50, 50);\r\n  vec3 darker = rgb(20, 20, 20);\r\n\r\n  float eye = v / eye_size;\r\n  if (0. < eye && eye < white_size) color = white;\r\n  eye = (eye - white_size) / (1. - white_size);\r\n\r\n  if (0. < eye && eye < light_blue_size) color = mix(white, light_blue, eye/light_blue_size);\r\n  eye = (eye - light_blue_size) / (1. - light_blue_size);\r\n\r\n  if (0. < eye && eye < blue_size) color = mix(light_blue, blue, eye/blue_size);\r\n  eye = (eye - blue_size) / (1. - blue_size);\r\n\r\n  if (0. < eye && eye < 1.) color = color = mix(blue, black, eye);\r\n\r\n  if (v < eye_size && abs(x) < sin(eye_size*PI) && abs(x) > sin((eye_size * (1. - eyelid_size))*PI)) color = white;\r\n\r\n  if (v < eye_size && abs(x) < sin((eye_size * (1. - eyelid_size))*PI) && abs(x) > sin((eye_size * (1. - eyelid_size) - border_size)*PI)) color = black;\r\n\r\n  if (v > eye_size && v < eye_size + border_size) color = black;\r\n\r\n  if (v > eye_size + around_eye_size && v < eye_size + border_size + around_eye_size) color = black;\r\n\r\n  if (abs(y) < sin(border_size*PI)/2. && v > eye_size && v < eye_size + around_eye_size) color = black;\r\n\r\n  if (abs(y) > vertical_lines && abs(y) < vertical_lines + sin(border_size*PI) && v > eye_size + around_eye_size) color = black;\r\n\r\n  if (v > 1. - ass_size) {\r\n    color = dark;\r\n    if (abs(x*x) < straps_size || abs(y*y) < straps_size) color = darker;\r\n\r\n    if (abs(x - side_corner_size*0.7) < border_size * PI / 2. && -y > side_corner_size*0.7 - border_size * PI/2.) color = black;\r\n    if (abs(-y - side_corner_size*0.7) < border_size * PI / 2. && x > side_corner_size*0.7 - border_size * PI / 2.) color = black;\r\n  }\r\n  if (v > 1. - ass_size && v < 1. - ass_size + border_size) color = black;\r\n\r\n  if (abs(y*y) > side_size) {\r\n    color = dark;\r\n    if (abs(x*x) < straps_size || abs(y*y) < straps_size) color = darker;\r\n  }\r\n  if (abs(y*y) > side_size && abs(y*y) < side_size + sin(border_size * PI)) color = black;\r\n\r\n  if (v > eye_size && v < eye_size + around_eye_size) {\r\n    if (abs(x - side_corner_size) < border_size * PI / 2. && y > side_corner_size - border_size * PI/2.) color = black;\r\n    if (abs(y - side_corner_size) < border_size * PI / 2. && x > side_corner_size - border_size * PI / 2.) color = black;\r\n  }\r\n\r\n  float dot1 = dot_sph_dist(- around_eye_size, -eye_size - around_eye_size/2., pos);\r\n  if (dot1 > 1. - 0.001 && dot1 < 1. - 0.001 + 0.0005) color = black;\r\n\r\n  if (dot_sph_dist(0.2, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n  if (dot_sph_dist(0.27, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n  if (dot_sph_dist(0.34, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n\r\n  return color;\r\n}")),
+        ),
+    ]),
+    animations_filters: (
+        uniforms: {
+            "teleport_light": false,
+        },
+        matrices: {},
+        cameras: {},
+    ),
+    elements_descriptions: (
+        uniforms: {},
+        matrices: {},
+        cameras: {},
+    ),
+    user_uniforms: (
+        uniforms: {},
+        matrices: {},
+    ),
+    animation_stages: ([]),
+    current_stage: Dev,
+    dev_stage: (
+        uniforms: {
+            "teleport_light": Bool(true),
+        },
+        matrices: {},
+    ),
+    animations: ([]),
+    use_time: false,
+    skybox: None,
+)

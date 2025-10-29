@@ -22,6 +22,7 @@ use macroquad::prelude::{
     mouse_wheel, next_frame, screen_height, screen_width, set_default_camera, Conf,
     DrawTextureParams, MouseButton, Texture2D, BLACK, WHITE,
 };
+use portal::gui::scene_serialized::SerializedScene;
 use portal::gui::scenes::Scenes;
 use portal::gui::{common::*, scene::*, texture::*};
 
@@ -1494,7 +1495,14 @@ impl Window {
             available_scenes.get_by_link(default_scene).unwrap()
         };
 
-        let scene = ron::from_str(scene_content).unwrap();
+        // Prefer new serialized format, fallback to legacy
+        let scene = match ron::from_str::<SerializedScene>(scene_content) {
+            Ok(ser) => {
+                // Build scene from new serialized format
+                Scene::from_serialized(ser)
+            }
+            Err(_) => ron::from_str::<Scene>(scene_content).unwrap(),
+        };
 
         Window {
             renderer: SceneRenderer::new(scene, 4000, 4000, scene_name).await,
@@ -1574,7 +1582,10 @@ impl Window {
                             }
                             ctx.memory_mut(|memory| {
                                 changed.uniform = true;
-                                let scene = ron::from_str(content).unwrap();
+                                let scene = match ron::from_str::<SerializedScene>(content) {
+                                    Ok(ser) => Scene::from_serialized(ser),
+                                    Err(_) => ron::from_str::<Scene>(content).unwrap(),
+                                };
                                 self.renderer
                                     .load_from_scene(scene, memory)
                                     .unwrap()
@@ -1738,14 +1749,64 @@ First, predefined library is included, then uniforms, then user library, then in
 
         {
             let mut not_remove_export = true;
-            if let Some(to_export) = self.renderer.data.to_export.as_ref() {
+            if let Some(_to_export) = self.renderer.data.to_export.as_ref() {
                 egui::Window::new("Export scene")
                     .open(&mut not_remove_export)
                     .vscroll(true)
                     .show(ctx, |ui| {
-                        let mut clone = to_export.clone();
+                        // UI state in memory
+                        let (mut use_old, mut compact) = ui.memory_mut(|mem| {
+                            let use_old = *mem.data.get_persisted_mut_or_default::<bool>(
+                                egui::Id::new("export_use_old"),
+                            );
+                            let compact = *mem.data.get_persisted_mut_or_default::<bool>(
+                                egui::Id::new("export_compact"),
+                            );
+                            (use_old, compact)
+                        });
+
+                        ui.checkbox(&mut use_old, "Use old format");
+                        ui.checkbox(&mut compact, "Compact output");
+                        ui.separator();
+
+                        ui.memory_mut(|mem| {
+                            mem.data
+                                .insert_persisted(egui::Id::new("export_use_old"), use_old);
+                            mem.data
+                                .insert_persisted(egui::Id::new("export_compact"), compact);
+                        });
+
+                        // Build content
+                        let content = {
+                            if !use_old {
+                                let ser = self.renderer.scene.to_serialized();
+                                if !compact {
+                                    ron::ser::to_string_pretty(
+                                        &ser,
+                                        ron::ser::PrettyConfig::default(),
+                                    )
+                                    .unwrap_or_else(|_| "<serialize error>".into())
+                                } else {
+                                    ron::to_string(&ser)
+                                        .unwrap_or_else(|_| "<serialize error>".into())
+                                }
+                            } else {
+                                if !compact {
+                                    ron::ser::to_string_pretty(
+                                        &self.renderer.scene,
+                                        ron::ser::PrettyConfig::default(),
+                                    )
+                                    .unwrap_or_else(|_| "<serialize error>".into())
+                                } else {
+                                    ron::to_string(&self.renderer.scene)
+                                        .unwrap_or_else(|_| "<serialize error>".into())
+                                }
+                            }
+                        };
+                        let mut content_mut = content.clone();
                         ui.add(
-                            egui::TextEdit::multiline(&mut clone).font(egui::TextStyle::Monospace),
+                            egui::TextEdit::multiline(&mut content_mut)
+                                .font(egui::TextStyle::Monospace),
                         );
                     });
             }
@@ -1763,21 +1824,46 @@ First, predefined library is included, then uniforms, then user library, then in
                     .open(&mut opened)
                     .vscroll(true)
                     .show(ctx, |ui| {
+                        let mut use_old = ui.memory_mut(|mem| {
+                            *mem.data.get_persisted_mut_or_default::<bool>(egui::Id::new("import_use_old"))
+                        });
+                        ui.checkbox(&mut use_old, "Use old format");
+                        ui.memory_mut(|mem| mem.data.insert_persisted(egui::Id::new("import_use_old"), use_old));
                         if ui.button("Recompile").clicked() {
-                            match ron::from_str::<Scene>(content) {
-                                Ok(scene) => {
-                                    ui.memory_mut(|memory| {
-                                        match self.renderer.load_from_scene(scene, memory) {
-                                            Some(Ok(())) => {},
-                                            Some(Err(_)) | None => {
-                                                self.should_recompile = true;
-                                                self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
-                                            },
-                                        }
-                                    });
-                                },
-                                Err(err) => {
-                                    self.import_window_errors = Some(err.to_string());
+                            if !use_old {
+                                match ron::from_str::<SerializedScene>(content) {
+                                    Ok(ser) => {
+                                        let scene: Scene = Scene::from_serialized(ser);
+                                        ui.memory_mut(|memory| {
+                                            match self.renderer.load_from_scene(scene, memory) {
+                                                Some(Ok(())) => {},
+                                                Some(Err(_)) | None => {
+                                                    self.should_recompile = true;
+                                                    self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
+                                                },
+                                            }
+                                        });
+                                    },
+                                    Err(err) => {
+                                        self.import_window_errors = Some(err.to_string());
+                                    }
+                                }
+                            } else {
+                                match ron::from_str::<Scene>(content) {
+                                    Ok(scene) => {
+                                        ui.memory_mut(|memory| {
+                                            match self.renderer.load_from_scene(scene, memory) {
+                                                Some(Ok(())) => {},
+                                                Some(Err(_)) | None => {
+                                                    self.should_recompile = true;
+                                                    self.import_window_errors = Some("Errors in shaders, look into `Edit scene` window after pressing `Recompile`.".to_owned());
+                                                },
+                                            }
+                                        });
+                                    },
+                                    Err(err) => {
+                                        self.import_window_errors = Some(err.to_string());
+                                    }
                                 }
                             }
                         }

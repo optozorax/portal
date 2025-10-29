@@ -25,13 +25,13 @@ impl TrefoilSpecial {
     }
 
     pub fn name_to_index(name: &str) -> Option<u8> {
-        if name.as_bytes().len() != 2 {
+        if name.len() != 2 {
             return None;
         }
         let number = name.as_bytes()[0];
         let letter = name.as_bytes()[1];
 
-        if !(b'a' <= letter && letter <= b'c') || !(b'1' <= number && number <= b'6') {
+        if !((b'a'..=b'c').contains(&letter) && (b'1'..=b'6').contains(&number)) {
             return None;
         }
 

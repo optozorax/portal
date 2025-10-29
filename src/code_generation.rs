@@ -22,7 +22,7 @@ impl LineNumbersByKey {
     }
 
     fn add_inner(&mut self, key: (TypeId, UniqueId), lines: Range<usize>) {
-        assert!(self.0.get(&key).is_none());
+        assert!(!self.0.contains_key(&key));
         self.0.insert(key, lines);
     }
 

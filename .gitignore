@@ -3,3 +3,5 @@ data
 scene_dump.ron
 video
 anim
+target-wsl
+diffs

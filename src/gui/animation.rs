@@ -53,7 +53,7 @@ impl<T: StorageElem2> Default for Animation<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StageChanging<T: StorageElem2>(BTreeMap<T::IdWrapper, Animation<T>>);
+pub struct StageChanging<T: StorageElem2>(pub BTreeMap<T::IdWrapper, Animation<T>>);
 
 impl<T: StorageElem2> Default for StageChanging<T> {
     fn default() -> Self {
@@ -62,7 +62,7 @@ impl<T: StorageElem2> Default for StageChanging<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DevStageChanging<T: StorageElem2>(BTreeMap<T::IdWrapper, T>);
+pub struct DevStageChanging<T: StorageElem2>(pub BTreeMap<T::IdWrapper, T>);
 
 impl<T: StorageElem2> Default for DevStageChanging<T> {
     fn default() -> Self {
@@ -71,7 +71,7 @@ impl<T: StorageElem2> Default for DevStageChanging<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AnimationFilter<T: StorageElem2>(BTreeMap<T::IdWrapper, bool>);
+pub struct AnimationFilter<T: StorageElem2>(pub BTreeMap<T::IdWrapper, bool>);
 
 impl<T: StorageElem2> Default for AnimationFilter<T> {
     fn default() -> Self {
@@ -238,7 +238,7 @@ impl<T: StorageElem2> DevStageChanging<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlobalStage<T: StorageElem2>(BTreeMap<T::IdWrapper, bool>);
+pub struct GlobalStage<T: StorageElem2>(pub BTreeMap<T::IdWrapper, bool>);
 
 impl<T: StorageElem2> Default for GlobalStage<T> {
     fn default() -> Self {
@@ -318,7 +318,7 @@ impl<T: StorageElem2> AnimationFilter<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementsDescription<T: StorageElem2>(BTreeMap<T::IdWrapper, ValueToUser>);
+pub struct ElementsDescription<T: StorageElem2>(pub BTreeMap<T::IdWrapper, ValueToUser>);
 
 impl<T: StorageElem2> Default for ElementsDescription<T> {
     fn default() -> Self {
@@ -346,9 +346,9 @@ impl<T: StorageElem2> ElementsDescription<T> {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ElementsDescriptions {
-    uniforms: ElementsDescription<AnyUniform>,
-    matrices: ElementsDescription<Matrix>,
-    cameras: ElementsDescription<Cam>,
+    pub uniforms: ElementsDescription<AnyUniform>,
+    pub matrices: ElementsDescription<Matrix>,
+    pub cameras: ElementsDescription<Cam>,
 }
 
 impl ElementsDescriptions {
@@ -370,9 +370,9 @@ impl ElementsDescriptions {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AnimationFilters {
-    uniforms: AnimationFilter<AnyUniform>,
-    matrices: AnimationFilter<Matrix>,
-    cameras: AnimationFilter<Cam>,
+    pub uniforms: AnimationFilter<AnyUniform>,
+    pub matrices: AnimationFilter<Matrix>,
+    pub cameras: AnimationFilter<Cam>,
 }
 
 impl AnimationFilters {
@@ -400,7 +400,7 @@ pub struct AnimationStage {
 
     original_cam_button: bool,
     pub set_cam: Option<Option<CameraId>>,
-    cams: BTreeMap<CameraId, bool>,
+    pub cams: BTreeMap<CameraId, bool>,
 
     #[serde(default)]
     pub hidden: bool,
@@ -420,7 +420,7 @@ impl<T: StorageElem2> ComboBoxChoosable for Animation<T> {
     fn get_number(&self) -> usize {
         use Animation::*;
         match self {
-            ProvidedToUser { .. } => 0,
+            ProvidedToUser => 0,
             FromDev => 1,
             Changed { .. } => 2,
             ChangedAndToUser { .. } => 3,
@@ -916,7 +916,7 @@ impl<T: StorageElem2> RealAnimationPart<T> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RealAnimationStageChanging<T: StorageElem2>(
-    BTreeMap<T::IdWrapper, RealAnimationPart<T>>,
+    pub BTreeMap<T::IdWrapper, RealAnimationPart<T>>,
 );
 
 impl<T: StorageElem2> Default for RealAnimationStageChanging<T> {
@@ -965,7 +965,7 @@ impl<T: StorageElem2 + std::fmt::Debug> RealAnimationStageChanging<T> {
             let enabled = *filter.0.entry(*id).or_default();
             let anim = self.0.entry(*id).or_default();
             if !global && enabled {
-                changed |= anim.egui(ui, storage, input, &name, data_id.with(id));
+                changed |= anim.egui(ui, storage, input, name, data_id.with(id));
             }
         }
 
@@ -977,7 +977,7 @@ impl<T: StorageElem2 + std::fmt::Debug> RealAnimationStageChanging<T> {
             let enabled = *filter.0.entry(*id).or_default();
             let anim = self.0.entry(*id).or_default();
             if global && enabled {
-                changed |= anim.egui(ui, storage, input, &name, data_id.with(id));
+                changed |= anim.egui(ui, storage, input, name, data_id.with(id));
             }
         }
 
@@ -1186,14 +1186,14 @@ impl StorageElem2 for RealAnimation {
         if self.use_any_cam_as_start.is_some() {
             self.use_prev_cam = false;
         }
-        ui.add_enabled_ui(!self.use_any_cam_as_start.is_some(), |ui| {
+        ui.add_enabled_ui(self.use_any_cam_as_start.is_none(), |ui| {
             changed.uniform |= egui_bool_named(ui, &mut self.use_prev_cam, "Use prev end cam");
         });
 
         if self.use_any_cam_as_end.is_some() {
             self.use_start_cam_as_end = false;
         }
-        ui.add_enabled_ui(!self.use_any_cam_as_end.is_some(), |ui| {
+        ui.add_enabled_ui(self.use_any_cam_as_end.is_none(), |ui| {
             changed.uniform |= egui_bool_named(
                 ui,
                 &mut self.use_start_cam_as_end,
@@ -1274,7 +1274,7 @@ impl StorageElem2 for RealAnimation {
                 }
             });
         });
-        if !self.use_prev_cam && !self.use_any_cam_as_start.is_some() {
+        if !self.use_prev_cam && self.use_any_cam_as_start.is_none() {
             changed |= cams.inline(
                 "Start cam:",
                 65.0,
@@ -1286,7 +1286,7 @@ impl StorageElem2 for RealAnimation {
         } else {
             self.cam_start = None;
         }
-        if !self.use_start_cam_as_end && !self.use_any_cam_as_end.is_some() {
+        if !self.use_start_cam_as_end && self.use_any_cam_as_end.is_none() {
             changed |= cams.inline(
                 "End cam:",
                 65.0,
