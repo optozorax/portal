@@ -93,6 +93,15 @@ fn remap_tvec3(v: &TVec3, maps: &IdMaps) -> TVec3 {
     }
 }
 
+fn remap_tvec4(v: &TVec4, maps: &IdMaps) -> TVec4 {
+    TVec4 {
+        x: remap_param(&v.x, maps),
+        y: remap_param(&v.y, maps),
+        z: remap_param(&v.z, maps),
+        w: remap_param(&v.w, maps),
+    }
+}
+
 fn remap_matrix_value(m: &Matrix, maps: &IdMaps) -> Matrix {
     use Matrix::*;
     match m {
@@ -136,6 +145,12 @@ fn remap_matrix_value(m: &Matrix, maps: &IdMaps) -> Matrix {
             j: remap_tvec3(j, maps),
             k: remap_tvec3(k, maps),
             pos: remap_tvec3(pos, maps),
+        },
+        ExactFull { c0, c1, c2, c3 } => ExactFull {
+            c0: remap_tvec4(c0, maps),
+            c1: remap_tvec4(c1, maps),
+            c2: remap_tvec4(c2, maps),
+            c3: remap_tvec4(c3, maps),
         },
         If {
             condition,

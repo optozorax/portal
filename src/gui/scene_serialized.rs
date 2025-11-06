@@ -14,7 +14,8 @@ use super::storage2::Storage2;
 use super::storage2::Wrapper;
 use super::texture::TextureName;
 use super::uniform::{
-    AnyUniform as OldAnyUniform, ParametrizeOrNot as OldParamOrNot, TVec3 as OldTVec3, UniformId,
+    AnyUniform as OldAnyUniform, ParametrizeOrNot as OldParamOrNot, TVec3 as OldTVec3,
+    TVec4 as OldTVec4, UniformId,
 };
 
 // Serialization-only, tree-like types
@@ -48,6 +49,14 @@ struct TVec3 {
     x: ParametrizeOrNot,
     y: ParametrizeOrNot,
     z: ParametrizeOrNot,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+struct TVec4 {
+    x: ParametrizeOrNot,
+    y: ParametrizeOrNot,
+    z: ParametrizeOrNot,
+    w: ParametrizeOrNot,
 }
 
 // Matrices
@@ -86,6 +95,12 @@ enum Matrix {
         j: TVec3,
         k: TVec3,
         pos: TVec3,
+    },
+    ExactFull {
+        c0: TVec4,
+        c1: TVec4,
+        c2: TVec4,
+        c3: TVec4,
     },
     If {
         condition: ParametrizeOrNot,
@@ -225,6 +240,15 @@ fn tvec3_to_ser(v: &OldTVec3, uniforms: &Storage2<OldAnyUniform>) -> TVec3 {
     }
 }
 
+fn tvec4_to_ser(v: &OldTVec4, uniforms: &Storage2<OldAnyUniform>) -> TVec4 {
+    TVec4 {
+        x: param_to_ser(&v.x, uniforms),
+        y: param_to_ser(&v.y, uniforms),
+        z: param_to_ser(&v.z, uniforms),
+        w: param_to_ser(&v.w, uniforms),
+    }
+}
+
 fn mat_id_to_ref(
     id: Option<MatrixId>,
     mats: &Storage2<OldMatrix>,
@@ -297,6 +321,12 @@ fn matrix_to_ser(
             j: tvec3_to_ser(j, uniforms),
             k: tvec3_to_ser(k, uniforms),
             pos: tvec3_to_ser(pos, uniforms),
+        },
+        OM::ExactFull { c0, c1, c2, c3 } => Matrix::ExactFull {
+            c0: tvec4_to_ser(c0, uniforms),
+            c1: tvec4_to_ser(c1, uniforms),
+            c2: tvec4_to_ser(c2, uniforms),
+            c3: tvec4_to_ser(c3, uniforms),
         },
         OM::If {
             condition,
@@ -415,6 +445,15 @@ fn tvec3_from_ser(v: TVec3, uniforms: &mut Storage2<OldAnyUniform>) -> OldTVec3 
         x: param_from_ser(v.x, uniforms),
         y: param_from_ser(v.y, uniforms),
         z: param_from_ser(v.z, uniforms),
+    }
+}
+
+fn tvec4_from_ser(v: TVec4, uniforms: &mut Storage2<OldAnyUniform>) -> OldTVec4 {
+    OldTVec4 {
+        x: param_from_ser(v.x, uniforms),
+        y: param_from_ser(v.y, uniforms),
+        z: param_from_ser(v.z, uniforms),
+        w: param_from_ser(v.w, uniforms),
     }
 }
 
@@ -1455,6 +1494,12 @@ fn matrix_from_ser(
             j: tvec3_from_ser(j, uniforms),
             k: tvec3_from_ser(k, uniforms),
             pos: tvec3_from_ser(pos, uniforms),
+        },
+        M::ExactFull { c0, c1, c2, c3 } => OldMatrix::ExactFull {
+            c0: tvec4_from_ser(c0, uniforms),
+            c1: tvec4_from_ser(c1, uniforms),
+            c2: tvec4_from_ser(c2, uniforms),
+            c3: tvec4_from_ser(c3, uniforms),
         },
         M::If {
             condition,

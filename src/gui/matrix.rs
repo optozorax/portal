@@ -45,6 +45,12 @@ pub enum Matrix {
         k: TVec3,
         pos: TVec3,
     },
+    ExactFull {
+        c0: TVec4,
+        c1: TVec4,
+        c2: TVec4,
+        c3: TVec4,
+    },
     If {
         condition: ParametrizeOrNot,
         then: Option<MatrixId>,
@@ -74,7 +80,17 @@ impl Default for Matrix {
 impl ComboBoxChoosable for Matrix {
     fn variants() -> &'static [&'static str] {
         &[
-            "Simple", "Mul", "Teleport", "Param.", "Exact", "If", "Sqrt", "Lerp", "Camera", "Inv",
+            "Simple",
+            "Mul",
+            "Teleport",
+            "Param.",
+            "Exact",
+            "If",
+            "Sqrt",
+            "Lerp",
+            "Camera",
+            "Inv",
+            "ExactFull",
         ]
     }
     fn get_number(&self) -> usize {
@@ -90,6 +106,7 @@ impl ComboBoxChoosable for Matrix {
             Lerp { .. } => 7,
             Camera => 8,
             Inv { .. } => 9,
+            ExactFull { .. } => 10,
         }
     }
     fn set_number(&mut self, number: usize) {
@@ -211,6 +228,32 @@ impl ComboBoxChoosable for Matrix {
             },
             8 => Camera,
             9 => Inv(None),
+            10 => ExactFull {
+                c0: TVec4 {
+                    x: ParametrizeOrNot::No(1.0),
+                    y: ParametrizeOrNot::No(0.0),
+                    z: ParametrizeOrNot::No(0.0),
+                    w: ParametrizeOrNot::No(0.0),
+                },
+                c1: TVec4 {
+                    x: ParametrizeOrNot::No(0.0),
+                    y: ParametrizeOrNot::No(1.0),
+                    z: ParametrizeOrNot::No(0.0),
+                    w: ParametrizeOrNot::No(0.0),
+                },
+                c2: TVec4 {
+                    x: ParametrizeOrNot::No(0.0),
+                    y: ParametrizeOrNot::No(0.0),
+                    z: ParametrizeOrNot::No(1.0),
+                    w: ParametrizeOrNot::No(0.0),
+                },
+                c3: TVec4 {
+                    x: ParametrizeOrNot::No(0.0),
+                    y: ParametrizeOrNot::No(0.0),
+                    z: ParametrizeOrNot::No(0.0),
+                    w: ParametrizeOrNot::No(1.0),
+                },
+            },
             _ => unreachable!(),
         };
     }
@@ -391,6 +434,20 @@ impl StorageElem2 for Matrix {
                 changed.uniform |=
                     pos.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(0));
             }
+            ExactFull { c0, c1, c2, c3 } => {
+                let hpat![uniforms, formulas_cache] = input;
+                ui.label("c0: ");
+                changed.uniform |= c0.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(0));
+                ui.separator();
+                ui.label("c1: ");
+                changed.uniform |= c1.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(1));
+                ui.separator();
+                ui.label("c2: ");
+                changed.uniform |= c2.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(2));
+                ui.separator();
+                ui.label("c3: ");
+                changed.uniform |= c3.egui(ui, egui_f64, uniforms, formulas_cache, data_id.with(3));
+            }
             If {
                 condition,
                 then,
@@ -525,6 +582,18 @@ impl StorageElem2 for Matrix {
                 ];
                 DMat4::from_cols_array_2d(&matrix)
             }
+            ExactFull { c0, c1, c2, c3 } => {
+                macro_rules! get {
+                    ($($x:tt)*) => {$($x)*.get(uniforms, formulas_cache)?};
+                }
+                let matrix = [
+                    [get!(c0.x), get!(c0.y), get!(c0.z), get!(c0.w)],
+                    [get!(c1.x), get!(c1.y), get!(c1.z), get!(c1.w)],
+                    [get!(c2.x), get!(c2.y), get!(c2.z), get!(c2.w)],
+                    [get!(c3.x), get!(c3.y), get!(c3.z), get!(c3.w)],
+                ];
+                DMat4::from_cols_array_2d(&matrix)
+            }
             If {
                 condition,
                 then,
@@ -613,6 +682,13 @@ impl StorageElem2 for Matrix {
                 k.remove_as_field(uniforms, formulas_cache);
                 pos.remove_as_field(uniforms, formulas_cache);
             }
+            ExactFull { c0, c1, c2, c3 } => {
+                let hpat![uniforms, formulas_cache] = input;
+                c0.remove_as_field(uniforms, formulas_cache);
+                c1.remove_as_field(uniforms, formulas_cache);
+                c2.remove_as_field(uniforms, formulas_cache);
+                c3.remove_as_field(uniforms, formulas_cache);
+            }
             If {
                 condition,
                 then,
@@ -686,6 +762,12 @@ impl StorageElem2 for Matrix {
                     + j.errors_count(uniforms, formulas_cache)
                     + k.errors_count(uniforms, formulas_cache)
                     + pos.errors_count(uniforms, formulas_cache)
+            }
+            ExactFull { c0, c1, c2, c3 } => {
+                c0.errors_count(uniforms, formulas_cache)
+                    + c1.errors_count(uniforms, formulas_cache)
+                    + c2.errors_count(uniforms, formulas_cache)
+                    + c3.errors_count(uniforms, formulas_cache)
             }
             If {
                 condition,
@@ -775,6 +857,18 @@ impl StorageElem2 for Matrix {
                     j: j.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
                     k: k.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
                     pos: pos.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                }
+            }
+            ExactFull { c0, c1, c2, c3 } => {
+                let hpat![uniforms, formulas_cache] = input;
+                use crate::gui::unique_id::UniqueId;
+                use std::collections::BTreeMap;
+                let mut u_visited: BTreeMap<UniqueId, UniqueId> = BTreeMap::new();
+                ExactFull {
+                    c0: c0.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    c1: c1.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    c2: c2.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
+                    c3: c3.duplicate_as_field(uniforms, formulas_cache, &mut u_visited),
                 }
             }
             If {
