@@ -1067,6 +1067,7 @@ impl StorageElem2 for AnyUniform {
                 "easing_in_out" => easing_in_out(*args.first()?),
                 "easing_in_out_fast" => easing_in_out_fast(*args.first()?),
                 "easing_plus_minus" => easing_plus_minus(*args.first()?),
+                "easing_elastic_out" => easing_elastic_out(*args.first()?),
 
                 "bump" => {
                     let x = *args.first()?;

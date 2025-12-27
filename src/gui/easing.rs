@@ -30,6 +30,18 @@ pub fn easing_plus_minus(mut t: f64) -> f64 {
     t.sin() * (3. - t.cos() - t2.cos() - t.cos() * t2.cos()) / 4.
 }
 
+pub fn easing_elastic_out(x: f64) -> f64 {
+    let c4 = (2.0 * std::f64::consts::PI) / 3.0;
+
+    if x == 0.0 {
+        0.0
+    } else if x == 1.0 {
+        1.0
+    } else {
+        (2.0_f64).powf(-10.0 * x) * ((x * 10.0 - 0.75) * c4).sin() + 1.0
+    }
+}
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Easing {
     #[default]
@@ -38,11 +50,12 @@ pub enum Easing {
     Out,
     InOut,
     InOutFast,
+    ElasticOut,
 }
 
 impl ComboBoxChoosable for Easing {
     fn variants() -> &'static [&'static str] {
-        &["Linear", "In", "Out", "InOut", "InOutFast"]
+        &["Linear", "In", "Out", "InOut", "InOutFast", "ElasticOut"]
     }
 
     fn get_number(&self) -> usize {
@@ -53,6 +66,7 @@ impl ComboBoxChoosable for Easing {
             Out => 2,
             InOut => 3,
             InOutFast => 4,
+            ElasticOut => 5,
         }
     }
 
@@ -64,6 +78,7 @@ impl ComboBoxChoosable for Easing {
             2 => Out,
             3 => InOut,
             4 => InOutFast,
+            5 => ElasticOut,
             _ => unreachable!(),
         };
     }
@@ -78,6 +93,7 @@ impl Easing {
             Out => easing_out(t),
             InOut => easing_in_out(t),
             InOutFast => easing_in_out_fast(t),
+            ElasticOut => easing_elastic_out(t),
         }
     }
 }
