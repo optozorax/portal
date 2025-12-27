@@ -324,6 +324,7 @@ fn remap_real_animation_value(ra: &RealAnimation, maps: &IdMaps) -> RealAnimatio
     r.cam_end = maps.map_opt_camera(ra.cam_end);
     r.cam_any_start = ra.cam_any_start.map(|id| maps.map_real_anim(id));
     r.cam_any_end = ra.cam_any_end.map(|id| maps.map_real_anim(id));
+    r.cam_easing_uniform = ra.cam_easing_uniform.map(|opt| maps.map_opt_uniform(opt));
     r
 }
 

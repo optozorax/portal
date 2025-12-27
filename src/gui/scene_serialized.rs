@@ -560,6 +560,8 @@ struct RealAnimationSer {
     cam_any_end: Option<String>,
     #[serde(default)]
     cam_easing: super::easing::Easing,
+    #[serde(default)]
+    cam_easing_uniform: Option<UniformRef>,
 }
 
 impl Default for RealAnimationSer {
@@ -578,6 +580,7 @@ impl Default for RealAnimationSer {
             cam_any_start: None,
             cam_any_end: None,
             cam_easing: super::easing::Easing::Linear,
+            cam_easing_uniform: None,
         }
     }
 }
@@ -1018,6 +1021,9 @@ pub(crate) fn serialize_scene_new_format(scene: &super::scene::Scene) -> Seriali
         // cam refs
         let cam_start_ref = cam_id_to_ref(a.cam_start, cameras_s, matrices_s, uniforms_s);
         let cam_end_ref = cam_id_to_ref(a.cam_end, cameras_s, matrices_s, uniforms_s);
+        let cam_easing_uniform = a
+            .cam_easing_uniform
+            .and_then(|opt| opt.and_then(|id| name_or_uniform_ref(uniforms_s, id)));
 
         ras.push(Named {
             name: name.clone(),
@@ -1043,6 +1049,7 @@ pub(crate) fn serialize_scene_new_format(scene: &super::scene::Scene) -> Seriali
                     .and_then(|x| x)
                     .map(|s| s.to_owned()),
                 cam_easing: a.cam_easing.clone(),
+                cam_easing_uniform,
             },
         });
     }
@@ -1405,6 +1412,10 @@ pub(crate) fn deserialize_scene_new_format(ser: SerializedScene, scene: &mut sup
             .cam_any_end
             .and_then(|n| real_name_to_id.get(&n).copied());
         a.cam_easing = data.cam_easing;
+        a.cam_easing_uniform = data
+            .cam_easing_uniform
+            .and_then(|u| uniform_ref_to_id(u, &mut scene.uniforms))
+            .map(|id| Some(id));
         scene.animations.set(id, a);
     }
 

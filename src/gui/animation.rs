@@ -1041,6 +1041,8 @@ pub struct RealAnimation {
 
     #[serde(default)]
     pub cam_easing: Easing,
+    #[serde(default)]
+    pub cam_easing_uniform: Option<Option<UniformId>>,
 }
 
 impl Default for RealAnimation {
@@ -1059,6 +1061,7 @@ impl Default for RealAnimation {
             use_any_cam_as_end: None,
             cam_any_start: None,
             cam_any_end: None,
+            cam_easing_uniform: None,
         }
     }
 }
@@ -1138,13 +1141,34 @@ impl StorageElem2 for RealAnimation {
             changed.uniform |= egui_f64_positive(ui, &mut self.duration);
         });
 
-        changed.uniform |= egui_combo_box(
-            ui,
-            "Camera easing:",
-            100.,
-            &mut self.cam_easing,
-            data_id.with("cam_easing"),
-        );
+        ui.horizontal(|ui| {
+            ui.label("Camera easing:");
+            let mut test = self.cam_easing_uniform.is_some();
+            if ui.checkbox(&mut test, "Get from uniform").changed() {
+                if test {
+                    self.cam_easing_uniform = Some(None);
+                } else {
+                    self.cam_easing_uniform = None;
+                }
+            }
+            if self.cam_easing_uniform.is_none() {
+                ui.separator();
+                changed.uniform |=
+                    egui_combo_box(ui, "", 0., &mut self.cam_easing, data_id.with("cam_easing"));
+            }
+        });
+
+        if let Some(uniform_id) = self.cam_easing_uniform.as_mut() {
+            let hpat![uniforms, formulas_cache] = input;
+            changed |= uniforms.inline(
+                "",
+                0.0,
+                uniform_id,
+                ui,
+                formulas_cache,
+                data_id.with("cam_easing_uniform"),
+            );
+        }
 
         ui.separator();
 
@@ -1337,6 +1361,9 @@ impl StorageElem2 for RealAnimation {
         self.matrices.remove(matrices, input);
         let hpat![uniforms, formulas_cache] = input;
         self.uniforms.remove(uniforms, formulas_cache);
+        if let Some(Some(id)) = self.cam_easing_uniform {
+            uniforms.remove_as_field(id, formulas_cache);
+        }
     }
 
     fn errors_count<F: FnMut(Self::IdWrapper) -> usize>(
@@ -1348,6 +1375,10 @@ impl StorageElem2 for RealAnimation {
         self.matrices.errors_count(matrices, input) + {
             let hpat![uniforms, formulas_cache] = input;
             self.uniforms.errors_count(uniforms, formulas_cache)
+                + self
+                    .cam_easing_uniform
+                    .and_then(|opt| opt.map(|id| uniforms.errors_inline(id, formulas_cache)))
+                    .unwrap_or(0)
         }
     }
 
@@ -1399,6 +1430,16 @@ impl StorageElem2 for RealAnimation {
                         }
                     }
                     CopyPrev => {}
+                }
+            }
+            if let Some(ref mut opt_id) = new.cam_easing_uniform {
+                if let Some(id) = opt_id {
+                    let nid = uniforms.duplicate_as_field_with_visited(
+                        *id,
+                        formulas_cache,
+                        &mut u_visited,
+                    );
+                    *opt_id = Some(nid);
                 }
             }
         }

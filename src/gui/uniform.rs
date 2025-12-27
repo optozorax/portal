@@ -1087,14 +1087,14 @@ impl StorageElem2 for AnyUniform {
                     // https://www.desmos.com/calculator/bmso7lev0b
                     let t = *args.first()?;
                     let time = 1. - *args.get(1)?;
-                    0.0_f64.max(t/time-(1.-time)/time)
+                    0.0_f64.max(t / time - (1. - time) / time)
                 }
 
                 "early_finish" => {
                     // https://www.desmos.com/calculator/fhg7bd2jpq
                     let t = *args.first()?;
                     let time = *args.get(1)?;
-                    1.0_f64.min(t/time)
+                    1.0_f64.min(t / time)
                 }
 
                 "lerp" => lerp((*args.first()?)..=(*args.get(1)?), *args.get(2)?),
