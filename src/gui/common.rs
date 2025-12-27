@@ -34,6 +34,9 @@ pub struct ShaderErrors(BTreeMap<TypeId, BTreeMap<UniqueId, Vec<(usize, String)>
 #[derive(Debug, Default)]
 pub struct TextureErrors(pub BTreeMap<String, macroquad::Error>);
 
+#[derive(Debug, Default)]
+pub struct VideoErrors(pub BTreeMap<String, String>);
+
 impl ShaderErrors {
     pub fn get<T: Any + Wrapper>(&self, id: T) -> Option<&[(usize, String)]> {
         self.0
@@ -69,6 +72,7 @@ pub struct Data {
 
     pub reload_textures: bool,
     pub texture_errors: TextureErrors,
+    pub video_errors: VideoErrors,
 
     pub generated_code_show_text: bool,
 

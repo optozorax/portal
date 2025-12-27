@@ -20,6 +20,7 @@ use crate::gui::matrix::*;
 use crate::gui::object::*;
 use crate::gui::texture::*;
 use crate::gui::uniform::*;
+use crate::gui::video::*;
 use crate::shader_error_parser::*;
 
 use egui::*;
@@ -82,6 +83,9 @@ pub struct Scene {
     pub cameras: Storage2<Cam>,
 
     pub textures: Storage2<TextureName>,
+
+    #[serde(default)]
+    pub videos: Storage2<Video>,
 
     pub materials: Storage2<Material>,
 
@@ -265,6 +269,9 @@ impl Scene {
 
         changed |= self.textures.egui(ui, &mut data.texture_errors, "Textures");
 
+        with_swapped!(x => (data.video_errors, self.uniforms, data.formulas_cache);
+            changed |= self.videos.egui(ui, &mut x, "Videos"));
+
         ui.collapsing("Skybox", |ui| {
             changed.shader |= egui_option(
                 ui,
@@ -385,10 +392,23 @@ pub trait UniformStruct {
 
 impl Scene {
     pub fn textures(&self) -> Vec<String> {
-        self.textures
-            .visible_elements()
-            .map(|(_, name)| TextureName::name(name))
-            .collect()
+        use std::collections::BTreeSet;
+        let mut names = BTreeSet::new();
+        let mut result = Vec::new();
+
+        for (_, name) in self.textures.visible_elements() {
+            if names.insert(name.to_owned()) {
+                result.push(TextureName::name(name));
+            }
+        }
+
+        for (_, name) in self.videos.visible_elements() {
+            if names.insert(name.to_owned()) {
+                result.push(TextureName::name(name));
+            }
+        }
+
+        result
     }
 
     pub fn compile_all_formulas(&self, cache: &FormulasCache) {
@@ -664,9 +684,20 @@ impl Scene {
 
         storages.insert("textures".to_owned(), {
             let mut result = StringStorage::default();
+            use std::collections::BTreeSet;
+            let mut names = BTreeSet::new();
+
             for (_, name) in self.textures.visible_elements() {
-                result.add_string(format!("uniform sampler2D {};\n", TextureName::name(name)));
+                names.insert(name.to_owned());
             }
+            for (_, name) in self.videos.visible_elements() {
+                names.insert(name.to_owned());
+            }
+
+            for name in names {
+                result.add_string(format!("uniform sampler2D {};\n", TextureName::name(&name)));
+            }
+
             result
         });
 
@@ -1279,7 +1310,7 @@ impl Scene {
     }
 
     pub fn update(&mut self, memory: &mut egui::Memory, data: &mut Data, mut time: f64) {
-        let mut total_time = time;
+        let total_time;
         if self.animation_stage_edit_state {
             drop(self.init_stage(self.current_stage, memory));
         }
@@ -1485,7 +1516,7 @@ impl Scene {
                 });
                 changed.uniform |= ui.add(
                     egui::Slider::new(&mut manual_value, 0.0..=1.0)
-                        .clamp_to_range(true),
+                        .clamping(SliderClamping::Always),
                 ).changed();
                 ui.memory_mut(|memory| {
                     memory.data.insert_persisted(value_id, manual_value);

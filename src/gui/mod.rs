@@ -14,6 +14,7 @@ pub mod storage;
 pub mod storage2;
 pub mod texture;
 pub mod uniform;
+pub mod video;
 
 pub mod camera;
 pub mod eng_rus;

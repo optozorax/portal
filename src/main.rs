@@ -679,6 +679,171 @@ struct SceneRenderer {
     current_fps: usize,
     current_motion_blur_frames: usize,
     texture_storage: Vec<Texture2D>,
+    #[cfg(not(target_arch = "wasm32"))]
+    video_runtimes: Vec<VideoRuntime>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+struct VideoRuntime {
+    /// Name of the video entry in Scene.videos; must match texture name.
+    video_name: String,
+    /// Id of the video entry in Scene.videos.
+    video_id: portal::gui::video::VideoId,
+    /// Cached uniform id controlling the frame position.
+    uniform_id: Option<portal::gui::uniform::UniformId>,
+    /// Sorted list of PNG frame file paths.
+    frame_files: Vec<String>,
+    /// Index of the last frame uploaded to GPU.
+    last_frame_index: Option<usize>,
+    /// Index in SceneRenderer.texture_storage where current texture is kept.
+    texture_storage_index: Option<usize>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn video_frames_dir(path: &str) -> Option<String> {
+    use std::path::Path;
+    let p = Path::new(path);
+    let stem = p.file_stem()?.to_string_lossy();
+    Some(format!("video_png/{}", stem))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn video_collect_frame_files(path: &str) -> Option<Vec<String>> {
+    use std::fs;
+    let dir = video_frames_dir(path)?;
+    let mut files: Vec<String> = fs::read_dir(&dir)
+        .ok()?
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let p = entry.path();
+            if p.extension().and_then(|e| e.to_str()) == Some("png") {
+                Some(p.to_string_lossy().into_owned())
+            } else {
+                None
+            }
+        })
+        .collect();
+    files.sort();
+    if files.is_empty() {
+        None
+    } else {
+        Some(files)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl VideoRuntime {
+    fn from_scene(scene: &Scene) -> Vec<Self> {
+        let mut result = Vec::new();
+
+        for (vid_id, name) in scene.videos.visible_elements() {
+            if let Some(video) = scene.videos.get_original(vid_id) {
+                if video.path.is_empty() {
+                    continue;
+                }
+                let uniform_id = video.uniform;
+                if uniform_id.is_none() {
+                    continue;
+                }
+                let frame_files = match video_collect_frame_files(&video.path) {
+                    Some(v) => v,
+                    None => continue,
+                };
+
+                result.push(Self {
+                    video_name: name.to_owned(),
+                    video_id: vid_id,
+                    uniform_id,
+                    frame_files,
+                    last_frame_index: None,
+                    texture_storage_index: None,
+                });
+            }
+        }
+
+        result
+    }
+
+    fn update(&mut self, renderer: &mut SceneRenderer) {
+        use portal::gui::texture::TextureName;
+
+        if self.frame_files.is_empty() {
+            return;
+        }
+
+        // Ensure we have a valid uniform id (re-resolve from scene if needed).
+        let uniform_id = match self.uniform_id.or_else(|| {
+            renderer
+                .scene
+                .videos
+                .get_original(self.video_id)
+                .and_then(|v| v.uniform)
+        }) {
+            Some(id) => {
+                self.uniform_id = Some(id);
+                id
+            }
+            None => return,
+        };
+
+        // Read current uniform value and clamp to [0, 1].
+        let value = match renderer
+            .scene
+            .uniforms
+            .get(uniform_id, &renderer.data.formulas_cache)
+        {
+            Some(v) => {
+                let f: f64 = v.into();
+                f.clamp(0.0, 1.0)
+            }
+            None => return,
+        };
+
+        let frame_count = self.frame_files.len();
+        if frame_count == 0 {
+            return;
+        }
+
+        let target_index = ((frame_count - 1) as f64 * value)
+            .round()
+            .clamp(0.0, (frame_count - 1) as f64) as usize;
+
+        // Avoid reload if frame didn't change.
+        if Some(target_index) == self.last_frame_index {
+            return;
+        }
+
+        let path = &self.frame_files[target_index];
+        let bytes = match std::fs::read(path) {
+            Ok(b) => b,
+            Err(_) => {
+                // Ignore IO errors for now; texture simply won't update.
+                return;
+            }
+        };
+
+        let texture = Texture2D::from_file_with_format(&bytes[..], None);
+
+        // Update material sampler (sampler name derived from texture name).
+        renderer
+            .material
+            .set_texture(&TextureName::name(&self.video_name), texture.clone());
+
+        // Keep texture alive in texture_storage, reusing the same slot to avoid leaks.
+        if let Some(index) = self.texture_storage_index {
+            if index < renderer.texture_storage.len() {
+                renderer.texture_storage[index] = texture;
+            } else {
+                renderer.texture_storage.push(texture);
+                self.texture_storage_index = Some(renderer.texture_storage.len() - 1);
+            }
+        } else {
+            renderer.texture_storage.push(texture);
+            self.texture_storage_index = Some(renderer.texture_storage.len() - 1);
+        }
+
+        self.last_frame_index = Some(target_index);
+    }
 }
 
 impl SceneRenderer {
@@ -786,6 +951,8 @@ impl SceneRenderer {
             current_fps: 60,
             current_motion_blur_frames: 1,
             texture_storage: vec![],
+            #[cfg(not(target_arch = "wasm32"))]
+            video_runtimes: Vec::new(),
         };
 
         result
@@ -820,6 +987,16 @@ impl SceneRenderer {
                         self.data.texture_errors.0.insert(name.to_string(), file);
                     }
                 }
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                // Rebuild video runtimes and immediately upload current frames
+                // so that videos are visible right after recompilation / scene load.
+                let mut runtimes = VideoRuntime::from_scene(&self.scene);
+                for v in &mut runtimes {
+                    v.update(self);
+                }
+                self.video_runtimes = runtimes;
             }
         }
     }
@@ -1158,6 +1335,15 @@ impl SceneRenderer {
             self.data
                 .formulas_cache
                 .set_camera_matrix(self.cam.get_matrix());
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let mut runtimes = Vec::new();
+            std::mem::swap(&mut runtimes, &mut self.video_runtimes);
+            for mut video in runtimes {
+                video.update(self);
+                self.video_runtimes.push(video);
+            }
         }
     }
 

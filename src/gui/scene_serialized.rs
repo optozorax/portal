@@ -17,6 +17,7 @@ use super::uniform::{
     AnyUniform as OldAnyUniform, ParametrizeOrNot as OldParamOrNot, TVec3 as OldTVec3,
     TVec4 as OldTVec4, UniformId,
 };
+use super::video::Video as OldVideo;
 
 // Serialization-only, tree-like types
 
@@ -36,6 +37,13 @@ type AnyUniform = OldAnyUniform;
 enum UniformRef {
     Named(String),
     Inline(Box<AnyUniform>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct VideoSer {
+    path: String,
+    #[serde(default)]
+    uniform: Option<UniformRef>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -607,6 +615,9 @@ pub struct SerializedScene {
     library: SerStorage<LibraryCode>,
 
     #[serde(default)]
+    videos: SerStorage<VideoSer>,
+
+    #[serde(default)]
     animations_filters: AnimationFiltersSer,
     #[serde(default)]
     elements_descriptions: ElementsDescriptionsSer,
@@ -641,6 +652,7 @@ pub(crate) fn serialize_scene_new_format(scene: &super::scene::Scene) -> Seriali
     let objects_s = &scene.objects;
     let cameras_s = &scene.cameras;
     let textures_s = &scene.textures;
+    let videos_s = &scene.videos;
     let materials_s = &scene.materials;
     let intersection_materials_s = &scene.intersection_materials;
     let library_s = &scene.library;
@@ -766,6 +778,26 @@ pub(crate) fn serialize_scene_new_format(scene: &super::scene::Scene) -> Seriali
             .collect(),
     );
 
+    // videos
+    let videos = SerStorage(
+        videos_s
+            .visible_elements()
+            .map(|(id, name)| {
+                let v = videos_s.get_original(id).unwrap();
+                let uniform_ref = v
+                    .uniform
+                    .and_then(|uid| name_or_uniform_ref(uniforms_s, uid));
+                Named {
+                    name: name.to_owned(),
+                    data: VideoSer {
+                        path: v.path.clone(),
+                        uniform: uniform_ref,
+                    },
+                }
+            })
+            .collect(),
+    );
+
     let mut base = SerializedScene {
         desc: desc.clone(),
         cam: cam.clone(),
@@ -777,6 +809,7 @@ pub(crate) fn serialize_scene_new_format(scene: &super::scene::Scene) -> Seriali
         materials,
         intersection_materials,
         library,
+        videos,
         animations_filters: AnimationFiltersSer::default(),
         elements_descriptions: ElementsDescriptionsSer::default(),
         user_uniforms: GlobalUserUniformsSer::default(),
@@ -1154,6 +1187,18 @@ pub(crate) fn deserialize_scene_new_format(ser: SerializedScene, scene: &mut sup
     }
     for Named { name, data } in ser.library.0.clone().into_iter() {
         scene.library.insert_named_with_order(name, data);
+    }
+
+    // videos
+    for Named { name, data } in ser.videos.0.clone().into_iter() {
+        let mut v = OldVideo {
+            path: data.path,
+            uniform: None,
+        };
+        if let Some(uref) = data.uniform {
+            v.uniform = uniform_ref_to_id(uref, &mut scene.uniforms);
+        }
+        scene.videos.insert_named_with_order(name, v);
     }
 
     // Build name->id maps for follow-up structures

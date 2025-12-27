@@ -10,6 +10,7 @@ use super::storage2::*;
 use super::texture::*;
 use super::uniform::*;
 use super::unique_id::UniqueId;
+use super::video::*;
 
 use std::collections::BTreeMap;
 
@@ -20,6 +21,7 @@ pub struct IdMaps {
     pub objects: BTreeMap<UniqueId, UniqueId>,
     pub cameras: BTreeMap<UniqueId, UniqueId>,
     pub textures: BTreeMap<UniqueId, UniqueId>,
+    pub videos: BTreeMap<UniqueId, UniqueId>,
     pub materials: BTreeMap<UniqueId, UniqueId>,
     pub intersections: BTreeMap<UniqueId, UniqueId>,
     pub library: BTreeMap<UniqueId, UniqueId>,
@@ -187,6 +189,12 @@ fn remap_cam_value(c: &Cam, maps: &IdMaps) -> Cam {
     }
 }
 
+fn remap_video_value(v: &Video, maps: &IdMaps) -> Video {
+    let mut v2 = v.clone();
+    v2.uniform = maps.map_opt_uniform(v.uniform);
+    v2
+}
+
 fn remap_object_value(o: &Object, maps: &IdMaps) -> Object {
     use Object::*;
     match o {
@@ -337,6 +345,7 @@ pub fn compute_maps(scene: &Scene) -> IdMaps {
     maps.objects = scene.objects.hash_id_map();
     maps.cameras = scene.cameras.hash_id_map();
     maps.textures = scene.textures.hash_id_map();
+    maps.videos = scene.videos.hash_id_map();
     maps.materials = scene.materials.hash_id_map();
     maps.intersections = scene.intersection_materials.hash_id_map();
     maps.library = scene.library.hash_id_map();
@@ -374,6 +383,11 @@ pub fn remap_scene(scene: &Scene, maps: &IdMaps) -> Scene {
     s.textures = s
         .textures
         .remap_ids_and_values(&|id| *maps.textures.get(&id).unwrap_or(&id), &|v| v.clone());
+    s.videos = s
+        .videos
+        .remap_ids_and_values(&|id| *maps.videos.get(&id).unwrap_or(&id), &|v| {
+            remap_video_value(v, maps)
+        });
     s.materials = s
         .materials
         .remap_ids_and_values(&|id| *maps.materials.get(&id).unwrap_or(&id), &|v| {
@@ -513,6 +527,7 @@ pub fn stabilize_ids(mut scene: Scene, max_iters: usize) -> Scene {
             && is_identity(&maps.objects)
             && is_identity(&maps.cameras)
             && is_identity(&maps.textures)
+            && is_identity(&maps.videos)
             && is_identity(&maps.materials)
             && is_identity(&maps.intersections)
             && is_identity(&maps.library)
@@ -523,6 +538,7 @@ pub fn stabilize_ids(mut scene: Scene, max_iters: usize) -> Scene {
             && maps.objects == prev_maps.objects
             && maps.cameras == prev_maps.cameras
             && maps.textures == prev_maps.textures
+            && maps.videos == prev_maps.videos
             && maps.materials == prev_maps.materials
             && maps.intersections == prev_maps.intersections
             && maps.library == prev_maps.library
