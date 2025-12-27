@@ -316,6 +316,8 @@ impl Scene {
             ui.separator();
             changed |= self.select_stage_ui(ui, true);
             ui.separator();
+            changed |= self.control_animation_parameters(ui);
+            ui.separator();
             changed |= self.select_animation_ui(ui);
             ui.separator();
             changed.uniform |= egui_bool_named(ui, &mut self.run_animations, "Run all animations");
@@ -1141,11 +1143,20 @@ impl Scene {
                 animation.uniforms.init_stage(&mut self.uniforms);
                 animation.matrices.init_stage(&mut self.matrices);
 
-                let cam_start = self.get_start_cam(&animation, id);
-                if let Some(cam) = cam_start {
-                    memory
-                        .data
-                        .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(Some(cam)));
+                let disable_cam_interp_id =
+                    egui::Id::new("RealAnimationDisableCamInterpolation");
+                let disable_cam_interp = memory
+                    .data
+                    .get_persisted::<bool>(disable_cam_interp_id)
+                    .unwrap_or(false);
+
+                if !disable_cam_interp {
+                    let cam_start = self.get_start_cam(&animation, id);
+                    if let Some(cam) = cam_start {
+                        memory
+                            .data
+                            .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(Some(cam)));
+                    }
                 }
             }
         }
@@ -1268,12 +1279,20 @@ impl Scene {
     }
 
     pub fn update(&mut self, memory: &mut egui::Memory, data: &mut Data, mut time: f64) {
+        let mut total_time = time;
         if self.animation_stage_edit_state {
             drop(self.init_stage(self.current_stage, memory));
         }
 
         if self.run_animations {
-            time %= self.total_animation_duration();
+            let total_duration = self.total_animation_duration();
+            if total_duration > 0.0 {
+                time %= total_duration;
+                total_time = time;
+            } else {
+                time = 0.0;
+                total_time = 0.0;
+            }
             for id in self
                 .animations
                 .visible_elements()
@@ -1293,41 +1312,113 @@ impl Scene {
             }
         } else if let CurrentStage::RealAnimation(id) = self.current_stage {
             let duration = self.animations.get_original(id).unwrap().duration;
-            time = (time % duration) / duration;
+            if duration > 0.0 {
+                let mut local_seconds = time % duration;
+
+                // Override time with manual value from UI slider if enabled.
+                let enabled_id = egui::Id::new("RealAnimationManualTimeEnabled");
+                let value_id = egui::Id::new("RealAnimationManualTimeValue");
+
+                if memory
+                    .data
+                    .get_persisted::<bool>(enabled_id)
+                    .unwrap_or(false)
+                {
+                    if let Some(value) = memory.data.get_persisted::<f64>(value_id) {
+                        let clamped = value.clamp(0.0, 1.0);
+                        time = clamped;
+                        local_seconds = clamped * duration;
+                    } else {
+                        time = local_seconds / duration;
+                    }
+                } else {
+                    time = local_seconds / duration;
+                }
+
+                // Sum durations of all previous real animations in visible order.
+                let prefix = self
+                    .animations
+                    .visible_elements()
+                    .map(|(aid, _)| aid)
+                    .take_while(|aid| *aid != id)
+                    .map(|aid| self.animations.get_original(aid).unwrap().duration)
+                    .sum::<f64>();
+
+                total_time = prefix + local_seconds;
+            } else {
+                time = 0.0;
+                total_time = 0.0;
+            }
+        } else {
+            total_time = time;
         }
         data.formulas_cache.set_time(time);
+        data.formulas_cache.set_total_time(total_time);
 
         if let CurrentStage::RealAnimation(id) = self.current_stage {
-            let animation = self.animations.get_original(id).unwrap();
-            let cam_start = self.get_start_cam(animation, id);
-            let cam_end = self.get_end_cam(animation, id);
-            if let Some((cam1id, cam2id)) = cam_start.zip(cam_end) {
-                let cam1 = with_swapped!(x => (self.uniforms, data.formulas_cache);
-                    self.cameras.get_original(cam1id).unwrap().get(&self.matrices, &x).unwrap());
-                let cam2 = with_swapped!(x => (self.uniforms, data.formulas_cache);
-                    self.cameras.get_original(cam2id).unwrap().get(&self.matrices, &x).unwrap());
+            let disable_cam_interp_id = egui::Id::new("RealAnimationDisableCamInterpolation");
+            let disable_cam_interp = memory
+                .data
+                .get_persisted::<bool>(disable_cam_interp_id)
+                .unwrap_or(false);
+            let apply_once_id = egui::Id::new("RealAnimationDisableCamInterpolationOnce");
+            let apply_once = memory
+                .data
+                .get_persisted::<bool>(apply_once_id)
+                .unwrap_or(false);
 
-                let t_raw = data.formulas_cache.get_time() % 1.;
-                let t = animation.cam_easing.ease(t_raw);
+            if !disable_cam_interp || apply_once {
+                let animation = self.animations.get_original(id).unwrap();
+                let cam_start = self.get_start_cam(animation, id);
+                let cam_end = self.get_end_cam(animation, id);
+                if let Some((cam1id, cam2id)) = cam_start.zip(cam_end) {
+                    let cam1 = with_swapped!(x => (self.uniforms, data.formulas_cache);
+                        self.cameras.get_original(cam1id).unwrap().get(&self.matrices, &x).unwrap());
+                    let cam2 = with_swapped!(x => (self.uniforms, data.formulas_cache);
+                        self.cameras.get_original(cam2id).unwrap().get(&self.matrices, &x).unwrap());
 
-                let override_matrix = t_raw < self.prev_t_raw || t_raw == 0.;
+                    let t_raw = data.formulas_cache.get_time() % 1.;
+                    let t = if let Some(opt_uid) = animation.cam_easing_uniform {
+                        if let Some(uid) = opt_uid {
+                            if let Some(value) = self.uniforms.get(uid, &data.formulas_cache) {
+                                let mut v: f64 = value.into();
+                                if !v.is_finite() {
+                                    v = 0.0;
+                                }
+                                v.clamp(0.0, 1.0)
+                            } else {
+                                animation.cam_easing.ease(t_raw)
+                            }
+                        } else {
+                            animation.cam_easing.ease(t_raw)
+                        }
+                    } else {
+                        animation.cam_easing.ease(t_raw)
+                    };
 
-                let cam = CalculatedCam {
-                    look_at: cam1.look_at.lerp(cam2.look_at, t),
-                    alpha: lerp(cam1.alpha..=cam2.alpha, t),
-                    beta: lerp(cam1.beta..=cam2.beta, t),
-                    r: lerp(cam1.r..=cam2.r, t),
-                    in_subspace: cam1.in_subspace,
-                    free_movement: cam1.free_movement,
-                    matrix: cam1.matrix,
-                    override_matrix,
-                };
+                    let override_matrix = t_raw < self.prev_t_raw || t_raw == 0.;
 
-                memory
-                    .data
-                    .insert_persisted(egui::Id::new("OverrideCam"), cam);
+                    let cam = CalculatedCam {
+                        look_at: cam1.look_at.lerp(cam2.look_at, t),
+                        alpha: lerp(cam1.alpha..=cam2.alpha, t),
+                        beta: lerp(cam1.beta..=cam2.beta, t),
+                        r: lerp(cam1.r..=cam2.r, t),
+                        in_subspace: cam1.in_subspace,
+                        free_movement: cam1.free_movement,
+                        matrix: cam1.matrix,
+                        override_matrix,
+                    };
 
-                self.prev_t_raw = t_raw;
+                    memory
+                        .data
+                        .insert_persisted(egui::Id::new("OverrideCam"), cam);
+
+                    self.prev_t_raw = t_raw;
+                }
+
+                if apply_once {
+                    memory.data.insert_persisted(apply_once_id, false);
+                }
             }
         }
     }
@@ -1367,6 +1458,58 @@ impl Scene {
             }
         });
         self.current_stage = current_stage;
+        changed
+    }
+
+    pub fn control_animation_parameters(&mut self, ui: &mut Ui) -> WhatChanged {
+        ui.label("Control animations:");
+
+        let mut changed = WhatChanged::default();
+
+        let enabled_id = egui::Id::new("RealAnimationManualTimeEnabled");
+        let value_id = egui::Id::new("RealAnimationManualTimeValue");
+        let free_cam_id = egui::Id::new("RealAnimationDisableCamInterpolation");
+
+        ui.horizontal(|ui| {
+            let mut manual_enabled = ui.memory_mut(|memory| {
+                *memory.data.get_persisted_mut_or_default::<bool>(enabled_id)
+            });
+            changed.uniform |= ui.checkbox(&mut manual_enabled, "Manual time").changed();
+            ui.memory_mut(|memory| {
+                memory.data.insert_persisted(enabled_id, manual_enabled);
+            });
+
+            if manual_enabled {
+                let mut manual_value = ui.memory_mut(|memory| {
+                    *memory.data.get_persisted_mut_or_default::<f64>(value_id)
+                });
+                changed.uniform |= ui.add(
+                    egui::Slider::new(&mut manual_value, 0.0..=1.0)
+                        .clamp_to_range(true),
+                ).changed();
+                ui.memory_mut(|memory| {
+                    memory.data.insert_persisted(value_id, manual_value);
+                });
+            }
+        });
+
+        let mut free_cam = ui.memory_mut(|memory| {
+            *memory
+                .data
+                .get_persisted_mut_or_default::<bool>(free_cam_id)
+        });
+        let prev_free_cam = free_cam;
+        changed.uniform |= ui.checkbox(&mut free_cam, "Free cam").changed();
+        ui.memory_mut(|memory| {
+            memory.data.insert_persisted(free_cam_id, free_cam);
+            if !prev_free_cam && free_cam {
+                memory.data.insert_persisted(
+                    egui::Id::new("RealAnimationDisableCamInterpolationOnce"),
+                    true,
+                );
+            }
+        });
+
         changed
     }
 

@@ -635,7 +635,7 @@ impl FormulasCacheInner {
 }
 
 #[derive(Default)]
-pub struct FormulasCache(RefCell<FormulasCacheInner>, f64, DMat4);
+pub struct FormulasCache(RefCell<FormulasCacheInner>, f64, f64, DMat4);
 
 impl Debug for FormulasCache {
     fn fmt(&self, _: &mut Formatter<'_>) -> fmt::Result {
@@ -679,12 +679,20 @@ impl FormulasCache {
         self.1 = time;
     }
 
+    pub fn get_total_time(&self) -> f64 {
+        self.2
+    }
+
+    pub fn set_total_time(&mut self, time: f64) {
+        self.2 = time;
+    }
+
     pub fn set_camera_matrix(&mut self, mat: DMat4) {
-        self.2 = mat;
+        self.3 = mat;
     }
 
     pub fn get_camera_matrix(&self) -> DMat4 {
-        self.2
+        self.3
     }
 }
 
@@ -1059,6 +1067,8 @@ impl StorageElem2 for AnyUniform {
                 "atan2" => args.first()?.atan2(*args.get(1)?),
 
                 "time" => formulas_cache.get_time(),
+
+                "total_time" => formulas_cache.get_total_time(),
 
                 // easings
                 "easing_linear" => easing_linear(*args.first()?),
