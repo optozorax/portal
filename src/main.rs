@@ -1486,7 +1486,7 @@ impl SceneRenderer {
         skip_existing: bool,
     ) {
         if matches!(
-            std::fs::exists(&format!("video/{}.mp4", output_name)),
+            std::fs::exists(&format!("video/{}.mov", output_name)),
             Ok(true)
         ) {
             if skip_existing {
@@ -1542,34 +1542,32 @@ impl SceneRenderer {
         println!("Start ffmpeg to render video");
         drop(std::fs::create_dir("video"));
         let command = std::process::Command::new("ffmpeg")
-            .arg("-framerate")
-            .arg((fps).to_string())
-            .arg("-i")
-            .arg("anim/frame_%d.png")
-            .arg("-c:v")
-            .arg("libx264")
-            .arg("-b:v")
-            .arg("100M")
-            .arg("-pix_fmt")
-            .arg("yuv420p")
-            .arg("-profile:v")
-            .arg("high")
-            .arg("-level")
-            .arg("4.2")
-            .arg("-maxrate")
-            .arg("100M")
-            .arg("-bufsize")
-            .arg("200M")
-            .arg("-g")
-            .arg("120")
-            .arg("-preset")
-            .arg("slow")
-            .arg("-movflags")
-            .arg("faststart")
-            .arg("-y")
-            .arg(format!("video/{}.mp4", output_name))
-            .output()
-            .expect("failed to execute process");
+        .arg("-framerate").arg(fps.to_string())
+        .arg("-i").arg("anim/frame_%d.png")
+
+        // Keep full-range; tag/convert explicitly to sRGB in YUV420 10-bit
+        .arg("-vf").arg("zscale=primariesin=bt709:transferin=iec61966-2-1:matrixin=bt709:rangein=full:primaries=bt709:transfer=iec61966-2-1:matrix=bt709:range=full,format=yuv420p10le")
+
+        .arg("-c:v").arg("libx265")
+        .arg("-pix_fmt").arg("yuv420p10le")
+        .arg("-crf").arg("15")
+        .arg("-preset").arg("slow")
+
+        // Bitstream + container tags (sRGB transfer)
+        .arg("-x265-params").arg("colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:range=full")
+        .arg("-colorspace").arg("bt709")
+        .arg("-color_primaries").arg("bt709")
+        .arg("-color_trc").arg("iec61966-2-1")
+        .arg("-color_range").arg("pc")
+
+        // MOV tends to keep colr atom; hvc1 tag improves compatibility
+        .arg("-movflags").arg("+write_colr+faststart")
+        .arg("-tag:v").arg("hvc1")
+
+        .arg("-y")
+        .arg(format!("video/{output_name}.mov"))
+        .output()
+        .expect("failed to execute ffmpeg");
         std::fs::remove_dir_all("anim").unwrap();
         if command.status.code() != Some(0) {
             println!(
@@ -2279,6 +2277,7 @@ fn window_conf() -> Conf {
 }
 
 async fn render() {
+    // let (width, height) = (1920, 1080);
     let (width, height) = (3840, 2160);
     // let (width, height) = (3840, 3840);
     // let (width, height) = (854, 480);
@@ -2303,8 +2302,10 @@ async fn render() {
     return;
     */
 
+    #[allow(clippy::single_element_loop)]
     for scene_name in [
-        "background_animation",
+        // "triple_tiling",
+        "boot.dev",
         // "plus_ultra",
 
         // "sphere_to_sphere",
@@ -2319,15 +2320,16 @@ async fn render() {
         println!("Rendering scene {scene_name}");
 
         let fps = 60;
-        let motion_blur_frames = 1;
+        let motion_blur_frames = 10;
         let skip_existing = true;
         let starts_with = Some("anim");
 
         let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
-        let scene = ron::from_str(scene_content).unwrap();
-        let mut renderer = SceneRenderer::new(scene, width, height, scene_name).await;
+        let scene: SerializedScene = ron::from_str(scene_content).unwrap();
+        let mut renderer =
+            SceneRenderer::new(Scene::from_serialized(scene), width, height, scene_name).await;
         renderer.aa_count = 4;
-        renderer.render_depth = 150;
+        renderer.render_depth = 100;
         // renderer.cam.view_angle *= 1.5;
 
         if true {
@@ -2337,6 +2339,7 @@ async fn render() {
 
         // if true {
         if false {
+            #[allow(clippy::single_element_loop)]
             for animation_stage in ["v2.screenshot.5"] {
                 drop(std::fs::create_dir("video"));
                 drop(std::fs::create_dir(format!(

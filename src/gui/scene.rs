@@ -1174,8 +1174,7 @@ impl Scene {
                 animation.uniforms.init_stage(&mut self.uniforms);
                 animation.matrices.init_stage(&mut self.matrices);
 
-                let disable_cam_interp_id =
-                    egui::Id::new("RealAnimationDisableCamInterpolation");
+                let disable_cam_interp_id = egui::Id::new("RealAnimationDisableCamInterpolation");
                 let disable_cam_interp = memory
                     .data
                     .get_persisted::<bool>(disable_cam_interp_id)
@@ -1502,9 +1501,8 @@ impl Scene {
         let free_cam_id = egui::Id::new("RealAnimationDisableCamInterpolation");
 
         ui.horizontal(|ui| {
-            let mut manual_enabled = ui.memory_mut(|memory| {
-                *memory.data.get_persisted_mut_or_default::<bool>(enabled_id)
-            });
+            let mut manual_enabled = ui
+                .memory_mut(|memory| *memory.data.get_persisted_mut_or_default::<bool>(enabled_id));
             changed.uniform |= ui.checkbox(&mut manual_enabled, "Manual time").changed();
             ui.memory_mut(|memory| {
                 memory.data.insert_persisted(enabled_id, manual_enabled);
@@ -1514,10 +1512,12 @@ impl Scene {
                 let mut manual_value = ui.memory_mut(|memory| {
                     *memory.data.get_persisted_mut_or_default::<f64>(value_id)
                 });
-                changed.uniform |= ui.add(
-                    egui::Slider::new(&mut manual_value, 0.0..=1.0)
-                        .clamping(SliderClamping::Always),
-                ).changed();
+                changed.uniform |= ui
+                    .add(
+                        egui::Slider::new(&mut manual_value, 0.0..=1.0)
+                            .clamping(SliderClamping::Always),
+                    )
+                    .changed();
                 ui.memory_mut(|memory| {
                     memory.data.insert_persisted(value_id, manual_value);
                 });
