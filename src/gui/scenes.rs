@@ -79,6 +79,12 @@ impl Default for Scenes {
                         content: include_str!("../../scenes/spheres_anim.ron"),
                         hidden: true,
                     },
+                    Scene {
+                        name: "Boot.dev ad integration",
+                        link: "boot.dev",
+                        content: include_str!("../../scenes/boot.dev.ron"),
+                        hidden: true,
+                    },
                 ],
             },
             SceneSection {
