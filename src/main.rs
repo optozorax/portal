@@ -655,6 +655,14 @@ pub fn average_images(mut images: Vec<Image>) -> Image {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct ViewportRect {
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+}
+
 struct SceneRenderer {
     scene: Scene,
     cam: RotateAroundCam,
@@ -1656,9 +1664,38 @@ struct Window {
     input_subscriber_id: usize,
 
     render_scale: f32,
+
+    edit_scene_side_panel: bool,
+    scene_viewport: Option<ViewportRect>,
 }
 
 impl Window {
+    fn edit_scene_ui_contents(&mut self, ui: &mut egui::Ui, changed: &mut WhatChanged) {
+        let (changed1, material) =
+            self.renderer
+                .scene
+                .egui(ui, &mut self.renderer.data, &mut self.should_recompile);
+
+        *changed |= changed1;
+
+        if changed.shader {
+            self.should_recompile = true;
+        }
+
+        if let Some(material) = material {
+            match material {
+                Ok(material) => {
+                    self.renderer.material = material;
+                    self.error_message = None;
+                }
+                Err(err) => {
+                    self.error_message = Some((err.0, err.1));
+                    self.renderer.data.errors = err.2;
+                }
+            }
+        }
+    }
+
     async fn new() -> Self {
         let available_scenes: Scenes = Default::default();
 
@@ -1691,6 +1728,8 @@ impl Window {
         Window {
             renderer: SceneRenderer::new(scene, 4000, 4000, scene_name).await,
             render_scale: 0.5,
+            edit_scene_side_panel: true,
+            scene_viewport: None,
             should_recompile: false,
             dpi_set: false,
 
@@ -1751,10 +1790,13 @@ impl Window {
 
         let mut changed = WhatChanged::default();
 
+        let mut menu_height_points = 0.0f32;
+
         if is_key_pressed(macroquad::input::KeyCode::Escape) {
             self.draw_menu = !self.draw_menu;
         }
         if self.draw_menu {
+            let before_top = ctx.available_rect();
             egui::containers::panel::TopBottomPanel::top("my top").show(ctx, |ui| {
                 use egui::menu;
 
@@ -1809,44 +1851,58 @@ impl Window {
                     EngRusSettings::egui(ui);
                 });
             });
+            let after_top = ctx.available_rect();
+            menu_height_points = after_top.top() - before_top.top();
         }
-        let mut edit_scene_opened = self.edit_scene_opened;
-
         let errors_count = self.renderer.scene.errors_count(0, &mut self.renderer.data);
-        egui::Window::new(if errors_count > 0 {
+        let edit_scene_title = if errors_count > 0 {
             format!("Edit scene ({} err)", errors_count)
         } else {
             "Edit scene".to_owned()
-        })
-        .id(egui::Id::new("Edit scene"))
-        .open(&mut edit_scene_opened)
-        .vscroll(true)
-        .hscroll(true)
-        .show(ctx, |ui| {
-            let (changed1, material) =
-                self.renderer
-                    .scene
-                    .egui(ui, &mut self.renderer.data, &mut self.should_recompile);
+        };
 
-            changed |= changed1;
+        let mut edit_scene_side_panel = self.edit_scene_side_panel;
+        let mut side_panel_width_points = 0.0f32;
 
-            if changed.shader {
-                self.should_recompile = true;
+        if self.edit_scene_opened {
+            if edit_scene_side_panel {
+                let before_side = ctx.available_rect();
+                egui::SidePanel::left("Edit scene side panel").show(ctx, |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.heading(edit_scene_title.clone());
+                        ui.separator();
+
+                        ui.horizontal(|ui| {
+                            ui.checkbox(&mut edit_scene_side_panel, "Dock as side panel");
+                            if ui.button("Close").clicked() {
+                                self.edit_scene_opened = false;
+                            }
+                        });
+                        ui.separator();
+
+                        self.edit_scene_ui_contents(ui, &mut changed);
+                    });
+                });
+                let after_side = ctx.available_rect();
+                side_panel_width_points = after_side.left() - before_side.left();
+            } else {
+                let mut open = self.edit_scene_opened;
+                egui::Window::new(edit_scene_title)
+                    .id(egui::Id::new("Edit scene"))
+                    .open(&mut open)
+                    .vscroll(true)
+                    .hscroll(true)
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.checkbox(&mut edit_scene_side_panel, "Dock as side panel");
+                        });
+                        ui.separator();
+
+                        self.edit_scene_ui_contents(ui, &mut changed);
+                    });
+                self.edit_scene_opened = open;
             }
-
-            if let Some(material) = material {
-                match material {
-                    Ok(material) => {
-                        self.renderer.material = material;
-                        self.error_message = None;
-                    }
-                    Err(err) => {
-                        self.error_message = Some((err.0, err.1));
-                        self.renderer.data.errors = err.2;
-                    }
-                }
-            }
-        });
+        }
         if let Some((code, message)) = self.error_message.as_ref() {
             if self.renderer.data.show_error_window {
                 egui::Window::new("Error message")
@@ -2003,7 +2059,6 @@ First, predefined library is included, then uniforms, then user library, then in
             if !not_remove_export {
                 self.renderer.data.to_export = None;
             }
-            self.edit_scene_opened = edit_scene_opened;
         }
 
         {
@@ -2230,37 +2285,70 @@ First, predefined library is included, then uniforms, then user library, then in
             self.should_recompile = true;
         }
 
+        self.edit_scene_side_panel = edit_scene_side_panel;
+
+        let egui_screen = ctx.screen_rect();
+        let scale_x = screen_width() / egui_screen.width();
+        let scale_y = screen_height() / egui_screen.height();
+
+        let menu_height = menu_height_points * scale_y;
+        let side_panel_width = side_panel_width_points * scale_x;
+
+        let viewport_x = side_panel_width;
+        let viewport_y = menu_height;
+        let viewport_width = screen_width() - side_panel_width;
+        let viewport_height = screen_height() - menu_height;
+
+        let new_viewport = ViewportRect {
+            x: viewport_x,
+            y: viewport_y,
+            width: viewport_width,
+            height: viewport_height,
+        };
+
+        if self
+            .scene_viewport
+            .map(|v| v != new_viewport)
+            .unwrap_or(true)
+        {
+            is_something_changed = true;
+        }
+
+        self.scene_viewport = Some(new_viewport);
+
         is_something_changed
     }
 
     fn draw(&mut self) {
-        if self.render_scale == 1.0 {
-            self.renderer.draw_full_screen();
-        } else {
-            self.renderer.draw_texture(
-                screen_width() * self.render_scale,
-                screen_height() * self.render_scale,
-                false,
-            );
+        let viewport = self.scene_viewport.unwrap_or(ViewportRect {
+            x: 0.0,
+            y: 0.0,
+            width: screen_width(),
+            height: screen_height(),
+        });
 
-            draw_texture_ex(
-                &self.renderer.render_target.texture,
-                0.,
-                0.,
-                WHITE,
-                DrawTextureParams {
-                    source: Some(macroquad::math::Rect::new(
-                        0.,
-                        0.,
-                        screen_width() * self.render_scale,
-                        screen_height() * self.render_scale,
-                    )),
-                    dest_size: Some(macroquad::prelude::vec2(screen_width(), screen_height())),
-                    // flip_y: true,
-                    ..Default::default()
-                },
-            );
-        }
+        let render_width = (viewport.width * self.render_scale).max(1.0);
+        let render_height = (viewport.height * self.render_scale).max(1.0);
+
+        self.renderer
+            .draw_texture(render_width, render_height, false);
+
+        draw_texture_ex(
+            &self.renderer.render_target.texture,
+            viewport.x,
+            viewport.y,
+            WHITE,
+            DrawTextureParams {
+                source: Some(macroquad::math::Rect::new(
+                    0.0,
+                    0.0,
+                    render_width,
+                    render_height,
+                )),
+                dest_size: Some(macroquad::prelude::vec2(viewport.width, viewport.height)),
+                ..Default::default()
+            },
+        );
     }
 }
 
