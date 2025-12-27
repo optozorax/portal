@@ -797,7 +797,7 @@
     textures: ([
         (
             name: "texture",
-            data: ("scenes/monoportal.png"),
+            data: ("scenes/img/monoportal.png"),
         ),
     ]),
     materials: ([

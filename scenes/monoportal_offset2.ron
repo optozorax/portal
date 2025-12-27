@@ -353,7 +353,7 @@
     textures: ([
         (
             name: "monoportal",
-            data: ("scenes/monoportal_offset.png"),
+            data: ("scenes/img/monoportal_offset.png"),
         ),
     ]),
     materials: ([

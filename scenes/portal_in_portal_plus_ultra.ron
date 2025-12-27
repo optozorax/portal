@@ -785,7 +785,7 @@
     textures: ([
         (
             name: "skybox",
-            data: ("scenes/360_big.png"),
+            data: ("scenes/img/360_big.png"),
         ),
     ]),
     materials: ([

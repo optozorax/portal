@@ -364,7 +364,7 @@
     textures: ([
         (
             name: "monoportal",
-            data: ("scenes/mobius_monoportal.png"),
+            data: ("scenes/img/mobius_monoportal.png"),
         ),
     ]),
     materials: ([
