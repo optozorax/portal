@@ -496,13 +496,23 @@ impl Scene {
 
         result.extend(vec![
             ("_camera".to_owned(), UniformType::Mat4),
+            ("_camera_left_eye".to_owned(), UniformType::Mat4),
+            ("_camera_right_eye".to_owned(), UniformType::Mat4),
             ("_camera_mul_inv".to_owned(), UniformType::Mat4),
             ("_camera_in_subspace".to_owned(), UniformType::Int1),
+            ("_left_eye_in_subspace".to_owned(), UniformType::Int1),
+            ("_right_eye_in_subspace".to_owned(), UniformType::Int1),
             ("_resolution".to_owned(), UniformType::Float2),
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
             ("_aa_count".to_owned(), UniformType::Int1),
             ("_aa_start".to_owned(), UniformType::Int1),
+            ("_draw_side_by_side".to_owned(), UniformType::Int1),
             ("_offset_after_material".to_owned(), UniformType::Float1),
+            ("_draw_anaglyph".to_owned(), UniformType::Int1),
+            ("_anaglyph_mode".to_owned(), UniformType::Int1),
+            ("_camera_scale".to_owned(), UniformType::Float1),
+            ("_left_eye_scale".to_owned(), UniformType::Float1),
+            ("_right_eye_scale".to_owned(), UniformType::Float1),
             ("_t_start".to_owned(), UniformType::Float1),
             ("_t_end".to_owned(), UniformType::Float1),
             ("_view_angle".to_owned(), UniformType::Float1),
@@ -1053,12 +1063,14 @@ impl Scene {
             let number_for = line.contains("!FOR_NUMBER!");
             let variable_for = line.contains("!FOR_VARIABLE!");
             let antialiasing_line = line.contains("!ANTIALIASING!");
+            let anaglyph_line = line.contains("!ANAGLYPH!");
             let camera_teleportation_line = line.contains("!CAMERA_TELEPORTATION!");
             let glsl_100 = line.contains("!GLSL100!");
             let glsl_300 = line.contains("!GLSL300!");
             if (number_for && data.for_prefer_variable)
                 || (variable_for && !data.for_prefer_variable)
                 || (antialiasing_line && data.disable_antialiasing)
+                || (anaglyph_line && data.disable_anaglyph)
                 || (camera_teleportation_line && data.disable_camera_teleportation)
                 || (glsl_100 && data.use_300_version)
                 || (glsl_300 && !data.use_300_version)
@@ -1608,9 +1620,9 @@ const VERTEX_SHADER_100: &str = "#version 100
 attribute vec3 position;
 attribute vec2 texcoord;
 
+// NOTE THAT ALL THESE VALUES ARE INTERPOLATING BETWEEN TRIANGLE VERTICES!!!
 varying vec2 uv;
 varying vec2 uv_screen;
-varying float pixel_size;
 
 uniform mat4 Model;
 uniform mat4 Projection;
@@ -1624,7 +1636,6 @@ void main() {
     float coef = min(_resolution.x, _resolution.y);
     uv_screen = (position.xy - _resolution/2.) / coef * 2.;
     uv = position.xy;
-    pixel_size = 1. / coef;
 
     gl_Position = res;
 }
@@ -1634,9 +1645,9 @@ const VERTEX_SHADER_300: &str = "#version 300 es
 in vec3 position;
 in vec2 texcoord;
 
+// NOTE THAT ALL THESE VALUES ARE INTERPOLATING BETWEEN TRIANGLE VERTICES!!!
 out vec2 uv;
 out vec2 uv_screen;
-out float pixel_size;
 
 uniform mat4 Model;
 uniform mat4 Projection;
@@ -1650,7 +1661,6 @@ void main() {
     float coef = min(_resolution.x, _resolution.y);
     uv_screen = (position.xy - _resolution/2.) / coef * 2.;
     uv = position.xy;
-    pixel_size = 1. / coef;
 
     gl_Position = res;
 }

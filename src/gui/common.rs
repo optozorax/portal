@@ -79,6 +79,7 @@ pub struct Data {
     pub for_prefer_variable: bool,
 
     pub disable_antialiasing: bool,
+    pub disable_anaglyph: bool,
     pub disable_camera_teleportation: bool,
 
     pub use_300_version: bool,

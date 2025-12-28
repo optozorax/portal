@@ -1,4 +1,5 @@
 use gesture_recognizer::*;
+use glam::Vec4Swizzles;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 use macroquad::prelude::is_key_down;
 use macroquad::prelude::is_key_pressed;
@@ -79,6 +80,11 @@ struct RotateAroundCam {
 
     do_not_teleport_one_frame: bool,
     send_camera_object_matrix: bool,
+
+    left_eye_matrix: DMat4,
+    right_eye_matrix: DMat4,
+    left_eye_in_subspace: bool,
+    right_eye_in_subspace: bool,
 }
 
 impl RotateAroundCam {
@@ -135,6 +141,11 @@ impl RotateAroundCam {
 
             do_not_teleport_one_frame: false,
             send_camera_object_matrix: true,
+
+            left_eye_matrix: DMat4::IDENTITY,
+            right_eye_matrix: DMat4::IDENTITY,
+            left_eye_in_subspace: false,
+            right_eye_in_subspace: false,
         }
     }
 
@@ -445,19 +456,46 @@ impl RotateAroundCam {
                 changed = true;
             }
         });
-        for row in self.teleport_matrix.to_cols_array_2d() {
-            ui.horizontal(|ui| {
-                for mut value in row {
-                    ui.add_enabled(
-                        false,
-                        DragValue::new(&mut value)
-                            .speed(0.01)
-                            .min_decimals(0)
-                            .max_decimals(2),
-                    );
-                }
+        let visualize_matrix = |ui: &mut Ui, matrix: DMat4| {
+            for row in matrix.to_cols_array_2d() {
+                ui.horizontal(|ui| {
+                    for mut value in row {
+                        ui.add_enabled(
+                            false,
+                            DragValue::new(&mut value)
+                                .speed(0.01)
+                                .min_decimals(0)
+                                .max_decimals(2),
+                        );
+                    }
+                });
+            }
+        };
+        visualize_matrix(ui, self.teleport_matrix);
+        ui.separator();
+        egui::CollapsingHeader::new("Eye matrices")
+            .id_salt(0)
+            .show(ui, |ui| {
+                ui.label(format!(
+                    "Left eye: {}",
+                    if self.left_eye_in_subspace {
+                        "(in subspace)"
+                    } else {
+                        "(not in subspace)"
+                    }
+                ));
+                visualize_matrix(ui, self.left_eye_matrix);
+                ui.separator();
+                ui.label(format!(
+                    "Right eye: {}",
+                    if self.right_eye_in_subspace {
+                        "(in subspace)"
+                    } else {
+                        "(not in subspace)"
+                    }
+                ));
+                visualize_matrix(ui, self.right_eye_matrix);
             });
-        }
         ui.separator();
         ui.horizontal(|ui| {
             ui.label("α");
@@ -675,6 +713,11 @@ struct SceneRenderer {
     render_depth: i32,
     aa_count: i32,
     aa_start: i32,
+    draw_side_by_side: bool,
+    eye_distance: f64,
+    swap_eyes: bool,
+    draw_anaglyph: bool,
+    anaglyph_mode: bool,
     angle_color_disable: bool,
     grid_disable: bool,
     black_border_disable: bool,
@@ -860,6 +903,7 @@ impl SceneRenderer {
             reload_textures: true,
             for_prefer_variable: cfg!(not(target_arch = "wasm32")),
             use_300_version: cfg!(not(target_arch = "wasm32")),
+            disable_anaglyph: true,
             ..Default::default()
         };
 
@@ -947,6 +991,11 @@ impl SceneRenderer {
             render_depth: 100,
             aa_count: 1,
             aa_start: 0,
+            draw_side_by_side: false,
+            eye_distance: 0.0999,
+            swap_eyes: false,
+            draw_anaglyph: true,
+            anaglyph_mode: false,
             angle_color_disable: false,
             grid_disable: false,
             black_border_disable: false,
@@ -972,6 +1021,7 @@ impl SceneRenderer {
         result.offset_after_material = result.scene.cam.offset_after_material;
         result.reload_textures().await;
         result.scene.run_animations = false;
+        result.teleport_eye_matrices();
         result
     }
 
@@ -1030,6 +1080,102 @@ impl SceneRenderer {
         Some(Ok(()))
     }
 
+    fn teleport_eye_matrices(&mut self) {
+        if !((self.draw_anaglyph || self.draw_side_by_side) && self.cam.allow_teleport) {
+            return;
+        }
+
+        let eye_distance = if self.swap_eyes {
+            -self.eye_distance
+        } else {
+            self.eye_distance
+        };
+
+        let mut process_one_eye = |eye_vector: DVec4| -> (DMat4, bool) {
+            let start_pos = self.cam.get_cam_pos();
+            let direction_pos = (self.cam.get_matrix() * eye_vector).xyz();
+            let mut result = (
+                DMat4::from_translation(direction_pos - start_pos) * self.cam.get_matrix(),
+                self.cam.in_subspace,
+            );
+
+            let (teleported, _, change_subspace) =
+                self.teleport_external_ray(start_pos, direction_pos);
+            if let Some(new_pos) = teleported {
+                let mut res = |cam_teleport_dx: f64| -> Option<()> {
+                    result.0 = self.teleport_matrix(
+                        result.0,
+                        start_pos,
+                        direction_pos,
+                        new_pos,
+                        cam_teleport_dx,
+                    )?;
+                    if change_subspace {
+                        result.1 = !self.cam.in_subspace;
+                    }
+                    Some(())
+                };
+                if res(0.001) == None
+                    && res(0.0001) == None
+                    && res(0.00001) == None
+                    && res(0.000001) == None
+                {
+                    // ok
+                }
+            }
+
+            result
+        };
+
+        let res1 = process_one_eye(DVec4::new(-eye_distance, 0., 0., 1.));
+        let res2 = process_one_eye(DVec4::new(eye_distance, 0., 0., 1.));
+        (self.cam.left_eye_matrix, self.cam.left_eye_in_subspace) = res1;
+        (self.cam.right_eye_matrix, self.cam.right_eye_in_subspace) = res2;
+    }
+
+    fn teleport_matrix(
+        &mut self,
+        matrix: DMat4,
+        start_pos: DVec3,
+        direction_pos: DVec3,
+        actual_teleported_pos: DVec3,
+        dx: f64,
+    ) -> Option<DMat4> {
+        let i = (matrix * DVec4::new(1., 0., 0., 0.) * dx).truncate();
+        let i = self
+            .teleport_external_ray(start_pos + i, direction_pos + i)
+            .0?
+            - actual_teleported_pos;
+        let i = DVec4::from((i, 0.)) / dx;
+
+        let j = (matrix * DVec4::new(0., 1., 0., 0.) * dx).truncate();
+        let j = self
+            .teleport_external_ray(start_pos + j, direction_pos + j)
+            .0?
+            - actual_teleported_pos;
+        let j = DVec4::from((j, 0.)) / dx;
+
+        let k = (matrix * DVec4::new(0., 0., 1., 0.) * dx).truncate();
+        let k = self
+            .teleport_external_ray(start_pos + k, direction_pos + k)
+            .0?
+            - actual_teleported_pos;
+        let k = DVec4::from((k, 0.)) / dx;
+
+        let pos = DVec4::new(0., 0., 0., 1.);
+
+        let new_mat = DMat4::from_cols(i, j, k, pos);
+
+        let pos = actual_teleported_pos
+            - (new_mat
+                * matrix.inverse()
+                * DVec4::new(direction_pos.x, direction_pos.y, direction_pos.z, 1.))
+            .truncate();
+        let pos = DVec4::from((pos, 1.));
+
+        Some(DMat4::from_cols(i, j, k, pos))
+    }
+
     fn teleport_camera(&mut self, prev_cam: RotateAroundCam) {
         if self.cam.do_not_teleport_one_frame {
             self.cam.do_not_teleport_one_frame = false;
@@ -1052,41 +1198,13 @@ impl SceneRenderer {
                 return;
             }
             let mut res = |cam_teleport_dx: f64| -> Option<()> {
-                let cam_matrix = self.cam.teleport_matrix;
-
-                let i = (cam_matrix * DVec4::new(1., 0., 0., 0.) * cam_teleport_dx).truncate();
-                let i = self
-                    .teleport_external_ray(self.cam.prev_cam_pos + i, cam_pos + i)
-                    .0?
-                    - new_pos;
-                let i = DVec4::from((i, 0.)) / cam_teleport_dx;
-
-                let j = (cam_matrix * DVec4::new(0., 1., 0., 0.) * cam_teleport_dx).truncate();
-                let j = self
-                    .teleport_external_ray(self.cam.prev_cam_pos + j, cam_pos + j)
-                    .0?
-                    - new_pos;
-                let j = DVec4::from((j, 0.)) / cam_teleport_dx;
-
-                let k = (cam_matrix * DVec4::new(0., 0., 1., 0.) * cam_teleport_dx).truncate();
-                let k = self
-                    .teleport_external_ray(self.cam.prev_cam_pos + k, cam_pos + k)
-                    .0?
-                    - new_pos;
-                let k = DVec4::from((k, 0.)) / cam_teleport_dx;
-
-                let pos = DVec4::new(0., 0., 0., 1.);
-
-                let new_mat = DMat4::from_cols(i, j, k, pos);
-
-                let pos = new_pos
-                    - (new_mat
-                        * cam_matrix.inverse()
-                        * DVec4::new(cam_pos.x, cam_pos.y, cam_pos.z, 1.))
-                    .truncate();
-                let pos = DVec4::from((pos, 1.));
-
-                self.cam.teleport_matrix = DMat4::from_cols(i, j, k, pos);
+                self.cam.teleport_matrix = self.teleport_matrix(
+                    self.cam.teleport_matrix,
+                    self.cam.prev_cam_pos,
+                    cam_pos,
+                    new_pos,
+                    cam_teleport_dx,
+                )?;
 
                 if change_subspace {
                     self.cam.in_subspace = !self.cam.in_subspace;
@@ -1113,6 +1231,18 @@ impl SceneRenderer {
         self.material.set_uniform("_resolution", (width, height));
         self.material
             .set_uniform("_camera", self.cam.get_matrix().as_f32());
+        self.material
+            .set_uniform("_camera_left_eye", self.cam.left_eye_matrix.as_f32());
+        self.material
+            .set_uniform("_camera_right_eye", self.cam.right_eye_matrix.as_f32());
+        self.material.set_uniform(
+            "_left_eye_in_subspace",
+            self.cam.left_eye_in_subspace as i32,
+        );
+        self.material.set_uniform(
+            "_right_eye_in_subspace",
+            self.cam.right_eye_in_subspace as i32,
+        );
         self.material.set_uniform(
             "_camera_mul_inv",
             self.cam.teleport_matrix.inverse().as_f32(),
@@ -1134,22 +1264,37 @@ impl SceneRenderer {
         self.material.set_uniform("_aa_count", self.aa_count);
         self.material.set_uniform("_aa_start", self.aa_start);
         self.material
+            .set_uniform("_draw_side_by_side", self.draw_side_by_side as i32);
+        self.material
+            .set_uniform("_draw_anaglyph", self.draw_anaglyph as i32);
+        self.material
+            .set_uniform("_anaglyph_mode", self.anaglyph_mode as i32);
+        self.material
             .set_uniform("_offset_after_material", self.offset_after_material as f32);
 
-        let scale = self
-            .cam
-            .get_matrix()
-            .to_cols_array_2d()
-            .into_iter()
-            .take(3)
-            .map(|x| DVec4::from(x).length())
-            .sum::<f64>()
-            / 3.0;
+        let calc_scale = |matrix: &DMat4| -> f64 {
+            matrix
+                .to_cols_array_2d()
+                .into_iter()
+                .take(3)
+                .map(|x| DVec4::from(x).length())
+                .sum::<f64>()
+                / 3.0
+        };
+
         self.material
-            .set_uniform("_t_start", self.gray_t_start as f32 * scale as f32);
+            .set_uniform("_t_start", self.gray_t_start as f32);
+        self.material
+            .set_uniform("_t_end", (self.gray_t_start + self.gray_t_size) as f32);
+        self.material
+            .set_uniform("_camera_scale", calc_scale(&self.cam.get_matrix()) as f32);
         self.material.set_uniform(
-            "_t_end",
-            (self.gray_t_start + self.gray_t_size) as f32 * scale as f32,
+            "_left_eye_scale",
+            calc_scale(&self.cam.left_eye_matrix) as f32,
+        );
+        self.material.set_uniform(
+            "_right_eye_scale",
+            calc_scale(&self.cam.right_eye_matrix) as f32,
         );
 
         self.material
@@ -1211,14 +1356,6 @@ impl SceneRenderer {
         } else {
             return (None, encounter_object, change_subspace);
         }
-    }
-
-    fn draw_full_screen(&mut self) {
-        self.scene.set_uniforms(&mut self.material, &mut self.data);
-        self.set_uniforms(screen_width(), screen_height());
-        gl_use_material(&self.material);
-        draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
-        gl_use_default_material();
     }
 
     fn draw_texture(&mut self, width: f32, height: f32, flip_y: bool) {
@@ -1332,6 +1469,7 @@ impl SceneRenderer {
         if self.cam.get_matrix() != self.prev_cam.get_matrix() {
             self.teleport_camera(self.prev_cam.clone());
         }
+        self.teleport_eye_matrices();
         self.prev_cam = self.cam.clone();
 
         memory.data.insert_persisted(
@@ -1357,6 +1495,28 @@ impl SceneRenderer {
 
     fn egui_rendering_settings(&mut self, ui: &mut Ui) -> WhatChanged {
         let mut changed = WhatChanged::default();
+        ui.label("3D rendering options:");
+        if self.data.disable_anaglyph {
+            ui.label("Anaglyph is disabled, can't control it. Enable it lower in the settings and recompile/reload the scene.");
+        } else {
+            changed.uniform |= ui
+                .checkbox(&mut self.draw_anaglyph, "Draw anaglyph")
+                .changed();
+            ui.label("By default anaglyph is grayscale for better visuals. Colorful anaglyph uses Dubois matrices for better color fidelity.");
+            changed.uniform |= ui
+                .checkbox(&mut self.anaglyph_mode, "Colorful anaglyph")
+                .changed();
+        }
+        changed.uniform |= ui
+            .checkbox(&mut self.draw_side_by_side, "Draw side-by-side")
+            .changed();
+        ui.label("Disable \"Swap eyes\" when you render video. Enable it when you want to look at 3D image with your eyes crossed.");
+        changed.uniform |= ui.checkbox(&mut self.swap_eyes, "Swap eyes").changed();
+        ui.horizontal(|ui| {
+            ui.label("Eye distance:");
+            changed.uniform |= egui_f64_positive(ui, &mut self.eye_distance);
+        });
+        ui.separator();
         ui.label("Render depth:");
         changed.uniform |= check_changed(&mut self.render_depth, |depth| {
             ui.add(
@@ -1365,12 +1525,17 @@ impl SceneRenderer {
         });
         ui.label("(Max count of ray bounce after portal, reflect, refract)");
         ui.separator();
-        ui.label("Antialiasing count:");
-        changed.uniform |= check_changed(&mut self.aa_count, |count| {
-            ui.add(
-                egui::Slider::new(count, 1..=16).clamping(egui::widgets::SliderClamping::Always),
-            );
-        });
+        if self.data.disable_antialiasing {
+            ui.label("Antialiasing is disabled, can't control it. Enable it lower in the settings and recompile/reload the scene.");
+        } else {
+            ui.label("Antialiasing count:");
+            changed.uniform |= check_changed(&mut self.aa_count, |count| {
+                ui.add(
+                    egui::Slider::new(count, 1..=16)
+                        .clamping(egui::widgets::SliderClamping::Always),
+                );
+            });
+        }
         ui.separator();
         ui.label("Offset after material:");
         changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
@@ -1388,10 +1553,14 @@ impl SceneRenderer {
         ui.separator();
         ui.label("Darkening by distance:");
         changed.uniform |= egui_bool(ui, &mut self.darken_by_distance);
-        ui.label("Darkening after distance:");
-        changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_start);
-        ui.label("Darkening size:");
-        changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_size);
+        ui.horizontal(|ui| {
+            ui.label("Darkening after distance:");
+            changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_start);
+        });
+        ui.horizontal(|ui| {
+            ui.label("Darkening size:");
+            changed.uniform |= egui_f64_positive(ui, &mut self.gray_t_size);
+        });
         ui.separator();
         ui.label("Disable darkening by angle with normal:");
         changed.uniform |= egui_bool(ui, &mut self.angle_color_disable);
@@ -1415,6 +1584,9 @@ impl SceneRenderer {
         ui.separator();
         ui.label("Improve compilation speed time 4: (uses 300 glsl version instead of 100)");
         changed.shader |= egui_bool(ui, &mut self.data.use_300_version);
+        ui.separator();
+        ui.label("Improve compilation speed time 5: (disable anaglyph)");
+        changed.shader |= egui_bool(ui, &mut self.data.disable_anaglyph);
         changed
     }
 
