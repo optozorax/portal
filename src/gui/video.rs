@@ -5,6 +5,8 @@ use crate::gui::unique_id::UniqueId;
 
 use egui::*;
 use serde::{Deserialize, Serialize};
+
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

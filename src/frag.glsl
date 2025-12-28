@@ -235,6 +235,8 @@ uniform int _aa_start;
 uniform int _draw_side_by_side;
 uniform vec2 _resolution;
 uniform int _draw_anaglyph;
+uniform float _anaglyph_p;
+uniform float _anaglyph_q;
 uniform int _anaglyph_mode;
 
 // absolute coordinates, integer values, from 0
@@ -309,30 +311,55 @@ vec3 anaglyphCombineLinear(vec3 leftLin, vec3 rightLin, int mode)
 
     if (mode == 0)
     {
-        // Classic grayscale red/cyan:
-        // R from left luminance, G/B from right luminance
-        const vec3 LUMA = vec3(0.299, 0.587, 0.114);
-        float l = dot(leftLin,  LUMA);
-        float r = dot(rightLin, LUMA);
-        return clamp(vec3(l, r, r), 0.0, 1.0);
+        // Grayscale red/cyan with deghost compensation (linear space).
+        // p = cyan -> red-eye leak
+        // q = red  -> cyan-eye leak
+        const vec3  LUMA = vec3(0.299, 0.587, 0.114);
+        float P    = _anaglyph_p;
+        float Q    = _anaglyph_q;
+
+        float l = dot(leftLin,  LUMA); // left-eye desired luminance (linear)
+        float r = dot(rightLin, LUMA); // right-eye desired luminance (linear)
+
+        float denom = max(1e-6, 1.0 - P * Q);
+
+        // What we actually output to the screen:
+        //   R channel carries left eye (with compensation)
+        //   G/B channels carry right eye (with compensation)
+        float Rout = (l - P * r) / denom;
+        float Cout = (r - Q * l) / denom;
+
+        return clamp(vec3(Rout, Cout, Cout), 0.0, 1.0);
     }
     else
     {
-        // Dubois red/cyan matrices (work in linear space)
-        // out = M_left * left + M_right * right
-        const mat3 M_left = mat3(
-            0.456100,  0.500484,  0.176381,
-           -0.040082, -0.037825, -0.015759,
-           -0.015216, -0.020597, -0.005469
-        );
+        // Half-color red/cyan with deghost compensation (linear space).
+        // Output: R = left grayscale (deghosted), G/B = right color (deghosted by scaling)
+        //
+        // Calibrated for your glasses/monitor:
+        float P = _anaglyph_p; // cyan -> red-eye leak
+        float Q = _anaglyph_q; // red  -> cyan-eye leak
 
-        const mat3 M_right = mat3(
-           -0.043471, -0.087939, -0.001555,
-            0.378476,  0.733640,  0.018450,
-           -0.072153, -0.112961,  1.226400
-        );
+        // Keep your luma weights (assumed you're in linear already)
+        const vec3 LUMA = vec3(0.299, 0.587, 0.114);
 
-        vec3 outLin = (M_left * leftLin) + (M_right * rightLin);
+        float l = dot(leftLin,  LUMA);  // desired left-eye grayscale
+        float r = dot(rightLin, LUMA);  // desired right-eye grayscale
+
+        float denom = max(1e-6, 1.0 - P * Q);
+
+        // Solve for what to emit so that perceived (approx):
+        // red-eye  sees: Rout + P*Cout  ≈ l
+        // cyan-eye sees: Cout + Q*Rout  ≈ r
+        float Rout = (l - P * r) / denom;
+        float Cout = (r - Q * l) / denom;
+
+        // Distribute Cout into G/B while preserving the right image's cyan hue.
+        // We enforce: (Gout + Bout)/2 == Cout
+        float sumGB = rightLin.g + rightLin.b;
+        float k = (sumGB > 1e-6) ? (2.0 * Cout / sumGB) : 0.0;
+
+        vec3 outLin = vec3(Rout, rightLin.g * k, rightLin.b * k);
         return clamp(outLin, 0.0, 1.0);
     }
 }

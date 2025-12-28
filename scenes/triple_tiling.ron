@@ -1516,7 +1516,7 @@
         (
             name: "anim.test",
             data: (
-                duration: 4,
+                duration: 8,
                 animation_stage: Animation("Explore"),
                 uniforms: ({
                     "a": CopyPrev,

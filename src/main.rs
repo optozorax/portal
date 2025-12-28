@@ -717,6 +717,8 @@ struct SceneRenderer {
     eye_distance: f64,
     swap_eyes: bool,
     draw_anaglyph: bool,
+    anaglyph_p: f64,
+    anaglyph_q: f64,
     anaglyph_mode: bool,
     angle_color_disable: bool,
     grid_disable: bool,
@@ -992,9 +994,11 @@ impl SceneRenderer {
             aa_count: 1,
             aa_start: 0,
             draw_side_by_side: false,
-            eye_distance: 0.0999,
+            eye_distance: 0.07,
             swap_eyes: false,
-            draw_anaglyph: true,
+            draw_anaglyph: false,
+            anaglyph_p: 0.29,
+            anaglyph_q: 0.06,
             anaglyph_mode: false,
             angle_color_disable: false,
             grid_disable: false,
@@ -1268,6 +1272,10 @@ impl SceneRenderer {
         self.material
             .set_uniform("_draw_anaglyph", self.draw_anaglyph as i32);
         self.material
+            .set_uniform("_anaglyph_p", self.anaglyph_p as f32);
+        self.material
+            .set_uniform("_anaglyph_q", self.anaglyph_q as f32);
+        self.material
             .set_uniform("_anaglyph_mode", self.anaglyph_mode as i32);
         self.material
             .set_uniform("_offset_after_material", self.offset_after_material as f32);
@@ -1502,10 +1510,29 @@ impl SceneRenderer {
             changed.uniform |= ui
                 .checkbox(&mut self.draw_anaglyph, "Draw anaglyph")
                 .changed();
-            ui.label("By default anaglyph is grayscale for better visuals. Colorful anaglyph uses Dubois matrices for better color fidelity.");
+            ui.label("By default anaglyph is grayscale for better visuals. Colorful anaglyph may produce a lot of ghosting.");
             changed.uniform |= ui
                 .checkbox(&mut self.anaglyph_mode, "Colorful anaglyph")
                 .changed();
+            ui.label("If you have ghosting on your anaglyph glasses (you can see other's eye image), you can tweaks these two values to get minimal ghosting. Note that blue lens may have no ghosting at all, but red lens may have a bit. Also note that ghosting may always be presented on pitch black background (in pocket dimension for example). So, anaglyph works best in room scenes.");
+            ui.horizontal(|ui| {
+                ui.label("Anaglyph P (red lens):");
+                changed.uniform |= ui.add(
+                    egui::Slider::new(&mut self.anaglyph_p, 0.15..=0.6)
+                        .clamping(egui::widgets::SliderClamping::Always)
+                        .min_decimals(0)
+                        .max_decimals(3),
+                ).changed();
+            });
+            ui.horizontal(|ui| {
+                ui.label("Anaglyph Q (blue lens):");
+                changed.uniform |= ui.add(
+                    egui::Slider::new(&mut self.anaglyph_q, 0.0..=0.25)
+                        .clamping(egui::widgets::SliderClamping::Always)
+                        .min_decimals(0)
+                        .max_decimals(3),
+                ).changed();
+            });
         }
         changed.uniform |= ui
             .checkbox(&mut self.draw_side_by_side, "Draw side-by-side")
@@ -2537,10 +2564,16 @@ fn window_conf() -> Conf {
 }
 
 async fn render() {
+    let render_stereo_image = true;
+
     // let (width, height) = (1920, 1080);
-    let (width, height) = (3840, 2160);
+    let (mut width, height) = (3840, 2160);
     // let (width, height) = (3840, 3840);
     // let (width, height) = (854, 480);
+
+    if render_stereo_image {
+        width *= 2;
+    }
 
     // render all scenes as a pictures
     /*
@@ -2564,8 +2597,8 @@ async fn render() {
 
     #[allow(clippy::single_element_loop)]
     for scene_name in [
-        // "triple_tiling",
-        "boot.dev",
+        "triple_tiling",
+        // "boot.dev",
         // "plus_ultra",
 
         // "sphere_to_sphere",
@@ -2580,7 +2613,7 @@ async fn render() {
         println!("Rendering scene {scene_name}");
 
         let fps = 60;
-        let motion_blur_frames = 10;
+        let motion_blur_frames = 5;
         let skip_existing = true;
         let starts_with = Some("anim");
 
@@ -2590,6 +2623,7 @@ async fn render() {
             SceneRenderer::new(Scene::from_serialized(scene), width, height, scene_name).await;
         renderer.aa_count = 4;
         renderer.render_depth = 100;
+        renderer.draw_side_by_side = render_stereo_image;
         // renderer.cam.view_angle *= 1.5;
 
         if true {

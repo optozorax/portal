@@ -509,6 +509,8 @@ impl Scene {
             ("_draw_side_by_side".to_owned(), UniformType::Int1),
             ("_offset_after_material".to_owned(), UniformType::Float1),
             ("_draw_anaglyph".to_owned(), UniformType::Int1),
+            ("_anaglyph_p".to_owned(), UniformType::Float1),
+            ("_anaglyph_q".to_owned(), UniformType::Float1),
             ("_anaglyph_mode".to_owned(), UniformType::Int1),
             ("_camera_scale".to_owned(), UniformType::Float1),
             ("_left_eye_scale".to_owned(), UniformType::Float1),
