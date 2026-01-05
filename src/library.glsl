@@ -2,7 +2,9 @@
 #version 300 es // !GLSL300!
 // Version can't be changed to upper versions because of WebGL.
 
+#ifdef GL_ES
 precision highp float;
+#endif
 
 uniform int _black_border_disable;
 

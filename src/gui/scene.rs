@@ -1084,7 +1084,13 @@ impl Scene {
                     if let Some(pos) = line.find("//") {
                         end = end.min(pos);
                     }
-                    line[..end].trim_end()
+                    let line = line[..end].trim_end();
+                    if cfg!(target_os = "macos") && data.use_300_version && line == "#version 300 es"
+                    {
+                        "#version 330 core"
+                    } else {
+                        line
+                    }
                 } else {
                     line
                 };
@@ -1105,15 +1111,22 @@ impl Scene {
 
         use macroquad::prelude::load_material;
         use macroquad::prelude::MaterialParams;
+        use std::borrow::Cow;
+
+        let vertex: Cow<'_, str> = if data.use_300_version {
+            if cfg!(target_os = "macos") {
+                Cow::Owned(VERTEX_SHADER_300.replace("#version 300 es", "#version 330 core"))
+            } else {
+                Cow::Borrowed(VERTEX_SHADER_300)
+            }
+        } else {
+            Cow::Borrowed(VERTEX_SHADER_100)
+        };
 
         Some(
             load_material(
                 macroquad::prelude::ShaderSource::Glsl {
-                    vertex: if data.use_300_version {
-                        VERTEX_SHADER_300
-                    } else {
-                        VERTEX_SHADER_100
-                    },
+                    vertex: vertex.as_ref(),
                     fragment: &code.storage,
                 },
                 MaterialParams {
