@@ -1079,6 +1079,15 @@ impl Scene {
             {
                 // skip line
             } else {
+                let line = if line.trim_start().starts_with("#version") {
+                    let mut end = line.len();
+                    if let Some(pos) = line.find("//") {
+                        end = end.min(pos);
+                    }
+                    line[..end].trim_end()
+                } else {
+                    line
+                };
                 res_storage += line;
             }
             res_storage += "\n";
