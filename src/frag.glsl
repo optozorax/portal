@@ -365,7 +365,7 @@ vec3 anaglyphCombineLinear(vec3 leftLin, vec3 rightLin, int mode)
     }
 }
 
-vec3 get_color2(vec2 image_position, mat4 camera_matrix, bool in_subspace, float camera_scale) {
+vec3 get_color2(vec2 image_position, mat4 camera_matrix, bool in_subspace, float camera_scale, vec2 resolution) {
     vec4 o = camera_matrix * vec4(0., 0., 0., 1.);
     vec4 d;
     if (_use_panini_projection == 1) {
@@ -374,8 +374,25 @@ vec3 get_color2(vec2 image_position, mat4 camera_matrix, bool in_subspace, float
         // Equirectangular mapping where the center of the image looks straight forward
         // in camera-local space (0, 0, 1). Then we rotate it by `camera_matrix` so the
         // 360 view follows the same orientation as the regular camera.
-        float yaw = image_position.x * Pi;
-        float pitch = image_position.y * Pi05;
+        // Keep 2:1 equirect aspect by adding black bars outside the valid region.
+        float coef = min(resolution.x, resolution.y);
+        float ax = resolution.x / coef;
+        float ay = resolution.y / coef;
+        float rx;
+        float ry;
+        if (ax >= 2.0 * ay) {
+            ry = ay;
+            rx = 2.0 * ay;
+        } else {
+            rx = ax;
+            ry = ax / 2.0;
+        }
+        if (abs(image_position.x) > rx || abs(image_position.y) > ry) {
+            return vec3(0.0);
+        }
+
+        float yaw = (image_position.x / rx) * Pi;
+        float pitch = (image_position.y / ry) * Pi05;
         vec3 dir_local = vec3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch));
         d = normalize(camera_matrix * vec4(dir_local, 0.));
     } else if (_use_180_camera == 1) {
@@ -401,14 +418,15 @@ vec3 get_color2(vec2 image_position, mat4 camera_matrix, bool in_subspace, float
 vec3 get_color(vec2 image_position) {
     if (_draw_anaglyph == 1) { // !ANAGLYPH!
         return anaglyphCombineLinear( // !ANAGLYPH!
-            get_color2(image_position, _camera_left_eye, _left_eye_in_subspace == 1, _left_eye_scale), // !ANAGLYPH!
-            get_color2(image_position, _camera_right_eye, _right_eye_in_subspace == 1, _right_eye_scale), // !ANAGLYPH!
+            get_color2(image_position, _camera_left_eye, _left_eye_in_subspace == 1, _left_eye_scale, _resolution), // !ANAGLYPH!
+            get_color2(image_position, _camera_right_eye, _right_eye_in_subspace == 1, _right_eye_scale, _resolution), // !ANAGLYPH!
             _anaglyph_mode // !ANAGLYPH!
         ); // !ANAGLYPH!
     } else { // !ANAGLYPH!
         mat4 final_matrix = _camera;
         bool final_in_subspace = _camera_in_subspace == 1;
         float final_scale = _camera_scale;
+        vec2 final_resolution = _resolution;
 
         if (_draw_side_by_side == 1) {
             float coef = min(_resolution.x, _resolution.y);
@@ -422,15 +440,17 @@ vec3 get_color(vec2 image_position) {
                 final_matrix = _camera_left_eye;
                 final_in_subspace = _left_eye_in_subspace == 1;
                 final_scale = _left_eye_scale;
+                final_resolution = resolution;
             } else {
                 image_position = (position.xy - vec2(resolution.x, 0.) - resolution/2.) / coef2 * 2.;
                 final_matrix = _camera_right_eye;
                 final_in_subspace = _right_eye_in_subspace == 1;
                 final_scale = _right_eye_scale;
+                final_resolution = resolution;
             }
         }
 
-        return get_color2(image_position, final_matrix, final_in_subspace, final_scale);
+        return get_color2(image_position, final_matrix, final_in_subspace, final_scale, final_resolution);
     } // !ANAGLYPH!
 }
 
