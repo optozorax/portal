@@ -1,0 +1,79 @@
+name: Build & Deploy WASM (demo branch)
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - demo
+
+permissions:
+  contents: write
+
+concurrency:
+  group: demo-wasm-deploy
+
+jobs:
+  build-and-deploy:
+    # Only deploy from the repo default branch (whatever it's called).
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Rust toolchain (stable + wasm32)
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-strip (wabt)
+        run: |
+          sudo apt-get update
+          sudo apt-get install --assume-yes --no-install-recommends wabt
+
+      - name: Build WASM
+        run: cargo build --release --locked --target wasm32-unknown-unknown
+
+      - name: Prepare artifact
+        run: |
+          cp target/wasm32-unknown-unknown/release/portal.wasm /tmp/portal.wasm
+          wasm-strip /tmp/portal.wasm
+
+      - name: Checkout demo branch
+        uses: actions/checkout@v4
+        with:
+          ref: demo
+          path: demo
+          fetch-depth: 0
+
+      - name: Update portal.wasm in demo branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cp /tmp/portal.wasm demo/portal.wasm
+
+          cd demo
+          git add portal.wasm
+
+          if git diff --cached --quiet; then
+            echo "No changes to portal.wasm; skipping commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git commit -m "Update portal.wasm (${GITHUB_SHA})"
+          git push origin HEAD:demo
+
