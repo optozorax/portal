@@ -62,6 +62,12 @@ impl Default for Scenes {
                         hidden: true,
                     },
                     Scene {
+                        name: "Wheatley texture 2",
+                        link: "wheatley_texture2",
+                        content: include_str!("../../scenes/wheatley_texture2.ron"),
+                        hidden: true,
+                    },
+                    Scene {
                         name: "Companion cube texture",
                         link: "companion_cube_texture",
                         content: include_str!("../../scenes/companion_cube_texture.ron"),

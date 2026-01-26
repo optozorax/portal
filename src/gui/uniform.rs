@@ -1095,6 +1095,7 @@ impl StorageElem2 for AnyUniform {
 
                 "later_start" => {
                     // https://www.desmos.com/calculator/bmso7lev0b
+                    // \left(\max\left(\frac{x}{1-0.25}-\frac{0.25}{1-0.25},\ 0\right)\right)\left\{0<x<1\right\}
                     let t = *args.first()?;
                     let time = 1. - *args.get(1)?;
                     0.0_f64.max(t / time - (1. - time) / time)
@@ -1102,6 +1103,7 @@ impl StorageElem2 for AnyUniform {
 
                 "early_finish" => {
                     // https://www.desmos.com/calculator/fhg7bd2jpq
+                    // \min\left(\frac{x}{0.25},\ 1\right)\left\{0<x<1\right\}
                     let t = *args.first()?;
                     let time = *args.get(1)?;
                     1.0_f64.min(t / time)
