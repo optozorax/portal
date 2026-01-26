@@ -370,9 +370,13 @@ vec3 get_color2(vec2 image_position, mat4 camera_matrix, bool in_subspace, float
     if (_use_panini_projection == 1) {
         d = normalize(camera_matrix * vec4(PaniniProjection(vec2(image_position.x, image_position.y), _view_angle, _panini_param), 0.));
     } else if (_use_360_camera == 1) {
-        float u = (image_position.x + 2.) * PI2;
-        float v = (image_position.y + 1.) * PI2;
-        d = vec4(cos(u) * sin(v), cos(v), sin(u) * sin(v), 0.);
+        // Equirectangular mapping where the center of the image looks straight forward
+        // in camera-local space (0, 0, 1). Then we rotate it by `camera_matrix` so the
+        // 360 view follows the same orientation as the regular camera.
+        float yaw = image_position.x * Pi;
+        float pitch = image_position.y * Pi05;
+        vec3 dir_local = vec3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch));
+        d = normalize(camera_matrix * vec4(dir_local, 0.));
     } else {
         float h = tan(_view_angle / 2.);
         d = normalize(camera_matrix * vec4(image_position.x * h, image_position.y * h, 1.0, 0.));
