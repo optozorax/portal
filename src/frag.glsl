@@ -229,6 +229,7 @@ uniform float _right_eye_scale;
 uniform float _view_angle;
 uniform int _use_panini_projection;
 uniform int _use_360_camera;
+uniform int _use_180_camera;
 uniform float _panini_param;
 uniform int _aa_count;
 uniform int _aa_start;
@@ -374,6 +375,17 @@ vec3 get_color2(vec2 image_position, mat4 camera_matrix, bool in_subspace, float
         // in camera-local space (0, 0, 1). Then we rotate it by `camera_matrix` so the
         // 360 view follows the same orientation as the regular camera.
         float yaw = image_position.x * Pi;
+        float pitch = image_position.y * Pi05;
+        vec3 dir_local = vec3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch));
+        d = normalize(camera_matrix * vec4(dir_local, 0.));
+    } else if (_use_180_camera == 1) {
+        // VR180 (front hemisphere) equirectangular.
+        // Use the full image width/height for [-90°, +90°] yaw/pitch, with black borders
+        // outside the square view area (e.g. when the viewport is wider than tall).
+        if (abs(image_position.x) > 1.0 || abs(image_position.y) > 1.0) {
+            return vec3(0.0);
+        }
+        float yaw = image_position.x * Pi05;
         float pitch = image_position.y * Pi05;
         vec3 dir_local = vec3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch));
         d = normalize(camera_matrix * vec4(dir_local, 0.));

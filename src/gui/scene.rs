@@ -520,6 +520,7 @@ impl Scene {
             ("_view_angle".to_owned(), UniformType::Float1),
             ("_use_panini_projection".to_owned(), UniformType::Int1),
             ("_use_360_camera".to_owned(), UniformType::Int1),
+            ("_use_180_camera".to_owned(), UniformType::Int1),
             ("_angle_color_disable".to_owned(), UniformType::Int1),
             ("_darken_by_distance".to_owned(), UniformType::Int1),
             ("_grid_disable".to_owned(), UniformType::Int1),

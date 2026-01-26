@@ -46,6 +46,7 @@ struct RotateAroundCam {
     panini_param: f64,
 
     use_360_camera: bool,
+    use_180_camera: bool,
 
     inverse_x: bool,
     inverse_y: bool,
@@ -109,6 +110,7 @@ impl RotateAroundCam {
             panini_param: 1.0,
 
             use_360_camera: false,
+            use_180_camera: false,
 
             inverse_x: false,
             inverse_y: false,
@@ -549,14 +551,38 @@ impl RotateAroundCam {
         ui.separator();
 
         ui.horizontal(|ui| {
+            ui.label("180 camera (VR180):");
+            changed |= check_changed(&mut self.use_180_camera, |is_use| {
+                ui.add(egui::Checkbox::new(is_use, ""));
+            });
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
             ui.label("Panini projection:");
             changed |= check_changed(&mut self.use_panini_projection, |is_use| {
                 ui.add(egui::Checkbox::new(is_use, ""));
             });
-            if !self.use_panini_projection {
-                self.view_angle = macroquad::math::clamp(self.view_angle, 0.0, deg2rad(140.0));
-            }
         });
+
+        // Keep camera modes mutually exclusive.
+        // Panini is a regular-camera projection variant; 360/180 are equirectangular modes.
+        if self.use_panini_projection {
+            self.use_360_camera = false;
+            self.use_180_camera = false;
+        }
+        if self.use_360_camera {
+            self.use_panini_projection = false;
+            self.use_180_camera = false;
+        }
+        if self.use_180_camera {
+            self.use_panini_projection = false;
+            self.use_360_camera = false;
+        }
+        if !self.use_panini_projection {
+            self.view_angle = macroquad::math::clamp(self.view_angle, 0.0, deg2rad(140.0));
+        }
         ui.horizontal(|ui| {
             let is_use = self.use_panini_projection;
             ui.label("Panini parameter:");
@@ -1263,6 +1289,8 @@ impl SceneRenderer {
         );
         self.material
             .set_uniform("_use_360_camera", self.cam.use_360_camera as i32);
+        self.material
+            .set_uniform("_use_180_camera", self.cam.use_180_camera as i32);
         self.material
             .set_uniform("_ray_tracing_depth", self.render_depth);
         self.material.set_uniform("_aa_count", self.aa_count);
