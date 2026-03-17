@@ -5,9 +5,9 @@
     ),
     cam: (
         look_at: (0, 0, 0),
-        alpha: -14.351416302988529,
-        beta: 1.1447293853759763,
-        r: 2.8903816239161313,
+        alpha: -15.48475141651389,
+        beta: 0.689589843749999,
+        r: 1.4832227950974164,
         offset_after_material: 0.000025,
     ),
     uniforms: ([
@@ -695,6 +695,7 @@
             data: (("vec3 companion_cube_color(float u, float v) {\r\n  float mul = 1.;\r\n  float dist = sqrt(u * u + v * v);\r\n  float circle_size = 0.6;\r\n  float circle_border = 0.03;\r\n  if (dist < circle_size + circle_border && dist > circle_size) { mul = 0.4; }\r\n  if (dist > circle_size + circle_border) { mul = (PI + atan(u, v))/(2.0*PI); }\r\n\r\n  if (dist < circle_size) {\r\n    float scale = 3.;\r\n    float x = u * scale;\r\n    float y = v * scale + 0.26;\r\n    float temp1 = x*x + y*y - 1.;\r\n    if (temp1 * temp1 * temp1 - x * x * y * y * y < 0.) {\r\n      return vec3(222., 35., 138.) / 255.;\r\n    }\r\n  }\r\n\r\n  return color_grid3(vec3(9.176470588235294e-1, 9.176470588235294e-1, 9.176470588235294e-1) * mul, vec2(u + 1., v + 1.));\r\n}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "debug_matrix": true,
@@ -934,7 +935,6 @@
                     "z_scale": ProvidedToUser,
                 },
                 matrices: {
-                    "?": FromDev,
                     "exact": FromDev,
                     "gray_sphere": ProvidedToUser,
                     "object1": ProvidedToUser,
@@ -1108,6 +1108,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1220,6 +1221,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1273,6 +1275,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1318,6 +1321,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1363,6 +1367,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1408,6 +1413,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1453,6 +1459,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1498,6 +1505,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1543,6 +1551,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1600,6 +1609,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1687,6 +1697,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1754,6 +1765,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1816,6 +1828,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1895,6 +1908,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -1962,6 +1976,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2038,6 +2053,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2099,6 +2115,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2157,6 +2174,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2236,6 +2254,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2289,6 +2308,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2352,6 +2372,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2405,6 +2426,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2467,6 +2489,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2529,6 +2552,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2595,6 +2619,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2640,6 +2665,85 @@
                 cam_any_start: Some("v3.half.7"),
                 cam_any_end: Some("v3.half.7"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
+            ),
+        ),
+        (
+            name: "anim.2.half.0",
+            data: (
+                duration: 5,
+                animation_stage: Animation("Explore"),
+                uniforms: ({
+                    "debug_matrix": CopyPrev,
+                    "debug_object1": CopyPrev,
+                    "debug_object2": CopyPrev,
+                    "debug_u": CopyPrev,
+                    "debug_v": CopyPrev,
+                    "inverse_normal": CopyPrev,
+                    "invert_ray": CopyPrev,
+                    "mirror": CopyPrev,
+                    "portal_black_color_progress": CopyPrev,
+                    "progress1": CopyPrev,
+                    "progress2": CopyPrev,
+                    "progress3": CopyPrev,
+                    "room_size_x": CopyPrev,
+                    "room_size_y": CopyPrev,
+                    "room_size_z": CopyPrev,
+                    "teleport_light": CopyPrev,
+                    "use_half": Changed(Some(Inline(Bool(true)))),
+                    "x_scale": CopyPrev,
+                    "x_scale_big": CopyPrev,
+                    "y_scale": CopyPrev,
+                    "z_scale": CopyPrev,
+                }),
+                matrices: ({
+                    "exact": CopyPrev,
+                    "gray_sphere": Changed(Some(Inline(Simple(
+                        offset: (0, 0, 0),
+                        scale: 0.25,
+                        rotate: (0, 0, 0),
+                        mirror: (false, false, false),
+                    )))),
+                    "object1": Changed(Some(Inline(Simple(
+                        offset: (-1.5, 0, 0),
+                        scale: 1,
+                        rotate: (0, 1.5707963267948966, 0),
+                        mirror: (false, false, false),
+                    )))),
+                    "object2": Changed(Some(Inline(Simple(
+                        offset: (1.5, 0, 0),
+                        scale: 1,
+                        rotate: (0, 4.71238898038469, 0),
+                        mirror: (false, false, false),
+                    )))),
+                    "room_origin": CopyPrev,
+                }),
+                use_prev_cam: false,
+                use_start_cam_as_end: false,
+                cam_start: Some(Inline((
+                    look_at: Coordinate((0, 0, 0)),
+                    alpha: -12.9147505772805,
+                    beta: 1.2133119201660136,
+                    r: 3.4973617649385202,
+                    in_subspace: false,
+                    free_movement: false,
+                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                ))),
+                cam_end: Some(Inline((
+                    look_at: Coordinate((0, 0, 0)),
+                    alpha: -15.764751340219945,
+                    beta: 1.0574418640136707,
+                    r: 1.4832227950974164,
+                    in_subspace: false,
+                    free_movement: false,
+                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                ))),
+                use_any_cam_as_start: None,
+                use_any_cam_as_end: None,
+                cam_any_start: None,
+                cam_any_end: None,
+                cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
     ]),

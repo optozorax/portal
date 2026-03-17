@@ -5,9 +5,9 @@
     ),
     cam: (
         look_at: (0, 0, 0),
-        alpha: 11.945792618185063,
-        beta: 1.0867470550537066,
-        r: 3.0923565925243244,
+        alpha: 5.808624763875923,
+        beta: 1.1821382141113304,
+        r: 2.5556666053920023,
         offset_after_material: 0.000025,
     ),
     uniforms: ([
@@ -864,6 +864,7 @@
             data: (("vec3 companion_cube_color(float u, float v) {\r\n  float mul = 1.;\r\n  float dist = sqrt(u * u + v * v);\r\n  float circle_size = 0.6;\r\n  float circle_border = 0.03;\r\n  if (dist < circle_size + circle_border && dist > circle_size) { mul = 0.4; }\r\n  if (dist > circle_size + circle_border) { mul = (PI + atan(u, v))/(2.0*PI); }\r\n\r\n  if (dist < circle_size) {\r\n    float scale = 3.;\r\n    float x = u * scale;\r\n    float y = v * scale + 0.26;\r\n    float temp1 = x*x + y*y - 1.;\r\n    if (temp1 * temp1 * temp1 - x * x * y * y * y < 0.) {\r\n      return vec3(222., 35., 138.) / 255.;\r\n    }\r\n  }\r\n\r\n  return color_grid3(vec3(9.176470588235294e-1, 9.176470588235294e-1, 9.176470588235294e-1) * mul, vec2(u + 1., v + 1.));\r\n}\r\n")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "enable_object": true,
@@ -1142,6 +1143,7 @@
                     "enable_second_side": ProvidedToUser,
                     "enable_teleportation_degrees": FromDev,
                     "flat_portal": FromDev,
+                    "flat_portal_scale": FromDev,
                     "mirror": FromDev,
                     "progress2": Changed(Some(Inline(Progress(0.5)))),
                     "progress_object": FromDev,
@@ -1473,7 +1475,6 @@
                 ),
                 description: None,
                 uniforms: {
-                    "?": FromDev,
                     "enable_object": FromDev,
                     "enable_object_vector": FromDev,
                     "enable_portal_vector": FromDev,
@@ -1973,6 +1974,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2037,6 +2039,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2105,6 +2108,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2173,6 +2177,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2241,6 +2246,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2309,6 +2315,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2377,6 +2384,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2445,6 +2453,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2515,6 +2524,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2569,6 +2579,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2623,6 +2634,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2691,6 +2703,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2747,6 +2760,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2803,6 +2817,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2859,6 +2874,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2927,6 +2943,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -2983,6 +3000,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3039,6 +3057,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3095,6 +3114,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3163,6 +3183,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3235,6 +3256,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3307,6 +3329,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3371,6 +3394,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3431,6 +3455,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3487,6 +3512,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3547,6 +3573,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3619,6 +3646,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3683,6 +3711,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3755,6 +3784,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3827,6 +3857,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3891,6 +3922,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -3963,6 +3995,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4035,6 +4068,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4099,6 +4133,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4172,6 +4207,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4229,6 +4265,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4310,6 +4347,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4374,6 +4412,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4430,6 +4469,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4486,6 +4526,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4546,6 +4587,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4606,6 +4648,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4684,6 +4727,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4744,6 +4788,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4804,6 +4849,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4864,6 +4910,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -4936,6 +4983,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5008,6 +5056,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5072,6 +5121,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5128,6 +5178,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5184,6 +5235,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5240,6 +5292,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5296,6 +5349,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5356,6 +5410,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5416,6 +5471,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5476,6 +5532,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5536,6 +5593,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5596,6 +5654,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5668,6 +5727,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5732,6 +5792,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5796,6 +5857,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5868,6 +5930,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -5940,6 +6003,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6012,6 +6076,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6076,6 +6141,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6148,6 +6214,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6204,6 +6271,7 @@
                 cam_any_start: Some("small.2"),
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6260,6 +6328,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6324,6 +6393,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6380,6 +6450,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6444,6 +6515,7 @@
                 cam_any_start: None,
                 cam_any_end: Some("v2.object.1"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6508,6 +6580,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6576,6 +6649,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6632,6 +6706,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6692,6 +6767,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6760,6 +6836,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6774,6 +6851,7 @@
                     "enable_second_side": CopyPrev,
                     "enable_teleportation_degrees": CopyPrev,
                     "flat_portal": CopyPrev,
+                    "flat_portal_scale": CopyPrev,
                     "mirror": CopyPrev,
                     "progress2": CopyPrev,
                     "progress_object": CopyPrev,
@@ -6816,6 +6894,7 @@
                 cam_any_start: Some("small.0"),
                 cam_any_end: Some("small.0"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6872,6 +6951,7 @@
                 cam_any_start: Some("small.1"),
                 cam_any_end: Some("small.1"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -6940,6 +7020,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7004,6 +7085,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7060,6 +7142,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7116,6 +7199,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7180,6 +7264,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7236,6 +7321,7 @@
                 cam_any_start: Some("ellipse.4"),
                 cam_any_end: Some("ellipse.4"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7293,6 +7379,7 @@
                 cam_any_start: Some("small.1"),
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7350,6 +7437,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7407,6 +7495,7 @@
                 cam_any_start: Some("small.2"),
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -7472,6 +7561,86 @@
                 cam_any_start: Some("v3.small.1"),
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
+            ),
+        ),
+        (
+            name: "v2.intro.5",
+            data: (
+                duration: 2,
+                animation_stage: RealAnimation("v2.intro.2"),
+                uniforms: ({
+                    "enable_object": CopyPrev,
+                    "enable_object_vector": CopyPrev,
+                    "enable_portal_vector": CopyPrev,
+                    "enable_second_side": CopyPrev,
+                    "enable_teleportation_degrees": CopyPrev,
+                    "flat_portal": CopyPrev,
+                    "flat_portal_scale": CopyPrev,
+                    "mirror": CopyPrev,
+                    "progress2": CopyPrev,
+                    "progress_object": CopyPrev,
+                    "progress_portal": CopyPrev,
+                    "room_size_x": CopyPrev,
+                    "room_size_y": CopyPrev,
+                    "room_size_z": CopyPrev,
+                    "scale_y": CopyPrev,
+                    "scale_z": Changed(Some(Inline(Float((
+                        min: None,
+                        max: None,
+                        value: 0.25,
+                    ))))),
+                    "show_object_teleportation": CopyPrev,
+                    "teleport_light": CopyPrev,
+                    "time_anim": CopyPrev,
+                }),
+                matrices: ({
+                    "a": CopyPrev,
+                    "a_final": CopyPrev,
+                    "a_final2": CopyPrev,
+                    "a_final3": CopyPrev,
+                    "b": CopyPrev,
+                    "b_final": CopyPrev,
+                    "b_final2": CopyPrev,
+                    "b_final3": CopyPrev,
+                    "b_final4": CopyPrev,
+                    "b_self": Changed(Some(Inline(Parametrized(
+                        offset: (
+                            x: Uniform(Some(Inline(Formula(("lerp(-0.60, 0, easing_in_out(time))"))))),
+                            y: Value(0),
+                            z: Uniform(Some(Inline(Formula(("lerp(0.6, 0, easing_in_out(time))"))))),
+                        ),
+                        rotate: (
+                            x: Value(0),
+                            y: Uniform(Some(Inline(Formula(("deg2rad(lerp(270, 180, easing_in_out(time)))"))))),
+                            z: Value(1.5707963267948966),
+                        ),
+                        mirror: (
+                            x: Value(0),
+                            y: Value(0),
+                            z: Value(0),
+                        ),
+                        scale: Uniform(Some(Inline(Formula(("lerp(1.0, 0.5, easing_in_out(time))"))))),
+                    )))),
+                    "empty": CopyPrev,
+                    "object": CopyPrev,
+                    "object_final": CopyPrev,
+                    "object_self": CopyPrev,
+                    "room_origin": CopyPrev,
+                    "scale_xyz": CopyPrev,
+                    "vector": CopyPrev,
+                    "vector_o": CopyPrev,
+                }),
+                use_prev_cam: false,
+                use_start_cam_as_end: true,
+                cam_start: None,
+                cam_end: None,
+                use_any_cam_as_start: Some(false),
+                use_any_cam_as_end: None,
+                cam_any_start: Some("v2.intro.2"),
+                cam_any_end: None,
+                cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
     ]),

@@ -5,9 +5,9 @@
     ),
     cam: (
         look_at: (0, 0, 0),
-        alpha: -25.13037659260744,
-        beta: 0.9998364309322512,
-        r: 4.235000000000028,
+        alpha: -43.86371018025402,
+        beta: 0.9888616180419947,
+        r: 3.5000000000000235,
         offset_after_material: 0.000025,
     ),
     uniforms: ([
@@ -95,65 +95,29 @@
         ),
         (
             name: "portal_a",
-            data: Parametrized(
-                offset: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Uniform(Some(Inline(Formula(("-distance * 2 - 0.05"))))),
-                ),
-                rotate: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
-                ),
-                mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
-                ),
-                scale: Value(1),
+            data: Simple(
+                offset: (0, 0, -3),
+                scale: 1,
+                rotate: (0, 0, 0),
+                mirror: (false, false, false),
             ),
         ),
         (
             name: "portal_b",
-            data: Parametrized(
-                offset: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Uniform(Some(Inline(Formula(("distance * 2 + 0.05"))))),
-                ),
-                rotate: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
-                ),
-                mirror: (
-                    x: Value(1),
-                    y: Value(0),
-                    z: Value(0),
-                ),
-                scale: Value(1),
+            data: Simple(
+                offset: (0, 0, 3),
+                scale: 1,
+                rotate: (0, 0, 0),
+                mirror: (false, false, false),
             ),
         ),
         (
             name: "triangle",
-            data: Parametrized(
-                offset: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Uniform(Some(Inline(Formula(("-progress * distance * 4"))))),
-                ),
-                rotate: (
-                    x: Value(4.71238898038469),
-                    y: Value(0),
-                    z: Value(0),
-                ),
-                mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
-                ),
-                scale: Value(1),
+            data: Simple(
+                offset: (0, 0, 0.27),
+                scale: 1,
+                rotate: (4.71238898038469, 0, 0),
+                mirror: (false, false, false),
             ),
         ),
         (
@@ -813,6 +777,7 @@
             data: (("float circle_distance(float x, float y) {\n  return sqrt(sqr(x) + sqr(y));\n}\n\nfloat ellipse_distance(float x, float y) {\n  return sqrt(2.*sqr(x) + sqr(y));\n}\n\nfloat square_distance(float x, float y) {\n  return max(abs(x), abs(y));\n}\n\nfloat rect_distance(float x, float y) {\n  return max(abs(x), abs(y) - 1.);\n}\n\nint is_inside_portal(\n  float distance, \n  float size, \n  float border,\n  float black_border,\n  int material_first, \n  int material_second, \n  int grid_material_first, \n  int grid_material_second, \n  bool back,\n  bool first\n) {\n  int material = material_second;\n  if (first) { material = material_first; }\n\n  if (distance < size) {\n    if (back) {\n      return material;      \n    } else {\n      if (teleport_light_u == 1) {\n      \tif (mirror_u == 1) {\n          return mirror_M;\n        } else {\n          return TELEPORT;\n        }\n      } else {\n        if (first) {\n          return grid_material_first;\n        } else {\n          return grid_material_second;\n        }\n      }\n    }\n  }\n  int black_material = solid_black_M;\n  if (_black_border_disable == 1) black_material = material;\n  if (distance < size + black_border && !back) return black_material;\n  if (distance < size + black_border + border) return material;\n  if (distance < size + black_border + border + black_border) return black_material;\n\n  return NOT_INSIDE;\n}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "distance": true,
@@ -1334,7 +1299,7 @@
             ),
         ),
     ]),
-    current_stage: Animation("one world 1"),
+    current_stage: Animation("explore"),
     dev_stage: (
         uniforms: {
             "distance": Progress(1),
@@ -1413,7 +1378,72 @@
             ),
         },
     ),
-    animations: ([]),
+    animations: ([
+        (
+            name: "anim.2.portals",
+            data: (
+                duration: 15,
+                animation_stage: Animation("explore"),
+                uniforms: ({
+                    "distance": CopyPrev,
+                    "mirror": CopyPrev,
+                    "portal_black_color_progress": CopyPrev,
+                    "progress": CopyPrev,
+                    "room_size_x": CopyPrev,
+                    "room_size_y": CopyPrev,
+                    "room_size_z": CopyPrev,
+                    "teleport_light": CopyPrev,
+                }),
+                matrices: ({
+                    "chamber_origin": CopyPrev,
+                    "portal_a": Changed(Some(Inline(Simple(
+                        offset: (0, -2, 0),
+                        scale: 1,
+                        rotate: (4.71238898038469, 0, 0),
+                        mirror: (false, false, false),
+                    )))),
+                    "portal_b": Changed(Some(Inline(Simple(
+                        offset: (0, 2, 0),
+                        scale: 1,
+                        rotate: (4.71238898038469, 0, 0),
+                        mirror: (false, false, false),
+                    )))),
+                    "room_blue": CopyPrev,
+                    "room_origin": CopyPrev,
+                    "room_red": CopyPrev,
+                    "triangle": CopyPrev,
+                    "triangle_teleported": CopyPrev,
+                    "triangle_teleported2": CopyPrev,
+                }),
+                use_prev_cam: false,
+                use_start_cam_as_end: false,
+                cam_start: Some(Inline((
+                    look_at: Coordinate((0, 0, 0)),
+                    alpha: -33.617043081254785,
+                    beta: 0.8267572021484331,
+                    r: 3.5000000000000235,
+                    in_subspace: false,
+                    free_movement: false,
+                    matrix: (0.9999871253967285, 0, 0, 0, -0.000029802322387695313, 1.0001659393310547, 0, 0, 0, 0, 1.000046730041504, 0, 0.00006390993857302574, -0.00033546633233605405, 0.00003591827041637963, 1),
+                ))),
+                cam_end: Some(Inline((
+                    look_at: Coordinate((0, 0, 0)),
+                    alpha: -44.883709875078225,
+                    beta: 2.3106340026855503,
+                    r: 3.5000000000000235,
+                    in_subspace: false,
+                    free_movement: false,
+                    matrix: (0.9999871253967285, 0, 0, 0, -0.000029802322387695313, 1.0001659393310547, 0, 0, 0, 0, 1.000046730041504, 0, 0.00006390993857302574, -0.00033546633233605405, 0.00003591827041637963, 1),
+                ))),
+                use_any_cam_as_start: None,
+                use_any_cam_as_end: None,
+                cam_any_start: None,
+                cam_any_end: None,
+                cam_easing: InOut,
+                cam_easing_uniform: None,
+            ),
+        ),
+    ]),
     use_time: false,
     skybox: None,
 )
