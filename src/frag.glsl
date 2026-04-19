@@ -67,8 +67,43 @@ uniform float _t_end;
 uniform float _t_start;
 uniform int _darken_by_distance;
 uniform mat4 _camera_mul_inv;
+uniform int _draw_depth_map;
+uniform float _depth_map_min;
+uniform float _depth_map_max;
 
-vec3 ray_tracing(Ray r, float camera_scale) {
+struct RayTraceResult {
+    vec3 color;
+    float depth;
+    bool has_depth;
+};
+
+float normalize_depth_value(float depth) {
+    float depth_min = min(_depth_map_min, _depth_map_max);
+    float depth_max = max(_depth_map_min, _depth_map_max);
+    return clamp((depth - depth_min) / max(1e-6, depth_max - depth_min), 0.0, 1.0);
+}
+
+vec3 depth_gradient_inferno(float t) {
+    vec3 c0 = sqrvec(vec3(0.001462, 0.000466, 0.013866));
+    vec3 c1 = sqrvec(vec3(0.258234, 0.038571, 0.406485));
+    vec3 c2 = sqrvec(vec3(0.578304, 0.148039, 0.404411));
+    vec3 c3 = sqrvec(vec3(0.865006, 0.316822, 0.226055));
+    vec3 c4 = sqrvec(vec3(0.987622, 0.645320, 0.039886));
+    vec3 c5 = sqrvec(vec3(0.988362, 0.998364, 0.644924));
+
+    if (t < 0.2) return mix(c0, c1, t / 0.2);
+    if (t < 0.4) return mix(c1, c2, (t - 0.2) / 0.2);
+    if (t < 0.6) return mix(c2, c3, (t - 0.4) / 0.2);
+    if (t < 0.8) return mix(c3, c4, (t - 0.6) / 0.2);
+    return mix(c4, c5, (t - 0.8) / 0.2);
+}
+
+vec3 sample_depth_gradient(float depth) {
+    float t = 1.0 - normalize_depth_value(depth);
+    return depth_gradient_inferno(t);
+}
+
+RayTraceResult ray_tracing(Ray r, float camera_scale) {
     //%skybox_processing//%
 
     vec3 current_color = vec3(1.);
@@ -97,25 +132,30 @@ vec3 ray_tracing(Ray r, float camera_scale) {
         if (i.hit.hit || i2.scene.hit.hit) {
             current_color *= m.mul_to_color;
             if (m.is_final) {
+                float depth = all_t / max(camera_scale, 1e-6);
                 if (all_t > _t_start * camera_scale && _darken_by_distance == 1) {
                     if (all_t > _t_end * camera_scale) all_t = _t_end * camera_scale;
                     float gray_t = (all_t - _t_start * camera_scale) / (_t_end - _t_start) / camera_scale;
-                    return color(0., 0., 0.) * sqr(sqr(gray_t)) + current_color * sqr(sqr(1.0 - gray_t));
+                    return RayTraceResult(
+                        color(0., 0., 0.) * sqr(sqr(gray_t)) + current_color * sqr(sqr(1.0 - gray_t)),
+                        depth,
+                        true
+                    );
                 } else {
-                    return current_color;
+                    return RayTraceResult(current_color, depth, true);
                 }
             } else {
                 r = m.new_ray;
             }
         } else {
             if (r.in_subspace) {
-                return color(0., 0., 0.);
+                return RayTraceResult(color(0., 0., 0.), 0.0, false);
             } else {
-                return current_color * not_found_color;
+                return RayTraceResult(current_color * not_found_color, 0.0, false);
             }
         }
     }
-    return color(0., 0., 0.);
+    return RayTraceResult(color(0., 0., 0.), 0.0, false);
 }
 
 // ---------------------------------------------------------------------------
@@ -412,7 +452,15 @@ vec3 get_color2(vec2 image_position, mat4 camera_matrix, bool in_subspace, float
     }
      
     Ray r = Ray(o, d, 1.0, in_subspace);
-    return ray_tracing(r, camera_scale);
+    RayTraceResult trace = ray_tracing(r, camera_scale);
+    if (_draw_depth_map == 1) {
+        if (trace.has_depth) {
+            return sample_depth_gradient(trace.depth);
+        } else {
+            return vec3(0.0);
+        }
+    }
+    return trace.color;
 }
 
 vec3 get_color(vec2 image_position) {

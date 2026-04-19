@@ -746,6 +746,9 @@ struct SceneRenderer {
     anaglyph_p: f64,
     anaglyph_q: f64,
     anaglyph_mode: bool,
+    draw_depth_map: bool,
+    depth_map_min: f64,
+    depth_map_max: f64,
     angle_color_disable: bool,
     grid_disable: bool,
     black_border_disable: bool,
@@ -1026,6 +1029,9 @@ impl SceneRenderer {
             anaglyph_p: 0.29,
             anaglyph_q: 0.06,
             anaglyph_mode: false,
+            draw_depth_map: false,
+            depth_map_min: 0.,
+            depth_map_max: 10.,
             angle_color_disable: false,
             grid_disable: false,
             black_border_disable: false,
@@ -1306,6 +1312,12 @@ impl SceneRenderer {
         self.material
             .set_uniform("_anaglyph_mode", self.anaglyph_mode as i32);
         self.material
+            .set_uniform("_draw_depth_map", self.draw_depth_map as i32);
+        self.material
+            .set_uniform("_depth_map_min", self.depth_map_min as f32);
+        self.material
+            .set_uniform("_depth_map_max", self.depth_map_max as f32);
+        self.material
             .set_uniform("_offset_after_material", self.offset_after_material as f32);
 
         let calc_scale = |matrix: &DMat4| -> f64 {
@@ -1571,6 +1583,36 @@ impl SceneRenderer {
             ui.label("Eye distance:");
             changed.uniform |= egui_f64_positive(ui, &mut self.eye_distance);
         });
+        ui.separator();
+        changed.uniform |= ui
+            .checkbox(&mut self.draw_depth_map, "Draw current depth map")
+            .changed();
+        if self.draw_depth_map {
+            ui.horizontal(|ui| {
+                ui.label("Minimum depth:");
+                changed.uniform |= check_changed(&mut self.depth_map_min, |value| {
+                    ui.add(
+                        DragValue::new(value)
+                            .speed(0.1)
+                            .range(0.0..=1_000_000.0)
+                            .min_decimals(0)
+                            .max_decimals(3),
+                    );
+                });
+            });
+            ui.horizontal(|ui| {
+                ui.label("Maximum depth:");
+                changed.uniform |= check_changed(&mut self.depth_map_max, |value| {
+                    ui.add(
+                        DragValue::new(value)
+                            .speed(0.1)
+                            .range(0.0..=1_000_000.0)
+                            .min_decimals(0)
+                            .max_decimals(3),
+                    );
+                });
+            });
+        }
         ui.separator();
         ui.label("Render depth:");
         changed.uniform |= check_changed(&mut self.render_depth, |depth| {
