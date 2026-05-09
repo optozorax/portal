@@ -1761,6 +1761,8 @@ impl SceneRenderer {
         height: u32,
         skip_existing: bool,
     ) {
+        let animation_start = std::time::Instant::now();
+
         if matches!(
             std::fs::exists(&format!("video/{}.mov", output_name)),
             Ok(true)
@@ -1821,6 +1823,7 @@ impl SceneRenderer {
 
         println!("Start ffmpeg to render video");
         drop(std::fs::create_dir("video"));
+        let ffmpeg_start = std::time::Instant::now();
         let command = std::process::Command::new("ffmpeg")
         .arg("-framerate").arg(fps.to_string())
         .arg("-i").arg("anim/frame_%d.png")
@@ -1848,6 +1851,7 @@ impl SceneRenderer {
         .arg(format!("video/{output_name}.mov"))
         .output()
         .expect("failed to execute ffmpeg");
+        let ffmpeg_elapsed = ffmpeg_start.elapsed();
         std::fs::remove_dir_all("anim").unwrap();
         if command.status.code() != Some(0) {
             println!(
@@ -1857,6 +1861,11 @@ impl SceneRenderer {
             );
         }
         println!("ffmpeg status: {}", command.status);
+        println!("ffmpeg time: {:?}", ffmpeg_elapsed);
+        println!(
+            "Finished `{output_name}` in {:?}",
+            animation_start.elapsed()
+        );
     }
 
     fn render_named_animations(
@@ -2831,7 +2840,10 @@ async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     match Cli::parse().command {
         Some(CliCommand::Render(options)) => {
-            if let Err(err) = render(options).await {
+            let render_start = std::time::Instant::now();
+            let result = render(options).await;
+            println!("Total render time: {:?}", render_start.elapsed());
+            if let Err(err) = result {
                 eprintln!("{err}");
                 std::process::exit(1);
             }
