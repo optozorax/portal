@@ -13,8 +13,6 @@ use glam::*;
 
 use serde::{Deserialize, Serialize};
 
-use crate::hlist;
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum Matrix {

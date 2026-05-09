@@ -1,3 +1,5 @@
+#[cfg(not(target_arch = "wasm32"))]
+use clap::{Args, Parser, Subcommand};
 use gesture_recognizer::*;
 use glam::Vec4Swizzles;
 use glam::{DMat4, DVec2, DVec3, DVec4};
@@ -1707,6 +1709,9 @@ impl SceneRenderer {
             "v2.spiral.7",
             "v2.spiral.9",
             "v2.spaaaace.0",
+            "v4.golden.0",
+            "v4.golden.1",
+            "v4.golden.2",
         ]
         .contains(&animation_name)
         {
@@ -1745,12 +1750,6 @@ impl SceneRenderer {
         Some(())
     }
 
-    fn use_animation_stage(&mut self, name: &str, memory: &mut egui::Memory) {
-        self.scene.init_animation_by_name(name, memory).unwrap();
-        self.update_inner_variables(name);
-        self.update(memory, 0.);
-    }
-
     fn render_animation(
         &mut self,
         duration_seconds: f32,
@@ -1772,6 +1771,10 @@ impl SceneRenderer {
             }
         }
 
+        let output_path = std::path::Path::new("video").join(output_name);
+        if let Some(parent) = output_path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
         drop(std::fs::create_dir("anim"));
         let count = ((duration_seconds * fps as f32) as usize).max(1);
         let exposure = 0.5; // number from 0 to 1
@@ -1854,6 +1857,62 @@ impl SceneRenderer {
             );
         }
         println!("ffmpeg status: {}", command.status);
+    }
+
+    fn render_named_animations(
+        &mut self,
+        animation_names: &[String],
+        fps: usize,
+        motion_blur_frames: usize,
+        skip_existing: bool,
+    ) -> Result<(), String> {
+        let mut memory = egui::Memory::default();
+
+        drop(std::fs::create_dir("video"));
+        drop(std::fs::create_dir(format!("video/{}", self.scene_name)));
+
+        for (i, animation_name) in animation_names.iter().enumerate() {
+            if self
+                .scene
+                .init_animation_by_name(animation_name, &mut memory)
+                .is_none()
+            {
+                return Err(format!(
+                    "Scene `{}` has no animation named `{animation_name}`",
+                    self.scene_name
+                ));
+            }
+
+            self.update(&mut memory, 0.);
+            let duration = self.scene.get_current_animation_duration().ok_or_else(|| {
+                format!(
+                    "Scene `{}` animation `{animation_name}` has no duration",
+                    self.scene_name
+                )
+            })?;
+            self.current_fps = fps;
+            self.current_motion_blur_frames = motion_blur_frames;
+            self.update_inner_variables(animation_name);
+
+            println!(
+                "Rendering animation {animation_name}, {}/{}",
+                i + 1,
+                animation_names.len()
+            );
+
+            self.render_animation(
+                duration as f32,
+                self.current_fps,
+                self.current_motion_blur_frames,
+                &format!("{}/{}", self.scene_name, animation_name),
+                &mut memory,
+                self.width,
+                self.height,
+                skip_existing,
+            );
+        }
+
+        Ok(())
     }
 
     fn render_all_animations(
@@ -2633,101 +2692,135 @@ fn window_conf() -> Conf {
     }
 }
 
-async fn render() {
-    let render_stereo_image = true;
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Parser)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<CliCommand>,
+}
 
-    // let (width, height) = (1920, 1080);
-    let (mut width, height) = (3840, 2160);
-    // let (width, height) = (3840, 3840);
-    // let (width, height) = (854, 480);
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Subcommand)]
+enum CliCommand {
+    Render(RenderCliOptions),
+}
 
-    if render_stereo_image {
-        width *= 2;
-    }
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Args)]
+struct RenderCliOptions {
+    scenes: String,
 
-    // render all scenes as a pictures
-    /*
-    let (width, height) = (4000, 2000);
-    for scene_name in Scenes::default().get_all_scenes_links() {
-        if scene_name != "room" {
-            continue;
-        }
+    animations: Option<String>,
+
+    #[arg(long, default_value_t = 3840)]
+    width: u32,
+
+    #[arg(long, default_value_t = 2160)]
+    height: u32,
+
+    #[arg(long, default_value_t = 60)]
+    fps: usize,
+
+    #[arg(long, alias = "motion_blur_frames", default_value_t = 1)]
+    motion_blur_frames: usize,
+
+    #[arg(
+        long = "stereoimage",
+        visible_alias = "stereo-image",
+        alias = "stereo_image",
+        action = clap::ArgAction::SetTrue
+    )]
+    stereo_image: bool,
+
+    #[arg(
+        long = "no-skip-existing",
+        alias = "no_skip_existing",
+        action = clap::ArgAction::SetTrue
+    )]
+    no_skip_existing: bool,
+
+    #[arg(
+        long = "filter-starts-with",
+        visible_alias = "starts-with",
+        alias = "filter_starts_with",
+        alias = "starts_with",
+        default_value = ""
+    )]
+    starts_with: String,
+
+    #[arg(long, alias = "aa_count", default_value_t = 10)]
+    aa_count: i32,
+
+    #[arg(long, alias = "render_depth", default_value_t = 150)]
+    render_depth: i32,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn render(options: RenderCliOptions) -> Result<(), String> {
+    let width = if options.stereo_image {
+        options
+            .width
+            .checked_mul(2)
+            .ok_or_else(|| "Render width overflow after stereo doubling".to_owned())?
+    } else {
+        options.width
+    };
+
+    let scenes = Scenes::default();
+    for scene_name in options
+        .scenes
+        .split(',')
+        .map(str::trim)
+        .filter(|x| !x.is_empty())
+    {
         println!("Rendering scene {scene_name}");
-        let scene_content = Scenes::default().get_by_link(&scene_name).unwrap().0;
-        let scene = ron::from_str(scene_content).unwrap();
-        let mut renderer = SceneRenderer::new(scene, width, height, &scene_name).await;
-        renderer.cam.use_360_camera = true;
-        renderer.aa_count = 256;
-        renderer.cam.r = 0.;
-        renderer.draw_texture(width as f32, height as f32, true);
-        renderer.render_target.texture.get_texture_data().export_png(&format!("anim/{scene_name}.png"));
-    }
-    return;
-    */
 
-    #[allow(clippy::single_element_loop)]
-    for scene_name in [
-        "triple_tiling",
-        // "boot.dev",
-        // "plus_ultra",
+        let scene_content = scenes
+            .get_by_link(scene_name)
+            .map(|(content, _)| content)
+            .ok_or_else(|| format!("Unknown scene `{scene_name}`"))?;
+        let scene: SerializedScene = ron::from_str(scene_content)
+            .map_err(|err| format!("Failed to parse scene `{scene_name}`: {err}"))?;
+        let mut renderer = SceneRenderer::new(
+            Scene::from_serialized(scene),
+            width,
+            options.height,
+            scene_name,
+        )
+        .await;
+        renderer.aa_count = options.aa_count;
+        renderer.render_depth = options.render_depth;
+        renderer.draw_side_by_side = options.stereo_image;
 
-        // "sphere_to_sphere",
-        // "half_spheres",
-        // "recursive_space",
-        // "sphere_intersection",
-        // "spheres_anim",
-        // "teleportation_degrees",
-        // "triple_portal_ish",
-        // "monoportal_rotating",
-    ] {
-        println!("Rendering scene {scene_name}");
-
-        let fps = 60;
-        let motion_blur_frames = 5;
-        let skip_existing = true;
-        let starts_with = Some("anim");
-
-        let scene_content = Scenes::default().get_by_link(scene_name).unwrap().0;
-        let scene: SerializedScene = ron::from_str(scene_content).unwrap();
-        let mut renderer =
-            SceneRenderer::new(Scene::from_serialized(scene), width, height, scene_name).await;
-        renderer.aa_count = 4;
-        renderer.render_depth = 100;
-        renderer.draw_side_by_side = render_stereo_image;
-        // renderer.cam.view_angle *= 1.5;
-
-        if true {
-            // if false {
-            renderer.render_all_animations(fps, motion_blur_frames, skip_existing, starts_with);
-        }
-
-        // if true {
-        if false {
-            #[allow(clippy::single_element_loop)]
-            for animation_stage in ["v2.screenshot.5"] {
-                drop(std::fs::create_dir("video"));
-                drop(std::fs::create_dir(format!(
-                    "video/{}",
-                    renderer.scene_name
-                )));
-
-                let mut memory = egui::Memory::default();
-                renderer.current_fps = fps;
-                renderer.current_motion_blur_frames = motion_blur_frames;
-                renderer.use_animation_stage(animation_stage, &mut memory);
-                renderer.render_animation(
-                    renderer.scene.get_current_animation_duration().unwrap() as f32,
-                    renderer.current_fps,
-                    renderer.current_motion_blur_frames,
-                    &format!("{scene_name}/{animation_stage}"),
-                    &mut memory,
-                    width,
-                    height,
-                    false,
-                );
-            }
+        if let Some(animation_names) = &options.animations {
+            let animation_names = animation_names
+                .split(',')
+                .map(str::trim)
+                .filter(|x| !x.is_empty())
+                .map(str::to_owned)
+                .collect::<Vec<_>>();
+            renderer.render_named_animations(
+                &animation_names,
+                options.fps,
+                options.motion_blur_frames,
+                !options.no_skip_existing,
+            )?;
+        } else {
+            let starts_with = if options.starts_with.is_empty() {
+                None
+            } else {
+                Some(options.starts_with.as_str())
+            };
+            renderer.render_all_animations(
+                options.fps,
+                options.motion_blur_frames,
+                !options.no_skip_existing,
+                starts_with,
+            );
         }
     }
+
+    Ok(())
 }
 
 #[macroquad::main(window_conf)]
@@ -2735,10 +2828,16 @@ async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     color_backtrace::install();
 
-    // if true {
-    if false {
-        render().await;
-        return;
+    #[cfg(not(target_arch = "wasm32"))]
+    match Cli::parse().command {
+        Some(CliCommand::Render(options)) => {
+            if let Err(err) = render(options).await {
+                eprintln!("{err}");
+                std::process::exit(1);
+            }
+            return;
+        }
+        None => {}
     }
 
     let mut window = Window::new().await;

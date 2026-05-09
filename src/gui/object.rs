@@ -12,8 +12,6 @@ use egui::*;
 
 use serde::{Deserialize, Serialize};
 
-use crate::hlist;
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Ord, PartialOrd)]
 pub struct MatrixName<'a>(pub Cow<'a, str>);
 
