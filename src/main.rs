@@ -2757,7 +2757,7 @@ struct RenderCliOptions {
     )]
     starts_with: String,
 
-    #[arg(long, alias = "aa_count", default_value_t = 10)]
+    #[arg(long, alias = "aa_count", default_value_t = 4)]
     aa_count: i32,
 
     #[arg(long, alias = "render_depth", default_value_t = 150)]
