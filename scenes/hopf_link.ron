@@ -1,10 +1,30 @@
 (
     desc: (
-        eng: "This is the portal in shape of Hopf Link. This portal is created by two pairs of two-sided portals.\n\nYou can see, that intersection of two circles is not a portal, this is because ray teleported twice and teleportations is compensated.\n\nThere is two options about how to paint this portal:\n- `By position` - it means that portal in one corner of the room will be painted in one color. With this option you can understand what\'s going on. But this coloring looks torned.\n- `Not by posiiton` - this is colored based on local position of the portal: left or right. This coloring not looks torned.\n\n# Twitter\n\n<https://twitter.com/optozorax/status/1373666222236184581>",
-        rus: "Это портал в форме Зацепления Хопфа. Этот портал создан из двух пар двухсторонних порталов.\n\nВы можете видеть что в пересечение двух окружностей — не портал, это потому что луч телепортируется дважды, и его телепортация компенсируется и он возвращается в прежнее место.\n\nСуществует два способа раскраски данного портала:\n- `По позиции` — это означает что портал в одном углу комнаты будет раскрашен в один цвет. С этой раскраской вы можете понять как он работает. Но эта раскраска выглядит рваной.\n- `Не по позиции` — эта раскраска смотрит на локальное положение портала (левый или правый), и раскрашивает в зависимости от этого. Данная раскраска не выглядит рваной.\n\n# Twitter\n\n<https://twitter.com/optozorax/status/1373666222236184581>",
+        eng: "This is the portal in shape of Hopf Link. This portal is created by two pairs of two-sided portals.
+
+You can see, that intersection of two circles is not a portal, this is because ray teleported twice and teleportations is compensated.
+
+There is two options about how to paint this portal:
+- `By position` - it means that portal in one corner of the room will be painted in one color. With this option you can understand what's going on. But this coloring looks torned.
+- `Not by posiiton` - this is colored based on local position of the portal: left or right. This coloring not looks torned.
+
+# Twitter
+
+<https://twitter.com/optozorax/status/1373666222236184581>",
+        rus: "Это портал в форме Зацепления Хопфа. Этот портал создан из двух пар двухсторонних порталов.
+
+Вы можете видеть что в пересечение двух окружностей — не портал, это потому что луч телепортируется дважды, и его телепортация компенсируется и он возвращается в прежнее место.
+
+Существует два способа раскраски данного портала:
+- `По позиции` — это означает что портал в одном углу комнаты будет раскрашен в один цвет. С этой раскраской вы можете понять как он работает. Но эта раскраска выглядит рваной.
+- `Не по позиции` — эта раскраска смотрит на локальное положение портала (левый или правый), и раскрашивает в зависимости от этого. Данная раскраска не выглядит рваной.
+
+# Twitter
+
+<https://twitter.com/optozorax/status/1373666222236184581>",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: -53.4072967763107,
         beta: 1.1222158681553218,
         r: 3.850000000000022,
@@ -14,25 +34,25 @@
         (
             name: "room_size_x",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 5,
+                value: 5.0,
             )),
         ),
         (
             name: "room_size_y",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 3,
+                value: 3.0,
             )),
         ),
         (
             name: "room_size_z",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 5,
+                value: 5.0,
             )),
         ),
         (
@@ -48,72 +68,72 @@
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "offset",
             data: Simple(
-                offset: (0.57, 0, 0),
-                scale: 1,
-                rotate: (6.14355896702004, 0, 0),
+                offset: (0.57, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (6.14355896702004, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "a",
             data: Simple(
-                offset: (0, 0, 2),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 2.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "b",
             data: Simple(
-                offset: (0, 0, -2),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, -2.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "a_user",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "b_user",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_a",
             data: Simple(
-                offset: (13, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (13.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_b",
             data: Simple(
-                offset: (-13, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (-13.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -140,20 +160,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Named("room_size_x"))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -168,20 +188,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-room_size_x"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -195,21 +215,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("room_size_y"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -223,21 +243,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("-room_size_y"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -251,21 +271,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Named("room_size_z"))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -279,21 +299,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Inline(Formula(("-room_size_z"))))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -322,9 +342,9 @@
                     to: Some(Inline(Mul(
                         to: Some(Named("offset")),
                         what: Some(Inline(Simple(
-                            offset: (0, 0, 0),
-                            scale: 1,
-                            rotate: (0, 0, 0),
+                            offset: (0.0, 0.0, 0.0),
+                            scale: 1.0,
+                            rotate: (0.0, 0.0, 0.0),
                             mirror: (true, true, false),
                         ))),
                     ))),
@@ -333,9 +353,9 @@
                     to: Some(Inline(Mul(
                         to: Some(Named("offset")),
                         what: Some(Inline(Simple(
-                            offset: (0, 0, 0),
-                            scale: 1,
-                            rotate: (0, 0, 0),
+                            offset: (0.0, 0.0, 0.0),
+                            scale: 1.0,
+                            rotate: (0.0, 0.0, 0.0),
                             mirror: (true, true, false),
                         ))),
                     ))),
@@ -372,7 +392,7 @@
                 r: 3.5000000000000187,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -384,7 +404,7 @@
                 r: 3.5000000000000187,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -396,7 +416,7 @@
                 r: 2.8925619834710896,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -408,7 +428,7 @@
                 r: 3.5000000000000187,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
     ]),
@@ -420,7 +440,7 @@
                 color: (0.8980392156862745, 0.8313725490196079, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -432,7 +452,7 @@
                 color: (0.9058823529411765, 0.29411764705882354, 0.29411764705882354),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -444,7 +464,7 @@
                 color: (0.2823529411764706, 0.2823529411764706, 0.2823529411764706),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -456,7 +476,7 @@
                 color: (0.5254901960784314, 0.5254901960784314, 0.5254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -468,7 +488,7 @@
                 color: (0.11372549019607843, 0.26666666666666666, 0.9058823529411765),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -480,7 +500,7 @@
                 color: (0.15294117647058825, 0.7372549019607844, 0.21568627450980393),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -492,7 +512,7 @@
                 color: (0.03557645, 0.6446965, 0.79122156),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -504,7 +524,7 @@
                 color: (0.9317271, 0.42666554, 0.051948573),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -516,7 +536,7 @@
                 color: (0.6666666666666666, 0.6666666666666666, 0.6666666666666666),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -525,10 +545,10 @@
         (
             name: "solid_black",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -540,7 +560,7 @@
                 color: (0.9254901960784314, 0.9254901960784314, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -551,17 +571,77 @@
     library: ([
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "portal",
-            data: (("int is_inside_portal(float x, float y, bool first, bool left) {\n  float value = sqr(x) + sqr(y);\n  float border = 0.13;\n  float black_border = 0.02;\n  float r = 1.0;\n  int material = portal_blue_M;\n  if (color_position_u == 1) {\n  if (first) material = portal_orange_M;\n  } else {\n  if (left) material = portal_orange_M;\n  }\n  if (value > sqr(r + border)) return NOT_INSIDE;\n  if (value > sqr(r)) {\n    if (value < sqr(r + black_border) || value > sqr(r + border - black_border)) return solid_black_M;\n    return material;\n  }\n  if (teleport_light_u == 1) {\n  return TELEPORT;\n  } else {\n  return grid_gray_M;\n  }\n}")),
+            data: (("int is_inside_portal(float x, float y, bool first, bool left) {
+  float value = sqr(x) + sqr(y);
+  float border = 0.13;
+  float black_border = 0.02;
+  float r = 1.0;
+  int material = portal_blue_M;
+  if (color_position_u == 1) {
+  if (first) material = portal_orange_M;
+  } else {
+  if (left) material = portal_orange_M;
+  }
+  if (value > sqr(r + border)) return NOT_INSIDE;
+  if (value > sqr(r)) {
+    if (value < sqr(r + black_border) || value > sqr(r + border - black_border)) return solid_black_M;
+    return material;
+  }
+  if (teleport_light_u == 1) {
+  return TELEPORT;
+  } else {
+  return grid_gray_M;
+  }
+}")),
         ),
         (
             name: "box",
-            data: (("SceneIntersection intersect_box(Ray r, int material) {\nvec3 rad = vec3(4., 4., 4.);\nvec3 m = 1.0/r.d.xyz;\nvec3 n = m*r.o.xyz;\nvec3 k = abs(m)*rad;\nvec3 t1 = -n - k;\nvec3 t2 = -n + k;\n\nfloat tN = max( max( t1.x, t1.y ), t1.z );\nfloat tF = min( min( t2.x, t2.y ), t2.z );\n\nfloat t = tN;\nif (tN < 0.0 && tF > 0.0) t = tF;\n\nif(tN > tF) return scene_intersection_none;\n\nif(t < 0.0) return scene_intersection_none;\n\nvec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\n\nvec3 pos = (r.o + r.d * t).xyz;\n\nvec2 uv = vec2(pos.x, pos.y);\nif (abs(abs(pos.x) - rad.x) < 0.0001) {\n  uv = vec2(pos.y, pos.z);\n}\nif (abs(abs(pos.y) - rad.y) < 0.0001) {\n  uv = vec2(pos.x, pos.z);\n}\n\nreturn SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);\n}")),
+            data: (("SceneIntersection intersect_box(Ray r, int material) {
+vec3 rad = vec3(4., 4., 4.);
+vec3 m = 1.0/r.d.xyz;
+vec3 n = m*r.o.xyz;
+vec3 k = abs(m)*rad;
+vec3 t1 = -n - k;
+vec3 t2 = -n + k;
+
+float tN = max( max( t1.x, t1.y ), t1.z );
+float tF = min( min( t2.x, t2.y ), t2.z );
+
+float t = tN;
+if (tN < 0.0 && tF > 0.0) t = tF;
+
+if(tN > tF) return scene_intersection_none;
+
+if(t < 0.0) return scene_intersection_none;
+
+vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
+
+vec3 pos = (r.o + r.d * t).xyz;
+
+vec2 uv = vec2(pos.x, pos.y);
+if (abs(abs(pos.x) - rad.x) < 0.0001) {
+  uv = vec2(pos.y, pos.z);
+}
+if (abs(abs(pos.y) - rad.y) < 0.0001) {
+  uv = vec2(pos.x, pos.z);
+}
+
+return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);
+}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "color_position": true,
@@ -720,33 +800,33 @@
                 },
                 matrices: {
                     "a": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "a_user": ChangedAndToUser(Some(Inline(Simple(
-                        offset: (0, 0, 0.5),
-                        scale: 1,
-                        rotate: (0, 3.141592653589793, 0),
+                        offset: (0.0, 0.0, 0.5),
+                        scale: 1.0,
+                        rotate: (0.0, 3.141592653589793, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "b": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "b_user": ChangedAndToUser(Some(Inline(Simple(
-                        offset: (0, 0, -0.5),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, -0.5),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "offset": ChangedAndToUser(Some(Inline(Simple(
-                        offset: (0.45, 0, 0),
-                        scale: 1,
-                        rotate: (0.17453292519943295, 5.497787143782138, 0),
+                        offset: (0.45, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.17453292519943295, 5.497787143782138, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "result_a": FromDev,
@@ -808,51 +888,51 @@
         uniforms: {
             "color_position": Bool(false),
             "room_size_x": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 5,
+                value: 5.0,
             )),
             "room_size_y": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 3,
+                value: 3.0,
             )),
             "room_size_z": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 5,
+                value: 5.0,
             )),
             "teleport_light": Bool(true),
         },
         matrices: {
             "a": Simple(
-                offset: (0, 0, 2),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 2.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "a_user": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "b": Simple(
-                offset: (0, 0, -2),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, -2.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "b_user": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "offset": Simple(
-                offset: (0.57, 0, 0),
-                scale: 1,
-                rotate: (6.14355896702004, 0, 0),
+                offset: (0.57, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (6.14355896702004, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "result_a": Mul(
@@ -864,21 +944,21 @@
                 what: Some(Named("b")),
             ),
             "room_a": Simple(
-                offset: (13, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (13.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_b": Simple(
-                offset: (-13, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (-13.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         },

@@ -4,7 +4,7 @@
         rus: "You should enter subspace using `Camera settings` -> `Inside subspace`",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: -2.1484399952165187,
         beta: 1.1000545135881332,
         r: 3.5,
@@ -29,19 +29,19 @@
         ),
         (
             name: "progress1",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "progress2",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "progress3",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "progress4",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "enable_camera",
@@ -56,25 +56,25 @@
         (
             name: "obj",
             data: Simple(
-                offset: (-0.86, 0, 0),
+                offset: (-0.86, 0.0, 0.0),
                 scale: 0.3,
-                rotate: (0, 0, 0),
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "a",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "b0",
             data: Simple(
-                offset: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
                 scale: 0.42,
                 rotate: (1.2740903539558606, 5.846852994181004, 6.19591884457987),
                 mirror: (false, false, false),
@@ -87,9 +87,9 @@
                 then: Some(Named("cam_fix")),
                 otherwise: Some(Inline(Mul(
                     to: Some(Inline(Simple(
-                        offset: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
                         scale: 0.1,
-                        rotate: (1.5707963267948966, 0, 0),
+                        rotate: (1.5707963267948966, 0.0, 0.0),
                         mirror: (false, false, false),
                     ))),
                     what: Some(Inline(Camera)),
@@ -99,9 +99,9 @@
         (
             name: "cam_fix",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -111,12 +111,52 @@
             name: "object_subspace",
             data: Complex(
                 kind: Simple(Some(Inline(Simple(
-                    offset: (0, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (0.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 )))),
-                intersect: (("if (enable_object_u == 0) { return scene_intersection_none; }\r\n\r\nSceneIntersection result = scene_intersection_none;\r\nSceneIntersection ihit = scene_intersection_none;\r\nRay transformed_ray;\r\nfloat len = 0.;\r\nRay r3;\r\nvec4 pos;\r\n\r\nvec3 cube_size = vec3(1.0, 1.0, 1.0);\r\nmat4 mat_transform = mat4(1.);\r\nmat4 mat_transform_inv = mat4(1.);\r\n\r\nfor (int i = 0; i < 1000; i++) { if (i >= subspace_degree_u) break; // !FOR_NUMBER!\r\nfor (int i = 0; i < subspace_degree_u; i++) { // !FOR_VARIABLE!\r\n    transformed_ray = transform(obj_mat_inv, transform(mat_transform_inv, r));\r\n    len = length(transformed_ray.d);\r\n    transformed_ray = normalize_ray(transformed_ray);\r\n    ihit = intersect_box(transformed_ray, companion_cube_M, cube_size);\r\n    ihit.hit.t /= len;\r\n    if (nearer(result.hit, ihit.hit)) {\r\n        result = ihit;\r\n        result.hit.n = normalize((mat_transform * (obj_mat * vec4(ihit.hit.n, 0.))).xyz);\r\n    }\r\n\r\n    transformed_ray = transform(obj_mat_inv, transform(mat_transform, r));\r\n    len = length(transformed_ray.d);\r\n    transformed_ray = normalize_ray(transformed_ray);\r\n    ihit = intersect_box(transformed_ray, companion_cube_M, cube_size);\r\n    ihit.hit.t /= len;\r\n    if (nearer(result.hit, ihit.hit)) {\r\n        result = ihit;\r\n        result.hit.n = normalize((mat_transform_inv * (obj_mat * vec4(ihit.hit.n, 0.))).xyz);\r\n    }\r\n\r\n    mat_transform_inv = a_mat * (b0_mat_inv * mat_transform_inv);\r\n    mat_transform = b0_mat * (a_mat_inv * mat_transform);\r\n}\r\n\r\nreturn result;\r\n")),
+                intersect: (("if (enable_object_u == 0) { return scene_intersection_none; }
+
+SceneIntersection result = scene_intersection_none;
+SceneIntersection ihit = scene_intersection_none;
+Ray transformed_ray;
+float len = 0.;
+Ray r3;
+vec4 pos;
+
+vec3 cube_size = vec3(1.0, 1.0, 1.0);
+mat4 mat_transform = mat4(1.);
+mat4 mat_transform_inv = mat4(1.);
+
+for (int i = 0; i < 1000; i++) { if (i >= subspace_degree_u) break; // !FOR_NUMBER!
+for (int i = 0; i < subspace_degree_u; i++) { // !FOR_VARIABLE!
+    transformed_ray = transform(obj_mat_inv, transform(mat_transform_inv, r));
+    len = length(transformed_ray.d);
+    transformed_ray = normalize_ray(transformed_ray);
+    ihit = intersect_box(transformed_ray, companion_cube_M, cube_size);
+    ihit.hit.t /= len;
+    if (nearer(result.hit, ihit.hit)) {
+        result = ihit;
+        result.hit.n = normalize((mat_transform * (obj_mat * vec4(ihit.hit.n, 0.))).xyz);
+    }
+
+    transformed_ray = transform(obj_mat_inv, transform(mat_transform, r));
+    len = length(transformed_ray.d);
+    transformed_ray = normalize_ray(transformed_ray);
+    ihit = intersect_box(transformed_ray, companion_cube_M, cube_size);
+    ihit.hit.t /= len;
+    if (nearer(result.hit, ihit.hit)) {
+        result = ihit;
+        result.hit.n = normalize((mat_transform_inv * (obj_mat * vec4(ihit.hit.n, 0.))).xyz);
+    }
+
+    mat_transform_inv = a_mat * (b0_mat_inv * mat_transform_inv);
+    mat_transform = b0_mat * (a_mat_inv * mat_transform);
+}
+
+return result;
+")),
                 in_subspace: Subspace,
             ),
         ),
@@ -124,7 +164,28 @@
             name: "sphere_subspace",
             data: Complex(
                 kind: Portal(Some(Named("a")), Some(Named("b0"))),
-                intersect: (("if (enable_portals_u == 0) return scene_intersection_none;\n\nvec3 op = -r.o.xyz;\nfloat b = dot(op, r.d.xyz);\nfloat det = b*b - dot(op, op) + 1.0;\nif (det < 0.) return scene_intersection_none;\n\ndet = sqrt(det);\nfloat t = b - det;\nif (t < 0.) t = b + det;\nif (t < 0.) return scene_intersection_none;\n\nvec4 pos = r.o + r.d * t;\nvec3 n = normalize(pos.xyz);\n\nfloat u = atan(pos.z, pos.x) / PI;\nfloat v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y) / PI;\n\nint material = portal_blue_M;\nif (first) material = portal_orange_M;\n\nreturn SceneIntersection(material, SurfaceIntersection(true, t, u, v, n), false);")),
+                intersect: (("if (enable_portals_u == 0) return scene_intersection_none;
+
+vec3 op = -r.o.xyz;
+float b = dot(op, r.d.xyz);
+float det = b*b - dot(op, op) + 1.0;
+if (det < 0.) return scene_intersection_none;
+
+det = sqrt(det);
+float t = b - det;
+if (t < 0.) t = b + det;
+if (t < 0.) return scene_intersection_none;
+
+vec4 pos = r.o + r.d * t;
+vec3 n = normalize(pos.xyz);
+
+float u = atan(pos.z, pos.x) / PI;
+float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y) / PI;
+
+int material = portal_blue_M;
+if (first) material = portal_orange_M;
+
+return SceneIntersection(material, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Subspace,
             ),
         ),
@@ -132,12 +193,52 @@
             name: "camera_subspace",
             data: Complex(
                 kind: Simple(Some(Inline(Simple(
-                    offset: (0, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (0.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 )))),
-                intersect: (("if (enable_camera_u == 0) { return scene_intersection_none; }\r\n\r\nSceneIntersection result = scene_intersection_none;\r\nSceneIntersection ihit = scene_intersection_none;\r\nRay transformed_ray;\r\nfloat len = 0.;\r\nRay r3;\r\nvec4 pos;\r\n\r\nvec3 cube_size = vec3(1.0, 1.0, 1.0);\r\nmat4 mat_transform = mat4(1.);\r\nmat4 mat_transform_inv = mat4(1.);\r\n\r\nfor (int i = 0; i < 1000; i++) { if (i >= subspace_degree_u) break; // !FOR_NUMBER!\r\nfor (int i = 0; i < subspace_degree_u; i++) { // !FOR_VARIABLE!\r\n    transformed_ray = transform(cam_mat_inv, transform(mat_transform_inv, r));\r\n    len = length(transformed_ray.d);\r\n    transformed_ray = normalize_ray(transformed_ray);\r\n    ihit = intersect_eye_sphere(transformed_ray);\r\n    ihit.hit.t /= len;\r\n    if (nearer(result.hit, ihit.hit)) {\r\n        result = ihit;\r\n        result.hit.n = normalize((mat_transform * (obj_mat * vec4(ihit.hit.n, 0.))).xyz);\r\n    }\r\n\r\n    transformed_ray = transform(cam_mat_inv, transform(mat_transform, r));\r\n    len = length(transformed_ray.d);\r\n    transformed_ray = normalize_ray(transformed_ray);\r\n    ihit = intersect_eye_sphere(transformed_ray);\r\n    ihit.hit.t /= len;\r\n    if (nearer(result.hit, ihit.hit)) {\r\n        result = ihit;\r\n        result.hit.n = normalize((mat_transform_inv * (obj_mat * vec4(ihit.hit.n, 0.))).xyz);\r\n    }\r\n\r\n    mat_transform_inv = a_mat * (b0_mat_inv * mat_transform_inv);\r\n    mat_transform = b0_mat * (a_mat_inv * mat_transform);\r\n}\r\n\r\nreturn result;\r\n")),
+                intersect: (("if (enable_camera_u == 0) { return scene_intersection_none; }
+
+SceneIntersection result = scene_intersection_none;
+SceneIntersection ihit = scene_intersection_none;
+Ray transformed_ray;
+float len = 0.;
+Ray r3;
+vec4 pos;
+
+vec3 cube_size = vec3(1.0, 1.0, 1.0);
+mat4 mat_transform = mat4(1.);
+mat4 mat_transform_inv = mat4(1.);
+
+for (int i = 0; i < 1000; i++) { if (i >= subspace_degree_u) break; // !FOR_NUMBER!
+for (int i = 0; i < subspace_degree_u; i++) { // !FOR_VARIABLE!
+    transformed_ray = transform(cam_mat_inv, transform(mat_transform_inv, r));
+    len = length(transformed_ray.d);
+    transformed_ray = normalize_ray(transformed_ray);
+    ihit = intersect_eye_sphere(transformed_ray);
+    ihit.hit.t /= len;
+    if (nearer(result.hit, ihit.hit)) {
+        result = ihit;
+        result.hit.n = normalize((mat_transform * (obj_mat * vec4(ihit.hit.n, 0.))).xyz);
+    }
+
+    transformed_ray = transform(cam_mat_inv, transform(mat_transform, r));
+    len = length(transformed_ray.d);
+    transformed_ray = normalize_ray(transformed_ray);
+    ihit = intersect_eye_sphere(transformed_ray);
+    ihit.hit.t /= len;
+    if (nearer(result.hit, ihit.hit)) {
+        result = ihit;
+        result.hit.n = normalize((mat_transform_inv * (obj_mat * vec4(ihit.hit.n, 0.))).xyz);
+    }
+
+    mat_transform_inv = a_mat * (b0_mat_inv * mat_transform_inv);
+    mat_transform = b0_mat * (a_mat_inv * mat_transform);
+}
+
+return result;
+")),
                 in_subspace: Subspace,
             ),
         ),
@@ -151,7 +252,7 @@
                 color: (0.03529411764705882, 0.6431372549019608, 0.788235294117647),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 16,
+                grid_scale: 16.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -163,7 +264,7 @@
                 color: (0.9294117647058824, 0.4235294117647059, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 16,
+                grid_scale: 16.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -172,13 +273,15 @@
         (
             name: "companion_cube",
             data: Complex(
-                code: (("return material_simple(hit, r, companion_cube_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);\r")),
+                code: (("return material_simple(hit, r, companion_cube_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);
+")),
             ),
         ),
         (
             name: "wheatley",
             data: Complex(
-                code: (("return material_simple(hit, r, wheatley_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);\r")),
+                code: (("return material_simple(hit, r, wheatley_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);
+")),
             ),
         ),
     ]),
@@ -186,23 +289,199 @@
     library: ([
         (
             name: "common",
-            data: (("bool invert_if(bool value, bool condition) {\n  if (condition) {\n    return !value;\n  } else {\n    return value;\n  }\n}")),
+            data: (("bool invert_if(bool value, bool condition) {
+  if (condition) {
+    return !value;
+  } else {
+    return value;
+  }
+}")),
         ),
         (
             name: "box",
-            data: (("SceneIntersection intersect_box(Ray r, int material, vec3 rad) {\r\n  vec3 m = 1.0/r.d.xyz;\r\n  vec3 n = m*r.o.xyz;\r\n  vec3 k = abs(m)*rad;\r\n  vec3 t1 = -n - k;\r\n  vec3 t2 = -n + k;\r\n\r\n  float tN = max( max( t1.x, t1.y ), t1.z );\r\n  float tF = min( min( t2.x, t2.y ), t2.z );\r\n\r\n  float t = tN;\r\n  if (tN < 0.0 && tF > 0.0) t = tF;\r\n\r\n  if(tN > tF) return scene_intersection_none;\r\n\r\n  if(t < 0.0) return scene_intersection_none;\r\n\r\n  vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\r\n\r\n  vec3 pos = (r.o + r.d * t).xyz;\r\n  vec3 pos_coords = pos;\r\n  pos_coords = pos_coords.xzy;\r\n  pos = pos.xzy;\r\n\r\n  vec2 uv = vec2(pos_coords.x, pos_coords.y);\r\n  if (pos.z < 0.) uv.x = -uv.x;\r\n  if (abs(abs(pos.x) - rad.x) < 0.0001) {\r\n    uv = vec2(pos_coords.y, pos_coords.z);\r\n    if (pos.x < 0.) uv.x = -uv.x;\r\n  }\r\n  if (abs(abs(pos.y) - rad.y) < 0.0001) {\r\n    uv = vec2(pos_coords.x, pos_coords.z);\r\n    if (pos.y > 0.) uv.x = -uv.x;\r\n  }\r\n\r\n  return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);\r\n}")),
+            data: (("SceneIntersection intersect_box(Ray r, int material, vec3 rad) {
+  vec3 m = 1.0/r.d.xyz;
+  vec3 n = m*r.o.xyz;
+  vec3 k = abs(m)*rad;
+  vec3 t1 = -n - k;
+  vec3 t2 = -n + k;
+
+  float tN = max( max( t1.x, t1.y ), t1.z );
+  float tF = min( min( t2.x, t2.y ), t2.z );
+
+  float t = tN;
+  if (tN < 0.0 && tF > 0.0) t = tF;
+
+  if(tN > tF) return scene_intersection_none;
+
+  if(t < 0.0) return scene_intersection_none;
+
+  vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
+
+  vec3 pos = (r.o + r.d * t).xyz;
+  vec3 pos_coords = pos;
+  pos_coords = pos_coords.xzy;
+  pos = pos.xzy;
+
+  vec2 uv = vec2(pos_coords.x, pos_coords.y);
+  if (pos.z < 0.) uv.x = -uv.x;
+  if (abs(abs(pos.x) - rad.x) < 0.0001) {
+    uv = vec2(pos_coords.y, pos_coords.z);
+    if (pos.x < 0.) uv.x = -uv.x;
+  }
+  if (abs(abs(pos.y) - rad.y) < 0.0001) {
+    uv = vec2(pos_coords.x, pos_coords.z);
+    if (pos.y > 0.) uv.x = -uv.x;
+  }
+
+  return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);
+}")),
         ),
         (
             name: "companion_cube",
-            data: (("vec3 companion_cube_color(float u, float v) {\r\n  float mul = 1.;\r\n  float dist = sqrt(u * u + v * v);\r\n  float circle_size = 0.6;\r\n  float circle_border = 0.03;\r\n  if (dist < circle_size + circle_border && dist > circle_size) { mul = 0.4; }\r\n  if (dist > circle_size + circle_border) { mul = (PI + atan(u, v))/(2.0*PI); }\r\n\r\n  if (dist < circle_size) {\r\n    float scale = 3.;\r\n    float x = u * scale;\r\n    float y = v * scale + 0.26;\r\n    float temp1 = x*x + y*y - 1.;\r\n    if (temp1 * temp1 * temp1 - x * x * y * y * y < 0.) {\r\n      return vec3(222., 35., 138.) / 255.;\r\n    }\r\n  }\r\n\r\n  return color_grid3(vec3(9.176470588235294e-1, 9.176470588235294e-1, 9.176470588235294e-1) * mul, vec2(u + 1., v + 1.));\r\n}")),
+            data: (("vec3 companion_cube_color(float u, float v) {
+  float mul = 1.;
+  float dist = sqrt(u * u + v * v);
+  float circle_size = 0.6;
+  float circle_border = 0.03;
+  if (dist < circle_size + circle_border && dist > circle_size) { mul = 0.4; }
+  if (dist > circle_size + circle_border) { mul = (PI + atan(u, v))/(2.0*PI); }
+
+  if (dist < circle_size) {
+    float scale = 3.;
+    float x = u * scale;
+    float y = v * scale + 0.26;
+    float temp1 = x*x + y*y - 1.;
+    if (temp1 * temp1 * temp1 - x * x * y * y * y < 0.) {
+      return vec3(222., 35., 138.) / 255.;
+    }
+  }
+
+  return color_grid3(vec3(9.176470588235294e-1, 9.176470588235294e-1, 9.176470588235294e-1) * mul, vec2(u + 1., v + 1.));
+}")),
         ),
         (
             name: "wheatley",
-            data: (("vec3 rgb(int r, int g, int b) {\r\n  float r1 = float(r) / 255.;\r\n  float g1 = float(g) / 255.;\r\n  float b1 = float(b) / 255.;\r\n  return vec3(r1 * r1, g1 * g1, b1 * b1);\r\n}\r\n\r\nfloat dot_sph_dist(float u, float v, vec3 pos) {\r\n  vec3 pos2 = vec3(\r\n    sin(v*PI)*cos(u*PI),\r\n    sin(v*PI)*sin(u*PI),\r\n    cos(v*PI)\r\n  );\r\n  return dot(pos2, pos);\r\n}\r\n\r\nvec3 wheatley_color(float u, float v) {\r\n  float x = sin(v*PI)*cos(u*PI);\r\n  float y = sin(v*PI)*sin(u*PI);\r\n  float z = cos(v*PI);\r\n  vec3 pos = vec3(x, y, z);\r\n\r\n  vec3 color = vec3(1.);\r\n\r\n  float eye_size = 0.12;\r\n  float white_size = 0.05;\r\n  float light_blue_size = 0.3;\r\n  float blue_size = 0.6;\r\n  float eyelid_size = 0.3;\r\n  float border_size = 0.005;\r\n  float around_eye_size = 0.1;\r\n  float vertical_lines = 0.4;\r\n  float ass_size = 0.2;\r\n  float side_size = 0.75;\r\n  float straps_size = 0.006;\r\n  float side_corner_size = 0.32;\r\n\r\n  vec3 white = rgb(255, 255, 255);\r\n  vec3 light_blue = rgb(152, 253, 252);\r\n  vec3 blue = rgb(34, 68, 207);\r\n  vec3 black = rgb(0, 0, 0);\r\n  vec3 gray = rgb(128, 128, 128);\r\n  vec3 dark = rgb(50, 50, 50);\r\n  vec3 darker = rgb(20, 20, 20);\r\n\r\n  float eye = v / eye_size;\r\n  if (0. < eye && eye < white_size) color = white;\r\n  eye = (eye - white_size) / (1. - white_size);\r\n\r\n  if (0. < eye && eye < light_blue_size) color = mix(white, light_blue, eye/light_blue_size);\r\n  eye = (eye - light_blue_size) / (1. - light_blue_size);\r\n\r\n  if (0. < eye && eye < blue_size) color = mix(light_blue, blue, eye/blue_size);\r\n  eye = (eye - blue_size) / (1. - blue_size);\r\n\r\n  if (0. < eye && eye < 1.) color = color = mix(blue, black, eye);\r\n\r\n  if (v < eye_size && abs(x) < sin(eye_size*PI) && abs(x) > sin((eye_size * (1. - eyelid_size))*PI)) color = white;\r\n\r\n  if (v < eye_size && abs(x) < sin((eye_size * (1. - eyelid_size))*PI) && abs(x) > sin((eye_size * (1. - eyelid_size) - border_size)*PI)) color = black;\r\n\r\n  if (v > eye_size && v < eye_size + border_size) color = black;\r\n\r\n  if (v > eye_size + around_eye_size && v < eye_size + border_size + around_eye_size) color = black;\r\n\r\n  if (abs(y) < sin(border_size*PI)/2. && v > eye_size && v < eye_size + around_eye_size) color = black;\r\n\r\n  if (abs(y) > vertical_lines && abs(y) < vertical_lines + sin(border_size*PI) && v > eye_size + around_eye_size) color = black;\r\n\r\n  if (v > 1. - ass_size) {\r\n    color = dark;\r\n    if (abs(x*x) < straps_size || abs(y*y) < straps_size) color = darker;\r\n\r\n    if (abs(x - side_corner_size*0.7) < border_size * PI / 2. && -y > side_corner_size*0.7 - border_size * PI/2.) color = black;\r\n    if (abs(-y - side_corner_size*0.7) < border_size * PI / 2. && x > side_corner_size*0.7 - border_size * PI / 2.) color = black;\r\n  }\r\n  if (v > 1. - ass_size && v < 1. - ass_size + border_size) color = black;\r\n\r\n  if (abs(y*y) > side_size) {\r\n    color = dark;\r\n    if (abs(x*x) < straps_size || abs(y*y) < straps_size) color = darker;\r\n  }\r\n  if (abs(y*y) > side_size && abs(y*y) < side_size + sin(border_size * PI)) color = black;\r\n\r\n  if (v > eye_size && v < eye_size + around_eye_size) {\r\n    if (abs(x - side_corner_size) < border_size * PI / 2. && y > side_corner_size - border_size * PI/2.) color = black;\r\n    if (abs(y - side_corner_size) < border_size * PI / 2. && x > side_corner_size - border_size * PI / 2.) color = black;\r\n  }\r\n\r\n  float dot1 = dot_sph_dist(- around_eye_size, -eye_size - around_eye_size/2., pos);\r\n  if (dot1 > 1. - 0.001 && dot1 < 1. - 0.001 + 0.0005) color = black;\r\n\r\n  if (dot_sph_dist(0.2, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n  if (dot_sph_dist(0.27, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n  if (dot_sph_dist(0.34, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;\r\n\r\n  return color;\r\n}")),
+            data: (("vec3 rgb(int r, int g, int b) {
+  float r1 = float(r) / 255.;
+  float g1 = float(g) / 255.;
+  float b1 = float(b) / 255.;
+  return vec3(r1 * r1, g1 * g1, b1 * b1);
+}
+
+float dot_sph_dist(float u, float v, vec3 pos) {
+  vec3 pos2 = vec3(
+    sin(v*PI)*cos(u*PI),
+    sin(v*PI)*sin(u*PI),
+    cos(v*PI)
+  );
+  return dot(pos2, pos);
+}
+
+vec3 wheatley_color(float u, float v) {
+  float x = sin(v*PI)*cos(u*PI);
+  float y = sin(v*PI)*sin(u*PI);
+  float z = cos(v*PI);
+  vec3 pos = vec3(x, y, z);
+
+  vec3 color = vec3(1.);
+
+  float eye_size = 0.12;
+  float white_size = 0.05;
+  float light_blue_size = 0.3;
+  float blue_size = 0.6;
+  float eyelid_size = 0.3;
+  float border_size = 0.005;
+  float around_eye_size = 0.1;
+  float vertical_lines = 0.4;
+  float ass_size = 0.2;
+  float side_size = 0.75;
+  float straps_size = 0.006;
+  float side_corner_size = 0.32;
+
+  vec3 white = rgb(255, 255, 255);
+  vec3 light_blue = rgb(152, 253, 252);
+  vec3 blue = rgb(34, 68, 207);
+  vec3 black = rgb(0, 0, 0);
+  vec3 gray = rgb(128, 128, 128);
+  vec3 dark = rgb(50, 50, 50);
+  vec3 darker = rgb(20, 20, 20);
+
+  float eye = v / eye_size;
+  if (0. < eye && eye < white_size) color = white;
+  eye = (eye - white_size) / (1. - white_size);
+
+  if (0. < eye && eye < light_blue_size) color = mix(white, light_blue, eye/light_blue_size);
+  eye = (eye - light_blue_size) / (1. - light_blue_size);
+
+  if (0. < eye && eye < blue_size) color = mix(light_blue, blue, eye/blue_size);
+  eye = (eye - blue_size) / (1. - blue_size);
+
+  if (0. < eye && eye < 1.) color = color = mix(blue, black, eye);
+
+  if (v < eye_size && abs(x) < sin(eye_size*PI) && abs(x) > sin((eye_size * (1. - eyelid_size))*PI)) color = white;
+
+  if (v < eye_size && abs(x) < sin((eye_size * (1. - eyelid_size))*PI) && abs(x) > sin((eye_size * (1. - eyelid_size) - border_size)*PI)) color = black;
+
+  if (v > eye_size && v < eye_size + border_size) color = black;
+
+  if (v > eye_size + around_eye_size && v < eye_size + border_size + around_eye_size) color = black;
+
+  if (abs(y) < sin(border_size*PI)/2. && v > eye_size && v < eye_size + around_eye_size) color = black;
+
+  if (abs(y) > vertical_lines && abs(y) < vertical_lines + sin(border_size*PI) && v > eye_size + around_eye_size) color = black;
+
+  if (v > 1. - ass_size) {
+    color = dark;
+    if (abs(x*x) < straps_size || abs(y*y) < straps_size) color = darker;
+
+    if (abs(x - side_corner_size*0.7) < border_size * PI / 2. && -y > side_corner_size*0.7 - border_size * PI/2.) color = black;
+    if (abs(-y - side_corner_size*0.7) < border_size * PI / 2. && x > side_corner_size*0.7 - border_size * PI / 2.) color = black;
+  }
+  if (v > 1. - ass_size && v < 1. - ass_size + border_size) color = black;
+
+  if (abs(y*y) > side_size) {
+    color = dark;
+    if (abs(x*x) < straps_size || abs(y*y) < straps_size) color = darker;
+  }
+  if (abs(y*y) > side_size && abs(y*y) < side_size + sin(border_size * PI)) color = black;
+
+  if (v > eye_size && v < eye_size + around_eye_size) {
+    if (abs(x - side_corner_size) < border_size * PI / 2. && y > side_corner_size - border_size * PI/2.) color = black;
+    if (abs(y - side_corner_size) < border_size * PI / 2. && x > side_corner_size - border_size * PI / 2.) color = black;
+  }
+
+  float dot1 = dot_sph_dist(- around_eye_size, -eye_size - around_eye_size/2., pos);
+  if (dot1 > 1. - 0.001 && dot1 < 1. - 0.001 + 0.0005) color = black;
+
+  if (dot_sph_dist(0.2, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;
+  if (dot_sph_dist(0.27, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;
+  if (dot_sph_dist(0.34, -eye_size - 0.03, pos) > 1. - 0.0003) color = black;
+
+  return color;
+}")),
         ),
         (
             name: "eye_sphere",
-            data: (("SceneIntersection intersect_eye_sphere(Ray r) {\nvec3 op = -r.o.xyz;\nfloat b = dot(op, r.d.xyz);\nfloat det = b*b - dot(op, op) + 1.0;\nif (det < 0.) return scene_intersection_none;\n\ndet = sqrt(det);\nfloat t = b - det;\n// if (t < 0.) t = b + det;\nif (t < 0.) return scene_intersection_none;\n\nvec4 pos = r.o + r.d * t;\nvec3 n = normalize(pos.xyz);\n\nfloat u = -atan(pos.x, pos.z);\nfloat v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);\n\nreturn SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n), false);\n}")),
+            data: (("SceneIntersection intersect_eye_sphere(Ray r) {
+vec3 op = -r.o.xyz;
+float b = dot(op, r.d.xyz);
+float det = b*b - dot(op, op) + 1.0;
+if (det < 0.) return scene_intersection_none;
+
+det = sqrt(det);
+float t = b - det;
+// if (t < 0.) t = b + det;
+if (t < 0.) return scene_intersection_none;
+
+vec4 pos = r.o + r.d * t;
+vec3 n = normalize(pos.xyz);
+
+float u = -atan(pos.x, pos.z);
+float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
+
+return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n), false);
+}")),
         ),
     ]),
     videos: ([]),
@@ -336,10 +615,10 @@
             "enable_object": Bool(true),
             "enable_portals": Bool(true),
             "fix_camera": Bool(false),
-            "progress1": Progress(0),
-            "progress2": Progress(0),
-            "progress3": Progress(0),
-            "progress4": Progress(0),
+            "progress1": Progress(0.0),
+            "progress2": Progress(0.0),
+            "progress3": Progress(0.0),
+            "progress4": Progress(0.0),
             "subspace_degree": Int((
                 min: Some(0),
                 max: None,
@@ -348,13 +627,13 @@
         },
         matrices: {
             "a": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "b0": Simple(
-                offset: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
                 scale: 0.42,
                 rotate: (1.2740903539558606, 5.846852994181004, 6.19591884457987),
                 mirror: (false, false, false),
@@ -364,24 +643,24 @@
                 then: Some(Named("cam_fix")),
                 otherwise: Some(Inline(Mul(
                     to: Some(Inline(Simple(
-                        offset: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
                         scale: 0.1,
-                        rotate: (1.5707963267948966, 0, 0),
+                        rotate: (1.5707963267948966, 0.0, 0.0),
                         mirror: (false, false, false),
                     ))),
                     what: Some(Inline(Camera)),
                 ))),
             ),
             "cam_fix": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "obj": Simple(
-                offset: (-0.86, 0, 0),
+                offset: (-0.86, 0.0, 0.0),
                 scale: 0.3,
-                rotate: (0, 0, 0),
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         },
@@ -390,57 +669,57 @@
         (
             name: "v3.small.0",
             data: (
-                duration: 1,
+                duration: 1.0,
                 animation_stage: Animation("explore"),
                 uniforms: ({
                     "enable_object": CopyPrev,
                     "enable_portals": Changed(Some(Inline(Bool(false)))),
                     "progress1": Changed(Some(Inline(Progress(0.95)))),
-                    "progress2": Changed(Some(Inline(Progress(0)))),
-                    "progress3": Changed(Some(Inline(Progress(0)))),
-                    "progress4": Changed(Some(Inline(Progress(0)))),
+                    "progress2": Changed(Some(Inline(Progress(0.0)))),
+                    "progress3": Changed(Some(Inline(Progress(0.0)))),
+                    "progress4": Changed(Some(Inline(Progress(0.0)))),
                     "subspace_degree": CopyPrev,
                 }),
                 matrices: ({
                     "a": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "b0": Changed(Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("0.25*progress3"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("deg2rad(360*progress2)"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         scale: Uniform(Some(Inline(Formula(("lerp(0.5, 1., progress4)"))))),
                     )))),
                     "obj": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Value(0.7),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         scale: Uniform(Some(Inline(Formula(("lerp(0, 0.12, progress1)"))))),
                     )))),
@@ -448,13 +727,13 @@
                 use_prev_cam: false,
                 use_start_cam_as_end: true,
                 cam_start: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 1.5707963267948966,
                     beta: 0.7330382858376184,
                     r: 0.92,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: None,
                 use_any_cam_as_start: None,
@@ -468,12 +747,12 @@
         (
             name: "v3.small.1",
             data: (
-                duration: 1,
+                duration: 1.0,
                 animation_stage: RealAnimation("v3.small.0"),
                 uniforms: ({
                     "enable_object": CopyPrev,
                     "enable_portals": Changed(Some(Inline(Bool(false)))),
-                    "progress1": Changed(Some(Inline(Progress(1)))),
+                    "progress1": Changed(Some(Inline(Progress(1.0)))),
                     "progress2": CopyPrev,
                     "progress3": CopyPrev,
                     "progress4": CopyPrev,
@@ -488,13 +767,13 @@
                 use_start_cam_as_end: false,
                 cam_start: None,
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 2.0943951023931953,
                     beta: 1.0821041362364843,
                     r: 0.92,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
@@ -507,14 +786,14 @@
         (
             name: "v3.small.2",
             data: (
-                duration: 5,
+                duration: 5.0,
                 animation_stage: RealAnimation("v3.small.0"),
                 uniforms: ({
                     "enable_camera": Changed(Some(Inline(Bool(true)))),
                     "enable_object": CopyPrev,
                     "enable_portals": Changed(Some(Inline(Bool(false)))),
                     "fix_camera": CopyPrev,
-                    "progress1": Changed(Some(Inline(Progress(1)))),
+                    "progress1": Changed(Some(Inline(Progress(1.0)))),
                     "progress2": Changed(Some(Inline(Formula(("easing_in_out(time)"))))),
                     "progress3": CopyPrev,
                     "progress4": CopyPrev,
@@ -542,7 +821,7 @@
         (
             name: "v3.small.3",
             data: (
-                duration: 5,
+                duration: 5.0,
                 animation_stage: RealAnimation("v3.small.2"),
                 uniforms: ({
                     "enable_camera": Changed(Some(Inline(Bool(false)))),
@@ -577,13 +856,13 @@
         (
             name: "v3.small.4",
             data: (
-                duration: 1,
+                duration: 1.0,
                 animation_stage: RealAnimation("v3.small.0"),
                 uniforms: ({
                     "enable_object": CopyPrev,
                     "enable_portals": CopyPrev,
                     "progress1": CopyPrev,
-                    "progress2": Changed(Some(Inline(Progress(1)))),
+                    "progress2": Changed(Some(Inline(Progress(1.0)))),
                     "progress3": Changed(Some(Inline(Formula(("easing_in_out(time)"))))),
                     "progress4": CopyPrev,
                     "subspace_degree": CopyPrev,
@@ -608,7 +887,7 @@
         (
             name: "v3.small.5",
             data: (
-                duration: 1,
+                duration: 1.0,
                 animation_stage: RealAnimation("v3.small.4"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -639,14 +918,14 @@
         (
             name: "v3.small.6",
             data: (
-                duration: 2,
+                duration: 2.0,
                 animation_stage: RealAnimation("v3.small.5"),
                 uniforms: ({
                     "enable_object": CopyPrev,
                     "enable_portals": CopyPrev,
                     "progress1": CopyPrev,
                     "progress2": CopyPrev,
-                    "progress3": Changed(Some(Inline(Progress(1)))),
+                    "progress3": Changed(Some(Inline(Progress(1.0)))),
                     "progress4": CopyPrev,
                     "subspace_degree": CopyPrev,
                 }),
@@ -659,13 +938,13 @@
                 use_start_cam_as_end: false,
                 cam_start: None,
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 2.141143846897508,
                     beta: 0.7160974195193073,
                     r: 2.6248673696212026,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
@@ -678,7 +957,7 @@
         (
             name: "v3.small.6.5",
             data: (
-                duration: 2,
+                duration: 2.0,
                 animation_stage: RealAnimation("v3.small.6"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -709,7 +988,7 @@
         (
             name: "v3.small.7",
             data: (
-                duration: 2,
+                duration: 2.0,
                 animation_stage: RealAnimation("v3.small.6"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -740,7 +1019,7 @@
         (
             name: "v3.small.8",
             data: (
-                duration: 2,
+                duration: 2.0,
                 animation_stage: RealAnimation("v3.small.7"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -771,7 +1050,7 @@
         (
             name: "v3.small.9",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v3.small.8"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -781,7 +1060,7 @@
                     "progress3": Changed(Some(Inline(Float((
                         min: None,
                         max: None,
-                        value: 3,
+                        value: 3.0,
                     ))))),
                     "progress4": Changed(Some(Inline(Formula(("easing_in_out(time)"))))),
                     "subspace_degree": Changed(Some(Inline(Int((
@@ -810,7 +1089,7 @@
         (
             name: "v3.small.10",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v3.small.9"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -841,7 +1120,7 @@
         (
             name: "v3.small.11",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v3.small.10"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -849,7 +1128,7 @@
                     "progress1": CopyPrev,
                     "progress2": CopyPrev,
                     "progress3": CopyPrev,
-                    "progress4": Changed(Some(Inline(Progress(1)))),
+                    "progress4": Changed(Some(Inline(Progress(1.0)))),
                     "subspace_degree": CopyPrev,
                 }),
                 matrices: ({
@@ -861,13 +1140,13 @@
                 use_start_cam_as_end: false,
                 cam_start: None,
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 7.394475984959036,
                     beta: 1.9817578962038775,
                     r: 4.650112662193511,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
@@ -880,7 +1159,7 @@
         (
             name: "v3.small.12",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v3.small.11"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -911,7 +1190,7 @@
         (
             name: "v3.small.13",
             data: (
-                duration: 1,
+                duration: 1.0,
                 animation_stage: RealAnimation("v3.small.12"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -942,7 +1221,7 @@
         (
             name: "v3.small.14",
             data: (
-                duration: 1,
+                duration: 1.0,
                 animation_stage: RealAnimation("v3.small.13"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -973,7 +1252,7 @@
         (
             name: "v3.small.15",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v3.small.14"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -984,7 +1263,7 @@
                     "progress4": Changed(Some(Inline(Float((
                         min: None,
                         max: None,
-                        value: 2,
+                        value: 2.0,
                     ))))),
                     "subspace_degree": CopyPrev,
                 }),
@@ -997,13 +1276,13 @@
                 use_start_cam_as_end: false,
                 cam_start: None,
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 7.487462491055672,
                     beta: 2.617993877991495,
                     r: 2.66,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
@@ -1016,7 +1295,7 @@
         (
             name: "v3.small.16",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v3.small.15"),
                 uniforms: ({
                     "enable_object": CopyPrev,
@@ -1061,15 +1340,15 @@
                 }),
                 matrices: ({
                     "a": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "b0": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
                         scale: 0.5,
-                        rotate: (0, 0, 0),
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "cam": CopyPrev,
@@ -1078,13 +1357,13 @@
                 use_prev_cam: false,
                 use_start_cam_as_end: true,
                 cam_start: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 1.5707963267948966,
                     beta: 0.7330382858376184,
                     r: 0.92,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: None,
                 use_any_cam_as_start: None,
@@ -1098,7 +1377,7 @@
         (
             name: "v4.prev.1",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v4.prev.0"),
                 uniforms: ({
                     "enable_camera": CopyPrev,
@@ -1117,15 +1396,15 @@
                     "cam": CopyPrev,
                     "cam_fix": Changed(Some(Inline(Mul(
                         to: Some(Inline(Simple(
-                            offset: (0, 0.92, 0.07),
+                            offset: (0.0, 0.92, 0.07),
                             scale: 0.1,
                             rotate: (0.08726646259971647, 3.141592653589793, 3.141592653589793),
                             mirror: (false, false, false),
                         ))),
                         what: Some(Inline(Simple(
-                            offset: (0, 0, 0),
-                            scale: 1,
-                            rotate: (0.6632251157578453, 0, 0),
+                            offset: (0.0, 0.0, 0.0),
+                            scale: 1.0,
+                            rotate: (0.6632251157578453, 0.0, 0.0),
                             mirror: (false, false, false),
                         ))),
                     )))),
@@ -1135,13 +1414,13 @@
                 use_start_cam_as_end: false,
                 cam_start: None,
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 4.180795411267571,
                     beta: 1.849063447580777,
                     r: 0.32245438752288097,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
@@ -1154,7 +1433,7 @@
         (
             name: "v4.prev.2",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v4.prev.0"),
                 uniforms: ({
                     "enable_camera": CopyPrev,
@@ -1173,9 +1452,9 @@
                     "cam": CopyPrev,
                     "cam_fix": CopyPrev,
                     "obj": Changed(Some(Inline(Simple(
-                        offset: (-6.17, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (-6.17, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                 }),
@@ -1183,13 +1462,13 @@
                 use_start_cam_as_end: false,
                 cam_start: None,
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 0.7217545424038826,
                     beta: 1.2506506212482418,
                     r: 0.8856347931896407,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: Some(false),
                 use_any_cam_as_end: None,
@@ -1202,7 +1481,7 @@
         (
             name: "v4.golden.0",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: Dev,
                 uniforms: ({
                     "enable_camera": Changed(Some(Inline(Bool(true)))),
@@ -1221,45 +1500,45 @@
                 }),
                 matrices: ({
                     "a": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "b0": Changed(Some(Inline(Simple(
-                        offset: (-3.73, 0, 0),
+                        offset: (-3.73, 0.0, 0.0),
                         scale: 0.99,
-                        rotate: (0, 2.3999632297279923, 0),
+                        rotate: (0.0, 2.3999632297279923, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "cam": CopyPrev,
                     "cam_fix": CopyPrev,
                     "obj": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
                         scale: 0.23,
-                        rotate: (0, 6.1086523819801535, 0),
+                        rotate: (0.0, 6.1086523819801535, 0.0),
                         mirror: (false, false, false),
                     )))),
                 }),
                 use_prev_cam: false,
                 use_start_cam_as_end: false,
                 cam_start: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 1.5433326721191212,
                     beta: 1.3816491699218727,
                     r: 3.5,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: -0.21666755676271485,
                     beta: 0.9826234436035111,
                     r: 3.5,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
@@ -1272,7 +1551,7 @@
         (
             name: "v4.golden.1",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v4.golden.0"),
                 uniforms: ({
                     "enable_camera": Changed(Some(Inline(Bool(false)))),
@@ -1301,7 +1580,7 @@
                     r: 3.5,
                     in_subspace: true,
                     free_movement: true,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: Some(Inline((
                     look_at: Coordinate((-12.941308357365745, 4.743371068720308, 0.31028263745655943)),
@@ -1310,7 +1589,7 @@
                     r: 3.5,
                     in_subspace: true,
                     free_movement: true,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
@@ -1352,7 +1631,7 @@
                     r: 3.5,
                     in_subspace: true,
                     free_movement: true,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: None,
                 use_any_cam_as_start: None,
@@ -1366,7 +1645,7 @@
         (
             name: "v4.walking_to_river.0",
             data: (
-                duration: 5,
+                duration: 5.0,
                 animation_stage: Dev,
                 uniforms: ({
                     "enable_camera": Changed(Some(Inline(Bool(true)))),
@@ -1385,23 +1664,23 @@
                 }),
                 matrices: ({
                     "a": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "b0": Changed(Some(Inline(Simple(
-                        offset: (-0.51, 0, 0),
+                        offset: (-0.51, 0.0, 0.0),
                         scale: 0.9,
-                        rotate: (0, 0.4886921905584123, 0.3490658503988659),
+                        rotate: (0.0, 0.4886921905584123, 0.3490658503988659),
                         mirror: (false, false, false),
                     )))),
                     "cam": CopyPrev,
                     "cam_fix": CopyPrev,
                     "obj": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
                         scale: 0.2,
-                        rotate: (0, 5.8817595792208905, 0),
+                        rotate: (0.0, 5.8817595792208905, 0.0),
                         mirror: (false, false, false),
                     )))),
                 }),
@@ -1414,7 +1693,7 @@
                     r: 3.0478247493783712,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: Some(Inline((
                     look_at: Coordinate((-0.50037839, -0.9983724, 0.26489346)),
@@ -1423,7 +1702,7 @@
                     r: 0.9711308921322931,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
@@ -1436,7 +1715,7 @@
         (
             name: "v4.walking_to_river.1",
             data: (
-                duration: 5,
+                duration: 5.0,
                 animation_stage: RealAnimation("v4.walking_to_river.0"),
                 uniforms: ({
                     "enable_camera": CopyPrev,
@@ -1470,7 +1749,7 @@
                     r: 33.04105648311,
                     in_subspace: true,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,

@@ -1,10 +1,79 @@
 (
     desc: (
-        eng: "# N-monoportal\n\nThis monoportal (portal with one continuous surface) acts as it consists of N parts, e.g. of three parts (look at `Triple portal` scene), but every time there is only one part!\n\n# Construction\n\nTake regular Monoportal and rotate its parts until the angle between them will equal `360°/Count`.\n\n# Regular monoportal\n\nThis is derived with `Count = 2`, and this is pretty obvious, it looks like it has two parts. \n\nIf you replace portals with mirrors (`Act as a mirror` option), then it looks like a regular mirror.\n\nIf you mirror one part (with `Mirror one part vertically` option) (this is not the same, as make this part a mirror!) then the portal looks like a regular rotating monoportal.\n\n# Triple monoportal\n\nThis sounds wild, but this looks like a baby from Monoportal and Triple portal. Image through this portal is continuous, and this is important. \n\nBut, for the mirror continuous of the image brokes.\n\nAlso, it brokes for the mirrored one-part option.\n\n# Quadruple monoportal\n\nHere mirror is not broken. Actually, the mirror is broken only for odd N.\n\nFor mirror enabled, a quarter in the middle looks like a regular monoportal, and this is! This is how a «True mirror» is created: just two mirrors around each other with the 90° angle between.\n\nSame thing for the mirrored one-part option.\n\n# Other\n\nOther monoportals look boring.\n",
-        rus: "# N-монопортал\n\nЭто монопортал (портал с одной непрерывной телепортирующей поверхностью), который ведёт себя как будто он состоит из N частей, например из трёх (смотри тройной портал), но на самом деле часть всегда одна!\n\n# Построение\n\nБерём обычный монопортал и просто вращаем его части, чтобы между ними был угол `360°/Count`.\n\n# Обычный монопортал\n\nОн получается при `Count = 2`, и это довольно очевидно, он выглядит как будто у него есть две части. \n\nЕсли заменить порталы на зеркала (опция `Act as a mirror`), то он выглядит как обычное зеркало.\n\nЕсли отзеркалить одну портальную часть (опция `Mirror one part vertically`) (это не то же самое что сделать её зеркалом!), то портал выглядит как обычный вращающий монопортал.\n\n# Тройной монопортал\n\nЭто звучит дико, но это похоже на ребёнка монопортала и тройной портала. Самое главное что в нём изображение сохраняет непрерывность и выглядит хорошо. \n\nЗеркало здесь ломается посередине.\n\nОтзеркаливание одной части тоже ломается.\n\n# Четверной монопортал\n\nА тут уже зеркало не ломается. На самом деле зеркало ломается только для нечётных N.\n\nЧетвертинка посередине выглядит как обычный монопортал — через неё можно читать текст напротив вас, и это сохраняется даже если включить зеркало! Именно так и сделан предмет под названием «True mirror», он состоит из двух зеркал, стоящих друг напротив друга под 90°.\n\nАналогично для опции отзеркаливания одной части.\n\n# Остальные\n\nОстальные монопорталы ничем не выделяются.",
+        eng: "# N-monoportal
+
+This monoportal (portal with one continuous surface) acts as it consists of N parts, e.g. of three parts (look at `Triple portal` scene), but every time there is only one part!
+
+# Construction
+
+Take regular Monoportal and rotate its parts until the angle between them will equal `360°/Count`.
+
+# Regular monoportal
+
+This is derived with `Count = 2`, and this is pretty obvious, it looks like it has two parts. 
+
+If you replace portals with mirrors (`Act as a mirror` option), then it looks like a regular mirror.
+
+If you mirror one part (with `Mirror one part vertically` option) (this is not the same, as make this part a mirror!) then the portal looks like a regular rotating monoportal.
+
+# Triple monoportal
+
+This sounds wild, but this looks like a baby from Monoportal and Triple portal. Image through this portal is continuous, and this is important. 
+
+But, for the mirror continuous of the image brokes.
+
+Also, it brokes for the mirrored one-part option.
+
+# Quadruple monoportal
+
+Here mirror is not broken. Actually, the mirror is broken only for odd N.
+
+For mirror enabled, a quarter in the middle looks like a regular monoportal, and this is! This is how a «True mirror» is created: just two mirrors around each other with the 90° angle between.
+
+Same thing for the mirrored one-part option.
+
+# Other
+
+Other monoportals look boring.
+",
+        rus: "# N-монопортал
+
+Это монопортал (портал с одной непрерывной телепортирующей поверхностью), который ведёт себя как будто он состоит из N частей, например из трёх (смотри тройной портал), но на самом деле часть всегда одна!
+
+# Построение
+
+Берём обычный монопортал и просто вращаем его части, чтобы между ними был угол `360°/Count`.
+
+# Обычный монопортал
+
+Он получается при `Count = 2`, и это довольно очевидно, он выглядит как будто у него есть две части. 
+
+Если заменить порталы на зеркала (опция `Act as a mirror`), то он выглядит как обычное зеркало.
+
+Если отзеркалить одну портальную часть (опция `Mirror one part vertically`) (это не то же самое что сделать её зеркалом!), то портал выглядит как обычный вращающий монопортал.
+
+# Тройной монопортал
+
+Это звучит дико, но это похоже на ребёнка монопортала и тройной портала. Самое главное что в нём изображение сохраняет непрерывность и выглядит хорошо. 
+
+Зеркало здесь ломается посередине.
+
+Отзеркаливание одной части тоже ломается.
+
+# Четверной монопортал
+
+А тут уже зеркало не ломается. На самом деле зеркало ломается только для нечётных N.
+
+Четвертинка посередине выглядит как обычный монопортал — через неё можно читать текст напротив вас, и это сохраняется даже если включить зеркало! Именно так и сделан предмет под названием «True mirror», он состоит из двух зеркал, стоящих друг напротив друга под 90°.
+
+Аналогично для опции отзеркаливания одной части.
+
+# Остальные
+
+Остальные монопорталы ничем не выделяются.",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: -1.795455899776223,
         beta: 1.0600336456298827,
         r: 3.8500000000000165,
@@ -14,25 +83,25 @@
         (
             name: "room_size_x",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_y",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_z",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
@@ -40,7 +109,7 @@
             data: Float((
                 min: None,
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
         ),
         (
@@ -48,7 +117,7 @@
             data: Float((
                 min: None,
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
         ),
         (
@@ -96,9 +165,9 @@
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -112,13 +181,13 @@
                 ),
                 rotate: (
                     x: Value(1.5707963267948966),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 scale: Value(0.55),
             ),
@@ -128,41 +197,41 @@
             data: Parametrized(
                 offset: (
                     x: Uniform(Some(Inline(Formula(("0.001"))))),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("pi() - (pi() - 2*pi()/count)/2"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("mirror_part"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
         ),
         (
             name: "b",
             data: Parametrized(
                 offset: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("(pi() - 2*pi()/count)/2"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
         ),
     ]),
@@ -174,20 +243,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Named("room_size_x"))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -202,20 +271,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-room_size_x"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -229,21 +298,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("room_size_y"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -257,21 +326,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("-room_size_y"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -285,21 +354,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Named("room_size_z"))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -313,21 +382,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Inline(Formula(("-room_size_z"))))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -339,7 +408,27 @@
             name: "monoportal",
             data: Flat(
                 kind: Portal(Some(Named("a")), Some(Named("b"))),
-                is_inside: (("int back_material = solid_black_M;\n\nint teleport_material = TELEPORT;\nif (portal_teleport_light_u == 0) { teleport_material = grid_gray_M; }\nif (back) { teleport_material = back_material; }\nif (portal_mirror_u == 1) { teleport_material = mirror_M; }\n\nfloat radius = 2.0;\nfloat radius_sqr = sqr(radius);\nfloat radius_border_sqr = sqr(radius + portal_border_size_u);\nfloat pos1 = sqr(x*portal_ellipse_a_u) + sqr(y*portal_ellipse_b_u);\n\nif (pos1 < radius_border_sqr && x > 0.) {\n  if (pos1 > radius_sqr) {\n    return back_material;\n  } else {\n    return teleport_material;\n  }\n} else {\n  return NOT_INSIDE;\n}")),
+                is_inside: (("int back_material = solid_black_M;
+
+int teleport_material = TELEPORT;
+if (portal_teleport_light_u == 0) { teleport_material = grid_gray_M; }
+if (back) { teleport_material = back_material; }
+if (portal_mirror_u == 1) { teleport_material = mirror_M; }
+
+float radius = 2.0;
+float radius_sqr = sqr(radius);
+float radius_border_sqr = sqr(radius + portal_border_size_u);
+float pos1 = sqr(x*portal_ellipse_a_u) + sqr(y*portal_ellipse_b_u);
+
+if (pos1 < radius_border_sqr && x > 0.) {
+  if (pos1 > radius_sqr) {
+    return back_material;
+  } else {
+    return teleport_material;
+  }
+} else {
+  return NOT_INSIDE;
+}")),
                 in_subspace: Normal,
             ),
         ),
@@ -347,7 +436,16 @@
             name: "triangle",
             data: Flat(
                 kind: Simple(Some(Named("object"))),
-                is_inside: (("if ((b_mat_inv * pos).z > 0.) return NOT_INSIDE;\nif ((a_mat_inv * pos).z < 0.) return NOT_INSIDE;\n\nreturn is_inside_object(\n  0.3,\n  triangle_distance(x, y, 1.61, -1.61, 1.0),\n  0.03,\n  triangle_white_M,\n  triangle_black_M\n);")),
+                is_inside: (("if ((b_mat_inv * pos).z > 0.) return NOT_INSIDE;
+if ((a_mat_inv * pos).z < 0.) return NOT_INSIDE;
+
+return is_inside_object(
+  0.3,
+  triangle_distance(x, y, 1.61, -1.61, 1.0),
+  0.03,
+  triangle_white_M,
+  triangle_black_M
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -359,7 +457,16 @@
                     second_portal: Some(Named("b")),
                     what: Some(Named("object")),
                 )))),
-                is_inside: (("if ((b_mat_inv * pos).z > 0.) return NOT_INSIDE;\nif ((a_mat_inv * pos).z < 0.) return NOT_INSIDE;\n\nreturn is_inside_object(\n  0.3,\n  triangle_distance(x, y, 1.61, -1.61, 1.0),\n  0.03,\n  triangle_white_M,\n  triangle_black_M\n);")),
+                is_inside: (("if ((b_mat_inv * pos).z > 0.) return NOT_INSIDE;
+if ((a_mat_inv * pos).z < 0.) return NOT_INSIDE;
+
+return is_inside_object(
+  0.3,
+  triangle_distance(x, y, 1.61, -1.61, 1.0),
+  0.03,
+  triangle_white_M,
+  triangle_black_M
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -371,7 +478,16 @@
                     second_portal: Some(Named("a")),
                     what: Some(Named("object")),
                 )))),
-                is_inside: (("if ((b_mat_inv * pos).z > 0.) return NOT_INSIDE;\nif ((a_mat_inv * pos).z < 0.) return NOT_INSIDE;\n\nreturn is_inside_object(\n  0.3,\n  triangle_distance(x, y, 1.61, -1.61, 1.0),\n  0.03,\n  triangle_white_M,\n  triangle_black_M\n);")),
+                is_inside: (("if ((b_mat_inv * pos).z > 0.) return NOT_INSIDE;
+if ((a_mat_inv * pos).z < 0.) return NOT_INSIDE;
+
+return is_inside_object(
+  0.3,
+  triangle_distance(x, y, 1.61, -1.61, 1.0),
+  0.03,
+  triangle_white_M,
+  triangle_black_M
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -390,7 +506,7 @@
                 color: (0.8980392156862745, 0.8313725490196079, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -402,7 +518,7 @@
                 color: (0.9058823529411765, 0.29411764705882354, 0.29411764705882354),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -414,7 +530,7 @@
                 color: (0.050980392156862744, 0.050980392156862744, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -426,7 +542,7 @@
                 color: (0.2235294117647059, 0.2235294117647059, 0.2235294117647059),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -438,7 +554,7 @@
                 color: (0.3137254901960784, 0.38823529411764707, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -450,7 +566,7 @@
                 color: (0.2627450980392157, 0.8470588235294118, 0.30196078431372547),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -462,7 +578,7 @@
                 color: (0.03529411764705882, 0.6431372549019608, 0.788235294117647),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -474,7 +590,7 @@
                 color: (0.9294117647058824, 0.4235294117647059, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -486,7 +602,7 @@
                 color: (0.6666666666666666, 0.6666666666666666, 0.6666666666666666),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -495,16 +611,16 @@
         (
             name: "mirror",
             data: Reflect(
-                add_to_color: (1, 1, 1),
+                add_to_color: (1.0, 1.0, 1.0),
             ),
         ),
         (
             name: "solid_black",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -513,7 +629,9 @@
         (
             name: "room_green_texture",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);\nresult.mul_to_color *= texture(monoportal_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);
+result.mul_to_color *= texture(monoportal_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;
+return result;")),
             ),
         ),
         (
@@ -522,7 +640,7 @@
                 color: (0.7686274509803922, 0.7686274509803922, 0.7686274509803922),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -534,7 +652,7 @@
                 color: (0.043137254901960784, 0.043137254901960784, 0.043137254901960784),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -545,13 +663,41 @@
     library: ([
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "common",
-            data: (("float triangle_distance(float x, float y, float k1, float k2, float y1) {\n  return max(\n    (y-k1*x)/sqrt(1.0+sqr(k1)),\n  max(\n    (y-k2*x)/sqrt(1.0+sqr(k2)),\n    -y1 * y\n  ));\n}\n\nint is_inside_object(\r\n  float distance, \r\n  float size, \r\n  float border,\r\n  int material_inner, \r\n  int material_border\n) {\r\n  if (distance > size) return material_inner;\r\n  if (distance > size -border) return material_border;\r\n  return NOT_INSIDE;\r\n}\n")),
+            data: (("float triangle_distance(float x, float y, float k1, float k2, float y1) {
+  return max(
+    (y-k1*x)/sqrt(1.0+sqr(k1)),
+  max(
+    (y-k2*x)/sqrt(1.0+sqr(k2)),
+    -y1 * y
+  ));
+}
+
+int is_inside_object(
+  float distance, 
+  float size, 
+  float border,
+  int material_inner, 
+  int material_border
+) {
+  if (distance > size) return material_inner;
+  if (distance > size -border) return material_border;
+  return NOT_INSIDE;
+}
+")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "count": true,
@@ -654,29 +800,29 @@
             "portal_ellipse_a": Float((
                 min: None,
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
             "portal_ellipse_b": Float((
                 min: None,
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
             "portal_mirror": Bool(false),
             "portal_teleport_light": Bool(true),
             "room_size_x": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_y": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_z": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "triangle_x": Progress(0.14),
             "triangle_y": Progress(0.5),
@@ -686,38 +832,38 @@
             "a": Parametrized(
                 offset: (
                     x: Uniform(Some(Inline(Formula(("0.001"))))),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("pi() - (pi() - 2*pi()/count)/2"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("mirror_part"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
             "b": Parametrized(
                 offset: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("(pi() - 2*pi()/count)/2"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
             "object": Parametrized(
                 offset: (
@@ -727,20 +873,20 @@
                 ),
                 rotate: (
                     x: Value(1.5707963267948966),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 scale: Value(0.55),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         },

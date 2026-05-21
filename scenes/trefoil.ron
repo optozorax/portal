@@ -1,7 +1,19 @@
 (
     desc: (
-        eng: "This is the portal, made from knot named \"Trefoil\". To be easier to code, I chose rectangular shape of that portal called \"cubic trefoil knot\".\n\nCubic trefoil knot made out of three same parts, one of each is rotated to some angle: a, b, c. In this scene you can set which front part teleport to which back part. Due to that structure, and continuous teleport surface, you can create very interesting portals just like playing with lego.\n\nSome of these portals I invented myself, but some found in [polycut program](https://facstaff.susqu.edu/brakke/polycut/polycut.htm).\n\nI don\'t know, is there any other interesting trefoil portal formations in 6 rooms. So I suggest you to formalize that thing and invent search method to find every other portal combinations. If you found something - please email me, I will add your portal here.",
-        rus: "Это портал, составленный из узла под названием \"Трилистник\". Для удобства программирования я выбрал квадратную форму этого узла, которую можно найти в интернете по запросу \"cubic trefoil knot\".\n\nCubic trefoil knot состоит из трёх одинаковых частей, развёрнутых под разным углом: a, b, c. В данной сцене можно задавать какая передняя часть телепортирует на какую заднюю часть другого портала. За счёт такого устройства, и непрерывной телепортирующей поверхности для всех трёх частей получаются очень интересные порталы, которые можно собирать как конструктор.\n\nКакие-то из здешних порталов я изобрёл сам, а какие-то подсмотрел в [программе polycut](https://facstaff.susqu.edu/brakke/polycut/polycut.htm).\n\nЯ не знаю, возможны ли другие интересные образования порталов в 6 комнатах. Предлагаю вам формализовать эту область и изобрести метод перебора, благодаря которым вы сможете найти все возможные комбинации. Если вы найдёте что-то новое - пишете мне, я добавлю сюда.",
+        eng: r#"This is the portal, made from knot named "Trefoil". To be easier to code, I chose rectangular shape of that portal called "cubic trefoil knot".
+
+Cubic trefoil knot made out of three same parts, one of each is rotated to some angle: a, b, c. In this scene you can set which front part teleport to which back part. Due to that structure, and continuous teleport surface, you can create very interesting portals just like playing with lego.
+
+Some of these portals I invented myself, but some found in [polycut program](https://facstaff.susqu.edu/brakke/polycut/polycut.htm).
+
+I don't know, is there any other interesting trefoil portal formations in 6 rooms. So I suggest you to formalize that thing and invent search method to find every other portal combinations. If you found something - please email me, I will add your portal here."#,
+        rus: r#"Это портал, составленный из узла под названием "Трилистник". Для удобства программирования я выбрал квадратную форму этого узла, которую можно найти в интернете по запросу "cubic trefoil knot".
+
+Cubic trefoil knot состоит из трёх одинаковых частей, развёрнутых под разным углом: a, b, c. В данной сцене можно задавать какая передняя часть телепортирует на какую заднюю часть другого портала. За счёт такого устройства, и непрерывной телепортирующей поверхности для всех трёх частей получаются очень интересные порталы, которые можно собирать как конструктор.
+
+Какие-то из здешних порталов я изобрёл сам, а какие-то подсмотрел в [программе polycut](https://facstaff.susqu.edu/brakke/polycut/polycut.htm).
+
+Я не знаю, возможны ли другие интересные образования порталов в 6 комнатах. Предлагаю вам формализовать эту область и изобрести метод перебора, благодаря которым вы сможете найти все возможные комбинации. Если вы найдёте что-то новое - пишете мне, я добавлю сюда."#,
     ),
     cam: (
         look_at: (15.001, 0.001, 0.001),
@@ -14,30 +26,30 @@
         (
             name: "room_size_x",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_y",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_z",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "portal_black_color_progress",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "teleport_light",
@@ -50,7 +62,7 @@
         (
             name: "a",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.21,
             )),
@@ -58,7 +70,7 @@
         (
             name: "b",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.35,
             )),
@@ -104,62 +116,62 @@
         (
             name: "empty",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "a1",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (1.5707963267948966, 1.5707963267948966, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (1.5707963267948966, 1.5707963267948966, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "b1",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "c1",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (4.71238898038469, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (4.71238898038469, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "p1",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "p2",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
                 rotate: (1.5707963267948966, 3.141592653589793, 1.5707963267948966),
                 mirror: (false, false, false),
             ),
@@ -167,9 +179,9 @@
         (
             name: "p3",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (1.5707963267948966, 1.5707963267948966, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (1.5707963267948966, 1.5707963267948966, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -178,15 +190,15 @@
             data: If(
                 condition: Uniform(Some(Named("use_origin_room"))),
                 then: Some(Inline(Simple(
-                    offset: (0, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (0.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
                 otherwise: Some(Inline(Simple(
-                    offset: (15, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (15.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
             ),
@@ -194,45 +206,45 @@
         (
             name: "room_b",
             data: Simple(
-                offset: (-15, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (-15.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_g",
             data: Simple(
-                offset: (0, 15, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 15.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_y",
             data: Simple(
-                offset: (0, -15, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, -15.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_v",
             data: Simple(
-                offset: (0, 0, 15),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 15.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_gr",
             data: Simple(
-                offset: (0, 0, -15),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, -15.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -242,9 +254,9 @@
                 to: Some(Inline(Mul(
                     to: Some(Named("portal0")),
                     what: Some(Inline(Simple(
-                        offset: (0.001, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.001, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     ))),
                 ))),
@@ -255,9 +267,9 @@
             name: "portal2",
             data: Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0.08726646259971647, 0),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.08726646259971647, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_b")),
@@ -267,9 +279,9 @@
             name: "portal3",
             data: Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0.08726646259971647),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.08726646259971647),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_g")),
@@ -279,9 +291,9 @@
             name: "portal4",
             data: Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (6.19591884457987, 0, 0),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (6.19591884457987, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_y")),
@@ -291,9 +303,9 @@
             name: "portal5",
             data: Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (0, 6.19591884457987, 0),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 6.19591884457987, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_v")),
@@ -303,9 +315,9 @@
             name: "portal6",
             data: Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 6.19591884457987),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 6.19591884457987),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_gr")),
@@ -440,9 +452,9 @@
         (
             name: "portal0",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -451,7 +463,7 @@
             data: Simple(
                 offset: (0.4, 0.2, 0.2),
                 scale: 0.15,
-                rotate: (0, 0, 0),
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -464,20 +476,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Named("room_size_x"))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -492,20 +504,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-room_size_x"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -519,21 +531,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("room_size_y"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -547,21 +559,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("-room_size_y"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -575,21 +587,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Named("room_size_z"))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -603,21 +615,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Inline(Formula(("-room_size_z"))))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -629,7 +641,9 @@
             name: "room_r",
             data: Complex(
                 kind: Simple(Some(Named("room_r"))),
-                intersect: (("if (use_origin_room_u == 1) return scene_intersection_none;\n\nreturn intersect_box(r, room_red_M, vec3(4., 4., 4.));")),
+                intersect: (("if (use_origin_room_u == 1) return scene_intersection_none;
+
+return intersect_box(r, room_red_M, vec3(4., 4., 4.));")),
                 in_subspace: Normal,
             ),
         ),
@@ -677,7 +691,36 @@
             name: "Trefoil knot",
             data: Complex(
                 kind: Portal(Some(Named("empty")), Some(Named("empty"))),
-                intersect: (("SceneIntersection sc = scene_intersection_none;\r\nbool f = first;\r\n\r\nint size = 18;\r\nfor (int i = 0; i < 18; i++) { if (i >= size) break; // !FOR_NUMBER!\r\nfor (int i = 0; i < size; i++) { // !FOR_VARIABLE!\r\n\tint current_var = ts_0_trefoil_u;\r\n\tif (i == 0) { current_var = ts_0_trefoil_u; }\r\n\telse if (i == 1) { current_var = ts_1_trefoil_u; }\r\n\telse if (i == 2) { current_var = ts_2_trefoil_u; }\r\n\telse if (i == 3) { current_var = ts_3_trefoil_u; }\r\n\telse if (i == 4) { current_var = ts_4_trefoil_u; }\r\n\telse if (i == 5) { current_var = ts_5_trefoil_u; }\r\n\telse if (i == 6) { current_var = ts_6_trefoil_u; }\r\n\telse if (i == 7) { current_var = ts_7_trefoil_u; }\r\n\telse if (i == 8) { current_var = ts_8_trefoil_u; }\r\n\telse if (i == 9) { current_var = ts_9_trefoil_u; }\r\n\telse if (i == 10) { current_var = ts_10_trefoil_u; }\r\n\telse if (i == 11) { current_var = ts_11_trefoil_u; }\r\n\telse if (i == 12) { current_var = ts_12_trefoil_u; }\r\n\telse if (i == 13) { current_var = ts_13_trefoil_u; }\r\n\telse if (i == 14) { current_var = ts_14_trefoil_u; }\r\n\telse if (i == 15) { current_var = ts_15_trefoil_u; }\r\n\telse if (i == 16) { current_var = ts_16_trefoil_u; }\r\n\telse if (i == 17) { current_var = ts_17_trefoil_u; }\r\n\r\n\tif (current_var >= 10000) sc=pp2(sc,r,f,i,current_var-10000);\r\n}\r\n\r\nreturn sc;")),
+                intersect: (("SceneIntersection sc = scene_intersection_none;
+bool f = first;
+
+int size = 18;
+for (int i = 0; i < 18; i++) { if (i >= size) break; // !FOR_NUMBER!
+for (int i = 0; i < size; i++) { // !FOR_VARIABLE!
+	int current_var = ts_0_trefoil_u;
+	if (i == 0) { current_var = ts_0_trefoil_u; }
+	else if (i == 1) { current_var = ts_1_trefoil_u; }
+	else if (i == 2) { current_var = ts_2_trefoil_u; }
+	else if (i == 3) { current_var = ts_3_trefoil_u; }
+	else if (i == 4) { current_var = ts_4_trefoil_u; }
+	else if (i == 5) { current_var = ts_5_trefoil_u; }
+	else if (i == 6) { current_var = ts_6_trefoil_u; }
+	else if (i == 7) { current_var = ts_7_trefoil_u; }
+	else if (i == 8) { current_var = ts_8_trefoil_u; }
+	else if (i == 9) { current_var = ts_9_trefoil_u; }
+	else if (i == 10) { current_var = ts_10_trefoil_u; }
+	else if (i == 11) { current_var = ts_11_trefoil_u; }
+	else if (i == 12) { current_var = ts_12_trefoil_u; }
+	else if (i == 13) { current_var = ts_13_trefoil_u; }
+	else if (i == 14) { current_var = ts_14_trefoil_u; }
+	else if (i == 15) { current_var = ts_15_trefoil_u; }
+	else if (i == 16) { current_var = ts_16_trefoil_u; }
+	else if (i == 17) { current_var = ts_17_trefoil_u; }
+
+	if (current_var >= 10000) sc=pp2(sc,r,f,i,current_var-10000);
+}
+
+return sc;")),
                 in_subspace: Normal,
             ),
         ),
@@ -690,7 +733,7 @@
                         then: Some(Inline(Simple(
                             offset: (0.16, 0.16, 0.16),
                             scale: 0.15,
-                            rotate: (0, 0, 0),
+                            rotate: (0.0, 0.0, 0.0),
                             mirror: (false, false, false),
                         ))),
                         otherwise: Some(Inline(If(
@@ -698,7 +741,7 @@
                             then: Some(Inline(Simple(
                                 offset: (-0.12, 0.16, 0.56),
                                 scale: 0.15,
-                                rotate: (0, 0, 0),
+                                rotate: (0.0, 0.0, 0.0),
                                 mirror: (false, false, false),
                             ))),
                             otherwise: Some(Inline(If(
@@ -706,7 +749,7 @@
                                 then: Some(Inline(Simple(
                                     offset: (0.26, 0.16, 0.56),
                                     scale: 0.15,
-                                    rotate: (0, 0, 0),
+                                    rotate: (0.0, 0.0, 0.0),
                                     mirror: (false, false, false),
                                 ))),
                                 otherwise: Some(Named("object")),
@@ -715,7 +758,25 @@
                     ))),
                     what: Some(Named("room_r")),
                 )))),
-                intersect: (("if (enable_object_u == 0) return scene_intersection_none;\n\nvec3 op = -r.o.xyz;\nfloat b = dot(op, r.d.xyz);\nfloat det = b*b - dot(op, op) + 1.0;\nif (det < 0.) return scene_intersection_none;\n\ndet = sqrt(det);\nfloat t = b - det;\nif (t < 0.) t = b + det;\nif (t < 0.) return scene_intersection_none;\n\nvec4 pos = r.o + r.d * t;\nvec3 n = normalize(pos.xyz);\n\nfloat u = atan(pos.z, pos.x);\nfloat v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);\n\nreturn SceneIntersection(grid_gray_2_M, SurfaceIntersection(true, t, u, v, n), false);")),
+                intersect: (("if (enable_object_u == 0) return scene_intersection_none;
+
+vec3 op = -r.o.xyz;
+float b = dot(op, r.d.xyz);
+float det = b*b - dot(op, op) + 1.0;
+if (det < 0.) return scene_intersection_none;
+
+det = sqrt(det);
+float t = b - det;
+if (t < 0.) t = b + det;
+if (t < 0.) return scene_intersection_none;
+
+vec4 pos = r.o + r.d * t;
+vec3 n = normalize(pos.xyz);
+
+float u = atan(pos.z, pos.x);
+float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
+
+return SceneIntersection(grid_gray_2_M, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -730,7 +791,7 @@
                 r: 1.3494015130034247,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -742,7 +803,7 @@
                 r: 1.3494015130034247,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -754,7 +815,7 @@
                 r: 1.3494015130034247,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -766,7 +827,7 @@
                 r: 1.3494015130034247,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -778,7 +839,7 @@
                 r: 2.3905470937778626,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -790,7 +851,7 @@
                 r: 2.3905470937778626,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
     ]),
@@ -807,7 +868,7 @@
                 color: (0.792156862745098, 0.7372549019607844, 0.3411764705882353),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -819,7 +880,7 @@
                 color: (0.8509803921568627, 0.4588235294117647, 0.4588235294117647),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -831,7 +892,7 @@
                 color: (0.050980392156862744, 0.050980392156862744, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -843,7 +904,7 @@
                 color: (0.2235294117647059, 0.2235294117647059, 0.2235294117647059),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -855,7 +916,7 @@
                 color: (0.4117647058823529, 0.4588235294117647, 0.8980392156862745),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -864,7 +925,9 @@
         (
             name: "room_blue_texture",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(3.137254901960784e-1, 3.8823529411764707e-1, 9.254901960784314e-1), 5e-1, true, 1.0, 3e-1, false, true);\nresult.mul_to_color *= texture(texture_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(3.137254901960784e-1, 3.8823529411764707e-1, 9.254901960784314e-1), 5e-1, true, 1.0, 3e-1, false, true);
+result.mul_to_color *= texture(texture_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;
+return result;")),
             ),
         ),
         (
@@ -873,7 +936,7 @@
                 color: (0.3058823529411765, 0.7372549019607844, 0.32941176470588235),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -882,7 +945,9 @@
         (
             name: "room_green_texture",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);\nresult.mul_to_color *= texture(texture_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);
+result.mul_to_color *= texture(texture_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;
+return result;")),
             ),
         ),
         (
@@ -891,7 +956,7 @@
                 color: (0.5529411764705883, 0.2901960784313726, 0.6274509803921569),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -903,7 +968,7 @@
                 color: (0.03529411764705882, 0.6431372549019608, 0.788235294117647),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -912,7 +977,9 @@
         (
             name: "portal_blue_black",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.04732297,0.560074,0.68341726), 5e-1, false, 4e0, 3e-1);\nresult.mul_to_color *= (1.0 - portal_black_color_progress_u);\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.04732297,0.560074,0.68341726), 5e-1, false, 4e0, 3e-1);
+result.mul_to_color *= (1.0 - portal_black_color_progress_u);
+return result;")),
             ),
         ),
         (
@@ -921,7 +988,7 @@
                 color: (0.9294117647058824, 0.4235294117647059, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -930,13 +997,15 @@
         (
             name: "portal_orange_black",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.6495146,0.2954198,0.03270938), 5e-1, false, 4e0, 3e-1);\nresult.mul_to_color *= (1.0 - portal_black_color_progress_u);\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.6495146,0.2954198,0.03270938), 5e-1, false, 4e0, 3e-1);
+result.mul_to_color *= (1.0 - portal_black_color_progress_u);
+return result;")),
             ),
         ),
         (
             name: "mirror",
             data: Reflect(
-                add_to_color: (1, 1, 1),
+                add_to_color: (1.0, 1.0, 1.0),
             ),
         ),
         (
@@ -945,7 +1014,7 @@
                 color: (0.6666666666666666, 0.6666666666666666, 0.6666666666666666),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 10,
+                grid_scale: 10.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -957,7 +1026,7 @@
                 color: (0.043137254901960784, 0.043137254901960784, 0.043137254901960784),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -969,7 +1038,7 @@
                 color: (0.7686274509803922, 0.7686274509803922, 0.7686274509803922),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -978,10 +1047,10 @@
         (
             name: "solid_black",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -990,10 +1059,10 @@
         (
             name: "solid_0",
             data: Simple(
-                color: (1, 0.24313725490196078, 0.24313725490196078),
+                color: (1.0, 0.24313725490196078, 0.24313725490196078),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1002,10 +1071,10 @@
         (
             name: "solid_1",
             data: Simple(
-                color: (0.24313725490196078, 1, 0.25098039215686274),
+                color: (0.24313725490196078, 1.0, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1014,10 +1083,10 @@
         (
             name: "solid_2",
             data: Simple(
-                color: (0.1843137254901961, 0.19607843137254902, 1),
+                color: (0.1843137254901961, 0.19607843137254902, 1.0),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1026,10 +1095,10 @@
         (
             name: "solid_3",
             data: Simple(
-                color: (1, 0.9764705882352941, 0.15294117647058825),
+                color: (1.0, 0.9764705882352941, 0.15294117647058825),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1038,7 +1107,13 @@
         (
             name: "custom_teleport",
             data: Complex(
-                code: (("r.o += r.d * _offset_after_material;\nr.o = get_mat_inv(int(hit.u)) * r.o;\nr.d = get_mat_inv(int(hit.u)) * r.d;\nr.o = get_mat(int(hit.v)) * r.o;\nr.d = get_mat(int(hit.v)) * r.d;\nr.d = normalize(r.d);\nreturn material_next(vec3(1.), r);")),
+                code: (("r.o += r.d * _offset_after_material;
+r.o = get_mat_inv(int(hit.u)) * r.o;
+r.d = get_mat_inv(int(hit.u)) * r.d;
+r.o = get_mat(int(hit.v)) * r.o;
+r.d = get_mat(int(hit.v)) * r.d;
+r.d = normalize(r.d);
+return material_next(vec3(1.), r);")),
             ),
         ),
         (
@@ -1047,7 +1122,7 @@
                 color: (0.596078431372549, 0.9411764705882353, 0.16470588235294117),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -1056,7 +1131,13 @@
         (
             name: "grid_gray_2",
             data: Complex(
-                code: (("float v = ease_in_out(hit.v/PI);\nfloat u = (PI + hit.u)/(2. * PI);\n\nvec3 red = vec3(200., 30., 30.)/255.;\nvec3 blue = vec3(30., 30., 200.)/255.;\n\nreturn material_simple(hit, r, (red * v + blue * (1.-v)) * u, 5e-1, true, 4e0, 0.2);")),
+                code: (("float v = ease_in_out(hit.v/PI);
+float u = (PI + hit.u)/(2. * PI);
+
+vec3 red = vec3(200., 30., 30.)/255.;
+vec3 blue = vec3(30., 30., 200.)/255.;
+
+return material_simple(hit, r, (red * v + blue * (1.-v)) * u, 5e-1, true, 4e0, 0.2);")),
             ),
         ),
     ]),
@@ -1064,29 +1145,552 @@
     library: ([
         (
             name: "common",
-            data: (("bool invert_if(bool value, bool condition) {\n  if (condition) {\n    return !value;\n  } else {\n    return value;\n  }\n}\n\nfloat  ease_in_out(float x) {\r\nif (x < 0.5) {\n  return 4. * x * x * x;\n} else {\n  float temp = -2. * x + 2.;\n  return 1. - temp * temp * temp / 2.;\n}\n}")),
+            data: (("bool invert_if(bool value, bool condition) {
+  if (condition) {
+    return !value;
+  } else {
+    return value;
+  }
+}
+
+float  ease_in_out(float x) {
+if (x < 0.5) {
+  return 4. * x * x * x;
+} else {
+  float temp = -2. * x + 2.;
+  return 1. - temp * temp * temp / 2.;
+}
+}")),
         ),
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "box",
-            data: (("SceneIntersection intersect_box(Ray r, int material, vec3 rad) {\nvec3 m = 1.0/r.d.xyz;\nvec3 n = m*r.o.xyz;\nvec3 k = abs(m)*rad;\nvec3 t1 = -n - k;\nvec3 t2 = -n + k;\n\nfloat tN = max( max( t1.x, t1.y ), t1.z );\nfloat tF = min( min( t2.x, t2.y ), t2.z );\n\nfloat t = tN;\nif (tN < 0.0 && tF > 0.0) t = tF;\n\nif(tN > tF) return scene_intersection_none;\n\nif(t < 0.0) return scene_intersection_none;\n\nvec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\n\nvec3 pos = (r.o + r.d * t).xyz;\n\nvec2 uv = vec2(pos.x, pos.y);\nif (abs(abs(pos.x) - rad.x) < 0.0001) {\n  uv = vec2(pos.y, pos.z);\n}\nif (abs(abs(pos.y) - rad.y) < 0.0001) {\n  uv = vec2(pos.x, pos.z);\n}\n\nreturn SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);\n}")),
+            data: (("SceneIntersection intersect_box(Ray r, int material, vec3 rad) {
+vec3 m = 1.0/r.d.xyz;
+vec3 n = m*r.o.xyz;
+vec3 k = abs(m)*rad;
+vec3 t1 = -n - k;
+vec3 t2 = -n + k;
+
+float tN = max( max( t1.x, t1.y ), t1.z );
+float tF = min( min( t2.x, t2.y ), t2.z );
+
+float t = tN;
+if (tN < 0.0 && tF > 0.0) t = tF;
+
+if(tN > tF) return scene_intersection_none;
+
+if(t < 0.0) return scene_intersection_none;
+
+vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
+
+vec3 pos = (r.o + r.d * t).xyz;
+
+vec2 uv = vec2(pos.x, pos.y);
+if (abs(abs(pos.x) - rad.x) < 0.0001) {
+  uv = vec2(pos.y, pos.z);
+}
+if (abs(abs(pos.y) - rad.y) < 0.0001) {
+  uv = vec2(pos.x, pos.z);
+}
+
+return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);
+}")),
         ),
         (
             name: "portal",
-            data: (("float circle_distance(float x, float y) {\n  return sqrt(sqr(x) + sqr(y));\n}\n\nfloat ellipse_distance(float x, float y) {\n  return sqrt(2.*sqr(x) + sqr(y));\n}\n\nfloat square_distance(float x, float y) {\n  return max(abs(x), abs(y));\n}\n\nfloat rect_distance(float x, float y, float a, float b) {\n  return max(abs(x)-a+1., abs(y)-b+1.);\n}\n\nfloat triangle_distance(float x, float y, float k1, float k2, float y1) {\n  return max(\n    (y-k1*x)/sqrt(1.0+sqr(k1)),\n  max(\n    (y-k2*x)/sqrt(1.0+sqr(k2)),\n    -y1 * y\n  ));\n}\n\nint is_inside_object(\r\n  float distance, \r\n  float size, \r\n  float border,\r\n  int material_inner, \r\n  int material_border\n) {\r\n  if (distance < size) return material_inner;\r\n  if (distance < size + border) return material_border;\r\n  return NOT_INSIDE;\r\n}\n\nint is_inside_portal(\n  float distance, \n  float size, \n  float border,\n  float black_border,\n  int material_first, \n  int material_second, \n  int grid_material_first, \n  int grid_material_second, \n  bool back,\n  bool first\n) {\n  int material = material_second;\n  if (first) { material = material_first; }\n\n  if (distance < size) {\n    if (back) {\n      return material;      \n    } else {\n      if (teleport_light_u == 1) {\n      \tif (mirror_u == 1) {\n          return mirror_M;\n        } else {\n          return TELEPORT;\n        }\n      } else {\n        if (first) {\n          return grid_material_first;\n        } else {\n          return grid_material_second;\n        }\n      }\n    }\n  }\n  int black_material = solid_black_M;\n  if (_black_border_disable == 1) black_material = material;\n  if (distance < size + black_border && !back) return black_material;\n  if (distance < size + black_border + border) return material;\n  if (distance < size + black_border + border + black_border) return black_material;\n\n  return NOT_INSIDE;\n}")),
+            data: (("float circle_distance(float x, float y) {
+  return sqrt(sqr(x) + sqr(y));
+}
+
+float ellipse_distance(float x, float y) {
+  return sqrt(2.*sqr(x) + sqr(y));
+}
+
+float square_distance(float x, float y) {
+  return max(abs(x), abs(y));
+}
+
+float rect_distance(float x, float y, float a, float b) {
+  return max(abs(x)-a+1., abs(y)-b+1.);
+}
+
+float triangle_distance(float x, float y, float k1, float k2, float y1) {
+  return max(
+    (y-k1*x)/sqrt(1.0+sqr(k1)),
+  max(
+    (y-k2*x)/sqrt(1.0+sqr(k2)),
+    -y1 * y
+  ));
+}
+
+int is_inside_object(
+  float distance, 
+  float size, 
+  float border,
+  int material_inner, 
+  int material_border
+) {
+  if (distance < size) return material_inner;
+  if (distance < size + border) return material_border;
+  return NOT_INSIDE;
+}
+
+int is_inside_portal(
+  float distance, 
+  float size, 
+  float border,
+  float black_border,
+  int material_first, 
+  int material_second, 
+  int grid_material_first, 
+  int grid_material_second, 
+  bool back,
+  bool first
+) {
+  int material = material_second;
+  if (first) { material = material_first; }
+
+  if (distance < size) {
+    if (back) {
+      return material;      
+    } else {
+      if (teleport_light_u == 1) {
+      	if (mirror_u == 1) {
+          return mirror_M;
+        } else {
+          return TELEPORT;
+        }
+      } else {
+        if (first) {
+          return grid_material_first;
+        } else {
+          return grid_material_second;
+        }
+      }
+    }
+  }
+  int black_material = solid_black_M;
+  if (_black_border_disable == 1) black_material = material;
+  if (distance < size + black_border && !back) return black_material;
+  if (distance < size + black_border + border) return material;
+  if (distance < size + black_border + border + black_border) return black_material;
+
+  return NOT_INSIDE;
+}")),
         ),
         (
             name: "part",
-            data: (("int is_inside_part(vec4 pos, float x, float y, bool back) {\n  return is_inside_square(x, y, 0.3, 0.3, room_yellow_M);\n}\n\nSurfaceIntersection cap_body(Ray r, vec3 pa, vec3 pb, float radius) {\n    vec3 ro = r.o.xyz;\n    vec3 rd = r.d.xyz;\n    vec3 ba = pb - pa;\n    vec3 oa = ro - pa;\n\n    float baba = dot(ba,ba);\n    float bard = dot(ba,rd);\n    float baoa = dot(ba,oa);\n    float rdoa = dot(rd,oa);\n    float oaoa = dot(oa,oa);\n\n    float a = baba      - bard*bard;\n    float b = baba*rdoa - baoa*bard;\n    float c = baba*oaoa - baoa*baoa - radius*radius*baba;\n    float h = b*b - a*c;\n    if( h>=0.0 ) {\n        float t = (-b-sqrt(h))/a;\n        float y = baoa + t*bard;\n        // body\n        if( y>0.0 && y<baba ) {\n            vec3 pos = ro + rd * t;\n            return SurfaceIntersection(true, t, 0., 0., cap_normal(pos, pa, pb, radius));\n        }\n    }\n    return intersection_none;\n}\n\nbool is_inside_box(Ray r, vec3 size) {\n  vec3 m = 1.0/r.d.xyz;\n  vec3 n = m*r.o.xyz;\n  vec3 k = abs(m)*size;\n  vec3 t1 = -n - k;\n  vec3 t2 = -n + k;\n\n  float tN = max( max( t1.x, t1.y ), t1.z );\n  float tF = min( min( t2.x, t2.y ), t2.z );\n\n  float t = tN;\n  if (tN < 0.0 && tF > 0.0) {\n    t = tF;\n  } \n\n  return !(tN > tF || t < 0.0);\n}\n\nSceneIntersection intersect_part(Ray r, bool first, bool is_portal, bool back, int color) {\n  float b = border_size_u + black_border_size_u+0.02;\n  vec3 offset_box = vec3(b_u, a_u*2.-b_u, a_u);\n  vec3 size_box = vec3(b_u+b, b_u+b, a_u+b);\n  r.o.xyz -= offset_box;\n  if (!is_inside_box(r, size_box)) return scene_intersection_none;\n  r.o.xyz += offset_box;  \n\n\n  SceneIntersection i = SceneIntersection(0, intersection_none, false);\n  SurfaceIntersection hit = intersection_none;\n  SurfaceIntersection hit2 = intersection_none;\n  SurfaceIntersection hita = intersection_none;\n  SurfaceIntersection hitb = intersection_none;\n  vec3 normal = vec3(0.);\n  float sz = 0.1;\n  float szb = 0.01;\n  vec4 ro = r.o;\n  float radius = border_size_u;\n\n  int border_material = color;\n\nif (enable_border_u == 1 && !back) {\n  vec3 c1 = vec3(0., a_u*2., 0.);\n  vec3 c2 = vec3(b_u*2., a_u*2., 0.);\n  vec3 c3 = vec3(b_u*2., (-b_u+a_u)*2., 0.);\n  vec3 c4 = vec3(b_u*2.,(-b_u+a_u)*2., a_u*2.);\n  vec3 c5 = vec3(0., (-b_u+a_u)*2., a_u*2.);\n  vec3 c6 = vec3(0., 0., a_u*2.);\n  float br = black_border_size_u;\n\n  hit = cap_body(r, c1, c2, radius);\n  if (nearer(i, hit)) {\n      i.material = border_material;\n      i.hit = hit;\n  }\nif (enable_black_border_u == 1) {\n  hita = hit;\n  hit = cap_body(r, c1-(c2-c1)*10., c2, radius);\n  hit2 = cap_body(r, c1, c2-vec3(radius+br, 0., 0.), radius+br);\n  if (!hita.hit && !hit.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n}\n\n  hit = cap(r, c2, c3, radius);\n  if (nearer(i, hit)) {\n      i.material = border_material;\n      i.hit = hit;\n  }\nif (enable_black_border_u == 1) {\n  hitb = hit;\n  hit2 = cap_body(r, c2-vec3(0., radius+br, 0.), c3+vec3(0., radius+br, 0.), radius+br);\n  if (!hit.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n  \n  hit2 = cap(r, c2-vec3(0., radius+br, 0.), c2, radius+br);\n  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n\n  hit2 = cap(r, c2-vec3(radius+br, 0., 0.), c2, radius+br);\n  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n\n  hita = hitb;\n}\n  hit = cap(r, c3, c4, radius);\n  if (nearer(i, hit)) {\n      i.material = border_material;\n      i.hit = hit;\n  }\nif (enable_black_border_u == 1) {\n  hitb = hit;\n  hit2 = cap_body(r, c3+vec3(0., 0., radius+br), c4-vec3(0., 0., radius+br), radius+br);\n  if (!hit.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n\n  hit2 = cap(r, c3+vec3(0., radius+br, 0.), c3, radius+br);\n  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n  hit2 = cap(r, c3+vec3(0., 0., radius+br), c3, radius+br);\n  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n\n  hita = hitb;\n}\n  hit = cap(r, c4, c5, radius);\n  if (nearer(i, hit)) {\n      i.material = border_material;\n      i.hit = hit;\n  }\nif (enable_black_border_u == 1) {\n  hitb = hit;\n  hit2 = cap_body(r, c4-vec3(radius+br, 0., 0.), c5+vec3(radius+br, 0., 0.), radius+br);\n  if (!hit.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n\n  hit2 = cap(r, c4-vec3(radius+br, 0., 0.), c4, radius+br);\n  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n  hit2 = cap(r, c4-vec3(0., 0., radius+br), c4, radius+br);\n  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n\n\n  hita = hitb;\n}\n  hit = cap_body(r, c5, c6, radius);\n  if (nearer(i, hit)) {\n      i.material = border_material;\n      i.hit = hit;\n  }\nif (enable_black_border_u == 1) {\n  hitb = hit;\n  hit = cap_body(r, c6-(c5-c6)*10., c5, radius);\n  hit2 = cap_body(r, c5+vec3(0., radius+br, 0.), c6, radius+br);\n  if (!hit.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n  hit2 = cap(r, c5+vec3(radius+br, 0., 0.), c5, radius+br);\n  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n  hit2 = cap(r, c5+vec3(0., radius+br, 0.), c5, radius+br);\n  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {\n    i.hit = hit2;\n    i.material = solid_black_M;\n  }\n}\n}\n\n  if (!is_portal) return i;\n  \n  r.o = ro - vec4(0., -b_u+a_u, a_u, 0.);\n  normal = -get_normal(a1_mat);\n  hit = plane_intersect(r, a1_mat_inv, get_normal(a1_mat));\n  if (nearer(i, hit)) { \n    int inside = NOT_INSIDE;\n    float distance = rect_distance(hit.u, hit.v, b_u-a_u, a_u);\n    if (distance <= 1.0 && is_collinear(hit.n, normal) == back) {\n      i.hit = hit;\n      i.material = TELEPORT;\n    }\n  }\n\n  r.o = ro - vec4(b_u, -b_u+a_u*2., 0., 0.);\n  normal = -get_normal(b1_mat);\n  hit = plane_intersect(r, b1_mat_inv, get_normal(b1_mat));\n  if (nearer(i, hit)) { \n    float distance = rect_distance(hit.u, hit.v, b_u, b_u);\n    if (distance <= 1.0 && is_collinear(hit.n, normal) == back) {\n      i.hit = hit;\n      i.material = TELEPORT;\n    }\n  }\n\n  r.o = ro - vec4(b_u, -2.*b_u+a_u*2., a_u, 0.);\n  normal = -get_normal(c1_mat);\n  hit = plane_intersect(r, c1_mat_inv, get_normal(c1_mat));\n  if (nearer(i, hit)) { \n    int inside = NOT_INSIDE;\n    float distance = rect_distance(hit.u, hit.v, b_u, a_u);\n    if (distance <= 1.0 && is_collinear(hit.n, normal) == back) {\n      i.hit = hit;\n      i.material = TELEPORT;\n    }\n  }\n\n  return i;\n}")),
+            data: (("int is_inside_part(vec4 pos, float x, float y, bool back) {
+  return is_inside_square(x, y, 0.3, 0.3, room_yellow_M);
+}
+
+SurfaceIntersection cap_body(Ray r, vec3 pa, vec3 pb, float radius) {
+    vec3 ro = r.o.xyz;
+    vec3 rd = r.d.xyz;
+    vec3 ba = pb - pa;
+    vec3 oa = ro - pa;
+
+    float baba = dot(ba,ba);
+    float bard = dot(ba,rd);
+    float baoa = dot(ba,oa);
+    float rdoa = dot(rd,oa);
+    float oaoa = dot(oa,oa);
+
+    float a = baba      - bard*bard;
+    float b = baba*rdoa - baoa*bard;
+    float c = baba*oaoa - baoa*baoa - radius*radius*baba;
+    float h = b*b - a*c;
+    if( h>=0.0 ) {
+        float t = (-b-sqrt(h))/a;
+        float y = baoa + t*bard;
+        // body
+        if( y>0.0 && y<baba ) {
+            vec3 pos = ro + rd * t;
+            return SurfaceIntersection(true, t, 0., 0., cap_normal(pos, pa, pb, radius));
+        }
+    }
+    return intersection_none;
+}
+
+bool is_inside_box(Ray r, vec3 size) {
+  vec3 m = 1.0/r.d.xyz;
+  vec3 n = m*r.o.xyz;
+  vec3 k = abs(m)*size;
+  vec3 t1 = -n - k;
+  vec3 t2 = -n + k;
+
+  float tN = max( max( t1.x, t1.y ), t1.z );
+  float tF = min( min( t2.x, t2.y ), t2.z );
+
+  float t = tN;
+  if (tN < 0.0 && tF > 0.0) {
+    t = tF;
+  } 
+
+  return !(tN > tF || t < 0.0);
+}
+
+SceneIntersection intersect_part(Ray r, bool first, bool is_portal, bool back, int color) {
+  float b = border_size_u + black_border_size_u+0.02;
+  vec3 offset_box = vec3(b_u, a_u*2.-b_u, a_u);
+  vec3 size_box = vec3(b_u+b, b_u+b, a_u+b);
+  r.o.xyz -= offset_box;
+  if (!is_inside_box(r, size_box)) return scene_intersection_none;
+  r.o.xyz += offset_box;  
+
+
+  SceneIntersection i = SceneIntersection(0, intersection_none, false);
+  SurfaceIntersection hit = intersection_none;
+  SurfaceIntersection hit2 = intersection_none;
+  SurfaceIntersection hita = intersection_none;
+  SurfaceIntersection hitb = intersection_none;
+  vec3 normal = vec3(0.);
+  float sz = 0.1;
+  float szb = 0.01;
+  vec4 ro = r.o;
+  float radius = border_size_u;
+
+  int border_material = color;
+
+if (enable_border_u == 1 && !back) {
+  vec3 c1 = vec3(0., a_u*2., 0.);
+  vec3 c2 = vec3(b_u*2., a_u*2., 0.);
+  vec3 c3 = vec3(b_u*2., (-b_u+a_u)*2., 0.);
+  vec3 c4 = vec3(b_u*2.,(-b_u+a_u)*2., a_u*2.);
+  vec3 c5 = vec3(0., (-b_u+a_u)*2., a_u*2.);
+  vec3 c6 = vec3(0., 0., a_u*2.);
+  float br = black_border_size_u;
+
+  hit = cap_body(r, c1, c2, radius);
+  if (nearer(i, hit)) {
+      i.material = border_material;
+      i.hit = hit;
+  }
+if (enable_black_border_u == 1) {
+  hita = hit;
+  hit = cap_body(r, c1-(c2-c1)*10., c2, radius);
+  hit2 = cap_body(r, c1, c2-vec3(radius+br, 0., 0.), radius+br);
+  if (!hita.hit && !hit.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+}
+
+  hit = cap(r, c2, c3, radius);
+  if (nearer(i, hit)) {
+      i.material = border_material;
+      i.hit = hit;
+  }
+if (enable_black_border_u == 1) {
+  hitb = hit;
+  hit2 = cap_body(r, c2-vec3(0., radius+br, 0.), c3+vec3(0., radius+br, 0.), radius+br);
+  if (!hit.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+  
+  hit2 = cap(r, c2-vec3(0., radius+br, 0.), c2, radius+br);
+  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+
+  hit2 = cap(r, c2-vec3(radius+br, 0., 0.), c2, radius+br);
+  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+
+  hita = hitb;
+}
+  hit = cap(r, c3, c4, radius);
+  if (nearer(i, hit)) {
+      i.material = border_material;
+      i.hit = hit;
+  }
+if (enable_black_border_u == 1) {
+  hitb = hit;
+  hit2 = cap_body(r, c3+vec3(0., 0., radius+br), c4-vec3(0., 0., radius+br), radius+br);
+  if (!hit.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+
+  hit2 = cap(r, c3+vec3(0., radius+br, 0.), c3, radius+br);
+  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+  hit2 = cap(r, c3+vec3(0., 0., radius+br), c3, radius+br);
+  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+
+  hita = hitb;
+}
+  hit = cap(r, c4, c5, radius);
+  if (nearer(i, hit)) {
+      i.material = border_material;
+      i.hit = hit;
+  }
+if (enable_black_border_u == 1) {
+  hitb = hit;
+  hit2 = cap_body(r, c4-vec3(radius+br, 0., 0.), c5+vec3(radius+br, 0., 0.), radius+br);
+  if (!hit.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+
+  hit2 = cap(r, c4-vec3(radius+br, 0., 0.), c4, radius+br);
+  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+  hit2 = cap(r, c4-vec3(0., 0., radius+br), c4, radius+br);
+  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+
+
+  hita = hitb;
+}
+  hit = cap_body(r, c5, c6, radius);
+  if (nearer(i, hit)) {
+      i.material = border_material;
+      i.hit = hit;
+  }
+if (enable_black_border_u == 1) {
+  hitb = hit;
+  hit = cap_body(r, c6-(c5-c6)*10., c5, radius);
+  hit2 = cap_body(r, c5+vec3(0., radius+br, 0.), c6, radius+br);
+  if (!hit.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+  hit2 = cap(r, c5+vec3(radius+br, 0., 0.), c5, radius+br);
+  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+  hit2 = cap(r, c5+vec3(0., radius+br, 0.), c5, radius+br);
+  if (!hita.hit && !hitb.hit && nearer(i, hit2)) {
+    i.hit = hit2;
+    i.material = solid_black_M;
+  }
+}
+}
+
+  if (!is_portal) return i;
+  
+  r.o = ro - vec4(0., -b_u+a_u, a_u, 0.);
+  normal = -get_normal(a1_mat);
+  hit = plane_intersect(r, a1_mat_inv, get_normal(a1_mat));
+  if (nearer(i, hit)) { 
+    int inside = NOT_INSIDE;
+    float distance = rect_distance(hit.u, hit.v, b_u-a_u, a_u);
+    if (distance <= 1.0 && is_collinear(hit.n, normal) == back) {
+      i.hit = hit;
+      i.material = TELEPORT;
+    }
+  }
+
+  r.o = ro - vec4(b_u, -b_u+a_u*2., 0., 0.);
+  normal = -get_normal(b1_mat);
+  hit = plane_intersect(r, b1_mat_inv, get_normal(b1_mat));
+  if (nearer(i, hit)) { 
+    float distance = rect_distance(hit.u, hit.v, b_u, b_u);
+    if (distance <= 1.0 && is_collinear(hit.n, normal) == back) {
+      i.hit = hit;
+      i.material = TELEPORT;
+    }
+  }
+
+  r.o = ro - vec4(b_u, -2.*b_u+a_u*2., a_u, 0.);
+  normal = -get_normal(c1_mat);
+  hit = plane_intersect(r, c1_mat_inv, get_normal(c1_mat));
+  if (nearer(i, hit)) { 
+    int inside = NOT_INSIDE;
+    float distance = rect_distance(hit.u, hit.v, b_u, a_u);
+    if (distance <= 1.0 && is_collinear(hit.n, normal) == back) {
+      i.hit = hit;
+      i.material = TELEPORT;
+    }
+  }
+
+  return i;
+}")),
         ),
         (
             name: "part2",
-            data: (("SceneIntersection intersect_parts_helper(\r\n    Ray r,\r\n    bool first,\r\n    mat4 m_mat,\r\n    mat4 m_inv,\r\n    float first_no,\r\n    float second_no,\r\n    int color\r\n) {\r\n    Ray transformed_ray = transform(m_inv, r);\r\n    float len = length(transformed_ray.d);\r\n    transformed_ray.d = normalize(transformed_ray.d);\r\n    SceneIntersection ihit = intersect_part(transformed_ray, first, true, first, color);\r\n    ihit.hit.t /= len;\r\n    if (ihit.hit.hit && ihit.material != NOT_INSIDE) { \r\n        if (ihit.material == TELEPORT) { \r\n            if (teleport_light_u == 0) { ihit.material = grid_gray_M; } else {\r\n              ihit.material = custom_teleport_M;\r\n              ihit.hit.u = first_no;\r\n              ihit.hit.v = second_no;\r\n            }\r\n        }\r\n        ihit.hit.n = normalize((m_mat * vec4(ihit.hit.n, 0.)).xyz);\r\n        return ihit;\r\n    }\r\n    return scene_intersection_none;\r\n}\r\n\r\nSceneIntersection intersect_parts(\r\n    Ray r,\r\n    bool first,\r\n    mat4 first_mat,\r\n    mat4 first_inv,\r\n    float first_no,\r\n    mat4 second_mat,\r\n    mat4 second_inv,\r\n    float second_no,\r\n    int color\r\n) {\r\n    if (!first) {\r\n        return intersect_parts_helper(r, first, first_mat, first_inv, first_no, second_no, color);\r\n    } else {\r\n        return intersect_parts_helper(r, first, second_mat, second_inv, second_no, first_no, color);\r\n    }\r\n}\r\n\r\nmat4 get_mat(int number) {\r\n         if (number == 0) { return portal1_p1_mat; }\r\n    else if (number == 1) { return portal1_p2_mat; }\r\n    else if (number == 2) { return portal1_p3_mat; }\r\n\r\n    else if (number == 3) { return portal2_p1_mat; }\r\n    else if (number == 4) { return portal2_p2_mat; }\r\n    else if (number == 5) { return portal2_p3_mat; }\r\n\r\n    else if (number == 6) { return portal3_p1_mat; }\r\n    else if (number == 7) { return portal3_p2_mat; }\r\n    else if (number == 8) { return portal3_p3_mat; }\r\n\r\n    else if (number == 9) { return portal4_p1_mat; }\r\n    else if (number ==10) { return portal4_p2_mat; }\r\n    else if (number ==11) { return portal4_p3_mat; }\r\n\r\n    else if (number ==12) { return portal5_p1_mat; }\r\n    else if (number ==13) { return portal5_p2_mat; }\r\n    else if (number ==14) { return portal5_p3_mat; }\r\n\r\n    else if (number ==15) { return portal6_p1_mat; }\r\n    else if (number ==16) { return portal6_p2_mat; }\r\n    else if (number ==17) { return portal6_p3_mat; }\r\n\r\n    else { return portal1_p1_mat; }\r\n}\r\n\r\nmat4 get_mat_inv(int number) {\r\n         if (number == 0) { return portal1_p1_mat_inv; }\r\n    else if (number == 1) { return portal1_p2_mat_inv; }\r\n    else if (number == 2) { return portal1_p3_mat_inv; }\r\n\r\n    else if (number == 3) { return portal2_p1_mat_inv; }\r\n    else if (number == 4) { return portal2_p2_mat_inv; }\r\n    else if (number == 5) { return portal2_p3_mat_inv; }\r\n\r\n    else if (number == 6) { return portal3_p1_mat_inv; }\r\n    else if (number == 7) { return portal3_p2_mat_inv; }\r\n    else if (number == 8) { return portal3_p3_mat_inv; }\r\n\r\n    else if (number == 9) { return portal4_p1_mat_inv; }\r\n    else if (number ==10) { return portal4_p2_mat_inv; }\r\n    else if (number ==11) { return portal4_p3_mat_inv; }\r\n\r\n    else if (number ==12) { return portal5_p1_mat_inv; }\r\n    else if (number ==13) { return portal5_p2_mat_inv; }\r\n    else if (number ==14) { return portal5_p3_mat_inv; }\r\n\r\n    else if (number ==15) { return portal6_p1_mat_inv; }\r\n    else if (number ==16) { return portal6_p2_mat_inv; }\r\n    else if (number ==17) { return portal6_p3_mat_inv; }\r\n\r\n    else { return portal1_p1_mat; }\r\n}\r\n\r\nSceneIntersection pp2(\r\n    SceneIntersection sc,\r\n    Ray r,\r\n    bool first,\r\n    int a,\r\n    int b\r\n) {\r\n    int color = 0;\r\n    int size = 20;\r\n    for (int i = 0; i < 20; i++) { if (i >= size) break; // !FOR_NUMBER!\r\n    for (int i = 0; i < size; i++) { // !FOR_VARIABLE!\r\n        if (b >= 1000) {\r\n           b -= 1000;\r\n           color += 1;\r\n        } else {\r\n            break;\r\n        }\r\n    }\r\n    int color2 = room_red_M;\r\n    if (color == 0) color2 = portal_orange_M;\r\n    if (color == 1) color2 = portal_green_M;\r\n    if (color == 2) color2 = portal_blue_M;\r\n    if (color == 3) color2 = room_yellow_M;\r\n    if (color == 4) color2 = room_violet_M;\r\n    if (color == 5) color2 = room_gray_M;\r\n    SceneIntersection ihit = intersect_parts(\r\n      r,\r\n      first,\r\n      get_mat(a),\r\n      get_mat_inv(a),\r\n      float(a) + 0.1,\r\n      get_mat(b),\r\n      get_mat_inv(b),\r\n      float(b) + 0.1,\r\n      color2\r\n    );\r\n    if (nearer(sc, ihit)) { sc = ihit; }\r\n    return sc;\r\n}\r\n\r\nSceneIntersection pp(\r\n    SceneIntersection sc,\r\n    Ray r,\r\n    bool first,\r\n    int ar, int ap,\r\n    int br, int bp\r\n) {\r\n    int a = ar * 3 + ap;\r\n    int b = br * 3 + bp;\r\n    return pp2(sc, r, first, a, b);\r\n}")),
+            data: (("SceneIntersection intersect_parts_helper(
+    Ray r,
+    bool first,
+    mat4 m_mat,
+    mat4 m_inv,
+    float first_no,
+    float second_no,
+    int color
+) {
+    Ray transformed_ray = transform(m_inv, r);
+    float len = length(transformed_ray.d);
+    transformed_ray.d = normalize(transformed_ray.d);
+    SceneIntersection ihit = intersect_part(transformed_ray, first, true, first, color);
+    ihit.hit.t /= len;
+    if (ihit.hit.hit && ihit.material != NOT_INSIDE) { 
+        if (ihit.material == TELEPORT) { 
+            if (teleport_light_u == 0) { ihit.material = grid_gray_M; } else {
+              ihit.material = custom_teleport_M;
+              ihit.hit.u = first_no;
+              ihit.hit.v = second_no;
+            }
+        }
+        ihit.hit.n = normalize((m_mat * vec4(ihit.hit.n, 0.)).xyz);
+        return ihit;
+    }
+    return scene_intersection_none;
+}
+
+SceneIntersection intersect_parts(
+    Ray r,
+    bool first,
+    mat4 first_mat,
+    mat4 first_inv,
+    float first_no,
+    mat4 second_mat,
+    mat4 second_inv,
+    float second_no,
+    int color
+) {
+    if (!first) {
+        return intersect_parts_helper(r, first, first_mat, first_inv, first_no, second_no, color);
+    } else {
+        return intersect_parts_helper(r, first, second_mat, second_inv, second_no, first_no, color);
+    }
+}
+
+mat4 get_mat(int number) {
+         if (number == 0) { return portal1_p1_mat; }
+    else if (number == 1) { return portal1_p2_mat; }
+    else if (number == 2) { return portal1_p3_mat; }
+
+    else if (number == 3) { return portal2_p1_mat; }
+    else if (number == 4) { return portal2_p2_mat; }
+    else if (number == 5) { return portal2_p3_mat; }
+
+    else if (number == 6) { return portal3_p1_mat; }
+    else if (number == 7) { return portal3_p2_mat; }
+    else if (number == 8) { return portal3_p3_mat; }
+
+    else if (number == 9) { return portal4_p1_mat; }
+    else if (number ==10) { return portal4_p2_mat; }
+    else if (number ==11) { return portal4_p3_mat; }
+
+    else if (number ==12) { return portal5_p1_mat; }
+    else if (number ==13) { return portal5_p2_mat; }
+    else if (number ==14) { return portal5_p3_mat; }
+
+    else if (number ==15) { return portal6_p1_mat; }
+    else if (number ==16) { return portal6_p2_mat; }
+    else if (number ==17) { return portal6_p3_mat; }
+
+    else { return portal1_p1_mat; }
+}
+
+mat4 get_mat_inv(int number) {
+         if (number == 0) { return portal1_p1_mat_inv; }
+    else if (number == 1) { return portal1_p2_mat_inv; }
+    else if (number == 2) { return portal1_p3_mat_inv; }
+
+    else if (number == 3) { return portal2_p1_mat_inv; }
+    else if (number == 4) { return portal2_p2_mat_inv; }
+    else if (number == 5) { return portal2_p3_mat_inv; }
+
+    else if (number == 6) { return portal3_p1_mat_inv; }
+    else if (number == 7) { return portal3_p2_mat_inv; }
+    else if (number == 8) { return portal3_p3_mat_inv; }
+
+    else if (number == 9) { return portal4_p1_mat_inv; }
+    else if (number ==10) { return portal4_p2_mat_inv; }
+    else if (number ==11) { return portal4_p3_mat_inv; }
+
+    else if (number ==12) { return portal5_p1_mat_inv; }
+    else if (number ==13) { return portal5_p2_mat_inv; }
+    else if (number ==14) { return portal5_p3_mat_inv; }
+
+    else if (number ==15) { return portal6_p1_mat_inv; }
+    else if (number ==16) { return portal6_p2_mat_inv; }
+    else if (number ==17) { return portal6_p3_mat_inv; }
+
+    else { return portal1_p1_mat; }
+}
+
+SceneIntersection pp2(
+    SceneIntersection sc,
+    Ray r,
+    bool first,
+    int a,
+    int b
+) {
+    int color = 0;
+    int size = 20;
+    for (int i = 0; i < 20; i++) { if (i >= size) break; // !FOR_NUMBER!
+    for (int i = 0; i < size; i++) { // !FOR_VARIABLE!
+        if (b >= 1000) {
+           b -= 1000;
+           color += 1;
+        } else {
+            break;
+        }
+    }
+    int color2 = room_red_M;
+    if (color == 0) color2 = portal_orange_M;
+    if (color == 1) color2 = portal_green_M;
+    if (color == 2) color2 = portal_blue_M;
+    if (color == 3) color2 = room_yellow_M;
+    if (color == 4) color2 = room_violet_M;
+    if (color == 5) color2 = room_gray_M;
+    SceneIntersection ihit = intersect_parts(
+      r,
+      first,
+      get_mat(a),
+      get_mat_inv(a),
+      float(a) + 0.1,
+      get_mat(b),
+      get_mat_inv(b),
+      float(b) + 0.1,
+      color2
+    );
+    if (nearer(sc, ihit)) { sc = ihit; }
+    return sc;
+}
+
+SceneIntersection pp(
+    SceneIntersection sc,
+    Ray r,
+    bool first,
+    int ar, int ap,
+    int br, int bp
+) {
+    int a = ar * 3 + ap;
+    int b = br * 3 + bp;
+    return pp2(sc, r, first, a, b);
+}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "a": false,
@@ -1947,8 +2551,12 @@
                     rus: "Six portals (Narnia)",
                 ),
                 description: Some((
-                    eng: "Found this in the \"polycut\" program. I tried to find this portal by myself, using visual brute force and interface below, but couldn\'t. True portal structure you see below really surprised me.\n\nAlso, this portal has something unique, that other portals don\'t: it has three independent knot pipes on its borders!!!",
-                    rus: "Нашёл этот портал в программе \"polycut\". Изначально я старался найти этот портал самостоятельно, используя интерфейс снизу и ориентуриуясь на визуальные артефакты неправильных порталов, но так и не смог. Истинная структура этого портала реально поразила меня, я даже не знал что его можно так сделать.\n\nКстати у этого портала есть поразительное свойство, которое отсутствует у других порталов: он имеет три независимых узла, на своих границах!!!",
+                    eng: r#"Found this in the "polycut" program. I tried to find this portal by myself, using visual brute force and interface below, but couldn't. True portal structure you see below really surprised me.
+
+Also, this portal has something unique, that other portals don't: it has three independent knot pipes on its borders!!!"#,
+                    rus: r#"Нашёл этот портал в программе "polycut". Изначально я старался найти этот портал самостоятельно, используя интерфейс снизу и ориентуриуясь на визуальные артефакты неправильных порталов, но так и не смог. Истинная структура этого портала реально поразила меня, я даже не знал что его можно так сделать.
+
+Кстати у этого портала есть поразительное свойство, которое отсутствует у других порталов: он имеет три независимых узла, на своих границах!!!"#,
                 )),
                 uniforms: {
                     "a": FromDev,
@@ -2103,12 +2711,12 @@
     dev_stage: (
         uniforms: {
             "a": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.21,
             )),
             "b": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.35,
             )),
@@ -2123,21 +2731,21 @@
                 max: Some(3),
                 value: 2,
             )),
-            "portal_black_color_progress": Progress(0),
+            "portal_black_color_progress": Progress(0.0),
             "room_size_x": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_y": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_z": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "teleport_light": Bool(true),
             "trefoil": TrefoilSpecial((((true, 0, 5), (false, 0, 0), (false, 0, 0), (false, 8, 0), (false, 7, 0), (false, 1, 0), (false, 5, 0), (false, 4, 0), (false, 6, 0), (false, 0, 0), (false, 0, 0), (false, 0, 0), (false, 0, 0), (false, 0, 0), (false, 0, 0), (false, 0, 0), (false, 0, 0), (false, 0, 0)))),
@@ -2145,66 +2753,66 @@
         },
         matrices: {
             "a1": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (1.5707963267948966, 1.5707963267948966, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (1.5707963267948966, 1.5707963267948966, 0.0),
                 mirror: (false, false, false),
             ),
             "b1": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "c1": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (4.71238898038469, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (4.71238898038469, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "empty": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "object": Simple(
                 offset: (0.4, 0.2, 0.2),
                 scale: 0.15,
-                rotate: (0, 0, 0),
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "p1": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "p2": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
                 rotate: (1.5707963267948966, 3.141592653589793, 1.5707963267948966),
                 mirror: (false, false, false),
             ),
             "p3": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (1.5707963267948966, 1.5707963267948966, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (1.5707963267948966, 1.5707963267948966, 0.0),
                 mirror: (false, false, false),
             ),
             "portal0": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "portal1": Mul(
                 to: Some(Inline(Mul(
                     to: Some(Named("portal0")),
                     what: Some(Inline(Simple(
-                        offset: (0.001, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.001, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     ))),
                 ))),
@@ -2224,9 +2832,9 @@
             ),
             "portal2": Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0.08726646259971647, 0),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.08726646259971647, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_b")),
@@ -2245,9 +2853,9 @@
             ),
             "portal3": Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0.08726646259971647),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.08726646259971647),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_g")),
@@ -2266,9 +2874,9 @@
             ),
             "portal4": Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (6.19591884457987, 0, 0),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (6.19591884457987, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_y")),
@@ -2287,9 +2895,9 @@
             ),
             "portal5": Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (0, 6.19591884457987, 0),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 6.19591884457987, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_v")),
@@ -2308,9 +2916,9 @@
             ),
             "portal6": Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.01, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 6.19591884457987),
+                    offset: (0.01, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 6.19591884457987),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("room_gr")),
@@ -2328,54 +2936,54 @@
                 what: Some(Named("portal6")),
             ),
             "room_b": Simple(
-                offset: (-15, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (-15.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_g": Simple(
-                offset: (0, 15, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 15.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_gr": Simple(
-                offset: (0, 0, -15),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, -15.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_r": If(
                 condition: Uniform(Some(Named("use_origin_room"))),
                 then: Some(Inline(Simple(
-                    offset: (0, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (0.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
                 otherwise: Some(Inline(Simple(
-                    offset: (15, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (15.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
             ),
             "room_v": Simple(
-                offset: (0, 0, 15),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 15.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_y": Simple(
-                offset: (0, -15, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, -15.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         },

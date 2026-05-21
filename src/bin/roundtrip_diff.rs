@@ -1,5 +1,7 @@
 use portal::gui::id_tools::stabilize_ids;
 use portal::gui::scene::Scene;
+use portal::gui::scene_serialized::normalize_pretty_output;
+use portal::gui::scene_serialized::pretty_config;
 
 fn main() {
     let scenes_dir = std::path::Path::new("scenes");
@@ -11,7 +13,7 @@ fn main() {
         }
     };
 
-    let pretty_cfg = ron::ser::PrettyConfig::default();
+    let pretty_cfg = pretty_config();
 
     // Ensure diffs root
     let diffs_root = std::path::Path::new("diffs");
@@ -50,10 +52,14 @@ fn main() {
         let s2 = stabilize_ids(roundtripped, 64);
 
         // Pretty print
-        let s1_str = ron::ser::to_string_pretty(&s1, pretty_cfg.clone())
-            .unwrap_or_else(|_| "<serialize error>".into());
-        let s2_str = ron::ser::to_string_pretty(&s2, pretty_cfg.clone())
-            .unwrap_or_else(|_| "<serialize error>".into());
+        let s1_str = normalize_pretty_output(
+            ron::ser::to_string_pretty(&s1, pretty_cfg.clone())
+                .unwrap_or_else(|_| "<serialize error>".into()),
+        );
+        let s2_str = normalize_pretty_output(
+            ron::ser::to_string_pretty(&s2, pretty_cfg.clone())
+                .unwrap_or_else(|_| "<serialize error>".into()),
+        );
 
         // Prepare per-scene diff folder and files
         let scene_name = path

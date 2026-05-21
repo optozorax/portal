@@ -9,7 +9,7 @@ macroquad = "0.4.14"
 egui-macroquad = "0.17.2"
 glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
-ron = "0.6.4"
+ron = "0.10"
 egui = "0.31.1"
 fasteval = "0.2.4"
 quad-url = "0.1.2"

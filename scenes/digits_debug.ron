@@ -4,7 +4,7 @@
         rus: "",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: 4.501262433818195,
         beta: 1.2520592673868067,
         r: 2.1732246307070646,
@@ -17,12 +17,16 @@
             name: "digits_surface",
             data: Flat(
                 kind: Simple(Some(Inline(Simple(
-                    offset: (0, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (0.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 )))),
-                is_inside: (("if (x*x + y*y < 5.) {\n  return digits_M;\n} else {\n  return NOT_INSIDE;\n}")),
+                is_inside: (("if (x*x + y*y < 5.) {
+  return digits_M;
+} else {
+  return NOT_INSIDE;
+}")),
                 in_subspace: Normal,
             ),
         ),
@@ -41,9 +45,81 @@
     library: ([
         (
             name: "digits",
-            data: (("float DigitBin(const in int x) {\r\n  return x==0?480599.0:x==1?139810.0:x==2?476951.0:x==3?476999.0:x==4?350020.0:x==5?464711.0:x==6?464727.0:x==7?476228.0:x==8?481111.0:x==9?481095.0:0.0;\r\n}\r\n\r\nfloat PrintValue(vec2 fragCoord, vec2 pixelCoord, vec2 fontSize, float value, float digits, float decimals) {\r\n  vec2 charCoord = (fragCoord - pixelCoord) / fontSize;\r\n  if(charCoord.y < 0.0 || charCoord.y >= 1.0) return 0.0;\r\n  float bits = 0.0;\r\n  float digitIndex1 = digits - floor(charCoord.x)+ 1.0;\r\n  if(- digitIndex1 <= decimals) {\r\n    float pow1 = pow(10.0, digitIndex1);\r\n    float absValue = abs(value);\r\n    float pivot = max(absValue, 1.5) * 10.0;\r\n    if(pivot < pow1) {\r\n      if(value < 0.0 && pivot >= pow1 * 0.1) bits = 1792.0;\r\n    } else if(digitIndex1 == 0.0) {\r\n      if(decimals > 0.0) bits = 2.0;\r\n    } else {\r\n      value = digitIndex1 < 0.0 ? fract(absValue) : absValue * 10.0;\r\n      bits = DigitBin(int (mod(value / pow1, 10.0)));\r\n    }\r\n  }\r\n  return floor(mod(bits / pow(2.0, floor(fract(charCoord.x) * 4.0) + floor(charCoord.y * 5.0) * 4.0), 2.0));\r\n}\r\n\r\nfloat number(vec2 fragCoord, vec2 pixelCoord, vec2 fontSize, float value) {\r\n  return 1. - PrintValue(fragCoord, pixelCoord, fontSize, value, 0., 0.);\r\n}\r\n\r\nfloat draw_digits_spiral(vec2 uv, vec2 fontSize, int count) {\r\n  float result = 1.;\r\n  int x = 0;\r\n  int y = 0;\r\n  int lap = 1; // Tracks the current lap. The value also indirectly tracks the maximum number of steps in current lap direction.\r\n  int steps = 0; // Tracks number of steps taken in the current lap direction.\r\n  int direction = 0; // 0: Right, 1: Up, 2: Left, 3: Down\r\n  int stepLimit = 1; // Tracks steps limit in the current direction.\r\n\r\n  // Define your loop maximum, adjust based on your needs.\r\n  for (int i = 0; i < 300; i++) { if (i >= count) break; // !FOR_NUMBER!\r\n  for (int i = 0; i < count; i++) { // !FOR_VARIABLE!\r\n    // Use the coordinates: (x, y)\r\n    result *= number(uv, vec2(float(x), float(y)), fontSize, float(i));\r\n\r\n    // Move to the next cell in the current direction.\r\n    if (direction == 0) x += 1;\r\n    else if (direction == 1) y -= 1;\r\n    else if (direction == 2) x -= 1;\r\n    else if (direction == 3) y += 1;\r\n\r\n    steps++;\r\n\r\n    // Change direction logic.\r\n    if (steps == stepLimit) {\r\n      direction = direction + 1; // Change direction.\r\n      if (direction >= 4) direction = 0;\r\n      steps = 0; // Reset step counter for the new direction.\r\n      // After completing a lap in the horizontal directions (right/left), increment step limit.\r\n      if (direction == 0 || direction == 2) {\r\n        lap++; // Completed a lap, increase its range.\r\n        stepLimit = lap;\r\n      }\r\n    }\r\n  }\r\n  return result;\r\n}\r\n\r\nfloat digits1(SurfaceIntersection hit) {\r\n  // return 1.;\r\n  return draw_digits_spiral(vec2(-hit.u, hit.v)*4., vec2(4,5) * vec2(5,3)/200., 300);\r\n}\r\n")),
+            data: (("float DigitBin(const in int x) {
+  return x==0?480599.0:x==1?139810.0:x==2?476951.0:x==3?476999.0:x==4?350020.0:x==5?464711.0:x==6?464727.0:x==7?476228.0:x==8?481111.0:x==9?481095.0:0.0;
+}
+
+float PrintValue(vec2 fragCoord, vec2 pixelCoord, vec2 fontSize, float value, float digits, float decimals) {
+  vec2 charCoord = (fragCoord - pixelCoord) / fontSize;
+  if(charCoord.y < 0.0 || charCoord.y >= 1.0) return 0.0;
+  float bits = 0.0;
+  float digitIndex1 = digits - floor(charCoord.x)+ 1.0;
+  if(- digitIndex1 <= decimals) {
+    float pow1 = pow(10.0, digitIndex1);
+    float absValue = abs(value);
+    float pivot = max(absValue, 1.5) * 10.0;
+    if(pivot < pow1) {
+      if(value < 0.0 && pivot >= pow1 * 0.1) bits = 1792.0;
+    } else if(digitIndex1 == 0.0) {
+      if(decimals > 0.0) bits = 2.0;
+    } else {
+      value = digitIndex1 < 0.0 ? fract(absValue) : absValue * 10.0;
+      bits = DigitBin(int (mod(value / pow1, 10.0)));
+    }
+  }
+  return floor(mod(bits / pow(2.0, floor(fract(charCoord.x) * 4.0) + floor(charCoord.y * 5.0) * 4.0), 2.0));
+}
+
+float number(vec2 fragCoord, vec2 pixelCoord, vec2 fontSize, float value) {
+  return 1. - PrintValue(fragCoord, pixelCoord, fontSize, value, 0., 0.);
+}
+
+float draw_digits_spiral(vec2 uv, vec2 fontSize, int count) {
+  float result = 1.;
+  int x = 0;
+  int y = 0;
+  int lap = 1; // Tracks the current lap. The value also indirectly tracks the maximum number of steps in current lap direction.
+  int steps = 0; // Tracks number of steps taken in the current lap direction.
+  int direction = 0; // 0: Right, 1: Up, 2: Left, 3: Down
+  int stepLimit = 1; // Tracks steps limit in the current direction.
+
+  // Define your loop maximum, adjust based on your needs.
+  for (int i = 0; i < 300; i++) { if (i >= count) break; // !FOR_NUMBER!
+  for (int i = 0; i < count; i++) { // !FOR_VARIABLE!
+    // Use the coordinates: (x, y)
+    result *= number(uv, vec2(float(x), float(y)), fontSize, float(i));
+
+    // Move to the next cell in the current direction.
+    if (direction == 0) x += 1;
+    else if (direction == 1) y -= 1;
+    else if (direction == 2) x -= 1;
+    else if (direction == 3) y += 1;
+
+    steps++;
+
+    // Change direction logic.
+    if (steps == stepLimit) {
+      direction = direction + 1; // Change direction.
+      if (direction >= 4) direction = 0;
+      steps = 0; // Reset step counter for the new direction.
+      // After completing a lap in the horizontal directions (right/left), increment step limit.
+      if (direction == 0 || direction == 2) {
+        lap++; // Completed a lap, increase its range.
+        stepLimit = lap;
+      }
+    }
+  }
+  return result;
+}
+
+float digits1(SurfaceIntersection hit) {
+  // return 1.;
+  return draw_digits_spiral(vec2(-hit.u, hit.v)*4., vec2(4,5) * vec2(5,3)/200., 300);
+}
+")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {},
         matrices: {},

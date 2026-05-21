@@ -19,6 +19,14 @@ use super::uniform::{
 };
 use super::video::Video as OldVideo;
 
+pub fn pretty_config() -> ron::ser::PrettyConfig {
+    ron::ser::PrettyConfig::default().escape_strings(false)
+}
+
+pub fn normalize_pretty_output(output: String) -> String {
+    output.replace("\r\n", "\n").replace('\r', "\n")
+}
+
 // Serialization-only, tree-like types
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

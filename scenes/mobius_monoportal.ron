@@ -1,10 +1,30 @@
 (
     desc: (
-        eng: "# Mobius Monoportal\n\nThis portal is Mobius band in every sense! It has one continuous surface that is closed and teleports to itself.\n\nThis portal is easily constructed by two simple Mobius portals.\n\nThis portal looks and constructed just like regular Monoportal.\n\n# Twitter\n\n<https://twitter.com/optozorax/status/1372767652683214850>",
-        rus: "# Монопортал Мёбиуса\n\nЭтот портал — лента Мёбиуса во всех смыслах! У него есть всего-лишь одна портальная поверхность, которая замкнута на себе, и телепортирует на себя.\n\nЭтот портал легко собирается из обычного портала Мёбиуса из двух частей.\n\nЭтот портал выглядит и собирается прямо как обычный Монопортал.\n\n# Twitter\n\n<https://twitter.com/optozorax/status/1372767652683214850>",
+        eng: "# Mobius Monoportal
+
+This portal is Mobius band in every sense! It has one continuous surface that is closed and teleports to itself.
+
+This portal is easily constructed by two simple Mobius portals.
+
+This portal looks and constructed just like regular Monoportal.
+
+# Twitter
+
+<https://twitter.com/optozorax/status/1372767652683214850>",
+        rus: "# Монопортал Мёбиуса
+
+Этот портал — лента Мёбиуса во всех смыслах! У него есть всего-лишь одна портальная поверхность, которая замкнута на себе, и телепортирует на себя.
+
+Этот портал легко собирается из обычного портала Мёбиуса из двух частей.
+
+Этот портал выглядит и собирается прямо как обычный Монопортал.
+
+# Twitter
+
+<https://twitter.com/optozorax/status/1372767652683214850>",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: -27.444766886160973,
         beta: 1.1472552882533924,
         r: 3.8500000000000076,
@@ -14,25 +34,25 @@
         (
             name: "room_size_x",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_y",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_z",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
@@ -57,15 +77,15 @@
         ),
         (
             name: "portal_color_progress",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "mobius_rotate_local_oy",
-            data: Angle(0),
+            data: Angle(0.0),
         ),
         (
             name: "progress",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "const_portal_border_size",
@@ -80,18 +100,18 @@
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "portal_0",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -100,28 +120,28 @@
             data: Mul(
                 to: Some(Inline(Mul(
                     to: Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 1.5707963267948966, 1.5707963267948966),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 1.5707963267948966, 1.5707963267948966),
                         mirror: (false, false, false),
                     ))),
                     what: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("mobius_rotate_local_oy"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                 ))),
                 what: Some(Named("portal_0")),
@@ -132,28 +152,28 @@
             data: Mul(
                 to: Some(Inline(Mul(
                     to: Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 4.71238898038469, 1.5707963267948966),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 4.71238898038469, 1.5707963267948966),
                         mirror: (false, false, false),
                     ))),
                     what: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("mobius_rotate_local_oy"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                 ))),
                 what: Some(Named("portal_0")),
@@ -162,9 +182,9 @@
         (
             name: "portal_b_user",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -177,20 +197,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Named("room_size_x"))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -205,20 +225,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-room_size_x"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -232,21 +252,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("room_size_y"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -260,21 +280,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("-room_size_y"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -288,21 +308,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Named("room_size_z"))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -316,21 +336,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Inline(Formula(("-room_size_z"))))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -342,7 +362,25 @@
             name: "mobius",
             data: Complex(
                 kind: Portal(Some(Named("portal_a")), Some(Named("portal_b"))),
-                intersect: (("float max_u = mobius_u_progress_u * 2.0*PI;\nfloat border_u = portal_border_size_u * 0.5 * mobius_border_u_progress_u;\n\nSurfaceIntersection hit =  mobius_intersect(r, max_u);\nint material = portal_blue_M;\nif (first) { material = portal_orange_M; }\nfloat y = abs(hit.v);\nfloat black = 0.2 / 2. * 0.3;\nif (y > 1. - black || (y < 1. - portal_border_size_u + black && y > 1. - portal_border_size_u)) {\n  material = solid_black_M;\n}\nif (abs(hit.v) < 1. - portal_border_size_u && hit.u < max_u - border_u && hit.u > border_u) {\n  if (portal_teleport_light_u == 1) {\n    material = TELEPORT;\n  } else {\n    material = gray_grid_M;\n  }\n}\nreturn SceneIntersection(material, hit, false);")),
+                intersect: (("float max_u = mobius_u_progress_u * 2.0*PI;
+float border_u = portal_border_size_u * 0.5 * mobius_border_u_progress_u;
+
+SurfaceIntersection hit =  mobius_intersect(r, max_u);
+int material = portal_blue_M;
+if (first) { material = portal_orange_M; }
+float y = abs(hit.v);
+float black = 0.2 / 2. * 0.3;
+if (y > 1. - black || (y < 1. - portal_border_size_u + black && y > 1. - portal_border_size_u)) {
+  material = solid_black_M;
+}
+if (abs(hit.v) < 1. - portal_border_size_u && hit.u < max_u - border_u && hit.u > border_u) {
+  if (portal_teleport_light_u == 1) {
+    material = TELEPORT;
+  } else {
+    material = gray_grid_M;
+  }
+}
+return SceneIntersection(material, hit, false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -357,7 +395,7 @@
                 r: 4.658500000000007,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
     ]),
@@ -374,7 +412,7 @@
                 color: (0.8980392156862745, 0.8313725490196079, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -386,7 +424,7 @@
                 color: (0.9058823529411765, 0.29411764705882354, 0.29411764705882354),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -398,7 +436,7 @@
                 color: (0.050980392156862744, 0.050980392156862744, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -410,7 +448,7 @@
                 color: (0.2235294117647059, 0.2235294117647059, 0.2235294117647059),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -422,7 +460,7 @@
                 color: (0.3137254901960784, 0.38823529411764707, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -434,7 +472,7 @@
                 color: (0.2627450980392157, 0.8470588235294118, 0.30196078431372547),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -443,13 +481,17 @@
         (
             name: "portal_blue",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.04732297,0.560074,0.68341726), 5e-1, false, 4e0, 3e-1);\nresult.mul_to_color *= portal_color_progress_u;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.04732297,0.560074,0.68341726), 5e-1, false, 4e0, 3e-1);
+result.mul_to_color *= portal_color_progress_u;
+return result;")),
             ),
         ),
         (
             name: "portal_orange",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.6495146,0.2954198,0.03270938), 5e-1, false, 4e0, 3e-1);\nresult.mul_to_color *= portal_color_progress_u;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.6495146,0.2954198,0.03270938), 5e-1, false, 4e0, 3e-1);
+result.mul_to_color *= portal_color_progress_u;
+return result;")),
             ),
         ),
         (
@@ -458,7 +500,7 @@
                 color: (0.4392156862745098, 0.4392156862745098, 0.4392156862745098),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -467,22 +509,26 @@
         (
             name: "room_green_texture",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);\nresult.mul_to_color *= texture(monoportal_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);
+result.mul_to_color *= texture(monoportal_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;
+return result;")),
             ),
         ),
         (
             name: "room_blue_texture",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(3.137254901960784e-1, 3.8823529411764707e-1, 9.254901960784314e-1), 5e-1, true, 1.0, 3e-1, false, true);\nresult.mul_to_color *= texture(monoportal_tex, vec2(room_size_x_u - hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(3.137254901960784e-1, 3.8823529411764707e-1, 9.254901960784314e-1), 5e-1, true, 1.0, 3e-1, false, true);
+result.mul_to_color *= texture(monoportal_tex, vec2(room_size_x_u - hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;
+return result;")),
             ),
         ),
         (
             name: "solid_black",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -493,13 +539,192 @@
     library: ([
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "mobius",
-            data: (("vec2 two_lines_nearest_points(Ray a, Ray b) {\r\n    vec3 n = cross(a.d.xyz, b.d.xyz);\r\n    vec3 n1 = cross(a.d.xyz, n);\r\n    vec3 n2 = cross(b.d.xyz, n);\r\n    return vec2(\r\n        dot(b.o.xyz-a.o.xyz, n2)/dot(a.d.xyz, n2),\r\n        dot(a.o.xyz-b.o.xyz, n1)/dot(b.d.xyz, n1)\r\n    );\r\n}\r\n\r\nfloat project(vec3 a, vec3 to) {\r\n    return dot(a, to) / dot(to, to);\r\n}\r\n\r\nvec3 projection(vec3 a, vec3 to) {\r\n    return to * project(a, to);\r\n}\r\n\r\nfloat clamp_mod(float a, float max) {\r\n    a = max + mod(a, max);\r\n    if (a < 0.) {\r\n        a += max;\r\n    }\r\n    if (a > max) {\r\n        a -= max;\r\n    }\r\n    return a;\r\n}\r\n\r\nfloat clamp_angle(float a, float max) {\r\n    return clamp_mod(a, max);\r\n}\r\n\r\nvec3 mobius_o(float u) {\r\n    return vec3(cos(u), 0, sin(u));\r\n}\r\n\r\nvec3 mobius_d(float u) {\r\n    return vec3(cos(u/2.)*cos(u), sin(u/2.), cos(u/2.)*sin(u))/2.; // mobius\r\n}\r\n\r\nvec3 mobius_step(float u, Ray r) {\r\n    Ray l = Ray(vec4(mobius_o(u), 1.), vec4(mobius_d(u), 0.), 1.0, false);\r\n    vec2 ts = two_lines_nearest_points(l, r);\r\n\r\n    vec3 lnearest = (l.o + l.d * ts.x).xyz;\r\n    vec3 rnearest = (r.o + r.d * ts.y).xyz;\r\n    \r\n    float distance = length(lnearest - rnearest);\r\n\r\n    if (abs(ts.x) > 1.) {\r\n        distance *= 2.0 * abs(ts.x);\r\n    }\r\n\r\n    if (ts.y < 0.) {\r\n        distance *= 4.0 * abs(ts.y);\r\n    }\r\n\r\n    return vec3(distance, ts.x, ts.y); // distance, v, t\r\n}\r\n\r\nvec3 mobius_d1(float v, float u) {\r\n    float a = sin(u/2.);\r\n    float b = cos(u/2.);\r\n    float c = sin(u);\r\n    float d = cos(u);\r\n    return vec3(\r\n        b*d/2., \r\n        b*c/2., \r\n        a/2.\r\n    );\r\n}\r\n\r\nvec3 mobius_d2(float v, float u) {\r\n    float a = sin(u/2.);\r\n    float b = cos(u/2.);\r\n    float c = sin(u);\r\n    float d = cos(u);\r\n    return vec3(\r\n        -(0.25*v*a*d+0.5*v*c*b+c), \r\n        -(0.25*(v*a*c-2.*d*(v*b+2.))), \r\n        0.25*v*b\r\n    );\r\n}\r\n\r\nstruct SearchResult {\r\n    float t;\r\n    float u;\r\n    float v;\r\n};\r\n\r\nSearchResult mobius_best_approx(float u, Ray r, float max, SearchResult best) {\r\n    float eps_der = 0.0001;\r\n    float eps_newton = 0.0001;\r\n\r\n    vec3 step = mobius_step(u, r);\r\n    int count = 10; \r\n    for (int k = 0; k < 10; k++) { if (k >= count) break; // !FOR_NUMBER!\r\n    for (int k = 0; k < count; k++) { // !FOR_VARIABLE!\r\n        if (step.x < eps_newton) {\r\n            break;\r\n        }\r\n        float du = -step.x/(mobius_step(u + eps_der, r).x - step.x)*eps_der;\r\n        u = clamp_angle(u + du, max);\r\n        step = mobius_step(u, r);\r\n        if (best.t > 0. && abs(u-best.u) < 0.01) {\r\n            return SearchResult(-1., 0., 0.);\r\n        }\r\n    }\r\n\r\n    if (step.x < eps_newton) {\r\n        return SearchResult(step.z, u, step.y);    \r\n    } else {\r\n        return SearchResult(-1., 0., 0.);\r\n    }\r\n}\r\n\r\nSearchResult update_best_approx(SearchResult best, SearchResult current) {\r\n    if (current.t > 0. && (current.v > -1. && current.v < 1.)) {\r\n        if (best.t < 0.) {\r\n            best = current;\r\n        } else {\r\n            if (current.t < best.t) {\r\n                best = current;\r\n            }\r\n        }\r\n    }\r\n    return best;\r\n}\r\n\r\nSearchResult mobius_find_best(Ray r, float max) {\r\n    SearchResult best = SearchResult(-1., 0., 0.);\r\n    best = update_best_approx(best, mobius_best_approx(0., r, max, best));\r\n    best = update_best_approx(best, mobius_best_approx(PI, r, max, best));\r\n    int count1 = 2;\r\n    for (int i = 0; i < 2; i++) { if (i >= count1) break; // !FOR_NUMBER!\r\n    for (int i = 0; i < count1; i++) { // !FOR_VARIABLE!\r\n        float u = float(i*2 + 1)/4. * 2. * PI;\r\n        best = update_best_approx(best, mobius_best_approx(u, r, max, best));\r\n    }\r\n    int count2 = 4;\r\n    for (int i = 0; i < 4; i++) { if (i >= count2) break; // !FOR_NUMBER!\r\n    for (int i = 0; i < count2; i++) { // !FOR_VARIABLE!\r\n        float u = float(i*2 + 1)/8. * 2. * PI;\r\n        best = update_best_approx(best, mobius_best_approx(u, r, max, best));\r\n    }\r\n    if (best.t < 0.) {\r\n        return best;\r\n    }\r\n    best = update_best_approx(best, mobius_best_approx(float(8 - 1)/16. * 2. * PI, r, max, best));\r\n    best = update_best_approx(best, mobius_best_approx(float(8 + 1)/16. * 2. * PI, r, max, best));\r\n    return best;\r\n}\r\n\r\nbool intersect_mobius_sphere(Ray r) {\r\n    vec3 op = -r.o.xyz;\r\n    float b = dot(op, r.d.xyz);\r\n    float det = b * b - dot(op, op) + 2.4055; // 1.55²\r\n    return det >= 0.;\r\n}\r\n\r\nSurfaceIntersection mobius_intersect(Ray r, float max) {\r\n    if (intersect_mobius_sphere(r)) {\r\n        SearchResult best = mobius_find_best(r, max);\r\n        if (best.t >= 0.) {\r\n            vec3 normal = normalize_normal(cross(mobius_d1(best.v, best.u), mobius_d2(best.v, best.u)), r.d.xyz);\r\n            return SurfaceIntersection(true, best.t, best.u, best.v, normal);\r\n        }\r\n    }\r\n\r\n    return intersection_none;\r\n}")),
+            data: (("vec2 two_lines_nearest_points(Ray a, Ray b) {
+    vec3 n = cross(a.d.xyz, b.d.xyz);
+    vec3 n1 = cross(a.d.xyz, n);
+    vec3 n2 = cross(b.d.xyz, n);
+    return vec2(
+        dot(b.o.xyz-a.o.xyz, n2)/dot(a.d.xyz, n2),
+        dot(a.o.xyz-b.o.xyz, n1)/dot(b.d.xyz, n1)
+    );
+}
+
+float project(vec3 a, vec3 to) {
+    return dot(a, to) / dot(to, to);
+}
+
+vec3 projection(vec3 a, vec3 to) {
+    return to * project(a, to);
+}
+
+float clamp_mod(float a, float max) {
+    a = max + mod(a, max);
+    if (a < 0.) {
+        a += max;
+    }
+    if (a > max) {
+        a -= max;
+    }
+    return a;
+}
+
+float clamp_angle(float a, float max) {
+    return clamp_mod(a, max);
+}
+
+vec3 mobius_o(float u) {
+    return vec3(cos(u), 0, sin(u));
+}
+
+vec3 mobius_d(float u) {
+    return vec3(cos(u/2.)*cos(u), sin(u/2.), cos(u/2.)*sin(u))/2.; // mobius
+}
+
+vec3 mobius_step(float u, Ray r) {
+    Ray l = Ray(vec4(mobius_o(u), 1.), vec4(mobius_d(u), 0.), 1.0, false);
+    vec2 ts = two_lines_nearest_points(l, r);
+
+    vec3 lnearest = (l.o + l.d * ts.x).xyz;
+    vec3 rnearest = (r.o + r.d * ts.y).xyz;
+    
+    float distance = length(lnearest - rnearest);
+
+    if (abs(ts.x) > 1.) {
+        distance *= 2.0 * abs(ts.x);
+    }
+
+    if (ts.y < 0.) {
+        distance *= 4.0 * abs(ts.y);
+    }
+
+    return vec3(distance, ts.x, ts.y); // distance, v, t
+}
+
+vec3 mobius_d1(float v, float u) {
+    float a = sin(u/2.);
+    float b = cos(u/2.);
+    float c = sin(u);
+    float d = cos(u);
+    return vec3(
+        b*d/2., 
+        b*c/2., 
+        a/2.
+    );
+}
+
+vec3 mobius_d2(float v, float u) {
+    float a = sin(u/2.);
+    float b = cos(u/2.);
+    float c = sin(u);
+    float d = cos(u);
+    return vec3(
+        -(0.25*v*a*d+0.5*v*c*b+c), 
+        -(0.25*(v*a*c-2.*d*(v*b+2.))), 
+        0.25*v*b
+    );
+}
+
+struct SearchResult {
+    float t;
+    float u;
+    float v;
+};
+
+SearchResult mobius_best_approx(float u, Ray r, float max, SearchResult best) {
+    float eps_der = 0.0001;
+    float eps_newton = 0.0001;
+
+    vec3 step = mobius_step(u, r);
+    int count = 10; 
+    for (int k = 0; k < 10; k++) { if (k >= count) break; // !FOR_NUMBER!
+    for (int k = 0; k < count; k++) { // !FOR_VARIABLE!
+        if (step.x < eps_newton) {
+            break;
+        }
+        float du = -step.x/(mobius_step(u + eps_der, r).x - step.x)*eps_der;
+        u = clamp_angle(u + du, max);
+        step = mobius_step(u, r);
+        if (best.t > 0. && abs(u-best.u) < 0.01) {
+            return SearchResult(-1., 0., 0.);
+        }
+    }
+
+    if (step.x < eps_newton) {
+        return SearchResult(step.z, u, step.y);    
+    } else {
+        return SearchResult(-1., 0., 0.);
+    }
+}
+
+SearchResult update_best_approx(SearchResult best, SearchResult current) {
+    if (current.t > 0. && (current.v > -1. && current.v < 1.)) {
+        if (best.t < 0.) {
+            best = current;
+        } else {
+            if (current.t < best.t) {
+                best = current;
+            }
+        }
+    }
+    return best;
+}
+
+SearchResult mobius_find_best(Ray r, float max) {
+    SearchResult best = SearchResult(-1., 0., 0.);
+    best = update_best_approx(best, mobius_best_approx(0., r, max, best));
+    best = update_best_approx(best, mobius_best_approx(PI, r, max, best));
+    int count1 = 2;
+    for (int i = 0; i < 2; i++) { if (i >= count1) break; // !FOR_NUMBER!
+    for (int i = 0; i < count1; i++) { // !FOR_VARIABLE!
+        float u = float(i*2 + 1)/4. * 2. * PI;
+        best = update_best_approx(best, mobius_best_approx(u, r, max, best));
+    }
+    int count2 = 4;
+    for (int i = 0; i < 4; i++) { if (i >= count2) break; // !FOR_NUMBER!
+    for (int i = 0; i < count2; i++) { // !FOR_VARIABLE!
+        float u = float(i*2 + 1)/8. * 2. * PI;
+        best = update_best_approx(best, mobius_best_approx(u, r, max, best));
+    }
+    if (best.t < 0.) {
+        return best;
+    }
+    best = update_best_approx(best, mobius_best_approx(float(8 - 1)/16. * 2. * PI, r, max, best));
+    best = update_best_approx(best, mobius_best_approx(float(8 + 1)/16. * 2. * PI, r, max, best));
+    return best;
+}
+
+bool intersect_mobius_sphere(Ray r) {
+    vec3 op = -r.o.xyz;
+    float b = dot(op, r.d.xyz);
+    float det = b * b - dot(op, op) + 2.4055; // 1.55²
+    return det >= 0.;
+}
+
+SurfaceIntersection mobius_intersect(Ray r, float max) {
+    if (intersect_mobius_sphere(r)) {
+        SearchResult best = mobius_find_best(r, max);
+        if (best.t >= 0.) {
+            vec3 normal = normalize_normal(cross(mobius_d1(best.v, best.u), mobius_d2(best.v, best.u)), r.d.xyz);
+            return SurfaceIntersection(true, best.t, best.u, best.v, normal);
+        }
+    }
+
+    return intersection_none;
+}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "const_portal_border_size": false,
@@ -571,8 +796,19 @@
             ),
             "portal_b_user": (
                 help_description: Some((
-                    eng: "Try rotate this around and found another\nangle/mirror combination when blue portal\nis match orange portal, and not equal to the\nshowed rotation. You will found that there is\nno other option. Therefore this is the only \none Möbius monoportal.",
-                    rus: "Попробуй покрутить этот портал и найти\nдругую комбинацию угол/отражение, которая\nзаставит голубой портал совпасть с оранжевым. \nОчень скоро ты обнаружишь, что не существует \nварианта, отличного от показанного в этой \nанимации, поэтому данный монопортал \nМёбиуса является единственным возможным.",
+                    eng: "Try rotate this around and found another
+angle/mirror combination when blue portal
+is match orange portal, and not equal to the
+showed rotation. You will found that there is
+no other option. Therefore this is the only 
+one Möbius monoportal.",
+                    rus: "Попробуй покрутить этот портал и найти
+другую комбинацию угол/отражение, которая
+заставит голубой портал совпасть с оранжевым. 
+Очень скоро ты обнаружишь, что не существует 
+варианта, отличного от показанного в этой 
+анимации, поэтому данный монопортал 
+Мёбиуса является единственным возможным.",
                 )),
                 overrided_name: "Blue portal position",
             ),
@@ -617,11 +853,11 @@
                 description: None,
                 uniforms: {
                     "const_portal_border_size": FromDev,
-                    "mobius_border_u_progress": Changed(Some(Inline(Progress(0)))),
+                    "mobius_border_u_progress": Changed(Some(Inline(Progress(0.0)))),
                     "mobius_rotate_local_oy": FromDev,
                     "mobius_u_progress": FromDev,
                     "portal_border_size": Changed(Some(Inline(Formula(("const_portal_border_size + progress"))))),
-                    "portal_color_progress": Changed(Some(Inline(Progress(1)))),
+                    "portal_color_progress": Changed(Some(Inline(Progress(1.0)))),
                     "portal_teleport_light": FromDev,
                     "progress": ProvidedToUser,
                     "room_size_x": FromDev,
@@ -633,38 +869,38 @@
                     "portal_a": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-2.4 * (1.0-progress)"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Value(1.5707963267948966),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "portal_b": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("2.4 * (1.0 - progress)"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Value(1.5707963267948966),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "portal_b_user": FromDev,
                     "room_origin": FromDev,
@@ -693,9 +929,9 @@
                     "portal_border_size": Changed(Some(Inline(Float((
                         min: None,
                         max: None,
-                        value: 2,
+                        value: 2.0,
                     ))))),
-                    "portal_color_progress": Changed(Some(Inline(Progress(1)))),
+                    "portal_color_progress": Changed(Some(Inline(Progress(1.0)))),
                     "portal_teleport_light": FromDev,
                     "progress": ProvidedToUser,
                     "room_size_x": FromDev,
@@ -705,29 +941,29 @@
                 matrices: {
                     "portal_0": FromDev,
                     "portal_a": Changed(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 1.5707963267948966),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 1.5707963267948966),
                         mirror: (false, false, false),
                     )))),
                     "portal_b": Changed(Some(Inline(Mul(
                         to: Some(Inline(Parametrized(
                             offset: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
                             rotate: (
-                                x: Value(0),
+                                x: Value(0.0),
                                 y: Uniform(Some(Inline(Formula(("progress * pi()"))))),
                                 z: Value(1.5707963267948966),
                             ),
                             mirror: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
-                            scale: Value(1),
+                            scale: Value(1.0),
                         ))),
                         what: Some(Named("portal_b_user")),
                     )))),
@@ -751,11 +987,11 @@
                 description: None,
                 uniforms: {
                     "const_portal_border_size": FromDev,
-                    "mobius_border_u_progress": Changed(Some(Inline(Progress(0)))),
+                    "mobius_border_u_progress": Changed(Some(Inline(Progress(0.0)))),
                     "mobius_rotate_local_oy": FromDev,
                     "mobius_u_progress": FromDev,
                     "portal_border_size": Changed(Some(Inline(Formula(("(1.0 - progress) + const_portal_border_size"))))),
-                    "portal_color_progress": Changed(Some(Inline(Progress(1)))),
+                    "portal_color_progress": Changed(Some(Inline(Progress(1.0)))),
                     "portal_teleport_light": FromDev,
                     "progress": ProvidedToUser,
                     "room_size_x": FromDev,
@@ -767,38 +1003,38 @@
                     "portal_a": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-progress"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Value(1.5707963267948966),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "portal_b": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("progress"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(3.141592653589793),
                             z: Value(1.5707963267948966),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "portal_b_user": FromDev,
                     "room_origin": FromDev,
@@ -824,7 +1060,7 @@
                     "mobius_rotate_local_oy": FromDev,
                     "mobius_u_progress": Changed(Some(Inline(Formula(("1.0 - progress * 0.5"))))),
                     "portal_border_size": FromDev,
-                    "portal_color_progress": Changed(Some(Inline(Progress(1)))),
+                    "portal_color_progress": Changed(Some(Inline(Progress(1.0)))),
                     "portal_teleport_light": FromDev,
                     "progress": ProvidedToUser,
                     "room_size_x": FromDev,
@@ -834,15 +1070,15 @@
                 matrices: {
                     "portal_0": FromDev,
                     "portal_a": Changed(Some(Inline(Simple(
-                        offset: (-1, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 1.5707963267948966),
+                        offset: (-1.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 1.5707963267948966),
                         mirror: (false, false, false),
                     )))),
                     "portal_b": Changed(Some(Inline(Simple(
-                        offset: (1, 0, 0),
-                        scale: 1,
-                        rotate: (0, 3.141592653589793, 1.5707963267948966),
+                        offset: (1.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 3.141592653589793, 1.5707963267948966),
                         mirror: (false, false, false),
                     )))),
                     "portal_b_user": FromDev,
@@ -865,11 +1101,11 @@
                 description: None,
                 uniforms: {
                     "const_portal_border_size": FromDev,
-                    "mobius_border_u_progress": Changed(Some(Inline(Progress(1)))),
+                    "mobius_border_u_progress": Changed(Some(Inline(Progress(1.0)))),
                     "mobius_rotate_local_oy": FromDev,
                     "mobius_u_progress": Changed(Some(Inline(Progress(0.5)))),
                     "portal_border_size": FromDev,
-                    "portal_color_progress": Changed(Some(Inline(Progress(1)))),
+                    "portal_color_progress": Changed(Some(Inline(Progress(1.0)))),
                     "portal_teleport_light": FromDev,
                     "progress": ProvidedToUser,
                     "room_size_x": FromDev,
@@ -881,38 +1117,38 @@
                     "portal_a": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-1.0+progress"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Value(1.5707963267948966),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "portal_b": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("1.0-progress"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(3.141592653589793),
                             z: Value(1.5707963267948966),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "portal_b_user": FromDev,
                     "room_origin": FromDev,
@@ -949,39 +1185,39 @@
                     "portal_0": FromDev,
                     "portal_a": Changed(Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("progress * pi() / 2"))))),
                             z: Value(1.5707963267948966),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "portal_b": Changed(Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("pi() + progress * pi() / 2"))))),
                             z: Value(1.5707963267948966),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "portal_b_user": FromDev,
                     "room_origin": FromDev,
@@ -1014,7 +1250,7 @@
                     "mobius_rotate_local_oy": ProvidedToUser,
                     "mobius_u_progress": Changed(Some(Inline(Progress(0.5)))),
                     "portal_border_size": FromDev,
-                    "portal_color_progress": Changed(Some(Inline(Progress(0)))),
+                    "portal_color_progress": Changed(Some(Inline(Progress(0.0)))),
                     "portal_teleport_light": FromDev,
                     "progress": FromDev,
                     "room_size_x": FromDev,
@@ -1026,28 +1262,28 @@
                     "portal_a": Changed(Some(Inline(Mul(
                         to: Some(Inline(Mul(
                             to: Some(Inline(Simple(
-                                offset: (0, 0, 0),
-                                scale: 1,
-                                rotate: (0, 1.5707963267948966, 1.5707963267948966),
+                                offset: (0.0, 0.0, 0.0),
+                                scale: 1.0,
+                                rotate: (0.0, 1.5707963267948966, 1.5707963267948966),
                                 mirror: (false, false, false),
                             ))),
                             what: Some(Inline(Parametrized(
                                 offset: (
-                                    x: Value(0),
-                                    y: Value(0),
-                                    z: Value(0),
+                                    x: Value(0.0),
+                                    y: Value(0.0),
+                                    z: Value(0.0),
                                 ),
                                 rotate: (
-                                    x: Value(0),
+                                    x: Value(0.0),
                                     y: Uniform(Some(Named("mobius_rotate_local_oy"))),
-                                    z: Value(0),
+                                    z: Value(0.0),
                                 ),
                                 mirror: (
-                                    x: Value(0),
-                                    y: Value(0),
-                                    z: Value(0),
+                                    x: Value(0.0),
+                                    y: Value(0.0),
+                                    z: Value(0.0),
                                 ),
-                                scale: Value(1),
+                                scale: Value(1.0),
                             ))),
                         ))),
                         what: Some(Named("portal_0")),
@@ -1055,28 +1291,28 @@
                     "portal_b": Changed(Some(Inline(Mul(
                         to: Some(Inline(Mul(
                             to: Some(Inline(Simple(
-                                offset: (0, 0, 0),
-                                scale: 1,
-                                rotate: (0, 4.71238898038469, 1.5707963267948966),
+                                offset: (0.0, 0.0, 0.0),
+                                scale: 1.0,
+                                rotate: (0.0, 4.71238898038469, 1.5707963267948966),
                                 mirror: (false, false, false),
                             ))),
                             what: Some(Inline(Parametrized(
                                 offset: (
-                                    x: Value(0),
-                                    y: Value(0),
-                                    z: Value(0),
+                                    x: Value(0.0),
+                                    y: Value(0.0),
+                                    z: Value(0.0),
                                 ),
                                 rotate: (
-                                    x: Value(0),
+                                    x: Value(0.0),
                                     y: Uniform(Some(Named("mobius_rotate_local_oy"))),
-                                    z: Value(0),
+                                    z: Value(0.0),
                                 ),
                                 mirror: (
-                                    x: Value(0),
-                                    y: Value(0),
-                                    z: Value(0),
+                                    x: Value(0.0),
+                                    y: Value(0.0),
+                                    z: Value(0.0),
                                 ),
-                                scale: Value(1),
+                                scale: Value(1.0),
                             ))),
                         ))),
                         what: Some(Named("portal_0")),
@@ -1100,52 +1336,52 @@
                 max: None,
                 value: 0.2,
             )),
-            "mobius_border_u_progress": Progress(1),
-            "mobius_rotate_local_oy": Angle(0),
-            "mobius_u_progress": Progress(1),
+            "mobius_border_u_progress": Progress(1.0),
+            "mobius_rotate_local_oy": Angle(0.0),
+            "mobius_u_progress": Progress(1.0),
             "portal_border_size": Formula(("const_portal_border_size")),
-            "portal_color_progress": Progress(0),
+            "portal_color_progress": Progress(0.0),
             "portal_teleport_light": Bool(true),
-            "progress": Progress(0),
+            "progress": Progress(0.0),
             "room_size_x": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_y": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_z": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         },
         matrices: {
             "portal_0": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "portal_a": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "portal_b": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         },

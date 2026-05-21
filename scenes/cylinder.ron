@@ -1,10 +1,14 @@
 (
     desc: (
-        eng: "Portal in the shape of the cylinder. With it you can do many useful things: table without legs, portal armor, contactless stick. With cylindric portal you can pick locks or do some surgeries without dissection. Incredibly interesting and useful thing.\n\nUPD 03.03.2024: turns out this was already in Polycut and is called Catenoids. If you enable the second side, you get a 1-in-1 picture from Polycut.",
-        rus: "Портал в форме цилиндра. С помощью него можно создать очень много полезных штук: стол без ножек, портальная броня, бесконтактная палка. С помощью цилиндрического портала можно взламывать замки или делать некоторые операции без вскрытия. Невероятно интересная и полезная штука!\n\nUPD 03.03.2024: оказывается это уже было в Polycut и называется Catenoids. Если включить вторую сторону, то получается 1-в-1 картинка из Polycut.",
+        eng: "Portal in the shape of the cylinder. With it you can do many useful things: table without legs, portal armor, contactless stick. With cylindric portal you can pick locks or do some surgeries without dissection. Incredibly interesting and useful thing.
+
+UPD 03.03.2024: turns out this was already in Polycut and is called Catenoids. If you enable the second side, you get a 1-in-1 picture from Polycut.",
+        rus: "Портал в форме цилиндра. С помощью него можно создать очень много полезных штук: стол без ножек, портальная броня, бесконтактная палка. С помощью цилиндрического портала можно взламывать замки или делать некоторые операции без вскрытия. Невероятно интересная и полезная штука!
+
+UPD 03.03.2024: оказывается это уже было в Polycut и называется Catenoids. Если включить вторую сторону, то получается 1-в-1 картинка из Polycut.",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: 1.4751068381694619,
         beta: 1.207755910158157,
         r: 3.914251301220411,
@@ -14,30 +18,30 @@
         (
             name: "room_size_x",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_y",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_z",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "portal_black_color_progress",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "teleport_light",
@@ -50,19 +54,19 @@
         (
             name: "cylinder_size",
             data: Float((
-                min: Some(0),
-                max: Some(5),
+                min: Some(0.0),
+                max: Some(5.0),
                 value: 0.5,
             )),
         ),
         (
             name: "cylinder_progress",
-            data: Progress(1),
+            data: Progress(1.0),
         ),
         (
             name: "orig_cylinder_radius",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.66,
             )),
@@ -70,7 +74,7 @@
         (
             name: "table_h",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.66,
             )),
@@ -78,15 +82,15 @@
         (
             name: "table_w",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
         ),
         (
             name: "table_height",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 1.16,
             )),
@@ -94,7 +98,7 @@
         (
             name: "table_leg_width",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.05,
             )),
@@ -102,18 +106,18 @@
         (
             name: "table_width",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.03,
             )),
         ),
         (
             name: "wear_portal_legs",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "human_progress",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "enable_human",
@@ -133,7 +137,7 @@
         ),
         (
             name: "triangle_pos",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "enable_cylinder_object",
@@ -148,27 +152,27 @@
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "p1",
             data: Simple(
-                offset: (-1.2, 0, 0),
-                scale: 1,
-                rotate: (1.5707963267948966, 0, 0),
+                offset: (-1.2, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (1.5707963267948966, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "p2",
             data: Simple(
-                offset: (1.2, 0, 0),
-                scale: 1,
-                rotate: (1.5707963267948966, 0, 0),
+                offset: (1.2, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (1.5707963267948966, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -176,9 +180,9 @@
             name: "triangle",
             data: Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.73, -0.5, 0),
+                    offset: (0.73, -0.5, 0.0),
                     scale: 1.26,
-                    rotate: (0, 0, 0),
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("p1")),
@@ -197,21 +201,21 @@
             data: Mul(
                 to: Some(Inline(Parametrized(
                     offset: (
-                        x: Value(0),
+                        x: Value(0.0),
                         y: Uniform(Some(Inline(Formula(("table_height+table_leg_width-table_width"))))),
-                        z: Value(0),
+                        z: Value(0.0),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
@@ -220,21 +224,21 @@
             name: "table",
             data: Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("-4+table_leg_width+(1-wear_portal_legs)*(table_height+0.2)"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
         ),
         (
@@ -243,20 +247,20 @@
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("table_h-table_leg_width"))))),
-                        y: Value(0),
+                        y: Value(0.0),
                         z: Uniform(Some(Inline(Formula(("table_w-table_leg_width"))))),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
@@ -267,20 +271,20 @@
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("table_h-table_leg_width"))))),
-                        y: Value(0),
+                        y: Value(0.0),
                         z: Uniform(Some(Inline(Formula(("-(table_w-table_leg_width)"))))),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
@@ -291,20 +295,20 @@
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("-(table_h-table_leg_width)"))))),
-                        y: Value(0),
+                        y: Value(0.0),
                         z: Uniform(Some(Inline(Formula(("table_w-table_leg_width"))))),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
@@ -315,20 +319,20 @@
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("-(table_h-table_leg_width)"))))),
-                        y: Value(0),
+                        y: Value(0.0),
                         z: Uniform(Some(Inline(Formula(("-(table_w-table_leg_width)"))))),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
@@ -337,21 +341,21 @@
             name: "portal_leg_common",
             data: Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("table_height/2-table_width-(1-wear_portal_legs)*(table_height+0.2)"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
                     x: Value(1.5707963267948966),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
         ),
         (
@@ -359,15 +363,15 @@
             data: Teleport(
                 first_portal: Some(Named("table")),
                 second_portal: Some(Inline(Simple(
-                    offset: (0, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (0.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Inline(Simple(
                     offset: (2.82, -3.35, 2.83),
-                    scale: 1,
-                    rotate: (1.5707963267948966, 0, 0),
+                    scale: 1.0,
+                    rotate: (1.5707963267948966, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
             ),
@@ -375,27 +379,27 @@
         (
             name: "human",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room1",
             data: Simple(
-                offset: (-9, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (-9.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room2",
             data: Simple(
-                offset: (9, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (9.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -408,20 +412,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Named("room_size_x"))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -436,20 +440,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-room_size_x"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -463,21 +467,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("room_size_y"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -491,21 +495,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("-room_size_y"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -519,21 +523,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Named("room_size_z"))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -547,21 +551,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Inline(Formula(("-room_size_z"))))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -573,7 +577,17 @@
             name: "main cylinder",
             data: Complex(
                 kind: Portal(Some(Named("p1")), Some(Named("p2"))),
-                intersect: (("if (enable_cylinder_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_v2(\n  orig_cylinder_radius_u,\n  pow(cylinder_progress_u, 2.0),\n  0.07,\n  0.02,\n  cylinder_size_u,\n  r,\n  first\n);")),
+                intersect: (("if (enable_cylinder_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_v2(
+  orig_cylinder_radius_u,
+  pow(cylinder_progress_u, 2.0),
+  0.07,
+  0.02,
+  cylinder_size_u,
+  r,
+  first
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -581,7 +595,20 @@
             name: "main cylinder triangle",
             data: Flat(
                 kind: Simple(Some(Named("triangle"))),
-                is_inside: (("if (enable_cylinder_u == 0) { return NOT_INSIDE; }\nif (enable_triangle_u == 0) { return NOT_INSIDE; }\n\nvec4 portal_pos = p1_mat_inv * pos;\nfloat cylinder_radius = get_orig_cylinder_radius(orig_cylinder_radius_u, pow(cylinder_progress_u, 2.0));\nif (sqr(portal_pos.x + cylinder_radius - orig_cylinder_radius_u) + sqr(portal_pos.y) < sqr(cylinder_radius)) return NOT_INSIDE;\n\nreturn is_inside_object(\n  0.3,\n  triangle_distance(x, y, 1.61, -1.61, 1.0),\n  0.03,\n  triangle_white_M,\n  triangle_black_M\n);")),
+                is_inside: (("if (enable_cylinder_u == 0) { return NOT_INSIDE; }
+if (enable_triangle_u == 0) { return NOT_INSIDE; }
+
+vec4 portal_pos = p1_mat_inv * pos;
+float cylinder_radius = get_orig_cylinder_radius(orig_cylinder_radius_u, pow(cylinder_progress_u, 2.0));
+if (sqr(portal_pos.x + cylinder_radius - orig_cylinder_radius_u) + sqr(portal_pos.y) < sqr(cylinder_radius)) return NOT_INSIDE;
+
+return is_inside_object(
+  0.3,
+  triangle_distance(x, y, 1.61, -1.61, 1.0),
+  0.03,
+  triangle_white_M,
+  triangle_black_M
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -589,7 +616,20 @@
             name: "main cylinder triangle teleported",
             data: Flat(
                 kind: Simple(Some(Named("triangle_teleported"))),
-                is_inside: (("if (enable_cylinder_u == 0) { return NOT_INSIDE; }\nif (enable_triangle_u == 0) { return NOT_INSIDE; }\n\nvec4 portal_pos = p2_mat_inv * pos;\nfloat cylinder_radius = get_orig_cylinder_radius(orig_cylinder_radius_u, pow(cylinder_progress_u, 2.0));\nif (sqr(portal_pos.x + cylinder_radius - orig_cylinder_radius_u) + sqr(portal_pos.y) > sqr(cylinder_radius)) return NOT_INSIDE;\n\nreturn is_inside_object(\n  0.3,\n  triangle_distance(x, y, 1.61, -1.61, 1.0),\n  0.03,\n  triangle_white_M,\n  triangle_black_M\n);")),
+                is_inside: (("if (enable_cylinder_u == 0) { return NOT_INSIDE; }
+if (enable_triangle_u == 0) { return NOT_INSIDE; }
+
+vec4 portal_pos = p2_mat_inv * pos;
+float cylinder_radius = get_orig_cylinder_radius(orig_cylinder_radius_u, pow(cylinder_progress_u, 2.0));
+if (sqr(portal_pos.x + cylinder_radius - orig_cylinder_radius_u) + sqr(portal_pos.y) > sqr(cylinder_radius)) return NOT_INSIDE;
+
+return is_inside_object(
+  0.3,
+  triangle_distance(x, y, 1.61, -1.61, 1.0),
+  0.03,
+  triangle_white_M,
+  triangle_black_M
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -597,7 +637,9 @@
             name: "main cylinder room1",
             data: Complex(
                 kind: Simple(Some(Named("room1"))),
-                intersect: (("if (enable_cylinder_u == 0) { return scene_intersection_none; }\n\nreturn intersect_box(r, room_red_M);")),
+                intersect: (("if (enable_cylinder_u == 0) { return scene_intersection_none; }
+
+return intersect_box(r, room_red_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -605,7 +647,9 @@
             name: "main cylinder room2",
             data: Complex(
                 kind: Simple(Some(Named("room2"))),
-                intersect: (("if (enable_cylinder_u == 0) { return scene_intersection_none; }\n\nreturn intersect_box(r, room_blue_M);")),
+                intersect: (("if (enable_cylinder_u == 0) { return scene_intersection_none; }
+
+return intersect_box(r, room_blue_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -613,7 +657,31 @@
             name: "table box",
             data: Complex(
                 kind: Simple(Some(Named("box"))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\n// thanks to @iq for https://www.shadertoy.com/view/ld23DV\n\nvec3 rad = vec3(table_h_u, table_width_u, table_w_u);\n\nvec3 rdd = r.d.xyz;\nvec3 roo = r.o.xyz;\n\n// ray-box intersection in box space\nvec3 m = 1.0/rdd;\nvec3 n = m*roo;\nvec3 k = abs(m)*rad;\n\nvec3 t1 = -n - k;\nvec3 t2 = -n + k;\n\nfloat tN = max( max( t1.x, t1.y ), t1.z );\nfloat tF = min( min( t2.x, t2.y ), t2.z );\n\nif(tN > tF || tF < 0.0) return scene_intersection_none;\n\nvec3 nor = -sign(rdd)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\n\nreturn SceneIntersection(triangle_white_M, SurfaceIntersection(true, tN, 0., 0., nor), false);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+// thanks to @iq for https://www.shadertoy.com/view/ld23DV
+
+vec3 rad = vec3(table_h_u, table_width_u, table_w_u);
+
+vec3 rdd = r.d.xyz;
+vec3 roo = r.o.xyz;
+
+// ray-box intersection in box space
+vec3 m = 1.0/rdd;
+vec3 n = m*roo;
+vec3 k = abs(m)*rad;
+
+vec3 t1 = -n - k;
+vec3 t2 = -n + k;
+
+float tN = max( max( t1.x, t1.y ), t1.z );
+float tF = min( min( t2.x, t2.y ), t2.z );
+
+if(tN > tF || tF < 0.0) return scene_intersection_none;
+
+vec3 nor = -sign(rdd)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
+
+return SceneIntersection(triangle_white_M, SurfaceIntersection(true, tN, 0., 0., nor), false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -621,7 +689,9 @@
             name: "table leg1",
             data: Complex(
                 kind: Simple(Some(Named("leg1"))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\nreturn SceneIntersection(triangle_white_M, cap(r, vec3(0.), vec3(0., table_height_u, 0.), table_leg_width_u), false);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+return SceneIntersection(triangle_white_M, cap(r, vec3(0.), vec3(0., table_height_u, 0.), table_leg_width_u), false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -629,7 +699,9 @@
             name: "table leg2",
             data: Complex(
                 kind: Simple(Some(Named("leg2"))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\nreturn SceneIntersection(triangle_white_M, cap(r, vec3(0.), vec3(0., table_height_u, 0.), table_leg_width_u), false);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+return SceneIntersection(triangle_white_M, cap(r, vec3(0.), vec3(0., table_height_u, 0.), table_leg_width_u), false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -637,7 +709,9 @@
             name: "table leg3",
             data: Complex(
                 kind: Simple(Some(Named("leg3"))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\nreturn SceneIntersection(triangle_white_M, cap(r, vec3(0.), vec3(0., table_height_u, 0.), table_leg_width_u), false);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+return SceneIntersection(triangle_white_M, cap(r, vec3(0.), vec3(0., table_height_u, 0.), table_leg_width_u), false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -645,7 +719,9 @@
             name: "table leg4",
             data: Complex(
                 kind: Simple(Some(Named("leg4"))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\nreturn SceneIntersection(triangle_white_M, cap(r, vec3(0.), vec3(0., table_height_u, 0.), table_leg_width_u), false);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+return SceneIntersection(triangle_white_M, cap(r, vec3(0.), vec3(0., table_height_u, 0.), table_leg_width_u), false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -659,7 +735,9 @@
                     to: Some(Named("portal_leg_orange")),
                     what: Some(Named("leg1")),
                 )))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_leg(r, first);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_leg(r, first);")),
                 in_subspace: Normal,
             ),
         ),
@@ -673,7 +751,9 @@
                     to: Some(Named("portal_leg_orange")),
                     what: Some(Named("leg2")),
                 )))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_leg(r, first);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_leg(r, first);")),
                 in_subspace: Normal,
             ),
         ),
@@ -687,7 +767,9 @@
                     to: Some(Named("portal_leg_orange")),
                     what: Some(Named("leg3")),
                 )))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_leg(r, first);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_leg(r, first);")),
                 in_subspace: Normal,
             ),
         ),
@@ -701,7 +783,9 @@
                     to: Some(Named("portal_leg_orange")),
                     what: Some(Named("leg4")),
                 )))),
-                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_leg(r, first);")),
+                intersect: (("if (enable_table_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_leg(r, first);")),
                 in_subspace: Normal,
             ),
         ),
@@ -709,7 +793,36 @@
             name: "human",
             data: Complex(
                 kind: Simple(Some(Named("human"))),
-                intersect: (("vec3 pa = vec3(0.);\nfloat radius = 0.06;\n\nSurfaceIntersection hit = intersection_none;\nSceneIntersection i = SceneIntersection(0, hit, false);\n\nif (enable_human_u == 0) { return i; }\n\nvec2 a1 = vec2(0., 0.); vec2 b1 = vec2(-0.4, -1.3);\nvec2 a2 = vec2(0., 0.); vec2 b2 = vec2(0.4, -1.3);\nvec2 a3 = vec2(0., 0.); vec2 b3 = vec2(0., 1.4);\nvec2 a4 = vec2(0., 1.); vec2 b4 = vec2(-1., 1.);\nvec2 a5 = vec2(0., 1.); vec2 b5 = vec2(1., 1.);\n\nhit = cap(r, vec3(a1, 0.), vec3(b1, 0.), radius);\nif (nearer(i, hit)) { i.hit = hit; }\nhit = cap(r, vec3(a2, 0.), vec3(b2, 0.), radius);\nif (nearer(i, hit)) { i.hit = hit; }\nhit = cap(r, vec3(a3, 0.), vec3(b3, 0.), radius);\nif (nearer(i, hit)) { i.hit = hit; }\nhit = cap(r, vec3(a4, 0.), vec3(b4, 0.), radius);\nif (nearer(i, hit)) { i.hit = hit; }\nhit = cap(r, vec3(a5, 0.), vec3(b5, 0.), radius);\nif (nearer(i, hit)) { i.hit = hit; }\n\nhit = intersect_sphere(r, vec4(b3, 0., 0.), 0.25);\nif (nearer(i, hit)) { i.hit = hit; }\n\nif (i.hit.hit) { i.material = triangle_black_M; }\nreturn i;")),
+                intersect: (("vec3 pa = vec3(0.);
+float radius = 0.06;
+
+SurfaceIntersection hit = intersection_none;
+SceneIntersection i = SceneIntersection(0, hit, false);
+
+if (enable_human_u == 0) { return i; }
+
+vec2 a1 = vec2(0., 0.); vec2 b1 = vec2(-0.4, -1.3);
+vec2 a2 = vec2(0., 0.); vec2 b2 = vec2(0.4, -1.3);
+vec2 a3 = vec2(0., 0.); vec2 b3 = vec2(0., 1.4);
+vec2 a4 = vec2(0., 1.); vec2 b4 = vec2(-1., 1.);
+vec2 a5 = vec2(0., 1.); vec2 b5 = vec2(1., 1.);
+
+hit = cap(r, vec3(a1, 0.), vec3(b1, 0.), radius);
+if (nearer(i, hit)) { i.hit = hit; }
+hit = cap(r, vec3(a2, 0.), vec3(b2, 0.), radius);
+if (nearer(i, hit)) { i.hit = hit; }
+hit = cap(r, vec3(a3, 0.), vec3(b3, 0.), radius);
+if (nearer(i, hit)) { i.hit = hit; }
+hit = cap(r, vec3(a4, 0.), vec3(b4, 0.), radius);
+if (nearer(i, hit)) { i.hit = hit; }
+hit = cap(r, vec3(a5, 0.), vec3(b5, 0.), radius);
+if (nearer(i, hit)) { i.hit = hit; }
+
+hit = intersect_sphere(r, vec4(b3, 0., 0.), 0.25);
+if (nearer(i, hit)) { i.hit = hit; }
+
+if (i.hit.hit) { i.material = triangle_black_M; }
+return i;")),
                 in_subspace: Normal,
             ),
         ),
@@ -720,49 +833,59 @@
                     to: Some(Inline(Mul(
                         to: Some(Inline(Parametrized(
                             offset: (
-                                x: Value(0),
-                                y: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
                                 z: Uniform(Some(Inline(Formula(("0.82 + (1.-human_progress)*(2.21-0.82)"))))),
                             ),
                             rotate: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
                             mirror: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
-                            scale: Value(1),
+                            scale: Value(1.0),
                         ))),
                         what: Some(Inline(Parametrized(
                             offset: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
                             rotate: (
                                 x: Value(1.5707963267948966),
                                 y: Uniform(Some(Inline(Formula(("-atan(0.4/1.3)"))))),
-                                z: Value(0),
+                                z: Value(0.0),
                             ),
                             mirror: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
-                            scale: Value(1),
+                            scale: Value(1.0),
                         ))),
                     ))),
                     what: Some(Named("human")),
                 ))), Some(Inline(Simple(
-                    offset: (-0.61, 0, -1),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (-0.61, 0.0, -1.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 )))),
-                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_v2(\n  0.09,\n  1.0,\n  0.07,\n  0.02,\n  0.4,\n  r,\n  first\n);")),
+                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_v2(
+  0.09,
+  1.0,
+  0.07,
+  0.02,
+  0.4,
+  r,
+  first
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -773,49 +896,59 @@
                     to: Some(Inline(Mul(
                         to: Some(Inline(Parametrized(
                             offset: (
-                                x: Value(0),
-                                y: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
                                 z: Uniform(Some(Inline(Formula(("0.82 + (1.-human_progress)*(2.21-0.82)"))))),
                             ),
                             rotate: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
                             mirror: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
-                            scale: Value(1),
+                            scale: Value(1.0),
                         ))),
                         what: Some(Inline(Parametrized(
                             offset: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
                             rotate: (
                                 x: Value(1.5707963267948966),
                                 y: Uniform(Some(Inline(Formula(("atan(0.4/1.3)"))))),
-                                z: Value(0),
+                                z: Value(0.0),
                             ),
                             mirror: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
-                            scale: Value(1),
+                            scale: Value(1.0),
                         ))),
                     ))),
                     what: Some(Named("human")),
                 ))), Some(Inline(Simple(
-                    offset: (-0.38, 0, -1),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (-0.38, 0.0, -1.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 )))),
-                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_v2(\n  0.09,\n  1.0,\n  0.07,\n  0.02,\n  0.4,\n  r,\n  first\n);")),
+                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_v2(
+  0.09,
+  1.0,
+  0.07,
+  0.02,
+  0.4,
+  r,
+  first
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -826,29 +959,39 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-0.55-(1.-human_progress)*(2.1-0.55)"))))),
-                            y: Value(1),
-                            z: Value(0),
+                            y: Value(1.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("human")),
                 ))), Some(Inline(Simple(
-                    offset: (-0.16, 0, -1),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (-0.16, 0.0, -1.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 )))),
-                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_v2(\n  0.09,\n  1.0,\n  0.07,\n  0.02,\n  0.3,\n  r,\n  first\n);")),
+                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_v2(
+  0.09,
+  1.0,
+  0.07,
+  0.02,
+  0.3,
+  r,
+  first
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -859,29 +1002,39 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("0.55+(1.-human_progress)*(2.1-0.55)"))))),
-                            y: Value(1),
-                            z: Value(0),
+                            y: Value(1.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("human")),
                 ))), Some(Inline(Simple(
-                    offset: (0.06, 0, -1),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (0.06, 0.0, -1.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 )))),
-                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_v2(\n  0.09,\n  1.0,\n  0.07,\n  0.02,\n  0.3,\n  r,\n  first\n);")),
+                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_v2(
+  0.09,
+  1.0,
+  0.07,
+  0.02,
+  0.3,
+  r,
+  first
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -891,26 +1044,36 @@
                 kind: Portal(Some(Inline(Mul(
                     to: Some(Inline(Mul(
                         to: Some(Inline(Simple(
-                            offset: (0, 0, 0),
-                            scale: 1,
-                            rotate: (0, 0, 0),
+                            offset: (0.0, 0.0, 0.0),
+                            scale: 1.0,
+                            rotate: (0.0, 0.0, 0.0),
                             mirror: (false, false, false),
                         ))),
                         what: Some(Inline(Simple(
-                            offset: (0, 0.47, 0),
-                            scale: 1,
-                            rotate: (1.5707963267948966, 0, 4.71238898038469),
+                            offset: (0.0, 0.47, 0.0),
+                            scale: 1.0,
+                            rotate: (1.5707963267948966, 0.0, 4.71238898038469),
                             mirror: (false, false, false),
                         ))),
                     ))),
                     what: Some(Named("human")),
                 ))), Some(Inline(Simple(
-                    offset: (0.56, 0, -1),
-                    scale: 1,
-                    rotate: (0, 0, 4.71238898038469),
+                    offset: (0.56, 0.0, -1.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 4.71238898038469),
                     mirror: (false, false, false),
                 )))),
-                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }\n\nreturn intersect_cylinder_portal_v2(\n  0.09,\n  human_progress_u,\n  0.07,\n  0.02,\n  0.3,\n  r,\n  first\n);")),
+                intersect: (("if (enable_human_u == 0) { return scene_intersection_none; }
+
+return intersect_cylinder_portal_v2(
+  0.09,
+  human_progress_u,
+  0.07,
+  0.02,
+  0.3,
+  r,
+  first
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -918,7 +1081,9 @@
             name: "object_room1",
             data: Complex(
                 kind: Simple(Some(Named("room1"))),
-                intersect: (("if (enable_cylinder_object_u == 0) { return scene_intersection_none; }\n\nreturn SceneIntersection(triangle_white_M, cap(r, vec3(0., -1.0, 0.), vec3(0., 1.0, 0.), 0.2), false);")),
+                intersect: (("if (enable_cylinder_object_u == 0) { return scene_intersection_none; }
+
+return SceneIntersection(triangle_white_M, cap(r, vec3(0., -1.0, 0.), vec3(0., 1.0, 0.), 0.2), false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -926,12 +1091,14 @@
             name: "object_main",
             data: Complex(
                 kind: Simple(Some(Inline(Simple(
-                    offset: (-1.2, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (-1.2, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 )))),
-                intersect: (("if (enable_cylinder_object_u == 0) { return scene_intersection_none; }\n\nreturn SceneIntersection(triangle_white_M, cap(r, vec3(0., -1.0, 0.), vec3(0., 1.0, 0.), 0.2), false);")),
+                intersect: (("if (enable_cylinder_object_u == 0) { return scene_intersection_none; }
+
+return SceneIntersection(triangle_white_M, cap(r, vec3(0., -1.0, 0.), vec3(0., 1.0, 0.), 0.2), false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -946,7 +1113,7 @@
                 r: 3.5,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -958,7 +1125,7 @@
                 r: 3.5,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
     ]),
@@ -975,7 +1142,7 @@
                 color: (0.8980392156862745, 0.8313725490196079, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -987,7 +1154,7 @@
                 color: (0.9058823529411765, 0.29411764705882354, 0.29411764705882354),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -999,7 +1166,7 @@
                 color: (0.050980392156862744, 0.050980392156862744, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -1011,7 +1178,7 @@
                 color: (0.2235294117647059, 0.2235294117647059, 0.2235294117647059),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -1023,7 +1190,7 @@
                 color: (0.3137254901960784, 0.38823529411764707, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -1032,7 +1199,9 @@
         (
             name: "room_blue_texture",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(3.137254901960784e-1, 3.8823529411764707e-1, 9.254901960784314e-1), 5e-1, true, 1.0, 3e-1, false, true);\nresult.mul_to_color *= texture(texture_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(3.137254901960784e-1, 3.8823529411764707e-1, 9.254901960784314e-1), 5e-1, true, 1.0, 3e-1, false, true);
+result.mul_to_color *= texture(texture_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;
+return result;")),
             ),
         ),
         (
@@ -1041,7 +1210,7 @@
                 color: (0.2627450980392157, 0.8470588235294118, 0.30196078431372547),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -1050,7 +1219,9 @@
         (
             name: "room_green_texture",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);\nresult.mul_to_color *= texture(texture_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);
+result.mul_to_color *= texture(texture_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;
+return result;")),
             ),
         ),
         (
@@ -1059,7 +1230,7 @@
                 color: (0.03529411764705882, 0.6431372549019608, 0.788235294117647),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -1068,7 +1239,9 @@
         (
             name: "portal_blue_black",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.04732297,0.560074,0.68341726), 5e-1, false, 4e0, 3e-1);\nresult.mul_to_color *= (1.0 - portal_black_color_progress_u);\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.04732297,0.560074,0.68341726), 5e-1, false, 4e0, 3e-1);
+result.mul_to_color *= (1.0 - portal_black_color_progress_u);
+return result;")),
             ),
         ),
         (
@@ -1077,7 +1250,7 @@
                 color: (0.9294117647058824, 0.4235294117647059, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -1086,13 +1259,15 @@
         (
             name: "portal_orange_black",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.6495146,0.2954198,0.03270938), 5e-1, false, 4e0, 3e-1);\nresult.mul_to_color *= (1.0 - portal_black_color_progress_u);\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple(hit, r, vec3(0.6495146,0.2954198,0.03270938), 5e-1, false, 4e0, 3e-1);
+result.mul_to_color *= (1.0 - portal_black_color_progress_u);
+return result;")),
             ),
         ),
         (
             name: "mirror",
             data: Reflect(
-                add_to_color: (1, 1, 1),
+                add_to_color: (1.0, 1.0, 1.0),
             ),
         ),
         (
@@ -1101,7 +1276,7 @@
                 color: (0.6666666666666666, 0.6666666666666666, 0.6666666666666666),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1113,7 +1288,7 @@
                 color: (0.043137254901960784, 0.043137254901960784, 0.043137254901960784),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -1125,7 +1300,7 @@
                 color: (0.7686274509803922, 0.7686274509803922, 0.7686274509803922),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -1134,10 +1309,10 @@
         (
             name: "solid_black",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -1146,10 +1321,10 @@
         (
             name: "solid_0",
             data: Simple(
-                color: (1, 0.24313725490196078, 0.24313725490196078),
+                color: (1.0, 0.24313725490196078, 0.24313725490196078),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1158,10 +1333,10 @@
         (
             name: "solid_1",
             data: Simple(
-                color: (0.24313725490196078, 1, 0.25098039215686274),
+                color: (0.24313725490196078, 1.0, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1170,10 +1345,10 @@
         (
             name: "solid_2",
             data: Simple(
-                color: (0.1843137254901961, 0.19607843137254902, 1),
+                color: (0.1843137254901961, 0.19607843137254902, 1.0),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1182,10 +1357,10 @@
         (
             name: "solid_3",
             data: Simple(
-                color: (1, 0.9764705882352941, 0.15294117647058825),
+                color: (1.0, 0.9764705882352941, 0.15294117647058825),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -1196,25 +1371,257 @@
     library: ([
         (
             name: "common",
-            data: (("bool invert_if(bool value, bool condition) {\n  if (condition) {\n    return !value;\n  } else {\n    return value;\n  }\n}")),
+            data: (("bool invert_if(bool value, bool condition) {
+  if (condition) {
+    return !value;
+  } else {
+    return value;
+  }
+}")),
         ),
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "box",
-            data: (("SceneIntersection intersect_box(Ray r, int material) {\nvec3 rad = vec3(4., 4., 4.);\nvec3 m = 1.0/r.d.xyz;\nvec3 n = m*r.o.xyz;\nvec3 k = abs(m)*rad;\nvec3 t1 = -n - k;\nvec3 t2 = -n + k;\n\nfloat tN = max( max( t1.x, t1.y ), t1.z );\nfloat tF = min( min( t2.x, t2.y ), t2.z );\n\nfloat t = tN;\nif (tN < 0.0 && tF > 0.0) t = tF;\n\nif(tN > tF) return scene_intersection_none;\n\nif(t < 0.0) return scene_intersection_none;\n\nvec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\n\nvec3 pos = (r.o + r.d * t).xyz;\n\nvec2 uv = vec2(pos.x, pos.y);\nif (abs(abs(pos.x) - rad.x) < 0.0001) {\n  uv = vec2(pos.y, pos.z);\n}\nif (abs(abs(pos.y) - rad.y) < 0.0001) {\n  uv = vec2(pos.x, pos.z);\n}\n\nreturn SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);\n}")),
+            data: (("SceneIntersection intersect_box(Ray r, int material) {
+vec3 rad = vec3(4., 4., 4.);
+vec3 m = 1.0/r.d.xyz;
+vec3 n = m*r.o.xyz;
+vec3 k = abs(m)*rad;
+vec3 t1 = -n - k;
+vec3 t2 = -n + k;
+
+float tN = max( max( t1.x, t1.y ), t1.z );
+float tF = min( min( t2.x, t2.y ), t2.z );
+
+float t = tN;
+if (tN < 0.0 && tF > 0.0) t = tF;
+
+if(tN > tF) return scene_intersection_none;
+
+if(t < 0.0) return scene_intersection_none;
+
+vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
+
+vec3 pos = (r.o + r.d * t).xyz;
+
+vec2 uv = vec2(pos.x, pos.y);
+if (abs(abs(pos.x) - rad.x) < 0.0001) {
+  uv = vec2(pos.y, pos.z);
+}
+if (abs(abs(pos.y) - rad.y) < 0.0001) {
+  uv = vec2(pos.x, pos.z);
+}
+
+return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);
+}")),
         ),
         (
             name: "sphere",
-            data: (("SurfaceIntersection intersect_sphere(Ray r, vec4 center, float radius) {\n  r.o -= center;\n  vec3 op = -r.o.xyz;\n  float b = dot(op, r.d.xyz);\n  float det = b*b - dot(op, op) + sqr(radius);\n  if (det < 0.) return intersection_none;\n\n  det = sqrt(det);\n  float t = b - det;\n  if (t < 0.) t = b + det;\n  if (t < 0.) return intersection_none;\n\n  vec4 pos = r.o + r.d * t;\n  vec3 n = normalize(pos.xyz);\n\n  float u = atan(pos.z, pos.x);\n  float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);\n\n  return SurfaceIntersection(true, t, u, v, n);\n}")),
+            data: (("SurfaceIntersection intersect_sphere(Ray r, vec4 center, float radius) {
+  r.o -= center;
+  vec3 op = -r.o.xyz;
+  float b = dot(op, r.d.xyz);
+  float det = b*b - dot(op, op) + sqr(radius);
+  if (det < 0.) return intersection_none;
+
+  det = sqrt(det);
+  float t = b - det;
+  if (t < 0.) t = b + det;
+  if (t < 0.) return intersection_none;
+
+  vec4 pos = r.o + r.d * t;
+  vec3 n = normalize(pos.xyz);
+
+  float u = atan(pos.z, pos.x);
+  float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
+
+  return SurfaceIntersection(true, t, u, v, n);
+}")),
         ),
         (
             name: "portal",
-            data: (("float circle_distance(float x, float y) {\n  return sqrt(sqr(x) + sqr(y));\n}\n\nfloat ellipse_distance(float x, float y) {\n  return sqrt(2.*sqr(x) + sqr(y));\n}\n\nfloat square_distance(float x, float y) {\n  return max(abs(x), abs(y));\n}\n\nfloat rect_distance(float x, float y, float a, float b) {\n  return max(abs(x)-a+1., abs(y)-b+1.);\n}\n\nfloat triangle_distance(float x, float y, float k1, float k2, float y1) {\n  return max(\n    (y-k1*x)/sqrt(1.0+sqr(k1)),\n  max(\n    (y-k2*x)/sqrt(1.0+sqr(k2)),\n    -y1 * y\n  ));\n}\n\nint is_inside_object(\r\n  float distance, \r\n  float size, \r\n  float border,\r\n  int material_inner, \r\n  int material_border\n) {\r\n  if (distance > size) return material_inner;\r\n  if (distance > size -border) return material_border;\r\n  return NOT_INSIDE;\r\n}\n\nint is_inside_portal(\n  float distance, \n  float size, \n  float border,\n  float black_border,\n  int material_first, \n  int material_second, \n  int grid_material_first, \n  int grid_material_second, \n  bool back,\n  bool first\n) {\n  int material = material_second;\n  if (first) { material = material_first; }\n\n  if (distance < size) {\n    if (back) {\n      return material;      \n    } else {\n      if (teleport_light_u == 1) {\n      \tif (mirror_u == 1) {\n          return mirror_M;\n        } else {\n          return TELEPORT;\n        }\n      } else {\n        if (first) {\n          return grid_material_first;\n        } else {\n          return grid_material_second;\n        }\n      }\n    }\n  }\n  int black_material = solid_black_M;\n  if (_black_border_disable == 1) black_material = material;\n  if (distance < size + black_border && !back) return black_material;\n  if (distance < size + black_border + border) return material;\n  if (distance < size + black_border + border + black_border) return black_material;\n\n  return NOT_INSIDE;\n}\n\nfloat get_orig_cylinder_radius(\n  float cylinder_radius,\n  float progress\n) {\n  float progress2 = pow(progress, (1.-progress)*0.3 + 0.15);\n  return cylinder_radius + (1. - progress2)/(progress2 + 0.01);\n}\n\nSceneIntersection intersect_cylinder_portal_v2(\n  float cylinder_radius,\n  float progress,\n  float border_size,\n  float black_border_size,\n  float cylinder_height,\n  Ray r,\n  bool first\n) {\n  float orig_cylinder_radius = get_orig_cylinder_radius(cylinder_radius, progress);\n  r.o.x += orig_cylinder_radius - cylinder_radius;\n\n  float a = dot(r.d.xy, r.d.xy);\n  float b = 2.0 * dot(r.o.xy, r.d.xy);\n  float c = dot(r.o.xy, r.o.xy) - sqr(orig_cylinder_radius);\n  float det = b*b - 4.0 * a * c;\n  if (det < 0.) return scene_intersection_none;\n\n  det = sqrt(det);\n\n  float t = (-b - det)/(2.*a);\n  vec4 pos = r.o + r.d * t;\n  float u = atan(pos.y, pos.x) * orig_cylinder_radius;\n  float v = pos.z;\n  float distance = rect_distance(u, v, PI*cylinder_radius, cylinder_height);\n  int result_material = is_inside_portal(\n    distance,\n    1.0,\n    border_size,\n    black_border_size,\n    portal_blue_M,\n    portal_orange_M,\n    grid_gray_M,\n    grid_gray_M,\n    two_sided_u == 0 && invert_if(true, first),\n    first\n  );\n\n  if (t < 0. || result_material == NOT_INSIDE) {\n    t = (-b + det)/(2.*a);\n    pos = r.o + r.d * t;\n    u = atan(pos.y, pos.x) * orig_cylinder_radius;\n    v = pos.z;\n    distance = rect_distance(u, v, PI*cylinder_radius, cylinder_height);\n    result_material = is_inside_portal(\n      distance,\n      1.0,\n      border_size,\n      black_border_size,\n      portal_blue_M,\n      portal_orange_M,\n      grid_gray_M,\n      grid_gray_M,\n      two_sided_u == 0 && invert_if(false, first),\n      first\n    );\n    if (t< 0. || result_material == NOT_INSIDE) {\n      return scene_intersection_none;\n    }\n  }\n\n  vec3 n = normalize(vec3(pos.xy, 0.));\n\n  return SceneIntersection(result_material, SurfaceIntersection(true, t, u, v, n), false);\n}\n\nSceneIntersection intersect_cylinder_portal_leg(\n  Ray r,\n  bool first\n) {\n  return intersect_cylinder_portal_v2(\n    table_leg_width_u+0.02,\n    1.0,\n    0.05,\n    0.01,\n    (table_height_u)/2.-0.05,\n    r,\n    first\n  );\n}\n")),
+            data: (("float circle_distance(float x, float y) {
+  return sqrt(sqr(x) + sqr(y));
+}
+
+float ellipse_distance(float x, float y) {
+  return sqrt(2.*sqr(x) + sqr(y));
+}
+
+float square_distance(float x, float y) {
+  return max(abs(x), abs(y));
+}
+
+float rect_distance(float x, float y, float a, float b) {
+  return max(abs(x)-a+1., abs(y)-b+1.);
+}
+
+float triangle_distance(float x, float y, float k1, float k2, float y1) {
+  return max(
+    (y-k1*x)/sqrt(1.0+sqr(k1)),
+  max(
+    (y-k2*x)/sqrt(1.0+sqr(k2)),
+    -y1 * y
+  ));
+}
+
+int is_inside_object(
+  float distance, 
+  float size, 
+  float border,
+  int material_inner, 
+  int material_border
+) {
+  if (distance > size) return material_inner;
+  if (distance > size -border) return material_border;
+  return NOT_INSIDE;
+}
+
+int is_inside_portal(
+  float distance, 
+  float size, 
+  float border,
+  float black_border,
+  int material_first, 
+  int material_second, 
+  int grid_material_first, 
+  int grid_material_second, 
+  bool back,
+  bool first
+) {
+  int material = material_second;
+  if (first) { material = material_first; }
+
+  if (distance < size) {
+    if (back) {
+      return material;      
+    } else {
+      if (teleport_light_u == 1) {
+      	if (mirror_u == 1) {
+          return mirror_M;
+        } else {
+          return TELEPORT;
+        }
+      } else {
+        if (first) {
+          return grid_material_first;
+        } else {
+          return grid_material_second;
+        }
+      }
+    }
+  }
+  int black_material = solid_black_M;
+  if (_black_border_disable == 1) black_material = material;
+  if (distance < size + black_border && !back) return black_material;
+  if (distance < size + black_border + border) return material;
+  if (distance < size + black_border + border + black_border) return black_material;
+
+  return NOT_INSIDE;
+}
+
+float get_orig_cylinder_radius(
+  float cylinder_radius,
+  float progress
+) {
+  float progress2 = pow(progress, (1.-progress)*0.3 + 0.15);
+  return cylinder_radius + (1. - progress2)/(progress2 + 0.01);
+}
+
+SceneIntersection intersect_cylinder_portal_v2(
+  float cylinder_radius,
+  float progress,
+  float border_size,
+  float black_border_size,
+  float cylinder_height,
+  Ray r,
+  bool first
+) {
+  float orig_cylinder_radius = get_orig_cylinder_radius(cylinder_radius, progress);
+  r.o.x += orig_cylinder_radius - cylinder_radius;
+
+  float a = dot(r.d.xy, r.d.xy);
+  float b = 2.0 * dot(r.o.xy, r.d.xy);
+  float c = dot(r.o.xy, r.o.xy) - sqr(orig_cylinder_radius);
+  float det = b*b - 4.0 * a * c;
+  if (det < 0.) return scene_intersection_none;
+
+  det = sqrt(det);
+
+  float t = (-b - det)/(2.*a);
+  vec4 pos = r.o + r.d * t;
+  float u = atan(pos.y, pos.x) * orig_cylinder_radius;
+  float v = pos.z;
+  float distance = rect_distance(u, v, PI*cylinder_radius, cylinder_height);
+  int result_material = is_inside_portal(
+    distance,
+    1.0,
+    border_size,
+    black_border_size,
+    portal_blue_M,
+    portal_orange_M,
+    grid_gray_M,
+    grid_gray_M,
+    two_sided_u == 0 && invert_if(true, first),
+    first
+  );
+
+  if (t < 0. || result_material == NOT_INSIDE) {
+    t = (-b + det)/(2.*a);
+    pos = r.o + r.d * t;
+    u = atan(pos.y, pos.x) * orig_cylinder_radius;
+    v = pos.z;
+    distance = rect_distance(u, v, PI*cylinder_radius, cylinder_height);
+    result_material = is_inside_portal(
+      distance,
+      1.0,
+      border_size,
+      black_border_size,
+      portal_blue_M,
+      portal_orange_M,
+      grid_gray_M,
+      grid_gray_M,
+      two_sided_u == 0 && invert_if(false, first),
+      first
+    );
+    if (t< 0. || result_material == NOT_INSIDE) {
+      return scene_intersection_none;
+    }
+  }
+
+  vec3 n = normalize(vec3(pos.xy, 0.));
+
+  return SceneIntersection(result_material, SurfaceIntersection(true, t, u, v, n), false);
+}
+
+SceneIntersection intersect_cylinder_portal_leg(
+  Ray r,
+  bool first
+) {
+  return intersect_cylinder_portal_v2(
+    table_leg_width_u+0.02,
+    1.0,
+    0.05,
+    0.01,
+    (table_height_u)/2.-0.05,
+    r,
+    first
+  );
+}
+")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "cylinder_progress": true,
@@ -1402,7 +1809,7 @@
                     rus: "Может быть собран из плоских порталов.",
                 )),
                 uniforms: {
-                    "cylinder_progress": ChangedAndToUser(Some(Inline(Progress(1)))),
+                    "cylinder_progress": ChangedAndToUser(Some(Inline(Progress(1.0)))),
                     "cylinder_size": FromDev,
                     "enable_cylinder": Changed(Some(Inline(Bool(true)))),
                     "enable_cylinder_object": ProvidedToUser,
@@ -1463,7 +1870,7 @@
                     rus: "Сквозь него вещи могут проходить насквозь.",
                 )),
                 uniforms: {
-                    "cylinder_progress": Changed(Some(Inline(Progress(1)))),
+                    "cylinder_progress": Changed(Some(Inline(Progress(1.0)))),
                     "cylinder_size": FromDev,
                     "enable_cylinder": Changed(Some(Inline(Bool(true)))),
                     "enable_cylinder_object": ProvidedToUser,
@@ -1504,19 +1911,19 @@
                     "triangle": Changed(Some(Inline(Mul(
                         to: Some(Inline(Parametrized(
                             offset: (
-                                x: Value(0),
+                                x: Value(0.0),
                                 y: Uniform(Some(Inline(Formula(("-1.3+triangle_pos*2.6"))))),
-                                z: Value(0),
+                                z: Value(0.0),
                             ),
                             rotate: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
                             mirror: (
-                                x: Value(0),
-                                y: Value(0),
-                                z: Value(0),
+                                x: Value(0.0),
+                                y: Value(0.0),
+                                z: Value(0.0),
                             ),
                             scale: Value(1.25),
                         ))),
@@ -1540,11 +1947,11 @@
                     rus: "Разные комнаты",
                 ),
                 description: Some((
-                    eng: "This scene shows different part of the cylindric portal in a different rooms, if you didn\'t understand how this works.",
+                    eng: "This scene shows different part of the cylindric portal in a different rooms, if you didn't understand how this works.",
                     rus: "Если вы не поняли как это работает, то в данной сцене части одного портала находятся в разных комнатах.",
                 )),
                 uniforms: {
-                    "cylinder_progress": ChangedAndToUser(Some(Inline(Progress(1)))),
+                    "cylinder_progress": ChangedAndToUser(Some(Inline(Progress(1.0)))),
                     "cylinder_size": FromDev,
                     "enable_cylinder": Changed(Some(Inline(Bool(true)))),
                     "enable_cylinder_object": ProvidedToUser,
@@ -1576,18 +1983,18 @@
                     "leg4": FromDev,
                     "p1": Changed(Some(Inline(Mul(
                         to: Some(Inline(Simple(
-                            offset: (0, 0, 0),
-                            scale: 1,
-                            rotate: (1.5707963267948966, 0, 0),
+                            offset: (0.0, 0.0, 0.0),
+                            scale: 1.0,
+                            rotate: (1.5707963267948966, 0.0, 0.0),
                             mirror: (false, false, false),
                         ))),
                         what: Some(Named("room1")),
                     )))),
                     "p2": Changed(Some(Inline(Mul(
                         to: Some(Inline(Simple(
-                            offset: (0, 0, 0),
-                            scale: 1,
-                            rotate: (1.5707963267948966, 0, 0),
+                            offset: (0.0, 0.0, 0.0),
+                            scale: 1.0,
+                            rotate: (1.5707963267948966, 0.0, 0.0),
                             mirror: (false, false, false),
                         ))),
                         what: Some(Named("room2")),
@@ -1662,13 +2069,13 @@
                     "triangle_teleported": FromDev,
                 },
                 set_cam: Some(Some(Inline((
-                    look_at: Coordinate((0, -3.25, 0)),
+                    look_at: Coordinate((0.0, -3.25, 0.0)),
                     alpha: -115.16392292526365,
                     beta: 1.060183674097059,
                     r: 3.9142513012204345,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 )))),
                 cams: {
                     "room1": false,
@@ -1746,7 +2153,7 @@
                 ),
                 description: None,
                 uniforms: {
-                    "cylinder_progress": ChangedAndToUser(Some(Inline(Progress(1)))),
+                    "cylinder_progress": ChangedAndToUser(Some(Inline(Progress(1.0)))),
                     "cylinder_size": FromDev,
                     "enable_cylinder": Changed(Some(Inline(Bool(true)))),
                     "enable_cylinder_object": ProvidedToUser,
@@ -1788,13 +2195,13 @@
                     "triangle_teleported": FromDev,
                 },
                 set_cam: Some(Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: 1.429605930271512,
                     beta: 1.1318605816364282,
                     r: 3.2349184307606698,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 )))),
                 cams: {
                     "room1": false,
@@ -1807,10 +2214,10 @@
     current_stage: Animation("how to build"),
     dev_stage: (
         uniforms: {
-            "cylinder_progress": Progress(0),
+            "cylinder_progress": Progress(0.0),
             "cylinder_size": Float((
-                min: Some(0),
-                max: Some(5),
+                min: Some(0.0),
+                max: Some(5.0),
                 value: 0.5,
             )),
             "enable_cylinder": Bool(false),
@@ -1818,105 +2225,105 @@
             "enable_human": Bool(false),
             "enable_table": Bool(false),
             "enable_triangle": Bool(false),
-            "human_progress": Progress(0),
+            "human_progress": Progress(0.0),
             "mirror": Bool(false),
             "orig_cylinder_radius": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.66,
             )),
-            "portal_black_color_progress": Progress(0),
+            "portal_black_color_progress": Progress(0.0),
             "room_size_x": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_y": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_z": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "table_h": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.66,
             )),
             "table_height": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 1.16,
             )),
             "table_leg_width": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.05,
             )),
             "table_w": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
             "table_width": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.03,
             )),
             "teleport_light": Bool(true),
-            "triangle_pos": Progress(0),
+            "triangle_pos": Progress(0.0),
             "two_sided": Bool(false),
-            "wear_portal_legs": Progress(0),
+            "wear_portal_legs": Progress(0.0),
         },
         matrices: {
             "box": Mul(
                 to: Some(Inline(Parametrized(
                     offset: (
-                        x: Value(0),
+                        x: Value(0.0),
                         y: Uniform(Some(Inline(Formula(("table_height+table_leg_width-table_width"))))),
-                        z: Value(0),
+                        z: Value(0.0),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
             "human": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "leg1": Mul(
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("table_h-table_leg_width"))))),
-                        y: Value(0),
+                        y: Value(0.0),
                         z: Uniform(Some(Inline(Formula(("table_w-table_leg_width"))))),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
@@ -1924,20 +2331,20 @@
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("table_h-table_leg_width"))))),
-                        y: Value(0),
+                        y: Value(0.0),
                         z: Uniform(Some(Inline(Formula(("-(table_w-table_leg_width)"))))),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
@@ -1945,20 +2352,20 @@
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("-(table_h-table_leg_width)"))))),
-                        y: Value(0),
+                        y: Value(0.0),
                         z: Uniform(Some(Inline(Formula(("table_w-table_leg_width"))))),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
@@ -1966,109 +2373,109 @@
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("-(table_h-table_leg_width)"))))),
-                        y: Value(0),
+                        y: Value(0.0),
                         z: Uniform(Some(Inline(Formula(("-(table_w-table_leg_width)"))))),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("table")),
             ),
             "p1": Simple(
-                offset: (-1.2, 0, 0),
-                scale: 1,
-                rotate: (1.5707963267948966, 0, 0),
+                offset: (-1.2, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (1.5707963267948966, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "p2": Simple(
-                offset: (1.2, 0, 0),
-                scale: 1,
-                rotate: (1.5707963267948966, 0, 0),
+                offset: (1.2, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (1.5707963267948966, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "portal_leg_common": Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("table_height/2-table_width-(1-wear_portal_legs)*(table_height+0.2)"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
                     x: Value(1.5707963267948966),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
             "portal_leg_orange": Teleport(
                 first_portal: Some(Named("table")),
                 second_portal: Some(Inline(Simple(
-                    offset: (0, 0, 0),
-                    scale: 1,
-                    rotate: (0, 0, 0),
+                    offset: (0.0, 0.0, 0.0),
+                    scale: 1.0,
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Inline(Simple(
                     offset: (2.82, -3.35, 2.83),
-                    scale: 1,
-                    rotate: (1.5707963267948966, 0, 0),
+                    scale: 1.0,
+                    rotate: (1.5707963267948966, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
             ),
             "room1": Simple(
-                offset: (-9, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (-9.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room2": Simple(
-                offset: (9, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (9.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "table": Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("-4+table_leg_width+(1-wear_portal_legs)*(table_height+0.2)"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
             "triangle": Mul(
                 to: Some(Inline(Simple(
-                    offset: (0.73, -0.5, 0),
+                    offset: (0.73, -0.5, 0.0),
                     scale: 1.26,
-                    rotate: (0, 0, 0),
+                    rotate: (0.0, 0.0, 0.0),
                     mirror: (false, false, false),
                 ))),
                 what: Some(Named("p1")),

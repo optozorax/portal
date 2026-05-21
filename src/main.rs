@@ -25,7 +25,7 @@ use macroquad::prelude::{
     mouse_wheel, next_frame, screen_height, screen_width, set_default_camera, Conf,
     DrawTextureParams, MouseButton, Texture2D, BLACK, WHITE,
 };
-use portal::gui::scene_serialized::SerializedScene;
+use portal::gui::scene_serialized::{normalize_pretty_output, pretty_config, SerializedScene};
 use portal::gui::scenes::Scenes;
 use portal::gui::{common::*, scene::*, texture::*};
 
@@ -2358,22 +2358,23 @@ First, predefined library is included, then uniforms, then user library, then in
                             if !use_old {
                                 let ser = self.renderer.scene.to_serialized();
                                 if !compact {
-                                    ron::ser::to_string_pretty(
-                                        &ser,
-                                        ron::ser::PrettyConfig::default(),
+                                    normalize_pretty_output(
+                                        ron::ser::to_string_pretty(&ser, pretty_config())
+                                            .unwrap_or_else(|_| "<serialize error>".into()),
                                     )
-                                    .unwrap_or_else(|_| "<serialize error>".into())
                                 } else {
                                     ron::to_string(&ser)
                                         .unwrap_or_else(|_| "<serialize error>".into())
                                 }
                             } else {
                                 if !compact {
-                                    ron::ser::to_string_pretty(
-                                        &self.renderer.scene,
-                                        ron::ser::PrettyConfig::default(),
+                                    normalize_pretty_output(
+                                        ron::ser::to_string_pretty(
+                                            &self.renderer.scene,
+                                            pretty_config(),
+                                        )
+                                        .unwrap_or_else(|_| "<serialize error>".into()),
                                     )
-                                    .unwrap_or_else(|_| "<serialize error>".into())
                                 } else {
                                     ron::to_string(&self.renderer.scene)
                                         .unwrap_or_else(|_| "<serialize error>".into())

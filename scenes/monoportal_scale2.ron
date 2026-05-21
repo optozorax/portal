@@ -1,10 +1,19 @@
 (
     desc: (
-        eng: "# Scaling monoportal\n\nIt constructed from offsetting monoportal, which upper part is transformed into trapezoid and everything dependent scaled to match this trapezoid.\n\nThis portal has one continuous surface which can enlarge or reduce objects.",
-        rus: "# Масштабирующий монопортал\n\nОн собран из смещающего монопортала, верхняя часть которого превращена в трапецию и в соответствии с этим изменился масштаб всего что от неё зависело.\n\nДанный портал состоит из одной непрерывной поверхности, при вхождении в которую возможно как увеличиваться так и уменьшаться.\n",
+        eng: "# Scaling monoportal
+
+It constructed from offsetting monoportal, which upper part is transformed into trapezoid and everything dependent scaled to match this trapezoid.
+
+This portal has one continuous surface which can enlarge or reduce objects.",
+        rus: "# Масштабирующий монопортал
+
+Он собран из смещающего монопортала, верхняя часть которого превращена в трапецию и в соответствии с этим изменился масштаб всего что от неё зависело.
+
+Данный портал состоит из одной непрерывной поверхности, при вхождении в которую возможно как увеличиваться так и уменьшаться.
+",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: 1.983285268424741,
         beta: 1.1789996985495108,
         r: 3.8500000000000267,
@@ -14,31 +23,31 @@
         (
             name: "room_size_x",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_y",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_z",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "height",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.5,
             )),
@@ -46,23 +55,23 @@
         (
             name: "width",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
         ),
         (
             name: "scale",
             data: Float((
-                min: Some(1),
+                min: Some(1.0),
                 max: None,
-                value: 2,
+                value: 2.0,
             )),
         ),
         (
             name: "border",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.13,
             )),
@@ -73,25 +82,25 @@
         ),
         (
             name: "progress",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
     ]),
     matrices: ([
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "a",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -99,19 +108,19 @@
             name: "b",
             data: Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("height + height/scale"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Value(3.141592653589793),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 scale: Uniform(Some(Inline(Formula(("1.0 / scale"))))),
             ),
@@ -120,40 +129,40 @@
             name: "support_a",
             data: Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("-height"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
                     x: Value(4.71238898038469),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
         ),
         (
             name: "support_b",
             data: Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("height + 2 * height/scale"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
                     x: Value(4.71238898038469),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 scale: Uniform(Some(Inline(Formula(("1.0 / scale_shape / scale"))))),
             ),
@@ -161,9 +170,9 @@
         (
             name: "triangle",
             data: Simple(
-                offset: (0, 0, 0.71),
-                scale: 1,
-                rotate: (4.71238898038469, 0, 0),
+                offset: (0.0, 0.0, 0.71),
+                scale: 1.0,
+                rotate: (4.71238898038469, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -176,20 +185,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Named("room_size_x"))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -204,20 +213,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-room_size_x"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -231,21 +240,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("room_size_y"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -259,21 +268,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("-room_size_y"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -287,21 +296,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Named("room_size_z"))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -315,21 +324,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Inline(Formula(("-room_size_z"))))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -341,7 +350,21 @@
             name: "monoportal",
             data: Flat(
                 kind: Portal(Some(Named("a")), Some(Named("b"))),
-                is_inside: (("if (abs(y) > height_u) return NOT_INSIDE;\n\nfloat p = (y + height_u) / (2.0 * height_u);\nfloat width = width_u * (1.0 / scale_shape_u + (1.0 - p) * (1.0 - 1.0 / scale_shape_u));\n\nfloat border_offset = border_u / (2.0 * height_u / sqrt(sqr(2.0 * height_u) + sqr(width_u / 2.0 * (1.0 - 1.0 / scale_u))));\n\nif (!first) border_offset *= scale_u;\n\nif (abs(x) > width + border_offset) return NOT_INSIDE;\nif (abs(x) > width) return black_solid_M;\n\nif (back) return black_solid_M;\n\nreturn TELEPORT;")),
+                is_inside: (("if (abs(y) > height_u) return NOT_INSIDE;
+
+float p = (y + height_u) / (2.0 * height_u);
+float width = width_u * (1.0 / scale_shape_u + (1.0 - p) * (1.0 - 1.0 / scale_shape_u));
+
+float border_offset = border_u / (2.0 * height_u / sqrt(sqr(2.0 * height_u) + sqr(width_u / 2.0 * (1.0 - 1.0 / scale_u))));
+
+if (!first) border_offset *= scale_u;
+
+if (abs(x) > width + border_offset) return NOT_INSIDE;
+if (abs(x) > width) return black_solid_M;
+
+if (back) return black_solid_M;
+
+return TELEPORT;")),
                 in_subspace: Normal,
             ),
         ),
@@ -349,7 +372,18 @@
             name: "support portals",
             data: Flat(
                 kind: Portal(Some(Named("support_a")), Some(Named("support_b"))),
-                is_inside: (("if (y > 0.) return NOT_INSIDE;\nfloat value = x*x + y*y;\nfloat border = border_u;\nif (!first) border *= scale_u * scale_shape_u;\nfloat width = width_u;\n\nint material = NOT_INSIDE;\n\nif (value < sqr(width + border)) material = black_solid_M;\nif (value < sqr(width) && !back) material = TELEPORT;\n\nreturn material;")),
+                is_inside: (("if (y > 0.) return NOT_INSIDE;
+float value = x*x + y*y;
+float border = border_u;
+if (!first) border *= scale_u * scale_shape_u;
+float width = width_u;
+
+int material = NOT_INSIDE;
+
+if (value < sqr(width + border)) material = black_solid_M;
+if (value < sqr(width) && !back) material = TELEPORT;
+
+return material;")),
                 in_subspace: Normal,
             ),
         ),
@@ -371,7 +405,7 @@
                 color: (0.8980392156862745, 0.8313725490196079, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -383,7 +417,7 @@
                 color: (0.9058823529411765, 0.29411764705882354, 0.29411764705882354),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -395,7 +429,7 @@
                 color: (0.050980392156862744, 0.050980392156862744, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -407,7 +441,7 @@
                 color: (0.2235294117647059, 0.2235294117647059, 0.2235294117647059),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -419,7 +453,7 @@
                 color: (0.3137254901960784, 0.38823529411764707, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -431,7 +465,7 @@
                 color: (0.2627450980392157, 0.8470588235294118, 0.30196078431372547),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -443,7 +477,7 @@
                 color: (0.03557645, 0.6446965, 0.79122156),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -455,7 +489,7 @@
                 color: (0.9317271, 0.42666554, 0.051948573),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -467,7 +501,7 @@
                 color: (0.6666666666666666, 0.6666666666666666, 0.6666666666666666),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -476,10 +510,10 @@
         (
             name: "black_solid",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -491,7 +525,7 @@
                 color: (0.7686274509803922, 0.7686274509803922, 0.7686274509803922),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -503,7 +537,7 @@
                 color: (0.043137254901960784, 0.043137254901960784, 0.043137254901960784),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -514,13 +548,30 @@
     library: ([
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "triangle",
-            data: (("int is_inside_triangle(float x, float y, float angle, float width, float border, int inner_m, int border_m) {\n  float value = width * 0.7 - abs(x)*angle;\n  if (between(border, y, value - border * angle)) {\n    return inner_m;\n  } else if (between(0., y, value)) {\n    return border_m;\n  } else {\n    return NOT_INSIDE;\n  }\n}")),
+            data: (("int is_inside_triangle(float x, float y, float angle, float width, float border, int inner_m, int border_m) {
+  float value = width * 0.7 - abs(x)*angle;
+  if (between(border, y, value - border * angle)) {
+    return inner_m;
+  } else if (between(0., y, value)) {
+    return border_m;
+  } else {
+    return NOT_INSIDE;
+  }
+}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "border": false,
@@ -614,7 +665,7 @@
                     "scale": Changed(Some(Inline(Float((
                         min: None,
                         max: None,
-                        value: 1,
+                        value: 1.0,
                     ))))),
                     "scale_shape": Changed(Some(Inline(Formula(("1.0 + progress"))))),
                     "width": FromDev,
@@ -650,7 +701,7 @@
                     "scale_shape": Changed(Some(Inline(Float((
                         min: None,
                         max: None,
-                        value: 2,
+                        value: 2.0,
                     ))))),
                     "width": FromDev,
                 },
@@ -703,118 +754,118 @@
     dev_stage: (
         uniforms: {
             "border": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.13,
             )),
             "height": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
                 value: 0.5,
             )),
-            "progress": Progress(0),
+            "progress": Progress(0.0),
             "room_size_x": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_y": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_z": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "scale": Float((
-                min: Some(1),
+                min: Some(1.0),
                 max: None,
-                value: 2,
+                value: 2.0,
             )),
             "scale_shape": Float((
-                min: Some(1),
+                min: Some(1.0),
                 max: None,
-                value: 2,
+                value: 2.0,
             )),
             "width": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
         },
         matrices: {
             "a": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "b": Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("height + height/scale"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Value(3.141592653589793),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 scale: Uniform(Some(Inline(Formula(("1.0 / scale"))))),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "support_a": Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("-height"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
                     x: Value(4.71238898038469),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
-                scale: Value(1),
+                scale: Value(1.0),
             ),
             "support_b": Parametrized(
                 offset: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Uniform(Some(Inline(Formula(("height + 2 * height/scale"))))),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 rotate: (
                     x: Value(4.71238898038469),
-                    y: Value(0),
-                    z: Value(0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 scale: Uniform(Some(Inline(Formula(("1.0 / scale_shape / scale"))))),
             ),
             "triangle": Simple(
-                offset: (0, 0, 0.71),
-                scale: 1,
-                rotate: (4.71238898038469, 0, 0),
+                offset: (0.0, 0.0, 0.71),
+                scale: 1.0,
+                rotate: (4.71238898038469, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         },

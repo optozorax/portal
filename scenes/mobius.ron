@@ -1,10 +1,34 @@
 (
     desc: (
-        eng: "# Möbius portal\n\nIt\'s a portal of two parts in shape of the Möbius band. For them who don\'t know, Möbius band has only one surface: no front, no back. If you don\'t understand where is Möbius band here, try toggle option «Teleport light».\n\n# Origin\n\nI invented this portal by myself, but it was presented in program [Polycut](https://facstaff.susqu.edu/brakke/polycut/polycut.htm) a very long ago. According to this program, this scene is called «Mobius 2-cover».\n\nSomething similiar is created in [KnotPortal](https://imaginary.org/program/knotportal) program and [related paper](https://arxiv.org/abs/2001.02927). \n\n# Twitter\n\n<https://twitter.com/optozorax/status/1361438218101657600>",
-        rus: "# Портал Мёбиуса\n\nЭто портал из двух частей в форме ленты Мёбиуса. Кто не знает, лента Мёбиуса особенна тем, что она обладает всего одной поверхностью, у неё нет ни передней, ни задней части. Если вы не понимаете где здесь находится лента мёбиуса, попробуйте выключить флаг «Teleport light».\n\n# Источник\n\nЯ изобрёл этот портал самостоятельно, но оказалось, что он уже был описан ранее, в программе [Polycut](https://facstaff.susqu.edu/brakke/polycut/polycut.htm) ещё очень давно. Согласно этой программе, это «Mobius 2-cover».\n\nНечто похожее делалось в программа [KnotPortal](https://imaginary.org/program/knotportal) и [научная работа](https://arxiv.org/abs/2001.02927) по ней.\n\n# Twitter\n\n<https://twitter.com/optozorax/status/1361438218101657600>",
+        eng: "# Möbius portal
+
+It's a portal of two parts in shape of the Möbius band. For them who don't know, Möbius band has only one surface: no front, no back. If you don't understand where is Möbius band here, try toggle option «Teleport light».
+
+# Origin
+
+I invented this portal by myself, but it was presented in program [Polycut](https://facstaff.susqu.edu/brakke/polycut/polycut.htm) a very long ago. According to this program, this scene is called «Mobius 2-cover».
+
+Something similiar is created in [KnotPortal](https://imaginary.org/program/knotportal) program and [related paper](https://arxiv.org/abs/2001.02927). 
+
+# Twitter
+
+<https://twitter.com/optozorax/status/1361438218101657600>",
+        rus: "# Портал Мёбиуса
+
+Это портал из двух частей в форме ленты Мёбиуса. Кто не знает, лента Мёбиуса особенна тем, что она обладает всего одной поверхностью, у неё нет ни передней, ни задней части. Если вы не понимаете где здесь находится лента мёбиуса, попробуйте выключить флаг «Teleport light».
+
+# Источник
+
+Я изобрёл этот портал самостоятельно, но оказалось, что он уже был описан ранее, в программе [Polycut](https://facstaff.susqu.edu/brakke/polycut/polycut.htm) ещё очень давно. Согласно этой программе, это «Mobius 2-cover».
+
+Нечто похожее делалось в программа [KnotPortal](https://imaginary.org/program/knotportal) и [научная работа](https://arxiv.org/abs/2001.02927) по ней.
+
+# Twitter
+
+<https://twitter.com/optozorax/status/1361438218101657600>",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: 1.1836938459668507,
         beta: 1.065771684646604,
         r: 4.772240000000025,
@@ -14,25 +38,25 @@
         (
             name: "room_size_x",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 6,
+                value: 6.0,
             )),
         ),
         (
             name: "room_size_y",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_z",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 6,
+                value: 6.0,
             )),
         ),
         (
@@ -54,8 +78,8 @@
         (
             name: "object_move",
             data: Float((
-                min: Some(0),
-                max: Some(5),
+                min: Some(0.0),
+                max: Some(5.0),
                 value: 0.45,
             )),
         ),
@@ -68,45 +92,45 @@
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "mobius_a",
             data: Simple(
-                offset: (-2.4, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 1.5707963267948966),
+                offset: (-2.4, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 1.5707963267948966),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "mobius_b",
             data: Simple(
-                offset: (2.4, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 1.5707963267948966),
+                offset: (2.4, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 1.5707963267948966),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "mobius_a_mul",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "mobius_b_mul",
             data: Simple(
-                offset: (-0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (-0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -130,20 +154,20 @@
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Named("object_move"))),
-                        y: Value(0),
-                        z: Value(0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("object_vector")),
             ),
@@ -159,9 +183,9 @@
         (
             name: "object_vector",
             data: Simple(
-                offset: (0, 1, 0),
-                scale: 1,
-                rotate: (0, 2.7401669256310974, 5.8643062867009474),
+                offset: (0.0, 1.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 2.7401669256310974, 5.8643062867009474),
                 mirror: (false, false, false),
             ),
         ),
@@ -182,20 +206,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Named("room_size_x"))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -210,20 +234,20 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-room_size_x"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -237,21 +261,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("room_size_y"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -265,21 +289,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("-room_size_y"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(1),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(1.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -293,21 +317,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Named("room_size_z"))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -321,21 +345,21 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Inline(Formula(("-room_size_z"))))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
@@ -347,7 +371,24 @@
             name: "mobuis portal",
             data: Complex(
                 kind: Portal(Some(Named("mobius_a_final")), Some(Named("mobius_b_final"))),
-                intersect: (("//return scene_intersection_none;\n\nSurfaceIntersection hit =  mobius_intersect(r);\nint material = portal_blue_M;\nif (first) { material = portal_orange_M; }\nfloat y = abs(hit.v);\nfloat black = border_size_u * black_border_size_u/2.;\nif (y > 1. - black || y < 1. - border_size_u + black) {\n  material = solid_black_M;\n}\nif (abs(hit.v) < 1. - border_size_u) {\n  if (teleport_light_u == 1) {\n    material = TELEPORT;\n  } else {\n    material = gray_grid_M;\n  }\n}\nreturn SceneIntersection(material, hit, false);")),
+                intersect: (("//return scene_intersection_none;
+
+SurfaceIntersection hit =  mobius_intersect(r);
+int material = portal_blue_M;
+if (first) { material = portal_orange_M; }
+float y = abs(hit.v);
+float black = border_size_u * black_border_size_u/2.;
+if (y > 1. - black || y < 1. - border_size_u + black) {
+  material = solid_black_M;
+}
+if (abs(hit.v) < 1. - border_size_u) {
+  if (teleport_light_u == 1) {
+    material = TELEPORT;
+  } else {
+    material = gray_grid_M;
+  }
+}
+return SceneIntersection(material, hit, false);")),
                 in_subspace: Normal,
             ),
         ),
@@ -357,20 +398,20 @@
                 kind: Simple(Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("-(room_size_x+4+1)"))))),
-                        y: Value(0),
-                        z: Value(0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 )))),
                 intersect: (("return intersect_box(r, room_red_M);")),
                 in_subspace: Normal,
@@ -382,20 +423,20 @@
                 kind: Simple(Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Inline(Formula(("room_size_x+4+1"))))),
-                        y: Value(0),
-                        z: Value(0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 )))),
                 intersect: (("return intersect_box(r, room_blue_M);")),
                 in_subspace: Normal,
@@ -405,7 +446,28 @@
             name: "object",
             data: Complex(
                 kind: Simple(Some(Named("object"))),
-                intersect: (("if (enable_object_u == 0) return scene_intersection_none;\n\nSceneIntersection result = object_intersect(r);\nif (!result.hit.hit) return scene_intersection_none;\n\nvec4 pos_absolute = object_mat * (r.o + r.d * result.hit.t);\n\nvec4 ray_o = object_vector_mat * vec4(0., 0., 0., 1.);\r\nvec4 ray_d = normalize(pos_absolute - ray_o);\r\nRay r2 = Ray(ray_o, ray_d, 1.0, false);\r\n\nRay r_mob = transform(mobius_a_final_mat_inv, r2);\nfloat len_mob = length(r_mob.d.xyz);\nr_mob.d = normalize(r_mob.d);\nSurfaceIntersection hit_mob = mobius_intersect(r_mob);\r\nhit_mob.t /= len_mob;\n\nfloat obj_t = length(pos_absolute - ray_o);\n\nif (hit_mob.t < obj_t) return scene_intersection_none;\n\nreturn result;")),
+                intersect: (("if (enable_object_u == 0) return scene_intersection_none;
+
+SceneIntersection result = object_intersect(r);
+if (!result.hit.hit) return scene_intersection_none;
+
+vec4 pos_absolute = object_mat * (r.o + r.d * result.hit.t);
+
+vec4 ray_o = object_vector_mat * vec4(0., 0., 0., 1.);
+vec4 ray_d = normalize(pos_absolute - ray_o);
+Ray r2 = Ray(ray_o, ray_d, 1.0, false);
+
+Ray r_mob = transform(mobius_a_final_mat_inv, r2);
+float len_mob = length(r_mob.d.xyz);
+r_mob.d = normalize(r_mob.d);
+SurfaceIntersection hit_mob = mobius_intersect(r_mob);
+hit_mob.t /= len_mob;
+
+float obj_t = length(pos_absolute - ray_o);
+
+if (hit_mob.t < obj_t) return scene_intersection_none;
+
+return result;")),
                 in_subspace: Normal,
             ),
         ),
@@ -413,7 +475,29 @@
             name: "object_teleported",
             data: Complex(
                 kind: Simple(Some(Named("object_teleported"))),
-                intersect: (("if (enable_object_u == 0) return scene_intersection_none;\n\nSceneIntersection result = object_intersect(r);\nif (!result.hit.hit) return scene_intersection_none;\n\nvec4 pos = r.o + r.d * result.hit.t;\nvec4 pos_absolute = object_teleported_mat * pos;\n\nvec4 ray_o = object_vector_teleported_mat * vec4(0., 0., 0., 1.);\r\nvec4 ray_d = normalize(pos_absolute-ray_o);\r\nRay r2 = Ray(ray_o, ray_d, 1.0, false);\r\n\nRay r_mob = transform(mobius_b_final_mat_inv, r2);\nfloat len_mob = length(r_mob.d);\nr_mob.d = normalize(r_mob.d);\nSurfaceIntersection hit_mob = mobius_intersect(r_mob);\r\nhit_mob.t /= len_mob;\n\nfloat obj_t = length(pos_absolute - ray_o);\n\nif (hit_mob.t > obj_t) return scene_intersection_none;\n\nreturn result;")),
+                intersect: (("if (enable_object_u == 0) return scene_intersection_none;
+
+SceneIntersection result = object_intersect(r);
+if (!result.hit.hit) return scene_intersection_none;
+
+vec4 pos = r.o + r.d * result.hit.t;
+vec4 pos_absolute = object_teleported_mat * pos;
+
+vec4 ray_o = object_vector_teleported_mat * vec4(0., 0., 0., 1.);
+vec4 ray_d = normalize(pos_absolute-ray_o);
+Ray r2 = Ray(ray_o, ray_d, 1.0, false);
+
+Ray r_mob = transform(mobius_b_final_mat_inv, r2);
+float len_mob = length(r_mob.d);
+r_mob.d = normalize(r_mob.d);
+SurfaceIntersection hit_mob = mobius_intersect(r_mob);
+hit_mob.t /= len_mob;
+
+float obj_t = length(pos_absolute - ray_o);
+
+if (hit_mob.t > obj_t) return scene_intersection_none;
+
+return result;")),
                 in_subspace: Normal,
             ),
         ),
@@ -421,7 +505,44 @@
             name: "object_vector",
             data: Complex(
                 kind: Simple(Some(Named("object_vector"))),
-                intersect: (("if (enable_object_u == 0) return scene_intersection_none;\n\nfloat radius = 0.03;\r\n\r\nSurfaceIntersection hit = intersection_none;\r\nSceneIntersection i = SceneIntersection(0, hit, false);\r\n\r\nhit = cap(r, vec3(0., 0., 0.), vec3(1., 0., 0.), radius);\r\nif (nearer(i, hit)) {\r\n  i.material = DEBUG_RED;\r\n  i.hit = hit;\r\n}\r\n\nhit = cap(r, vec3(1., 0., 0.), vec3(0.9, 0., -0.1), radius);\r\nif (nearer(i, hit)) {\r\n  i.material = DEBUG_RED;\r\n  i.hit = hit;\r\n}\r\n\nhit = cap(r, vec3(1., 0., 0.), vec3(0.9, 0.0, 0.1), radius);\r\nif (nearer(i, hit)) {\r\n  i.material = DEBUG_RED;\r\n  i.hit = hit;\r\n}\r\n\r\nhit = cap(r, vec3(0., -0.2, 0.), vec3(0., 0.2, 0.), radius);\r\nif (nearer(i, hit)) {\r\n  i.material = DEBUG_GREEN;\r\n  i.hit = hit;\r\n}\r\n\r\nhit = cap(r, vec3(0., 0., -0.2), vec3(0., 0., 0.2), radius);\r\nif (nearer(i, hit)) {\r\n  i.material = DEBUG_BLUE;\r\n  i.hit = hit;\r\n}\r\n\r\nreturn i;")),
+                intersect: (("if (enable_object_u == 0) return scene_intersection_none;
+
+float radius = 0.03;
+
+SurfaceIntersection hit = intersection_none;
+SceneIntersection i = SceneIntersection(0, hit, false);
+
+hit = cap(r, vec3(0., 0., 0.), vec3(1., 0., 0.), radius);
+if (nearer(i, hit)) {
+  i.material = DEBUG_RED;
+  i.hit = hit;
+}
+
+hit = cap(r, vec3(1., 0., 0.), vec3(0.9, 0., -0.1), radius);
+if (nearer(i, hit)) {
+  i.material = DEBUG_RED;
+  i.hit = hit;
+}
+
+hit = cap(r, vec3(1., 0., 0.), vec3(0.9, 0.0, 0.1), radius);
+if (nearer(i, hit)) {
+  i.material = DEBUG_RED;
+  i.hit = hit;
+}
+
+hit = cap(r, vec3(0., -0.2, 0.), vec3(0., 0.2, 0.), radius);
+if (nearer(i, hit)) {
+  i.material = DEBUG_GREEN;
+  i.hit = hit;
+}
+
+hit = cap(r, vec3(0., 0., -0.2), vec3(0., 0., 0.2), radius);
+if (nearer(i, hit)) {
+  i.material = DEBUG_BLUE;
+  i.hit = hit;
+}
+
+return i;")),
                 in_subspace: Normal,
             ),
         ),
@@ -436,7 +557,7 @@
                 r: 3.5,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -448,7 +569,7 @@
                 r: 3.5,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -460,7 +581,7 @@
                 r: 4.658500000000003,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -472,7 +593,7 @@
                 r: 4.658500000000003,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
     ]),
@@ -484,7 +605,7 @@
                 color: (0.8980392156862745, 0.8313725490196079, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -496,7 +617,7 @@
                 color: (0.9058823529411765, 0.29411764705882354, 0.29411764705882354),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -508,7 +629,7 @@
                 color: (0.2823529411764706, 0.2823529411764706, 0.2823529411764706),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -520,7 +641,7 @@
                 color: (0.5254901960784314, 0.5254901960784314, 0.5254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -532,7 +653,7 @@
                 color: (0.3137254901960784, 0.38823529411764707, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -544,7 +665,7 @@
                 color: (0.2627450980392157, 0.8470588235294118, 0.30196078431372547),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -556,7 +677,7 @@
                 color: (0.03557645, 0.6446965, 0.79122156),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -568,7 +689,7 @@
                 color: (0.9317271, 0.42666554, 0.051948573),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -580,7 +701,7 @@
                 color: (0.6392156862745098, 0.6392156862745098, 0.6392156862745098),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -589,10 +710,10 @@
         (
             name: "solid_black",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -604,7 +725,7 @@
                 color: (0.9254901960784314, 0.9254901960784314, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -615,21 +736,248 @@
     library: ([
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "mobius",
-            data: (("vec2 two_lines_nearest_points(Ray a, Ray b) {\r\n    vec3 n = cross(a.d.xyz, b.d.xyz);\r\n    vec3 n1 = cross(a.d.xyz, n);\r\n    vec3 n2 = cross(b.d.xyz, n);\r\n    return vec2(\r\n        dot(b.o.xyz-a.o.xyz, n2)/dot(a.d.xyz, n2),\r\n        dot(a.o.xyz-b.o.xyz, n1)/dot(b.d.xyz, n1)\r\n    );\r\n}\r\n\r\nfloat project(vec3 a, vec3 to) {\r\n    return dot(a, to) / dot(to, to);\r\n}\r\n\r\nvec3 projection(vec3 a, vec3 to) {\r\n    return to * project(a, to);\r\n}\r\n\r\nfloat clamp_mod(float a, float max) {\r\n    a = max + mod(a, max);\r\n    if (a < 0.) {\r\n        a += max;\r\n    }\r\n    if (a > max) {\r\n        a -= max;\r\n    }\r\n    return a;\r\n}\r\n\r\nfloat clamp_angle(float a) {\r\n    return clamp_mod(a, 2. * PI);\r\n}\r\n\r\nvec3 mobius_o(float u) {\r\n    return vec3(cos(u), 0, sin(u));\r\n}\r\n\r\nvec3 mobius_d(float u) {\r\n    return vec3(cos(u/2.)*cos(u), sin(u/2.), cos(u/2.)*sin(u))/2.; // mobius\r\n}\r\n\r\nvec3 mobius_step(float u, Ray r) {\r\n    Ray l = Ray(vec4(mobius_o(u), 1.), vec4(mobius_d(u), 0.), 1.0, false);\r\n    vec2 ts = two_lines_nearest_points(l, r);\r\n\r\n    vec3 lnearest = (l.o + l.d * ts.x).xyz;\r\n    vec3 rnearest = (r.o + r.d * ts.y).xyz;\r\n    \r\n    float distance = length(lnearest - rnearest);\r\n\r\n    if (abs(ts.x) > 1.) {\r\n        distance *= 2.0 * abs(ts.x);\r\n    }\r\n\r\n    if (ts.y < 0.) {\r\n        distance *= 4.0 * abs(ts.y);\r\n    }\r\n\r\n    return vec3(distance, ts.x, ts.y); // distance, v, t\r\n}\r\n\r\nvec3 mobius_d1(float v, float u) {\r\n    float a = sin(u/2.);\r\n    float b = cos(u/2.);\r\n    float c = sin(u);\r\n    float d = cos(u);\r\n    return vec3(\r\n        b*d/2., \r\n        b*c/2., \r\n        a/2.\r\n    );\r\n}\r\n\r\nvec3 mobius_d2(float v, float u) {\r\n    float a = sin(u/2.);\r\n    float b = cos(u/2.);\r\n    float c = sin(u);\r\n    float d = cos(u);\r\n    return vec3(\r\n        -(0.25*v*a*d+0.5*v*c*b+c), \r\n        -(0.25*(v*a*c-2.*d*(v*b+2.))), \r\n        0.25*v*b\r\n    );\r\n}\r\n\r\nstruct SearchResult {\r\n    float t;\r\n    float u;\r\n    float v;\r\n};\r\n\r\nSearchResult mobius_best_approx(float u, Ray r, float eps_newton, SearchResult best) {\r\n    float eps_der = mobius_derivative_step_u;\r\n\r\n    vec3 step = mobius_step(u, r);\r\n    int count = 10; \r\n    for (int k = 0; k < 10; k++) { if (k >= count) break; // !FOR_NUMBER!\r\n    for (int k = 0; k < count; k++) { // !FOR_VARIABLE!\r\n        if (step.x < eps_newton) {\r\n            break;\r\n        }\r\n        float du = -step.x/(mobius_step(u + eps_der, r).x - step.x)*eps_der;\r\n        u = clamp_angle(u + du);\r\n        step = mobius_step(u, r);\r\n        if (best.t > 0. && abs(u-best.u) < 0.01) {\r\n            return SearchResult(-1., 0., 0.);\r\n        }\r\n    }\r\n\r\n    if (step.x < eps_newton) {\r\n        return SearchResult(step.z, u, step.y);    \r\n    } else {\r\n        return SearchResult(-1., 0., 0.);\r\n    }\r\n}\r\n\r\nSearchResult update_best_approx(SearchResult best, SearchResult current) {\r\n    if (current.t > 0. && (current.v > -1. && current.v < 1.)) {\r\n        if (best.t < 0.) {\r\n            best = current;\r\n        } else {\r\n            if (current.t < best.t) {\r\n                best = current;\r\n            }\r\n        }\r\n    }\r\n    return best;\r\n}\r\n\r\nSearchResult mobius_find_best(Ray r) {\r\n    SearchResult best = SearchResult(-1., 0., 0.);\r\n    best = update_best_approx(best, mobius_best_approx(0., r, 0.0001, best));\r\n    best = update_best_approx(best, mobius_best_approx(PI, r, 0.0001, best));\r\n    int count1 = 2; \r\n    for (int i = 0; i < 2; i++) { if (i >= count1) break; // !FOR_NUMBER!\r\n    for (int i = 0; i < count1; i++) { // !FOR_VARIABLE!\r\n        float u = float(i*2 + 1)/4. * 2. * PI;\r\n        best = update_best_approx(best, mobius_best_approx(u, r, 0.0001, best));\r\n    }\r\n    int count2 = 4; \r\n    for (int i = 0; i < 4; i++) { if (i >= count2) break; // !FOR_NUMBER!\r\n    for (int i = 0; i < count2; i++) { // !FOR_VARIABLE!\r\n        float u = float(i*2 + 1)/8. * 2. * PI;\r\n        best = update_best_approx(best, mobius_best_approx(u, r, 0.0001, best));\r\n    }\r\n    if (best.t < 0.) {\r\n        return best;\r\n    }\r\n    best = update_best_approx(best, mobius_best_approx(float(8 - 1)/16. * 2. * PI, r, 0.0001, best));\r\n    best = update_best_approx(best, mobius_best_approx(float(8 + 1)/16. * 2. * PI, r, 0.0001, best));\r\n    return best;\r\n}\r\n\r\nbool intersect_mobius_sphere(Ray r) {\r\n    vec3 op = -r.o.xyz;\r\n    float b = dot(op, r.d.xyz);\r\n    float det = b * b - dot(op, op) + 2.4055; // 1.55²\r\n    return det >= 0.;\r\n}\r\n\r\nSurfaceIntersection mobius_intersect(Ray r) {\r\n    if (intersect_mobius_sphere(r)) {\r\n        SearchResult best = mobius_find_best(r);\r\n        if (best.t >= 0.) {\r\n            vec3 normal = normalize_normal(cross(mobius_d1(best.v, best.u), mobius_d2(best.v, best.u)), r.d.xyz);\r\n            return SurfaceIntersection(true, best.t, best.u, best.v, normal);\r\n        }\r\n    }\r\n\r\n    return intersection_none;\r\n}")),
+            data: (("vec2 two_lines_nearest_points(Ray a, Ray b) {
+    vec3 n = cross(a.d.xyz, b.d.xyz);
+    vec3 n1 = cross(a.d.xyz, n);
+    vec3 n2 = cross(b.d.xyz, n);
+    return vec2(
+        dot(b.o.xyz-a.o.xyz, n2)/dot(a.d.xyz, n2),
+        dot(a.o.xyz-b.o.xyz, n1)/dot(b.d.xyz, n1)
+    );
+}
+
+float project(vec3 a, vec3 to) {
+    return dot(a, to) / dot(to, to);
+}
+
+vec3 projection(vec3 a, vec3 to) {
+    return to * project(a, to);
+}
+
+float clamp_mod(float a, float max) {
+    a = max + mod(a, max);
+    if (a < 0.) {
+        a += max;
+    }
+    if (a > max) {
+        a -= max;
+    }
+    return a;
+}
+
+float clamp_angle(float a) {
+    return clamp_mod(a, 2. * PI);
+}
+
+vec3 mobius_o(float u) {
+    return vec3(cos(u), 0, sin(u));
+}
+
+vec3 mobius_d(float u) {
+    return vec3(cos(u/2.)*cos(u), sin(u/2.), cos(u/2.)*sin(u))/2.; // mobius
+}
+
+vec3 mobius_step(float u, Ray r) {
+    Ray l = Ray(vec4(mobius_o(u), 1.), vec4(mobius_d(u), 0.), 1.0, false);
+    vec2 ts = two_lines_nearest_points(l, r);
+
+    vec3 lnearest = (l.o + l.d * ts.x).xyz;
+    vec3 rnearest = (r.o + r.d * ts.y).xyz;
+    
+    float distance = length(lnearest - rnearest);
+
+    if (abs(ts.x) > 1.) {
+        distance *= 2.0 * abs(ts.x);
+    }
+
+    if (ts.y < 0.) {
+        distance *= 4.0 * abs(ts.y);
+    }
+
+    return vec3(distance, ts.x, ts.y); // distance, v, t
+}
+
+vec3 mobius_d1(float v, float u) {
+    float a = sin(u/2.);
+    float b = cos(u/2.);
+    float c = sin(u);
+    float d = cos(u);
+    return vec3(
+        b*d/2., 
+        b*c/2., 
+        a/2.
+    );
+}
+
+vec3 mobius_d2(float v, float u) {
+    float a = sin(u/2.);
+    float b = cos(u/2.);
+    float c = sin(u);
+    float d = cos(u);
+    return vec3(
+        -(0.25*v*a*d+0.5*v*c*b+c), 
+        -(0.25*(v*a*c-2.*d*(v*b+2.))), 
+        0.25*v*b
+    );
+}
+
+struct SearchResult {
+    float t;
+    float u;
+    float v;
+};
+
+SearchResult mobius_best_approx(float u, Ray r, float eps_newton, SearchResult best) {
+    float eps_der = mobius_derivative_step_u;
+
+    vec3 step = mobius_step(u, r);
+    int count = 10; 
+    for (int k = 0; k < 10; k++) { if (k >= count) break; // !FOR_NUMBER!
+    for (int k = 0; k < count; k++) { // !FOR_VARIABLE!
+        if (step.x < eps_newton) {
+            break;
+        }
+        float du = -step.x/(mobius_step(u + eps_der, r).x - step.x)*eps_der;
+        u = clamp_angle(u + du);
+        step = mobius_step(u, r);
+        if (best.t > 0. && abs(u-best.u) < 0.01) {
+            return SearchResult(-1., 0., 0.);
+        }
+    }
+
+    if (step.x < eps_newton) {
+        return SearchResult(step.z, u, step.y);    
+    } else {
+        return SearchResult(-1., 0., 0.);
+    }
+}
+
+SearchResult update_best_approx(SearchResult best, SearchResult current) {
+    if (current.t > 0. && (current.v > -1. && current.v < 1.)) {
+        if (best.t < 0.) {
+            best = current;
+        } else {
+            if (current.t < best.t) {
+                best = current;
+            }
+        }
+    }
+    return best;
+}
+
+SearchResult mobius_find_best(Ray r) {
+    SearchResult best = SearchResult(-1., 0., 0.);
+    best = update_best_approx(best, mobius_best_approx(0., r, 0.0001, best));
+    best = update_best_approx(best, mobius_best_approx(PI, r, 0.0001, best));
+    int count1 = 2; 
+    for (int i = 0; i < 2; i++) { if (i >= count1) break; // !FOR_NUMBER!
+    for (int i = 0; i < count1; i++) { // !FOR_VARIABLE!
+        float u = float(i*2 + 1)/4. * 2. * PI;
+        best = update_best_approx(best, mobius_best_approx(u, r, 0.0001, best));
+    }
+    int count2 = 4; 
+    for (int i = 0; i < 4; i++) { if (i >= count2) break; // !FOR_NUMBER!
+    for (int i = 0; i < count2; i++) { // !FOR_VARIABLE!
+        float u = float(i*2 + 1)/8. * 2. * PI;
+        best = update_best_approx(best, mobius_best_approx(u, r, 0.0001, best));
+    }
+    if (best.t < 0.) {
+        return best;
+    }
+    best = update_best_approx(best, mobius_best_approx(float(8 - 1)/16. * 2. * PI, r, 0.0001, best));
+    best = update_best_approx(best, mobius_best_approx(float(8 + 1)/16. * 2. * PI, r, 0.0001, best));
+    return best;
+}
+
+bool intersect_mobius_sphere(Ray r) {
+    vec3 op = -r.o.xyz;
+    float b = dot(op, r.d.xyz);
+    float det = b * b - dot(op, op) + 2.4055; // 1.55²
+    return det >= 0.;
+}
+
+SurfaceIntersection mobius_intersect(Ray r) {
+    if (intersect_mobius_sphere(r)) {
+        SearchResult best = mobius_find_best(r);
+        if (best.t >= 0.) {
+            vec3 normal = normalize_normal(cross(mobius_d1(best.v, best.u), mobius_d2(best.v, best.u)), r.d.xyz);
+            return SurfaceIntersection(true, best.t, best.u, best.v, normal);
+        }
+    }
+
+    return intersection_none;
+}")),
         ),
         (
             name: "box",
-            data: (("SceneIntersection intersect_box(Ray r, int material) {\nvec3 rad = vec3(4., 4., 4.);\nvec3 m = 1.0/r.d.xyz;\nvec3 n = m*r.o.xyz;\nvec3 k = abs(m)*rad;\nvec3 t1 = -n - k;\nvec3 t2 = -n + k;\n\nfloat tN = max( max( t1.x, t1.y ), t1.z );\nfloat tF = min( min( t2.x, t2.y ), t2.z );\n\nfloat t = tN;\nif (tN < 0.0 && tF > 0.0) t = tF;\n\nif(tN > tF) return scene_intersection_none;\n\nif(t < 0.0) return scene_intersection_none;\n\nvec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\n\nvec3 pos = (r.o + r.d * t).xyz;\n\nvec2 uv = vec2(pos.x, pos.y);\nif (abs(abs(pos.x) - rad.x) < 0.0001) {\n  uv = vec2(pos.y, pos.z);\n}\nif (abs(abs(pos.y) - rad.y) < 0.0001) {\n  uv = vec2(pos.x, pos.z);\n}\n\nreturn SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);\n}")),
+            data: (("SceneIntersection intersect_box(Ray r, int material) {
+vec3 rad = vec3(4., 4., 4.);
+vec3 m = 1.0/r.d.xyz;
+vec3 n = m*r.o.xyz;
+vec3 k = abs(m)*rad;
+vec3 t1 = -n - k;
+vec3 t2 = -n + k;
+
+float tN = max( max( t1.x, t1.y ), t1.z );
+float tF = min( min( t2.x, t2.y ), t2.z );
+
+float t = tN;
+if (tN < 0.0 && tF > 0.0) t = tF;
+
+if(tN > tF) return scene_intersection_none;
+
+if(t < 0.0) return scene_intersection_none;
+
+vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
+
+vec3 pos = (r.o + r.d * t).xyz;
+
+vec2 uv = vec2(pos.x, pos.y);
+if (abs(abs(pos.x) - rad.x) < 0.0001) {
+  uv = vec2(pos.y, pos.z);
+}
+if (abs(abs(pos.y) - rad.y) < 0.0001) {
+  uv = vec2(pos.x, pos.z);
+}
+
+return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);
+}")),
         ),
         (
             name: "object",
-            data: (("SceneIntersection object_intersect(Ray r) {\r\n\tvec3 op = -r.o.xyz;\r\n\tfloat b = dot(op, r.d.xyz);\r\n\tfloat det = b*b - dot(op, op) + 0.04;\r\n\tif (det < 0.) return scene_intersection_none;\r\n\r\n\tdet = sqrt(det);\r\n\tfloat t = b - det;\r\n\tif (t < 0.) t = b + det;\r\n\tif (t < 0.) return scene_intersection_none;\r\n\r\n\tvec4 pos = r.o + r.d * t;\r\n\tvec3 n = normalize(pos.xyz);\r\n\r\n\tfloat u = atan(pos.z, pos.x);\r\n\tfloat v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);\r\n\r\n\treturn SceneIntersection(gray_grid_M, SurfaceIntersection(true, t, u, v, n), false);\r\n}")),
+            data: (("SceneIntersection object_intersect(Ray r) {
+	vec3 op = -r.o.xyz;
+	float b = dot(op, r.d.xyz);
+	float det = b*b - dot(op, op) + 0.04;
+	if (det < 0.) return scene_intersection_none;
+
+	det = sqrt(det);
+	float t = b - det;
+	if (t < 0.) t = b + det;
+	if (t < 0.) return scene_intersection_none;
+
+	vec4 pos = r.o + r.d * t;
+	vec3 n = normalize(pos.xyz);
+
+	float u = atan(pos.z, pos.x);
+	float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
+
+	return SceneIntersection(gray_grid_M, SurfaceIntersection(true, t, u, v, n), false);
+}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "black_border_size": false,
@@ -769,54 +1117,54 @@
                 },
                 matrices: {
                     "mobius_a": ChangedAndToUser(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "mobius_a_final": FromDev,
                     "mobius_a_mul": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-(room_size_x+4+1)"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "mobius_b": ChangedAndToUser(Some(Inline(Simple(
-                        offset: (0, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 0),
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "mobius_b_final": FromDev,
                     "mobius_b_mul": Changed(Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("room_size_x+4+1"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     )))),
                     "object": FromDev,
                     "object_teleported": FromDev,
@@ -858,17 +1206,17 @@
                 },
                 matrices: {
                     "mobius_a": ChangedAndToUser(Some(Inline(Simple(
-                        offset: (-2.4, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 1.5707963267948966),
+                        offset: (-2.4, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 1.5707963267948966),
                         mirror: (false, false, false),
                     )))),
                     "mobius_a_final": FromDev,
                     "mobius_a_mul": FromDev,
                     "mobius_b": ChangedAndToUser(Some(Inline(Simple(
-                        offset: (2.4, 0, 0),
-                        scale: 1,
-                        rotate: (0, 0, 1.5707963267948966),
+                        offset: (2.4, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 1.5707963267948966),
                         mirror: (false, false, false),
                     )))),
                     "mobius_b_final": FromDev,
@@ -918,9 +1266,9 @@
                     "object": FromDev,
                     "object_teleported": FromDev,
                     "object_vector": Changed(Some(Inline(Simple(
-                        offset: (0, 1, 0),
-                        scale: 1,
-                        rotate: (0, 3.141592653589793, 0),
+                        offset: (0.0, 1.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 3.141592653589793, 0.0),
                         mirror: (false, false, false),
                     )))),
                     "object_vector_teleported": FromDev,
@@ -965,9 +1313,9 @@
                     "object": FromDev,
                     "object_teleported": FromDev,
                     "object_vector": Changed(Some(Inline(Simple(
-                        offset: (0, 1, 0),
-                        scale: 1,
-                        rotate: (0, 2.7227136331111543, 5.8643062867009474),
+                        offset: (0.0, 1.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 2.7227136331111543, 5.8643062867009474),
                         mirror: (false, false, false),
                     )))),
                     "object_vector_teleported": FromDev,
@@ -1013,7 +1361,7 @@
                     "object_teleported": FromDev,
                     "object_vector": Changed(Some(Inline(Simple(
                         offset: (-1.5, -1.5, 1.5),
-                        scale: 1,
+                        scale: 1.0,
                         rotate: (5.340707511102648, 3.141592653589793, 0.890117918517108),
                         mirror: (false, false, false),
                     )))),
@@ -1081,32 +1429,32 @@
             "enable_object": Bool(false),
             "mobius_derivative_step": Formula(("0.000005")),
             "object_move": Float((
-                min: Some(0),
-                max: Some(5),
+                min: Some(0.0),
+                max: Some(5.0),
                 value: 0.45,
             )),
             "room_size_x": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 6,
+                value: 6.0,
             )),
             "room_size_y": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_z": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 6,
+                value: 6.0,
             )),
             "teleport_light": Bool(true),
         },
         matrices: {
             "mobius_a": Simple(
-                offset: (-2.4, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 1.5707963267948966),
+                offset: (-2.4, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 1.5707963267948966),
                 mirror: (false, false, false),
             ),
             "mobius_a_final": Mul(
@@ -1114,15 +1462,15 @@
                 what: Some(Named("mobius_a_mul")),
             ),
             "mobius_a_mul": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "mobius_b": Simple(
-                offset: (2.4, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 1.5707963267948966),
+                offset: (2.4, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 1.5707963267948966),
                 mirror: (false, false, false),
             ),
             "mobius_b_final": Mul(
@@ -1130,29 +1478,29 @@
                 what: Some(Named("mobius_b_mul")),
             ),
             "mobius_b_mul": Simple(
-                offset: (-0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (-0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "object": Mul(
                 to: Some(Inline(Parametrized(
                     offset: (
                         x: Uniform(Some(Named("object_move"))),
-                        y: Value(0),
-                        z: Value(0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     rotate: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
                     mirror: (
-                        x: Value(0),
-                        y: Value(0),
-                        z: Value(0),
+                        x: Value(0.0),
+                        y: Value(0.0),
+                        z: Value(0.0),
                     ),
-                    scale: Value(1),
+                    scale: Value(1.0),
                 ))),
                 what: Some(Named("object_vector")),
             ),
@@ -1162,9 +1510,9 @@
                 what: Some(Named("object")),
             ),
             "object_vector": Simple(
-                offset: (0, 1, 0),
-                scale: 1,
-                rotate: (0, 2.7401669256310974, 5.8643062867009474),
+                offset: (0.0, 1.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 2.7401669256310974, 5.8643062867009474),
                 mirror: (false, false, false),
             ),
             "object_vector_teleported": Teleport(
@@ -1173,9 +1521,9 @@
                 what: Some(Named("object_vector")),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         },

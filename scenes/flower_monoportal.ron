@@ -1,10 +1,11 @@
 (
     desc: (
-        eng: "\n",
+        eng: "
+",
         rus: "",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: -24.159485865899548,
         beta: 0.6074342959507477,
         r: 2.5657905911535464,
@@ -14,25 +15,25 @@
         (
             name: "room_size_x",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_y",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
             name: "room_size_z",
             data: Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
         ),
         (
@@ -52,7 +53,7 @@
             data: Float((
                 min: None,
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
         ),
         (
@@ -66,8 +67,8 @@
         (
             name: "side_border",
             data: Float((
-                min: Some(0),
-                max: Some(5),
+                min: Some(0.0),
+                max: Some(5.0),
                 value: 0.5,
             )),
         ),
@@ -81,15 +82,15 @@
         ),
         (
             name: "polygon_size",
-            data: Progress(1),
+            data: Progress(1.0),
         ),
         (
             name: "color_progress",
-            data: Progress(1),
+            data: Progress(1.0),
         ),
         (
             name: "progress",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "gray_room",
@@ -108,7 +109,7 @@
             data: Float((
                 min: None,
                 max: None,
-                value: 3,
+                value: 3.0,
             )),
         ),
         (
@@ -136,99 +137,99 @@
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "symmetric_offset",
             data: Simple(
-                offset: (0.02, 0, 0),
+                offset: (0.02, 0.0, 0.0),
                 scale: 1.13,
-                rotate: (4.71238898038469, 0, 1.5707963267948966),
+                rotate: (4.71238898038469, 0.0, 1.5707963267948966),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "r",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "g",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 2.0943951023931953, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 2.0943951023931953, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "b",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 4.1887902047863905, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 4.1887902047863905, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "first",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 5.759586531581287, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 5.759586531581287, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "second",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 3.6651914291880923, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 3.6651914291880923, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "third",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 1.5707963267948966, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 1.5707963267948966, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "r_user",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "g_user",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "b_user",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -265,9 +266,9 @@
         (
             name: "polygon",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 0,
-                rotate: (4.71238898038469, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 0.0,
+                rotate: (4.71238898038469, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -302,27 +303,27 @@
         (
             name: "room_r",
             data: Simple(
-                offset: (9, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (9.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_g",
             data: Simple(
-                offset: (0, 9, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 9.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
         (
             name: "room_b",
             data: Simple(
-                offset: (0, 0, 9),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 9.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -335,24 +336,28 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Named("room_size_x"))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
-                is_inside: (("if (gray_room_u == 1) {\r\nreturn is_inside_square(x, y, room_size_z_u, room_size_y_u, room_white2_M);\r\n}\n\nreturn is_inside_square(x, y, room_size_z_u, room_size_y_u, room_yellow_M);")),
+                is_inside: (("if (gray_room_u == 1) {
+return is_inside_square(x, y, room_size_z_u, room_size_y_u, room_white2_M);
+}
+
+return is_inside_square(x, y, room_size_z_u, room_size_y_u, room_yellow_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -363,24 +368,28 @@
                     to: Some(Inline(Parametrized(
                         offset: (
                             x: Uniform(Some(Inline(Formula(("-room_size_x"))))),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         rotate: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Value(1.5707963267948966),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
-                is_inside: (("if (gray_room_u == 1) {\r\nreturn is_inside_square(x, y, room_size_z_u, room_size_y_u, room_white2_M);\r\n}\n\nreturn is_inside_square(x, y, room_size_z_u, room_size_y_u, room_red_M);")),
+                is_inside: (("if (gray_room_u == 1) {
+return is_inside_square(x, y, room_size_z_u, room_size_y_u, room_white2_M);
+}
+
+return is_inside_square(x, y, room_size_z_u, room_size_y_u, room_red_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -390,25 +399,29 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Named("room_size_y"))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
-                is_inside: (("if (gray_room_u == 1) {\r\nreturn is_inside_square(x, y, room_size_z_u, room_size_y_u, room_black2_M);\r\n}\n\nreturn is_inside_square(x, y, room_size_x_u, room_size_z_u, room_black_M);")),
+                is_inside: (("if (gray_room_u == 1) {
+return is_inside_square(x, y, room_size_z_u, room_size_y_u, room_black2_M);
+}
+
+return is_inside_square(x, y, room_size_x_u, room_size_z_u, room_black_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -418,25 +431,29 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
+                            x: Value(0.0),
                             y: Uniform(Some(Inline(Formula(("-room_size_y"))))),
-                            z: Value(0),
+                            z: Value(0.0),
                         ),
                         rotate: (
                             x: Value(1.5707963267948966),
-                            y: Value(0),
-                            z: Value(0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
-                is_inside: (("if (gray_room_u == 1) {\r\nreturn is_inside_square(x, y, room_size_z_u, room_size_y_u, room_black2_M);\r\n}\n\nreturn is_inside_square(x, y, room_size_x_u, room_size_z_u, room_gray_M);")),
+                is_inside: (("if (gray_room_u == 1) {
+return is_inside_square(x, y, room_size_z_u, room_size_y_u, room_black2_M);
+}
+
+return is_inside_square(x, y, room_size_x_u, room_size_z_u, room_gray_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -446,25 +463,29 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Named("room_size_z"))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
-                is_inside: (("if (gray_room_u == 1) {\r\nreturn is_inside_square(x, y, room_size_z_u, room_size_y_u, room_white2_M);\r\n}\n\nreturn is_inside_square(x, y, room_size_x_u, room_size_y_u, room_blue_M);")),
+                is_inside: (("if (gray_room_u == 1) {
+return is_inside_square(x, y, room_size_z_u, room_size_y_u, room_white2_M);
+}
+
+return is_inside_square(x, y, room_size_x_u, room_size_y_u, room_blue_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -474,25 +495,29 @@
                 kind: Simple(Some(Inline(Mul(
                     to: Some(Inline(Parametrized(
                         offset: (
-                            x: Value(0),
-                            y: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
                             z: Uniform(Some(Inline(Formula(("-room_size_z"))))),
                         ),
                         rotate: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
                         mirror: (
-                            x: Value(0),
-                            y: Value(0),
-                            z: Value(0),
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
                         ),
-                        scale: Value(1),
+                        scale: Value(1.0),
                     ))),
                     what: Some(Named("room_origin")),
                 )))),
-                is_inside: (("if (gray_room_u == 1) {\r\nreturn is_inside_square(x, y, room_size_z_u, room_size_y_u, room_white2_M);\r\n}\n\nreturn is_inside_square(x, y, room_size_x_u, room_size_y_u, room_green_texture_M);")),
+                is_inside: (("if (gray_room_u == 1) {
+return is_inside_square(x, y, room_size_z_u, room_size_y_u, room_white2_M);
+}
+
+return is_inside_square(x, y, room_size_x_u, room_size_y_u, room_green_texture_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -506,7 +531,9 @@
                     to: Some(Named("first")),
                     what: Some(Named("portal_r")),
                 )))),
-                is_inside: (("if (two_sided_u == 1 && !back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, !back, first, solid_red_M, solid_green_M);")),
+                is_inside: (("if (two_sided_u == 1 && !back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, !back, first, solid_red_M, solid_green_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -520,7 +547,9 @@
                     to: Some(Named("first")),
                     what: Some(Named("portal_g")),
                 )))),
-                is_inside: (("if (two_sided_u == 1 && !back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, !back, first, solid_green_M, solid_blue_M);")),
+                is_inside: (("if (two_sided_u == 1 && !back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, !back, first, solid_green_M, solid_blue_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -534,7 +563,9 @@
                     to: Some(Named("first")),
                     what: Some(Named("portal_b")),
                 )))),
-                is_inside: (("if (two_sided_u == 1 && !back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, !back, first, solid_blue_M, solid_red_M);")),
+                is_inside: (("if (two_sided_u == 1 && !back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, !back, first, solid_blue_M, solid_red_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -542,7 +573,10 @@
             name: "polygon r",
             data: Flat(
                 kind: Simple(Some(Named("polygon"))),
-                is_inside: (("vec4 pos1 = portal_r_mat_inv * pos;\nif (pos1.z < abs(pos1.x)/sqrt(3.0)) return NOT_INSIDE;\n\nreturn is_inside_polygon(x, y);")),
+                is_inside: (("vec4 pos1 = portal_r_mat_inv * pos;
+if (pos1.z < abs(pos1.x)/sqrt(3.0)) return NOT_INSIDE;
+
+return is_inside_polygon(x, y);")),
                 in_subspace: Normal,
             ),
         ),
@@ -550,7 +584,10 @@
             name: "polygon_g",
             data: Flat(
                 kind: Simple(Some(Named("polygon_g"))),
-                is_inside: (("vec4 pos1 = portal_g_mat_inv * pos;\nif (pos1.z < abs(pos1.x)/sqrt(3.0)) return NOT_INSIDE;\n\nreturn is_inside_polygon(x, y);")),
+                is_inside: (("vec4 pos1 = portal_g_mat_inv * pos;
+if (pos1.z < abs(pos1.x)/sqrt(3.0)) return NOT_INSIDE;
+
+return is_inside_polygon(x, y);")),
                 in_subspace: Normal,
             ),
         ),
@@ -558,7 +595,10 @@
             name: "polygon_b",
             data: Flat(
                 kind: Simple(Some(Named("polygon_b"))),
-                is_inside: (("vec4 pos1 = portal_b_mat_inv * pos;\nif (pos1.z < abs(pos1.x)/sqrt(3.0)) return NOT_INSIDE;\n\nreturn is_inside_polygon(x, y);")),
+                is_inside: (("vec4 pos1 = portal_b_mat_inv * pos;
+if (pos1.z < abs(pos1.x)/sqrt(3.0)) return NOT_INSIDE;
+
+return is_inside_polygon(x, y);")),
                 in_subspace: Normal,
             ),
         ),
@@ -596,7 +636,11 @@
                     to: Some(Named("first")),
                     what: Some(Named("portal_b")),
                 )))),
-                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;\n\nif (back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, false, !first, solid_red_M, solid_blue_M);")),
+                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;
+
+if (back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, false, !first, solid_red_M, solid_blue_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -610,7 +654,13 @@
                     to: Some(Named("first")),
                     what: Some(Named("portal_r")),
                 )))),
-                is_inside: (("\n\nif (two_sided_u == 0) return NOT_INSIDE;\n\nif (back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, false, !first, solid_green_M, solid_red_M);")),
+                is_inside: (("
+
+if (two_sided_u == 0) return NOT_INSIDE;
+
+if (back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, false, !first, solid_green_M, solid_red_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -624,7 +674,11 @@
                     to: Some(Named("third")),
                     what: Some(Named("portal_g")),
                 )))),
-                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;\n\nif (back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, false, !first, solid_blue_M, solid_green_M);")),
+                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;
+
+if (back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, false, !first, solid_blue_M, solid_green_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -638,7 +692,11 @@
                     to: Some(Named("third")),
                     what: Some(Named("portal_r")),
                 )))),
-                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;\n\nif (back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, false, !first, solid_green_M, solid_red_M);")),
+                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;
+
+if (back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, false, !first, solid_green_M, solid_red_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -652,7 +710,11 @@
                     to: Some(Named("third")),
                     what: Some(Named("portal_b")),
                 )))),
-                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;\n\nif (back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, false, !first, solid_red_M, solid_blue_M);")),
+                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;
+
+if (back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, false, !first, solid_red_M, solid_blue_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -666,7 +728,11 @@
                     to: Some(Named("first")),
                     what: Some(Named("portal_g")),
                 )))),
-                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;\n\nif (back) return NOT_INSIDE;\n\nreturn portal_is_inside(x, y, false, !first, solid_blue_M, solid_green_M);")),
+                is_inside: (("if (two_sided_u == 0) return NOT_INSIDE;
+
+if (back) return NOT_INSIDE;
+
+return portal_is_inside(x, y, false, !first, solid_blue_M, solid_green_M);")),
                 in_subspace: Normal,
             ),
         ),
@@ -681,7 +747,7 @@
                 r: 2.89256198347109,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -693,7 +759,7 @@
                 r: 2.89256198347109,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -705,7 +771,7 @@
                 r: 2.89256198347109,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -717,7 +783,7 @@
                 r: 3.8500000000000236,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -729,7 +795,7 @@
                 r: 3.8500000000000236,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
@@ -741,31 +807,31 @@
                 r: 3.8500000000000236,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
             name: "picture",
             data: (
-                look_at: Coordinate((0, 0, 0)),
+                look_at: Coordinate((0.0, 0.0, 0.0)),
                 alpha: -14.515208384038198,
                 beta: 2.1655923302345945,
                 r: 0.7617019752655252,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
         (
             name: "picture 3",
             data: (
-                look_at: Coordinate((0, 0, 0)),
+                look_at: Coordinate((0.0, 0.0, 0.0)),
                 alpha: -13.641867310629474,
                 beta: 1.4060923153185307,
                 r: 0.837872172792078,
                 in_subspace: false,
                 free_movement: false,
-                matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
             ),
         ),
     ]),
@@ -782,7 +848,7 @@
                 color: (0.8980392156862745, 0.8313725490196079, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -794,7 +860,7 @@
                 color: (0.9058823529411765, 0.29411764705882354, 0.29411764705882354),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -806,7 +872,7 @@
                 color: (0.050980392156862744, 0.050980392156862744, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -818,7 +884,7 @@
                 color: (0.2235294117647059, 0.2235294117647059, 0.2235294117647059),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -830,7 +896,7 @@
                 color: (0.3137254901960784, 0.38823529411764707, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -842,7 +908,7 @@
                 color: (0.2627450980392157, 0.8470588235294118, 0.30196078431372547),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: true,
@@ -854,7 +920,7 @@
                 color: (0.20784313725490197, 0.8235294117647058, 0.9019607843137255),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -866,7 +932,7 @@
                 color: (0.9686274509803922, 0.6862745098039216, 0.25098039215686274),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -878,7 +944,7 @@
                 color: (0.6666666666666666, 0.6666666666666666, 0.6666666666666666),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -887,10 +953,10 @@
         (
             name: "solid_black",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -902,7 +968,7 @@
                 color: (0.7411764705882353, 0.7411764705882353, 0.7411764705882353),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -911,10 +977,10 @@
         (
             name: "solid_red",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -923,10 +989,10 @@
         (
             name: "solid_blue",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -935,10 +1001,10 @@
         (
             name: "solid_green",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -950,7 +1016,7 @@
                 color: (0.9254901960784314, 0.9254901960784314, 0.9254901960784314),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -962,7 +1028,7 @@
                 color: (0.2823529411764706, 0.2823529411764706, 0.2823529411764706),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 1,
+                grid_scale: 1.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -971,7 +1037,9 @@
         (
             name: "room_green_texture",
             data: Complex(
-                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);\nresult.mul_to_color *= texture(monoportal_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;\nreturn result;")),
+                code: (("MaterialProcessing result = material_simple2(hit, r, vec3(2.627450980392157e-1, 8.470588235294118e-1, 3.0196078431372547e-1), 5e-1, true, 1.0, 3e-1, false, true);
+result.mul_to_color *= texture(monoportal_tex, vec2(room_size_x_u + hit.u, room_size_x_u-hit.v) / (room_size_x_u * 2.0)).rgb;
+return result;")),
             ),
         ),
     ]),
@@ -979,25 +1047,120 @@
     library: ([
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "portal",
-            data: (("int portal_is_inside(float x, float y, bool back, bool first, int material1, int material2) {\nint material = material1;\nif (first) material = material2;\n\nint teleport = TELEPORT;\nif (teleport_light_u == 0) teleport = gray_grid_M; \nif (back) teleport = material;\n\nif (between(0., x, side_border_u) && \n    between(0., abs(y), height_u + border_u)) {\n  if (between(0., x, black_border_u) ||\n      (between(side_border_u-black_border_u, x, side_border_u) && \n       between(0., abs(y), height_u + black_border_u)) &&\n      !back) {\n    return solid_black_M;\n  } else {\n    return material;\n  }\n} else if (between(0., abs(y), height_u) && \n           between(0., x, width_u)) {\n  return teleport;\n} else if (between(0., abs(y), height_u + border_u) && \n           between(0., x, width_u + border_u)) {\n  if (between(0., abs(y), height_u + black_border_u) && \n      between(0., x, width_u + black_border_u) && \n      !back) {\n    return solid_black_M;\n  } else {\n    return material;\n  }\n} else if (between(0., abs(y), height_u + border_u + black_border_u) && \n           between(0., x, width_u + border_u + black_border_u)) {\n  return solid_black_M;\n} else {\n  return NOT_INSIDE;\n}\n}")),
+            data: (("int portal_is_inside(float x, float y, bool back, bool first, int material1, int material2) {
+int material = material1;
+if (first) material = material2;
+
+int teleport = TELEPORT;
+if (teleport_light_u == 0) teleport = gray_grid_M; 
+if (back) teleport = material;
+
+if (between(0., x, side_border_u) && 
+    between(0., abs(y), height_u + border_u)) {
+  if (between(0., x, black_border_u) ||
+      (between(side_border_u-black_border_u, x, side_border_u) && 
+       between(0., abs(y), height_u + black_border_u)) &&
+      !back) {
+    return solid_black_M;
+  } else {
+    return material;
+  }
+} else if (between(0., abs(y), height_u) && 
+           between(0., x, width_u)) {
+  return teleport;
+} else if (between(0., abs(y), height_u + border_u) && 
+           between(0., x, width_u + border_u)) {
+  if (between(0., abs(y), height_u + black_border_u) && 
+      between(0., x, width_u + black_border_u) && 
+      !back) {
+    return solid_black_M;
+  } else {
+    return material;
+  }
+} else if (between(0., abs(y), height_u + border_u + black_border_u) && 
+           between(0., x, width_u + border_u + black_border_u)) {
+  return solid_black_M;
+} else {
+  return NOT_INSIDE;
+}
+}")),
         ),
         (
             name: "polygon",
-            data: (("int is_inside_polygon(float x, float y) {\n  float border_ = 0.03 * polygon_size_u;\n  int inner = solid_white_M;\n  int border= solid_black_M;\n  float height = 0.6 * polygon_size_u;\n  float width = 0.5 * polygon_size_u;\n  float slant = 0.4;\n  if (between(border_, y, slant * x + height) && abs(x) < width) {\n    return inner;\n  } else if (between(0., y, slant * x + height + border_) && abs(x) < width + border_) {\n    return border;\n  } else {\n    return NOT_INSIDE;\n  }\n}")),
+            data: (("int is_inside_polygon(float x, float y) {
+  float border_ = 0.03 * polygon_size_u;
+  int inner = solid_white_M;
+  int border= solid_black_M;
+  float height = 0.6 * polygon_size_u;
+  float width = 0.5 * polygon_size_u;
+  float slant = 0.4;
+  if (between(border_, y, slant * x + height) && abs(x) < width) {
+    return inner;
+  } else if (between(0., y, slant * x + height + border_) && abs(x) < width + border_) {
+    return border;
+  } else {
+    return NOT_INSIDE;
+  }
+}")),
         ),
         (
             name: "box",
-            data: (("SceneIntersection intersect_box(Ray r, int material) {\nvec3 rad = vec3(4., 4., 4.);\nvec3 m = 1.0/r.d.xyz;\nvec3 n = m*r.o.xyz;\nvec3 k = abs(m)*rad;\nvec3 t1 = -n - k;\nvec3 t2 = -n + k;\n\nfloat tN = max( max( t1.x, t1.y ), t1.z );\nfloat tF = min( min( t2.x, t2.y ), t2.z );\n\nfloat t = tN;\nif (tN < 0.0 && tF > 0.0) t = tF;\n\nif(tN > tF) return scene_intersection_none;\n\nif(t < 0.0) return scene_intersection_none;\n\nvec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);\n\nvec3 pos = (r.o + r.d * t).xyz;\n\nvec2 uv = vec2(pos.x, pos.y);\nif (abs(abs(pos.x) - rad.x) < 0.0001) {\n  uv = vec2(pos.y, pos.z);\n}\nif (abs(abs(pos.y) - rad.y) < 0.0001) {\n  uv = vec2(pos.x, pos.z);\n}\n\nreturn SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);\n}")),
+            data: (("SceneIntersection intersect_box(Ray r, int material) {
+vec3 rad = vec3(4., 4., 4.);
+vec3 m = 1.0/r.d.xyz;
+vec3 n = m*r.o.xyz;
+vec3 k = abs(m)*rad;
+vec3 t1 = -n - k;
+vec3 t2 = -n + k;
+
+float tN = max( max( t1.x, t1.y ), t1.z );
+float tF = min( min( t2.x, t2.y ), t2.z );
+
+float t = tN;
+if (tN < 0.0 && tF > 0.0) t = tF;
+
+if(tN > tF) return scene_intersection_none;
+
+if(t < 0.0) return scene_intersection_none;
+
+vec3 oN = -sign(r.d.xyz)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
+
+vec3 pos = (r.o + r.d * t).xyz;
+
+vec2 uv = vec2(pos.x, pos.y);
+if (abs(abs(pos.x) - rad.x) < 0.0001) {
+  uv = vec2(pos.y, pos.z);
+}
+if (abs(abs(pos.y) - rad.y) < 0.0001) {
+  uv = vec2(pos.x, pos.z);
+}
+
+return SceneIntersection(material, SurfaceIntersection(true, t, uv.x, uv.y, normalize_normal(r.d.xyz, oN)), false);
+}")),
         ),
         (
             name: "common",
-            data: (("bool invert_if(bool value, bool condition) {\n  if (condition) {\n    return !value;\n  } else {\n    return value;\n  }\n}")),
+            data: (("bool invert_if(bool value, bool condition) {
+  if (condition) {
+    return !value;
+  } else {
+    return value;
+  }
+}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "aa": false,
@@ -1222,7 +1385,7 @@
             "ab": Float((
                 min: None,
                 max: None,
-                value: 3,
+                value: 3.0,
             )),
             "black_border": Float((
                 min: None,
@@ -1234,33 +1397,33 @@
                 max: None,
                 value: 0.1,
             )),
-            "color_progress": Progress(1),
+            "color_progress": Progress(1.0),
             "gray_room": Bool(false),
             "height": Float((
                 min: None,
                 max: None,
                 value: 0.16,
             )),
-            "polygon_size": Progress(1),
-            "progress": Progress(0),
+            "polygon_size": Progress(1.0),
+            "progress": Progress(0.0),
             "room_size_x": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_y": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "room_size_z": Float((
-                min: Some(0),
+                min: Some(0.0),
                 max: None,
-                value: 4,
+                value: 4.0,
             )),
             "side_border": Float((
-                min: Some(0),
-                max: Some(5),
+                min: Some(0.0),
+                max: Some(5.0),
                 value: 0.5,
             )),
             "speed": Float((
@@ -1275,44 +1438,44 @@
             "width": Float((
                 min: None,
                 max: None,
-                value: 1,
+                value: 1.0,
             )),
         },
         matrices: {
             "b": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 4.1887902047863905, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 4.1887902047863905, 0.0),
                 mirror: (false, false, false),
             ),
             "b_user": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "first": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 5.759586531581287, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 5.759586531581287, 0.0),
                 mirror: (false, false, false),
             ),
             "g": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 2.0943951023931953, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 2.0943951023931953, 0.0),
                 mirror: (false, false, false),
             ),
             "g_user": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "polygon": Simple(
-                offset: (0, 0, 0),
-                scale: 0,
-                rotate: (4.71238898038469, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 0.0,
+                rotate: (4.71238898038469, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "polygon_b": Teleport(
@@ -1359,57 +1522,57 @@
                 what: Some(Named("r")),
             ),
             "r": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "r_user": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_b": Simple(
-                offset: (0, 0, 9),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 9.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_g": Simple(
-                offset: (0, 9, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 9.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "room_r": Simple(
-                offset: (9, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (9.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
             "second": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 3.6651914291880923, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 3.6651914291880923, 0.0),
                 mirror: (false, false, false),
             ),
             "symmetric_offset": Simple(
-                offset: (0.02, 0, 0),
+                offset: (0.02, 0.0, 0.0),
                 scale: 1.13,
-                rotate: (4.71238898038469, 0, 1.5707963267948966),
+                rotate: (4.71238898038469, 0.0, 1.5707963267948966),
                 mirror: (false, false, false),
             ),
             "third": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 1.5707963267948966, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 1.5707963267948966, 0.0),
                 mirror: (false, false, false),
             ),
         },
@@ -1418,7 +1581,7 @@
         (
             name: "test",
             data: (
-                duration: 1,
+                duration: 1.0,
                 animation_stage: Dev,
                 uniforms: ({
                     "?": CopyPrev,
@@ -1473,7 +1636,7 @@
                     r: 3.4150672768253534,
                     in_subspace: false,
                     free_movement: true,
-                    matrix: (0.9999275207519531, 0.00017881393432617188, 0.00011920928955078125, 0, -0.000059604644775390625, 0.9998083114624023, 0.000260770320892334, 0, 0, 0.00014901161193847656, 0.9999871253967285, 0, -0.00003811176137247241, -0.00004742318929684686, 0.0001480764349778979, 1),
+                    matrix: (0.9999275207519531, 0.00017881393432617188, 0.00011920928955078125, 0.0, -0.000059604644775390625, 0.9998083114624023, 0.000260770320892334, 0.0, 0.0, 0.00014901161193847656, 0.9999871253967285, 0.0, -0.00003811176137247241, -0.00004742318929684686, 0.0001480764349778979, 1.0),
                 ))),
                 cam_end: Some(Inline((
                     look_at: Coordinate((-1.424785059181927, -0.4661249817518608, 0.43933388471841545)),
@@ -1482,13 +1645,14 @@
                     r: 3.4150672768253534,
                     in_subspace: false,
                     free_movement: true,
-                    matrix: (0.6247162818908691, -0.7499456405639648, -0.21666288375854492, 0, -0.7500052452087402, -0.4997849464416504, -0.43314695358276367, 0, 0.21630525588989258, 0.4329085350036621, -0.8750557899475098, 0, -0.06489703960359516, 0.04350251293258445, -0.03757957407254153, 1),
+                    matrix: (0.6247162818908691, -0.7499456405639648, -0.21666288375854492, 0.0, -0.7500052452087402, -0.4997849464416504, -0.43314695358276367, 0.0, 0.21630525588989258, 0.4329085350036621, -0.8750557899475098, 0.0, -0.06489703960359516, 0.04350251293258445, -0.03757957407254153, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
     ]),

@@ -4,7 +4,7 @@
         rus: "",
     ),
     cam: (
-        look_at: (0, 0, 0),
+        look_at: (0.0, 0.0, 0.0),
         alpha: -44.40622372196733,
         beta: 1.2985695250802745,
         r: 3.9142513012204803,
@@ -13,7 +13,7 @@
     uniforms: ([
         (
             name: "portal_black_color_progress",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "teleport_light",
@@ -29,20 +29,20 @@
         ),
         (
             name: "scale_down",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
         (
             name: "scale_up",
-            data: Progress(0),
+            data: Progress(0.0),
         ),
     ]),
     matrices: ([
         (
             name: "room_origin",
             data: Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -50,19 +50,19 @@
             name: "a",
             data: Parametrized(
                 offset: (
-                    x: Value(1),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(1.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Value(1.5707963267948966),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 scale: Uniform(Some(Inline(Formula(("1.0 - scale_down * 0.2 + scale_up * 0.2"))))),
             ),
@@ -70,9 +70,9 @@
         (
             name: "b",
             data: Simple(
-                offset: (-1, 0, 0),
-                scale: 1,
-                rotate: (0, 1.5707963267948966, 0),
+                offset: (-1.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 1.5707963267948966, 0.0),
                 mirror: (false, false, false),
             ),
         ),
@@ -82,7 +82,44 @@
             name: "portal",
             data: Flat(
                 kind: Portal(Some(Named("a")), Some(Named("b"))),
-                is_inside: (("float distance = circle_distance(x, y);\n\nbool first2 = first;\nint surface1 = solid_1_M;\nint surface2 = solid_0_M;\nint portal_blue = portal_orange_M;\nint portal_orange = portal_blue_M;\n\nif (invert_distance_u == 1) {\n  if (distance < 1.) distance = 2.;\n  else if (distance > 1.07) distance = 0.;\n\n  first2 = back;\n  if (first) {\n    surface1 = solid_0_M;\n    surface2 = solid_1_M;\n    portal_blue = portal_blue_M;\n    portal_orange = portal_orange_M;\n  } else {\n    surface1 = solid_0_M;\n    surface2 = solid_1_M;\n    portal_blue = portal_blue_M;\n    portal_orange = portal_orange_M;\n  }\n}\n\nreturn is_inside_portal(\n  distance,\n  1.,\n  0.05,\n  0.01,\n  portal_blue,\n  portal_orange,\n  surface1,\n  surface2,\n  false,\n  first2\n);")),
+                is_inside: (("float distance = circle_distance(x, y);
+
+bool first2 = first;
+int surface1 = solid_1_M;
+int surface2 = solid_0_M;
+int portal_blue = portal_orange_M;
+int portal_orange = portal_blue_M;
+
+if (invert_distance_u == 1) {
+  if (distance < 1.) distance = 2.;
+  else if (distance > 1.07) distance = 0.;
+
+  first2 = back;
+  if (first) {
+    surface1 = solid_0_M;
+    surface2 = solid_1_M;
+    portal_blue = portal_blue_M;
+    portal_orange = portal_orange_M;
+  } else {
+    surface1 = solid_0_M;
+    surface2 = solid_1_M;
+    portal_blue = portal_blue_M;
+    portal_orange = portal_orange_M;
+  }
+}
+
+return is_inside_portal(
+  distance,
+  1.,
+  0.05,
+  0.01,
+  portal_blue,
+  portal_orange,
+  surface1,
+  surface2,
+  false,
+  first2
+);")),
                 in_subspace: Normal,
             ),
         ),
@@ -101,7 +138,7 @@
                 color: (0.03529411764705882, 0.6431372549019608, 0.788235294117647),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -113,7 +150,7 @@
                 color: (0.9294117647058824, 0.4235294117647059, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -125,7 +162,7 @@
                 color: (0.6666666666666666, 0.6666666666666666, 0.6666666666666666),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -137,7 +174,7 @@
                 color: (0.03529411764705882, 0.6431372549019608, 0.788235294117647),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -149,7 +186,7 @@
                 color: (0.9294117647058824, 0.4235294117647059, 0.050980392156862744),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -158,10 +195,10 @@
         (
             name: "solid_2",
             data: Simple(
-                color: (0.1843137254901961, 0.19607843137254902, 1),
+                color: (0.1843137254901961, 0.19607843137254902, 1.0),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 5,
+                grid_scale: 5.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -170,10 +207,10 @@
         (
             name: "solid_3",
             data: Simple(
-                color: (1, 0.9764705882352941, 0.15294117647058825),
+                color: (1.0, 0.9764705882352941, 0.15294117647058825),
                 normal_coef: 0.5,
                 grid: true,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: true,
                 grid3: false,
@@ -182,16 +219,16 @@
         (
             name: "mirror",
             data: Reflect(
-                add_to_color: (1, 1, 1),
+                add_to_color: (1.0, 1.0, 1.0),
             ),
         ),
         (
             name: "solid_black",
             data: Simple(
-                color: (0, 0, 0),
+                color: (0.0, 0.0, 0.0),
                 normal_coef: 0.5,
                 grid: false,
-                grid_scale: 4,
+                grid_scale: 4.0,
                 grid_coef: 0.3,
                 grid2: false,
                 grid3: false,
@@ -202,17 +239,109 @@
     library: ([
         (
             name: "common",
-            data: (("bool invert_if(bool value, bool condition) {\n  if (condition) {\n    return !value;\n  } else {\n    return value;\n  }\n}")),
+            data: (("bool invert_if(bool value, bool condition) {
+  if (condition) {
+    return !value;
+  } else {
+    return value;
+  }
+}")),
         ),
         (
             name: "room",
-            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {\n  if (abs(x) < sizex && abs(y) < sizey) {\n    return material;\n  } else {\n    return NOT_INSIDE;\n  }\n}\n")),
+            data: (("int is_inside_square(float x, float y, float sizex, float sizey, int material) {
+  if (abs(x) < sizex && abs(y) < sizey) {
+    return material;
+  } else {
+    return NOT_INSIDE;
+  }
+}
+")),
         ),
         (
             name: "portal",
-            data: (("float circle_distance(float x, float y) {\n  return sqrt(sqr(x) + sqr(y));\n}\n\nfloat ellipse_distance(float x, float y) {\n  return sqrt(2.*sqr(x) + sqr(y));\n}\n\nfloat square_distance(float x, float y) {\n  return max(abs(x), abs(y));\n}\n\nfloat rect_distance(float x, float y, float a, float b) {\n  return max(abs(x)-a+1., abs(y)-b+1.);\n}\n\nfloat triangle_distance(float x, float y, float k1, float k2, float y1) {\n  return max(\n    (y-k1*x)/sqrt(1.0+sqr(k1)),\n  max(\n    (y-k2*x)/sqrt(1.0+sqr(k2)),\n    -y1 * y\n  ));\n}\n\nint is_inside_object(\r\n  float distance, \r\n  float size, \r\n  float border,\r\n  int material_inner, \r\n  int material_border\n) {\r\n  if (distance < size) return material_inner;\r\n  if (distance < size + border) return material_border;\r\n  return NOT_INSIDE;\r\n}\n\nint is_inside_portal(\n  float distance, \n  float size, \n  float border,\n  float black_border,\n  int material_first, \n  int material_second, \n  int grid_material_first, \n  int grid_material_second, \n  bool back,\n  bool first\n) {\n  int material = material_second;\n  if (first) { material = material_first; }\n\n  if (distance < size) {\n    if (back) {\n      return material;      \n    } else {\n      if (teleport_light_u == 1) {\n      \tif (mirror_u == 1) {\n          return mirror_M;\n        } else {\n          return TELEPORT;\n        }\n      } else {\n        if (first) {\n          return grid_material_first;\n        } else {\n          return grid_material_second;\n        }\n      }\n    }\n  }\n  int black_material = solid_black_M;\n  if (_black_border_disable == 1) black_material = material;\n  if (distance < size + black_border && !back) return black_material;\n  if (distance < size + black_border + border) return material;\n  if (distance < size + black_border + border + black_border) return black_material;\n\n  return NOT_INSIDE;\n}")),
+            data: (("float circle_distance(float x, float y) {
+  return sqrt(sqr(x) + sqr(y));
+}
+
+float ellipse_distance(float x, float y) {
+  return sqrt(2.*sqr(x) + sqr(y));
+}
+
+float square_distance(float x, float y) {
+  return max(abs(x), abs(y));
+}
+
+float rect_distance(float x, float y, float a, float b) {
+  return max(abs(x)-a+1., abs(y)-b+1.);
+}
+
+float triangle_distance(float x, float y, float k1, float k2, float y1) {
+  return max(
+    (y-k1*x)/sqrt(1.0+sqr(k1)),
+  max(
+    (y-k2*x)/sqrt(1.0+sqr(k2)),
+    -y1 * y
+  ));
+}
+
+int is_inside_object(
+  float distance, 
+  float size, 
+  float border,
+  int material_inner, 
+  int material_border
+) {
+  if (distance < size) return material_inner;
+  if (distance < size + border) return material_border;
+  return NOT_INSIDE;
+}
+
+int is_inside_portal(
+  float distance, 
+  float size, 
+  float border,
+  float black_border,
+  int material_first, 
+  int material_second, 
+  int grid_material_first, 
+  int grid_material_second, 
+  bool back,
+  bool first
+) {
+  int material = material_second;
+  if (first) { material = material_first; }
+
+  if (distance < size) {
+    if (back) {
+      return material;      
+    } else {
+      if (teleport_light_u == 1) {
+      	if (mirror_u == 1) {
+          return mirror_M;
+        } else {
+          return TELEPORT;
+        }
+      } else {
+        if (first) {
+          return grid_material_first;
+        } else {
+          return grid_material_second;
+        }
+      }
+    }
+  }
+  int black_material = solid_black_M;
+  if (_black_border_disable == 1) black_material = material;
+  if (distance < size + black_border && !back) return black_material;
+  if (distance < size + black_border + border) return material;
+  if (distance < size + black_border + border + black_border) return black_material;
+
+  return NOT_INSIDE;
+}")),
         ),
     ]),
+    videos: ([]),
     animations_filters: (
         uniforms: {
             "invert_distance": true,
@@ -299,40 +428,40 @@
         uniforms: {
             "invert_distance": Bool(false),
             "mirror": Bool(false),
-            "portal_black_color_progress": Progress(0),
-            "scale_down": Progress(0),
-            "scale_up": Progress(0),
+            "portal_black_color_progress": Progress(0.0),
+            "scale_down": Progress(0.0),
+            "scale_up": Progress(0.0),
             "teleport_light": Bool(true),
         },
         matrices: {
             "a": Parametrized(
                 offset: (
-                    x: Value(1),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(1.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 rotate: (
-                    x: Value(0),
+                    x: Value(0.0),
                     y: Value(1.5707963267948966),
-                    z: Value(0),
+                    z: Value(0.0),
                 ),
                 mirror: (
-                    x: Value(0),
-                    y: Value(0),
-                    z: Value(0),
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
                 ),
                 scale: Uniform(Some(Inline(Formula(("1.0 - scale_down * 0.2 + scale_up * 0.2"))))),
             ),
             "b": Simple(
-                offset: (-1, 0, 0),
-                scale: 1,
-                rotate: (0, 1.5707963267948966, 0),
+                offset: (-1.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 1.5707963267948966, 0.0),
                 mirror: (false, false, false),
             ),
             "room_origin": Simple(
-                offset: (0, 0, 0),
-                scale: 1,
-                rotate: (0, 0, 0),
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
         },
@@ -341,7 +470,7 @@
         (
             name: "v2.surface.0",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: Animation("Explore"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -359,28 +488,29 @@
                 use_prev_cam: false,
                 use_start_cam_as_end: false,
                 cam_start: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: -46.80722273396073,
                     beta: 1.4949662764840845,
                     r: 0.5818285144116352,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: -44.52522390888744,
                     beta: 1.4425944503122097,
                     r: 3.558410273836792,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -410,6 +540,7 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
@@ -439,12 +570,13 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.surface.3",
             data: (
-                duration: 4,
+                duration: 4.0,
                 animation_stage: RealAnimation("v2.surface.2"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -468,7 +600,7 @@
                     r: 3.558410273836792,
                     in_subspace: false,
                     free_movement: true,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: Some(Inline((
                     look_at: Coordinate((-3.866393205869834, 0.10665798583011926, 4.446924392162896)),
@@ -477,19 +609,20 @@
                     r: 2.9408349370552003,
                     in_subspace: false,
                     free_movement: true,
-                    matrix: (0.9999275207519531, 0, 0, 0, 0, 0.9999871253967285, 0, 0, 0, 0, 0.9999275207519531, 0, 3.9998912393873693, 0.0000014293943552956545, 0.000390463433100674, 1),
+                    matrix: (0.9999275207519531, 0.0, 0.0, 0.0, 0.0, 0.9999871253967285, 0.0, 0.0, 0.0, 0.0, 0.9999275207519531, 0.0, 3.9998912393873693, 0.0000014293943552956545, 0.000390463433100674, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.surface.4",
             data: (
-                duration: 4,
+                duration: 4.0,
                 animation_stage: RealAnimation("v2.surface.3"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -513,12 +646,13 @@
                 cam_any_start: Some("v2.surface.3"),
                 cam_any_end: Some("v2.surface.3"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.surface.5",
             data: (
-                duration: 4,
+                duration: 4.0,
                 animation_stage: RealAnimation("v2.surface.3"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -542,28 +676,29 @@
                     r: 2.9408349370552003,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (0.9999275207519531, 0, 0, 0, 0, 0.9999871253967285, 0, 0, 0, 0, 0.9999275207519531, 0, 3.9998912393873693, 0.0000014293943552956545, 0.000390463433100674, 1),
+                    matrix: (0.9999275207519531, 0.0, 0.0, 0.0, 0.0, 0.9999871253967285, 0.0, 0.0, 0.0, 0.0, 0.9999275207519531, 0.0, 3.9998912393873693, 0.0000014293943552956545, 0.000390463433100674, 1.0),
                 ))),
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: -45.5589267615265,
                     beta: 1.2538380813598615,
                     r: 10.152559799477231,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1.0001659393310547, 0, 0, 0, 0, 1.0013580322265625, 0, 0, 0, 0, 0.9984970092773438, 0, -0.000354975448056738, -0.008072544693401795, 0.007247409912471525, 1),
+                    matrix: (1.0001659393310547, 0.0, 0.0, 0.0, 0.0, 1.0013580322265625, 0.0, 0.0, 0.0, 0.0, 0.9984970092773438, 0.0, -0.000354975448056738, -0.008072544693401795, 0.007247409912471525, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.surface.6",
             data: (
-                duration: 4,
+                duration: 4.0,
                 animation_stage: RealAnimation("v2.surface.5"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -587,12 +722,13 @@
                 cam_any_start: Some("v2.surface.5"),
                 cam_any_end: Some("v2.surface.5"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.surface.7",
             data: (
-                duration: 2,
+                duration: 2.0,
                 animation_stage: RealAnimation("v2.surface.5"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -616,12 +752,13 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.surface.8",
             data: (
-                duration: 2,
+                duration: 2.0,
                 animation_stage: RealAnimation("v2.surface.5"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -645,12 +782,13 @@
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.surface.9",
             data: (
-                duration: 4,
+                duration: 4.0,
                 animation_stage: RealAnimation("v2.surface.2"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -669,25 +807,26 @@
                 use_start_cam_as_end: false,
                 cam_start: None,
                 cam_end: Some(Inline((
-                    look_at: Coordinate((0, 0, 0)),
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
                     alpha: -44.808723588452914,
                     beta: 2.2150836928659188,
                     r: 62.09213230591659,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: Some(true),
                 use_any_cam_as_end: None,
                 cam_any_start: Some("v2.surface.0"),
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.new.0",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v2.surface.3"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -711,7 +850,7 @@
                     r: 3.558410273836792,
                     in_subspace: false,
                     free_movement: true,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: Some(Inline((
                     look_at: Coordinate((0.4883110404540273, -0.01127505995709965, 1.3152781624612555)),
@@ -720,19 +859,20 @@
                     r: 3.558410273836792,
                     in_subspace: false,
                     free_movement: true,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.new.1",
             data: (
-                duration: 2,
+                duration: 2.0,
                 animation_stage: RealAnimation("v2.new.0"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -756,7 +896,7 @@
                     r: 3.558410273836792,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: Some(Inline((
                     look_at: Coordinate((0.5017438210197748, -0.11802808162157681, -2.24150507941883)),
@@ -765,19 +905,20 @@
                     r: 6.934334949441444,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.new.2",
             data: (
-                duration: 3,
+                duration: 3.0,
                 animation_stage: RealAnimation("v2.new.0"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -801,12 +942,13 @@
                 cam_any_start: Some("v2.new.0"),
                 cam_any_end: Some("v2.new.0"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.new.3",
             data: (
-                duration: 2,
+                duration: 2.0,
                 animation_stage: RealAnimation("v2.new.2"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -830,12 +972,13 @@
                 cam_any_start: Some("v2.new.1"),
                 cam_any_end: Some("v2.new.1"),
                 cam_easing: InOut,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.new.4",
             data: (
-                duration: 8,
+                duration: 8.0,
                 animation_stage: RealAnimation("v2.surface.3"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -853,34 +996,35 @@
                 use_prev_cam: false,
                 use_start_cam_as_end: false,
                 cam_start: Some(Inline((
-                    look_at: Coordinate((1, 0, 0)),
+                    look_at: Coordinate((1.0, 0.0, 0.0)),
                     alpha: -44.52522390888744,
                     beta: 1.4425944503122097,
                     r: 3.558410273836792,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 cam_end: Some(Inline((
-                    look_at: Coordinate((1, 0, 0)),
+                    look_at: Coordinate((1.0, 0.0, 0.0)),
                     alpha: -50.80653452555493,
                     beta: 1.4425944503122097,
                     r: 3.558410273836792,
                     in_subspace: false,
                     free_movement: false,
-                    matrix: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                 ))),
                 use_any_cam_as_start: None,
                 use_any_cam_as_end: None,
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
         (
             name: "v2.new.5",
             data: (
-                duration: 8,
+                duration: 8.0,
                 animation_stage: RealAnimation("v2.surface.2"),
                 uniforms: ({
                     "invert_distance": CopyPrev,
@@ -904,6 +1048,7 @@
                 cam_any_start: Some("v2.new.4"),
                 cam_any_end: Some("v2.new.4"),
                 cam_easing: Linear,
+                cam_easing_uniform: None,
             ),
         ),
     ]),
