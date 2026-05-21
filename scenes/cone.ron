@@ -204,7 +204,7 @@ return grid_gray_M;")),
                 kind: Portal(Some(Named("a")), Some(Named("b"))),
                 is_inside: (("if (x > 0.) {
   if (back) return grid_back_M;
-  if (teleport_light_u == 0) {
+  if (!tlight(teleport_light_u)) {
     if (first) return portal_blue_M;
     else return portal_orange_M;
   } else {
@@ -620,7 +620,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {

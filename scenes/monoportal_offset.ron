@@ -424,7 +424,7 @@ float border = border_u * supp_r_u;
 if (y > 0.) border *= supp_r_far_u;
 
 if (x*x + y*y < sqr(r) && !back) {
-  if (teleport_light_u == 0) return room_blue_M;
+  if (!tlight(teleport_light_u)) return room_blue_M;
   return TELEPORT;
 } else if (x*x + y*y < sqr(r + border)) {
   return solid_black_M;
@@ -645,7 +645,7 @@ if (abs(y) > height_u + border_up_down_u * border_u) return NOT_INSIDE;
 if (abs(y) > height_u) return solid_black_M;
 
 if (back) return solid_black_M;
-if (teleport_light_u == 0) return portal_material;
+if (!tlight(teleport_light_u)) return portal_material;
 
 return TELEPORT;
 }")),

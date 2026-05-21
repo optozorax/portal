@@ -450,7 +450,7 @@ And this can be called «portal» and not «mirror-like thing» because you can 
 if (first) { back_material = portal_blue_M; }
 
 int teleport_material = TELEPORT;
-if (portal_teleport_light_u == 0) {
+if (!tlight(portal_teleport_light_u)) {
 teleport_material = portal_grid_orange_M;
 if (first) { teleport_material = portal_grid_blue_M; }
 }

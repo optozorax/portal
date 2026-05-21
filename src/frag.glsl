@@ -63,6 +63,7 @@ SceneIntersectionWithMaterial scene_intersect_material_process(Ray r) {
 // ---------------------------------------------------------------------------
 
 uniform int _ray_tracing_depth;
+uniform int _aa_count;
 uniform float _t_end;
 uniform float _t_start;
 uniform int _darken_by_distance;
@@ -110,6 +111,8 @@ RayTraceResult ray_tracing(Ray r, float camera_scale) {
     float all_t = 0.;
     for (int j = 0; j < 10000; j++) { if (j >= _ray_tracing_depth) break; // !FOR_NUMBER!
     for (int j = 0; j < _ray_tracing_depth; j++) { // !FOR_VARIABLE!
+        tlight_ray_depth = j;
+        tlight_prepare(r.o, r.d);
         SceneIntersection i = scene_intersect(r);
         SceneIntersectionWithMaterial i2 = scene_intersect_material_process(r);
         
@@ -271,7 +274,6 @@ uniform int _use_panini_projection;
 uniform int _use_360_camera;
 uniform int _use_180_camera;
 uniform float _panini_param;
-uniform int _aa_count;
 uniform int _aa_start;
 uniform int _draw_side_by_side;
 uniform vec2 _resolution;
@@ -290,7 +292,6 @@ in vec2 uv_screen; // !GLSL300!
 
 layout(location=0) out vec4 FragColor; // !GLSL300!
 
-uniform int _teleport_external_ray;
 uniform vec3 _external_ray_a;
 uniform vec3 _external_ray_b;
 
@@ -520,6 +521,7 @@ void main() {
         int a = 0;
         for (int a = 0; a < 16; a++) { if (a >= _aa_count) break; // !FOR_NUMBER! !ANTIALIASING!
         for (int a = _aa_start; a < _aa_count + _aa_start; a++) { // !FOR_VARIABLE! !ANTIALIASING!
+            tlight_aa_sample = a;
             vec2 offset = quasi_random(a);
             result += get_color(uv_screen + offset * pixel_size * 2.);
         } // !ANTIALIASING!

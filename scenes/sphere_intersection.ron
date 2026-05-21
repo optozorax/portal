@@ -306,7 +306,7 @@ float u = atan(pos.z, pos.x) / PI;
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y) / PI;
 
 int material = TELEPORT;
-if (teleport_light_u == 0) {
+if (!tlight(teleport_light_u)) {
 if (first) material = solid_0_M;
 else material = solid_1_M;
 }
@@ -866,7 +866,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {

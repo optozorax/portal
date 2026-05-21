@@ -394,7 +394,7 @@ impl Scene {
     pub fn textures(&self) -> Vec<String> {
         use std::collections::BTreeSet;
         let mut names = BTreeSet::new();
-        let mut result = Vec::new();
+        let mut result = vec!["_random_texture".to_owned()];
 
         for (_, name) in self.textures.visible_elements() {
             if names.insert(name.to_owned()) {
@@ -506,6 +506,7 @@ impl Scene {
             ("_ray_tracing_depth".to_owned(), UniformType::Int1),
             ("_aa_count".to_owned(), UniformType::Int1),
             ("_aa_start".to_owned(), UniformType::Int1),
+            ("_teleport_light_chance".to_owned(), UniformType::Float1),
             ("_draw_side_by_side".to_owned(), UniformType::Int1),
             ("_offset_after_material".to_owned(), UniformType::Float1),
             ("_draw_anaglyph".to_owned(), UniformType::Int1),
@@ -1089,7 +1090,9 @@ impl Scene {
                         end = end.min(pos);
                     }
                     let line = line[..end].trim_end();
-                    if cfg!(target_os = "macos") && data.use_300_version && line == "#version 300 es"
+                    if cfg!(target_os = "macos")
+                        && data.use_300_version
+                        && line == "#version 300 es"
                     {
                         "#version 330 core"
                     } else {

@@ -443,7 +443,7 @@ return is_inside_portal(x, y, back, room_green_M);")),
             data: Flat(
                 kind: Portal(Some(Named("supp_a")), Some(Named("supp_b"))),
                 is_inside: (("if (x*x + y*y < 1. && !back) {
-  if (teleport_light_u == 0) return room_blue_M;
+  if (!tlight(teleport_light_u)) return room_blue_M;
   return TELEPORT;
 } else if (x*x + y*y < 1.2) {
   return solid_black_M;
@@ -664,7 +664,7 @@ if (abs(y) > height_u + border_up_down_u * border_u) return NOT_INSIDE;
 if (abs(y) > height_u) return solid_black_M;
 
 if (back) return solid_black_M;
-if (teleport_light_u == 0) return portal_material;
+if (!tlight(teleport_light_u)) return portal_material;
 
 return TELEPORT;
 }")),

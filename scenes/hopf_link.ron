@@ -598,7 +598,7 @@ There is two options about how to paint this portal:
     if (value < sqr(r + black_border) || value > sqr(r + border - black_border)) return solid_black_M;
     return material;
   }
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
   return TELEPORT;
   } else {
   return grid_gray_M;

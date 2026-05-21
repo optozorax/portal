@@ -386,7 +386,7 @@
             data: Flat(
                 kind: Portal(Some(Named("i")), Some(Named("ii"))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -406,7 +406,7 @@
             data: Flat(
                 kind: Portal(Some(Named("vi")), Some(Named("vii"))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -426,7 +426,7 @@
             data: Flat(
                 kind: Portal(Some(Named("vvi")), Some(Named("vvii"))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -446,7 +446,7 @@
             data: Flat(
                 kind: Portal(Some(Named("npi")), Some(Named("npii"))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -474,7 +474,7 @@
                     what: Some(Named("nmpi")),
                 )))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -494,7 +494,7 @@
             data: Flat(
                 kind: Portal(Some(Named("negative_portal_a")), Some(Named("negative_portal_b"))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -522,7 +522,7 @@
                     what: Some(Named("negative_monoportal_a")),
                 )))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -550,7 +550,7 @@
                     what: Some(Named("negative_monoportal_b")),
                 )))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -578,7 +578,7 @@
                     what: Some(Named("a_negative_monoportal_a")),
                 )))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -606,7 +606,7 @@
                     what: Some(Named("a_negative_monoportal_b")),
                 )))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -634,7 +634,7 @@
                     what: Some(Named("a_negative_monoportal_c")),
                 )))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -664,7 +664,7 @@
                     mirror: (false, false, false),
                 )))),
                 is_inside: (("if (x*x + y*y > 1.2) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     return TELEPORT;
   } else {
     return grid_gray_M;
@@ -1035,7 +1035,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {

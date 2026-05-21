@@ -871,7 +871,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {
@@ -904,7 +904,7 @@ int is_inside_portal(
   if (abs(y) > user_height_u - 0.01) return solid_black_M;
   if (abs(y) > user_height_u - 0.01 - 0.04) return portal_blue_M;
   if (abs(y) > user_height_u - 0.01 - 0.04 - 0.01) return solid_black_M;
-  if (teleport_light_u == 0) return material;
+  if (!tlight(teleport_light_u)) return material;
   return TELEPORT;
 }")),
         ),

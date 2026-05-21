@@ -729,6 +729,30 @@ struct ViewportRect {
     height: f32,
 }
 
+const RANDOM_TEXTURE_SIZE: u16 = 1024;
+
+fn next_random_u32(state: &mut u64) -> u32 {
+    *state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    ((z ^ (z >> 31)) >> 32) as u32
+}
+
+fn create_random_texture() -> Texture2D {
+    let pixel_count = RANDOM_TEXTURE_SIZE as usize * RANDOM_TEXTURE_SIZE as usize;
+    let mut bytes = Vec::with_capacity(pixel_count * 4);
+    let mut state = 0x7261_6e64_6f6d_5f74;
+
+    for _ in 0..pixel_count {
+        bytes.extend_from_slice(&next_random_u32(&mut state).to_le_bytes());
+    }
+
+    let texture = Texture2D::from_rgba8(RANDOM_TEXTURE_SIZE, RANDOM_TEXTURE_SIZE, &bytes);
+    texture.set_filter(macroquad::prelude::FilterMode::Nearest);
+    texture
+}
+
 struct SceneRenderer {
     scene: Scene,
     cam: RotateAroundCam,
@@ -741,6 +765,7 @@ struct SceneRenderer {
     render_depth: i32,
     aa_count: i32,
     aa_start: i32,
+    teleport_light_chance: f64,
     draw_side_by_side: bool,
     eye_distance: f64,
     swap_eyes: bool,
@@ -762,6 +787,7 @@ struct SceneRenderer {
     scene_name: String,
     current_fps: usize,
     current_motion_blur_frames: usize,
+    random_texture: Texture2D,
     texture_storage: Vec<Texture2D>,
     #[cfg(not(target_arch = "wasm32"))]
     video_runtimes: Vec<VideoRuntime>,
@@ -1024,6 +1050,7 @@ impl SceneRenderer {
             render_depth: 100,
             aa_count: 1,
             aa_start: 0,
+            teleport_light_chance: 1.0,
             draw_side_by_side: false,
             eye_distance: 0.07,
             swap_eyes: false,
@@ -1045,6 +1072,7 @@ impl SceneRenderer {
             scene_name: scene_name.to_owned(),
             current_fps: 60,
             current_motion_blur_frames: 1,
+            random_texture: create_random_texture(),
             texture_storage: vec![],
             #[cfg(not(target_arch = "wasm32"))]
             video_runtimes: Vec::new(),
@@ -1304,6 +1332,10 @@ impl SceneRenderer {
         self.material.set_uniform("_aa_count", self.aa_count);
         self.material.set_uniform("_aa_start", self.aa_start);
         self.material
+            .set_uniform("_teleport_light_chance", self.teleport_light_chance as f32);
+        self.material
+            .set_texture("_random_texture", self.random_texture.clone());
+        self.material
             .set_uniform("_draw_side_by_side", self.draw_side_by_side as i32);
         self.material
             .set_uniform("_draw_anaglyph", self.draw_anaglyph as i32);
@@ -1559,21 +1591,25 @@ impl SceneRenderer {
             ui.label("If you have ghosting on your anaglyph glasses (you can see other's eye image), you can tweaks these two values to get minimal ghosting. Note that blue lens may have no ghosting at all, but red lens may have a bit. Also note that ghosting may always be presented on pitch black background (in pocket dimension for example). So, anaglyph works best in room scenes.");
             ui.horizontal(|ui| {
                 ui.label("Anaglyph P (red lens):");
-                changed.uniform |= ui.add(
-                    egui::Slider::new(&mut self.anaglyph_p, 0.15..=0.6)
-                        .clamping(egui::widgets::SliderClamping::Always)
-                        .min_decimals(0)
-                        .max_decimals(3),
-                ).changed();
+                changed.uniform |= ui
+                    .add(
+                        egui::Slider::new(&mut self.anaglyph_p, 0.15..=0.6)
+                            .clamping(egui::widgets::SliderClamping::Always)
+                            .min_decimals(0)
+                            .max_decimals(3),
+                    )
+                    .changed();
             });
             ui.horizontal(|ui| {
                 ui.label("Anaglyph Q (blue lens):");
-                changed.uniform |= ui.add(
-                    egui::Slider::new(&mut self.anaglyph_q, 0.0..=0.25)
-                        .clamping(egui::widgets::SliderClamping::Always)
-                        .min_decimals(0)
-                        .max_decimals(3),
-                ).changed();
+                changed.uniform |= ui
+                    .add(
+                        egui::Slider::new(&mut self.anaglyph_q, 0.0..=0.25)
+                            .clamping(egui::widgets::SliderClamping::Always)
+                            .min_decimals(0)
+                            .max_decimals(3),
+                    )
+                    .changed();
             });
         }
         changed.uniform |= ui
@@ -1630,11 +1666,19 @@ impl SceneRenderer {
             ui.label("Antialiasing count:");
             changed.uniform |= check_changed(&mut self.aa_count, |count| {
                 ui.add(
-                    egui::Slider::new(count, 1..=16)
+                    egui::Slider::new(count, 1..=256)
                         .clamping(egui::widgets::SliderClamping::Always),
                 );
             });
         }
+        ui.separator();
+        ui.label("Teleport light chance:");
+        changed.uniform |= check_changed(&mut self.teleport_light_chance, |chance| {
+            ui.add(
+                egui::Slider::new(chance, 0.0..=1.0)
+                    .clamping(egui::widgets::SliderClamping::Always),
+            );
+        });
         ui.separator();
         ui.label("Offset after material:");
         changed.uniform |= check_changed(&mut self.offset_after_material, |offset| {
@@ -2761,6 +2805,9 @@ struct RenderCliOptions {
     #[arg(long, alias = "aa_count", default_value_t = 4)]
     aa_count: i32,
 
+    #[arg(long, alias = "teleport_light_chance", default_value_t = 1.0)]
+    teleport_light_chance: f64,
+
     #[arg(long, alias = "render_depth", default_value_t = 150)]
     render_depth: i32,
 }
@@ -2799,6 +2846,7 @@ async fn render(options: RenderCliOptions) -> Result<(), String> {
         )
         .await;
         renderer.aa_count = options.aa_count;
+        renderer.teleport_light_chance = options.teleport_light_chance;
         renderer.render_depth = options.render_depth;
         renderer.draw_side_by_side = options.stereo_image;
 

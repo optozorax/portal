@@ -1265,7 +1265,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {
@@ -1551,7 +1551,7 @@ if (enable_black_border_u == 1) {
     ihit.hit.t /= len;
     if (ihit.hit.hit && ihit.material != NOT_INSIDE) { 
         if (ihit.material == TELEPORT) { 
-            if (teleport_light_u == 0) { ihit.material = grid_gray_M; } else {
+            if (!tlight(teleport_light_u)) { ihit.material = grid_gray_M; } else {
               ihit.material = custom_teleport_M;
               ihit.hit.u = first_no;
               ihit.hit.v = second_no;

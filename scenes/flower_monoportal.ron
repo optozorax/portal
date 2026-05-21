@@ -1063,7 +1063,7 @@ int material = material1;
 if (first) material = material2;
 
 int teleport = TELEPORT;
-if (teleport_light_u == 0) teleport = gray_grid_M; 
+if (!tlight(teleport_light_u)) teleport = gray_grid_M;
 if (back) teleport = material;
 
 if (between(0., x, side_border_u) && 

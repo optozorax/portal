@@ -582,7 +582,7 @@ return object2(x, y, false);")),
                 intersect: (("if (cylinder_enable_u == 0) return scene_intersection_none;
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = grid_gray_M;
+if (!tlight(teleport_light_u)) material = grid_gray_M;
 
 return intersect_cylinder(r, cylinder_radius_u, cylinder_height_u, cylinder_progress_u, material);")),
                 in_subspace: Normal,
@@ -601,7 +601,7 @@ return intersect_cylinder(r, cylinder_radius_u, cylinder_height_u, cylinder_prog
                 intersect: (("if (cylinder_enable_u == 0) return scene_intersection_none;
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = grid_gray_M;
+if (!tlight(teleport_light_u)) material = grid_gray_M;
 
 return intersect_cylinder(r, cylinder_radius2_u, cylinder_height_u, cylinder_progress_u, material);")),
                 in_subspace: Normal,
@@ -622,7 +622,7 @@ return intersect_cylinder(r, cylinder_radius2_u, cylinder_height_u, cylinder_pro
 if (cylinder_enable_u == 0 || dist > 1.0) return NOT_INSIDE;
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = grid_gray_M;
+if (!tlight(teleport_light_u)) material = grid_gray_M;
 
 return material;")),
                 in_subspace: Normal,
@@ -643,7 +643,7 @@ return material;")),
 if (cylinder_enable_u == 0 || (dist > 3.5 || dist < 1.5) || x > 0.) return NOT_INSIDE;
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = grid_gray_M;
+if (!tlight(teleport_light_u)) material = grid_gray_M;
 
 return material;")),
                 in_subspace: Normal,
@@ -664,7 +664,7 @@ return material;")),
 if (cylinder_enable_u == 0 || (dist > 3.5 || dist < 1.5) || x > 0.) return NOT_INSIDE;
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = grid_gray_M;
+if (!tlight(teleport_light_u)) material = grid_gray_M;
 
 return material;")),
                 in_subspace: Normal,
@@ -1170,7 +1170,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {

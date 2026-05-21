@@ -1207,7 +1207,7 @@ if (!definitely_not_in_portal(hit.u, hit.v)) {
     vec4 pos1 = b2_mat * pos_local;
     if (is_inside_subspace(pos_local)) {
         int teleport_material = solid_7_M;
-        if (teleport_light_subspace_u == 1) {
+        if (tlight(teleport_light_subspace_u)) {
             teleport_material = TELEPORT;
         }
         is_inside = ellipse_portal(hit.u, hit.v, is_back, true, teleport_material);
@@ -1509,7 +1509,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
         return TELEPORT;
       } else {
         if (first) {

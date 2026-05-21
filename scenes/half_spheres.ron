@@ -1199,7 +1199,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {
@@ -1252,7 +1252,7 @@ if (distance / flat_portal_scale_u > 1. && distance < 1.) {
       result.material = TELEPORT;
     }
   } else {
-    if (teleport_light_u == 0) {
+    if (!tlight(teleport_light_u)) {
       result.material = solid_gray_M;
     } else {
       result.material = TELEPORT;
@@ -1276,7 +1276,7 @@ if (
 }
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = solid_gray_M;
+if (!tlight(teleport_light_u)) material = solid_gray_M;
 
 if (flat_portal_u == 1) {
   bool back = is_collinear(hit.n, normal);

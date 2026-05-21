@@ -7,6 +7,52 @@ precision highp float;
 #endif
 
 uniform int _black_border_disable;
+uniform float _teleport_light_chance;
+uniform int _teleport_external_ray;
+uniform sampler2D _random_texture;
+
+const float TLIGHT_RANDOM_TEXTURE_SIZE = 1024.0;
+
+int tlight_aa_sample = 0;
+int tlight_ray_depth = 0;
+vec4 tlight_ray_origin = vec4(0.0);
+vec4 tlight_ray_direction = vec4(0.0);
+float tlight_ray_random = 0.0;
+
+vec4 tlight_texture(vec2 pos) {
+    return texture2D(_random_texture, pos); // !GLSL100!
+    return texture(_random_texture, pos); // !GLSL300!
+}
+
+float tlight_random() {
+    vec2 texel = floor(gl_FragCoord.xy);
+    texel += vec2(
+        float(tlight_aa_sample) * 131.0 + float(tlight_ray_depth) * 521.0,
+        float(tlight_aa_sample) * 367.0 + float(tlight_ray_depth) * 109.0
+    );
+    texel += floor(vec2(
+        dot(tlight_ray_origin, vec4(17.0, 59.0, 113.0, 241.0)) + dot(tlight_ray_direction, vec4(331.0, 73.0, 19.0, 211.0)),
+        dot(tlight_ray_origin, vec4(277.0, 37.0, 151.0, 97.0)) + dot(tlight_ray_direction, vec4(43.0, 307.0, 167.0, 29.0))
+    ) * 1024.0);
+    texel = mod(texel, vec2(TLIGHT_RANDOM_TEXTURE_SIZE));
+
+    return tlight_texture((texel + 0.5) / TLIGHT_RANDOM_TEXTURE_SIZE).r;
+}
+
+void tlight_prepare(vec4 origin, vec4 direction) {
+    tlight_ray_origin = origin;
+    tlight_ray_direction = direction;
+    tlight_ray_random = tlight_random();
+}
+
+bool tlight(int enabled) {
+    if (enabled == 0) return false;
+    if (_teleport_external_ray == 1) return true;
+    if (_teleport_light_chance >= 1.0) return true;
+    if (_teleport_light_chance <= 0.0) return false;
+
+    return tlight_ray_random < _teleport_light_chance;
+}
 
 // ---------------------------------------------------------------------------
 // Scalar math ---------------------------------------------------------------

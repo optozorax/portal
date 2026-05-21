@@ -248,7 +248,7 @@
 if (x*x+y*y<1.2) {
   return portal_blue_M;
 } else {
- if (teleport_light_u == 1) {
+ if (tlight(teleport_light_u)) {
   return TELEPORT;
 } else {
   return grid_gray_M;
@@ -278,7 +278,7 @@ if (x*x+y*y<1.2) {
 if (x*x+y*y<1.2) {
   return portal_orange_M;
 } else {
- if (teleport_light_u == 1) {
+ if (tlight(teleport_light_u)) {
   return TELEPORT;
 } else {
   return grid_gray_M;
@@ -308,7 +308,7 @@ if (x*x+y*y<1.2) {
 if (x*x+y*y<1.2) {
   return portal_blue_M;
 } else {
- if (teleport_light_u == 1) {
+ if (tlight(teleport_light_u)) {
   return TELEPORT;
 } else {
   return grid_gray_M;
@@ -338,7 +338,7 @@ if (x*x+y*y<1.2) {
 if (x*x+y*y<1.2) {
   return portal_orange_M;
 } else {
- if (teleport_light_u == 1) {
+ if (tlight(teleport_light_u)) {
   return TELEPORT;
 } else {
   return grid_gray_M;
@@ -704,7 +704,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {

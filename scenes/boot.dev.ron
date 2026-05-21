@@ -547,7 +547,7 @@
                     ),
                     scale: Value(1.0),
                 )))),
-                is_inside: (("if (teleport_light_u == 0) return grid_gray_M; else return TELEPORT; ")),
+                is_inside: (("if (!tlight(teleport_light_u)) return grid_gray_M; else return TELEPORT; ")),
                 in_subspace: Normal,
             ),
         ),
@@ -1096,7 +1096,7 @@ if (!i.hit || enable_cylinder_u == 0) return SceneIntersectionWithMaterial(scene
 
 mat3 object1_mat_custom = object1_transform_matrix(i.u, i.v);
 
-if (teleport_light_u == 0 || teleport_light_cylinder_u == 0) {
+if (!tlight(teleport_light_u) || teleport_light_cylinder_u == 0) {
     vec3 normal = adjugate(object1_mat) * object1_mat_custom * vec3(1., 0., 0.);
     return SceneIntersectionWithMaterial(
         SceneIntersection(grid_gray_M, SurfaceIntersection(true, i.t, i.u / PI, i.v / PI, normal), false),
@@ -1138,7 +1138,7 @@ if (!i.hit || enable_cylinder_u == 0) return SceneIntersectionWithMaterial(scene
 
 mat3 object2_mat_custom = object2_transform_matrix(i.u, i.v);
 
-if (teleport_light_u == 0 || teleport_light_cylinder_u == 0) {
+if (!tlight(teleport_light_u) || teleport_light_cylinder_u == 0) {
     vec3 normal = adjugate(object2_mat) * object2_mat_custom * vec3(1., 0., 0.);
     return SceneIntersectionWithMaterial(
         SceneIntersection(grid_gray_M, SurfaceIntersection(true, i.t, i.u / PI, i.v / PI, normal), false),
@@ -1327,7 +1327,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {

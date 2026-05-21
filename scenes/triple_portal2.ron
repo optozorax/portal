@@ -884,7 +884,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {
@@ -971,7 +971,7 @@ int is_inside_portal(
   float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
   int material = TELEPORT;
-  if (teleport_light_u == 0) material = material_teleport;
+  if (!tlight(teleport_light_u)) material = material_teleport;
 
   if ((first && dot(n, r.d.xyz) < 0.) || (!first && dot(n, r.d.xyz) > 0.)) {
     if (enable_second_side_u == 0) {

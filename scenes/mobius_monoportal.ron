@@ -374,7 +374,7 @@ if (y > 1. - black || (y < 1. - portal_border_size_u + black && y > 1. - portal_
   material = solid_black_M;
 }
 if (abs(hit.v) < 1. - portal_border_size_u && hit.u < max_u - border_u && hit.u > border_u) {
-  if (portal_teleport_light_u == 1) {
+  if (tlight(portal_teleport_light_u)) {
     material = TELEPORT;
   } else {
     material = gray_grid_M;

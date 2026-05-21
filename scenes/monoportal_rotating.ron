@@ -325,7 +325,7 @@ Thanks to [@myotra](http://t.me/FindYouByUsernameAndContactYou).",
                 is_inside: (("int back_material = solid_black_M;
 
 int teleport_material = TELEPORT;
-if (portal_teleport_light_u == 0) { teleport_material = grid_gray_M; }
+if (!tlight(portal_teleport_light_u)) { teleport_material = grid_gray_M; }
 if (back) { teleport_material = back_material; }
 
 float radius = 2.0;

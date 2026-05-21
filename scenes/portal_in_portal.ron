@@ -1236,7 +1236,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
         return TELEPORT;
       } else {
         if (first) {

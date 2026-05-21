@@ -487,7 +487,7 @@ float height = 2.0;
 float border = 0.1;
 
 if (abs(x) < width && abs(y) < height && !back) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     if (mirror_u == 1) {
       return mirror_M;
     } else {
@@ -941,7 +941,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {

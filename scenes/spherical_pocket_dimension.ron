@@ -277,7 +277,7 @@ vec3 n = normalize(pos.xyz);
 float u = atan(pos.z, pos.x);
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
-if (teleport_light_u == 1) {return SceneIntersection(TELEPORT, SurfaceIntersection(true, t, u, v, n), false);}
+if (tlight(teleport_light_u)) {return SceneIntersection(TELEPORT, SurfaceIntersection(true, t, u, v, n), false);}
 return SceneIntersection(grid_gray_M, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Normal,
             ),
@@ -324,7 +324,7 @@ vec3 n = normalize(pos.xyz);
 float u = atan(pos.z, pos.x);
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
-if (teleport_light_u == 1) {return SceneIntersection(TELEPORT, SurfaceIntersection(true, t, u, v, n), false);}
+if (tlight(teleport_light_u)) {return SceneIntersection(TELEPORT, SurfaceIntersection(true, t, u, v, n), false);}
 return SceneIntersection(grid_gray_M, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Normal,
             ),

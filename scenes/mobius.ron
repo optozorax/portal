@@ -382,7 +382,7 @@ if (y > 1. - black || y < 1. - border_size_u + black) {
   material = solid_black_M;
 }
 if (abs(hit.v) < 1. - border_size_u) {
-  if (teleport_light_u == 1) {
+  if (tlight(teleport_light_u)) {
     material = TELEPORT;
   } else {
     material = gray_grid_M;

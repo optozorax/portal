@@ -375,7 +375,7 @@ float u = atan(pos.z, pos.x);
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = grid_gray_M;
+if (!tlight(teleport_light_u)) material = grid_gray_M;
 
 return SceneIntersection(material, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Normal,
@@ -427,7 +427,7 @@ float u = atan(pos.z, pos.x);
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = grid_gray_M;
+if (!tlight(teleport_light_u)) material = grid_gray_M;
 
 return SceneIntersection(material, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Normal,
@@ -479,7 +479,7 @@ float u = atan(pos.z, pos.x);
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
 int material = TELEPORT;
-if (teleport_light_u == 0) material = grid_gray_M;
+if (!tlight(teleport_light_u)) material = grid_gray_M;
 
 return SceneIntersection(material, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Normal,
@@ -865,7 +865,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
       	if (mirror_u == 1) {
           return mirror_M;
         } else {

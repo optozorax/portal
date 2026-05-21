@@ -310,7 +310,7 @@ if (first) {
 
 if (disable_second_portal_u == 1) material = grid_gray_M;
 
-if (teleport_light_u == 1 && disable_second_portal_u == 0) material = TELEPORT;
+if (tlight(teleport_light_u) && disable_second_portal_u == 0) material = TELEPORT;
 
 return SceneIntersection(material, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Normal,
@@ -481,7 +481,7 @@ float u = atan(pos.z, pos.x);
 float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y);
 
 int material = TELEPORT;
-if (teleport_light_u == 0) {
+if (!tlight(teleport_light_u)) {
 bool back = dot(n, r.d.xyz) > 0.;
 back = xor(back, inside_cone);
 material = solid_0_M;
@@ -541,7 +541,7 @@ if (first) {
 
 if (disable_second_portal_u == 1) material = grid_gray_M;
 
-if (teleport_light_u == 1 && disable_second_portal_u == 0) material = TELEPORT;
+if (tlight(teleport_light_u) && disable_second_portal_u == 0) material = TELEPORT;
 
 return material;
 ")),
@@ -826,7 +826,7 @@ int is_inside_portal(
     if (back) {
       return material;      
     } else {
-      if (teleport_light_u == 1) {
+      if (tlight(teleport_light_u)) {
         return TELEPORT;
       } else {
         if (first) {
