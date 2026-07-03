@@ -42,7 +42,9 @@ jobs:
           sudo apt-get install --assume-yes --no-install-recommends wabt
 
       - name: Build WASM
-        run: cargo build --release --locked --target wasm32-unknown-unknown
+        run: cargo build --release --locked --target wasm32-unknown-unknown --bin portal
+        env:
+          RUSTFLAGS: -C link-arg=--allow-undefined
 
       - name: Prepare artifact
         run: |
@@ -76,4 +78,3 @@ jobs:
 
           git commit -m "Update portal.wasm (${GITHUB_SHA})"
           git push origin HEAD:demo
-
