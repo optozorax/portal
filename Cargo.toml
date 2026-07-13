@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 macroquad = "0.4.14"
-egui-macroquad = "0.17.2"
+egui-macroquad = { version = "0.17.2", default-features = false }
 glam = { version = "0.13.0", features = ["serde"] }
 serde = "1.0.124"
 ron = "0.10"
