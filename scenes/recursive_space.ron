@@ -55,6 +55,10 @@
             name: "enable_debug",
             data: Bool(false),
         ),
+        (
+            name: "enable_cut",
+            data: Bool(true),
+        ),
     ]),
     matrices: ([
         (
@@ -107,6 +111,27 @@
                 scale: 1.0,
                 rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
+            ),
+        ),
+        (
+            name: "cut_plane",
+            data: Parametrized(
+                offset: (
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Uniform(Some(Inline(Formula(("lerp(1.8, 0.78, time)"))))),
+                ),
+                rotate: (
+                    x: Value(6.03883921190038),
+                    y: Value(0.0),
+                    z: Value(0.0),
+                ),
+                mirror: (
+                    x: Value(0.0),
+                    y: Value(0.0),
+                    z: Value(0.0),
+                ),
+                scale: Value(1.0),
             ),
         ),
     ]),
@@ -170,6 +195,11 @@ return result;
                 kind: Portal(Some(Named("a")), Some(Named("b0"))),
                 intersect: (("if (enable_portals_u == 0) return scene_intersection_none;
 
+mat4 inv_transform = b0_mat;
+if (first) {
+    inv_transform = a_mat;
+}
+
 vec3 op = -r.o.xyz;
 float b = dot(op, r.d.xyz);
 float det = b*b - dot(op, op) + 1.0;
@@ -177,10 +207,13 @@ if (det < 0.) return scene_intersection_none;
 
 det = sqrt(det);
 float t = b - det;
-if (t < 0.) t = b + det;
-if (t < 0.) return scene_intersection_none;
-
 vec4 pos = r.o + r.d * t;
+float cut_pos = (cut_plane_mat * inv_transform * pos).z;
+if (t < 0. || (enable_cut_u == 1 && cut_pos < 0.)) t = b + det;
+pos = r.o + r.d * t;
+cut_pos = (cut_plane_mat * inv_transform * pos).z;
+if (t < 0. || (enable_cut_u == 1 && cut_pos < 0.)) return scene_intersection_none;
+
 vec3 n = normalize(pos.xyz);
 
 float u = atan(pos.z, pos.x) / PI;
@@ -188,6 +221,7 @@ float v = atan(sqrt(pos.x * pos.x + pos.z * pos.z), pos.y) / PI;
 
 int material = portal_blue_M;
 if (first) material = portal_orange_M;
+if (abs(cut_pos) < 0.01) material = black_M;
 
 return SceneIntersection(material, SurfaceIntersection(true, t, u, v, n), false);")),
                 in_subspace: Subspace,
@@ -312,6 +346,18 @@ return result;
             data: Complex(
                 code: (("return material_simple(hit, r, wheatley_color(hit.u, hit.v), 5e-1, false, 4e0, 3e-1);
 ")),
+            ),
+        ),
+        (
+            name: "black",
+            data: Simple(
+                color: (0.0, 0.0, 0.0),
+                normal_coef: 0.5,
+                grid: false,
+                grid_scale: 4.0,
+                grid_coef: 0.3,
+                grid2: false,
+                grid3: false,
             ),
         ),
     ]),
@@ -518,6 +564,7 @@ return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n)
     animations_filters: (
         uniforms: {
             "enable_camera": true,
+            "enable_cut": true,
             "enable_debug": true,
             "enable_object": true,
             "enable_portals": true,
@@ -533,6 +580,7 @@ return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n)
             "b0": true,
             "cam": false,
             "cam_fix": true,
+            "cut_plane": true,
             "obj": true,
         },
         cameras: {},
@@ -542,6 +590,10 @@ return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n)
             "enable_camera": (
                 help_description: None,
                 overrided_name: "Enable camera",
+            ),
+            "enable_cut": (
+                help_description: None,
+                overrided_name: "",
             ),
             "enable_debug": (
                 help_description: None,
@@ -603,6 +655,7 @@ return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n)
     user_uniforms: (
         uniforms: {
             "enable_camera": true,
+            "enable_cut": false,
             "enable_debug": true,
             "enable_object": true,
             "enable_portals": true,
@@ -618,6 +671,7 @@ return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n)
             "b0": false,
             "cam": false,
             "cam_fix": false,
+            "cut_plane": false,
             "obj": false,
         },
     ),
@@ -753,6 +807,7 @@ return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n)
     dev_stage: (
         uniforms: {
             "enable_camera": Bool(false),
+            "enable_cut": Bool(false),
             "enable_debug": Bool(false),
             "enable_object": Bool(true),
             "enable_portals": Bool(false),
@@ -794,6 +849,12 @@ return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n)
                 ))),
             ),
             "cam_fix": Simple(
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
+                mirror: (false, false, false),
+            ),
+            "cut_plane": Simple(
                 offset: (0.0, 0.0, 0.0),
                 scale: 1.0,
                 rotate: (0.0, 0.0, 0.0),
@@ -2108,6 +2169,139 @@ return SceneIntersection(wheatley_M, SurfaceIntersection(true, t, u/PI, v/PI, n)
                 cam_any_start: None,
                 cam_any_end: None,
                 cam_easing: InOut,
+                cam_easing_uniform: None,
+            ),
+        ),
+        (
+            name: "v4.thumbnail.1",
+            data: (
+                duration: 1.0,
+                animation_stage: Dev,
+                uniforms: ({
+                    "enable_camera": CopyPrev,
+                    "enable_cut": Changed(Some(Inline(Bool(true)))),
+                    "enable_debug": CopyPrev,
+                    "enable_object": Changed(Some(Inline(Bool(true)))),
+                    "enable_portals": Changed(Some(Inline(Bool(true)))),
+                    "fix_camera": CopyPrev,
+                    "progress1": CopyPrev,
+                    "progress2": CopyPrev,
+                    "progress3": CopyPrev,
+                    "progress4": CopyPrev,
+                    "subspace_degree": Changed(Some(Inline(Int((
+                        min: None,
+                        max: None,
+                        value: 1,
+                    ))))),
+                }),
+                matrices: ({
+                    "a": Changed(Some(Inline(Simple(
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 1.0,
+                        rotate: (0.0, 0.0, 0.0),
+                        mirror: (false, false, false),
+                    )))),
+                    "b0": Changed(Some(Inline(Simple(
+                        offset: (0.2, 0.0, -0.11),
+                        scale: 0.6,
+                        rotate: (1.2740903539558606, 0.03490658503988659, 5.3756140961425345),
+                        mirror: (false, false, false),
+                    )))),
+                    "cam": CopyPrev,
+                    "cam_fix": CopyPrev,
+                    "cut_plane": Changed(Some(Inline(Parametrized(
+                        offset: (
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Uniform(Some(Inline(Formula(("lerp(1.8, 0.78, time)"))))),
+                        ),
+                        rotate: (
+                            x: Value(6.03883921190038),
+                            y: Value(0.0),
+                            z: Value(0.0),
+                        ),
+                        mirror: (
+                            x: Value(0.0),
+                            y: Value(0.0),
+                            z: Value(0.0),
+                        ),
+                        scale: Value(1.0),
+                    )))),
+                    "obj": Changed(Some(Inline(Simple(
+                        offset: (-0.66, 0.0, -0.14),
+                        scale: 0.21,
+                        rotate: (0.0, 0.0, 0.0),
+                        mirror: (false, false, false),
+                    )))),
+                }),
+                use_prev_cam: false,
+                use_start_cam_as_end: true,
+                cam_start: Some(Inline((
+                    look_at: Coordinate((0.0, 0.0, 0.0)),
+                    alpha: -1.220000839233397,
+                    beta: 1.1356557464599473,
+                    r: 1.9756587551882214,
+                    in_subspace: true,
+                    free_movement: false,
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+                ))),
+                cam_end: None,
+                use_any_cam_as_start: None,
+                use_any_cam_as_end: None,
+                cam_any_start: None,
+                cam_any_end: None,
+                cam_easing: Linear,
+                cam_easing_uniform: None,
+            ),
+        ),
+        (
+            name: "v4.thumbnail.2",
+            data: (
+                duration: 0.01,
+                animation_stage: Animation("golden"),
+                uniforms: ({
+                    "enable_camera": CopyPrev,
+                    "enable_cut": CopyPrev,
+                    "enable_debug": CopyPrev,
+                    "enable_object": CopyPrev,
+                    "enable_portals": CopyPrev,
+                    "fix_camera": CopyPrev,
+                    "progress1": CopyPrev,
+                    "progress2": CopyPrev,
+                    "progress3": CopyPrev,
+                    "progress4": CopyPrev,
+                    "subspace_degree": CopyPrev,
+                }),
+                matrices: ({
+                    "a": CopyPrev,
+                    "b0": CopyPrev,
+                    "cam": CopyPrev,
+                    "cam_fix": CopyPrev,
+                    "cut_plane": CopyPrev,
+                    "obj": Changed(Some(Inline(Simple(
+                        offset: (0.0, 0.0, 0.0),
+                        scale: 0.23,
+                        rotate: (0.0, 0.0, 0.0),
+                        mirror: (false, false, false),
+                    )))),
+                }),
+                use_prev_cam: false,
+                use_start_cam_as_end: true,
+                cam_start: Some(Inline((
+                    look_at: Coordinate((-1.93, 0.07, 0.61)),
+                    alpha: -1.0466693878173827,
+                    beta: 0.16586929321289,
+                    r: 2.8925619834710763,
+                    in_subspace: true,
+                    free_movement: false,
+                    matrix: (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+                ))),
+                cam_end: None,
+                use_any_cam_as_start: None,
+                use_any_cam_as_end: None,
+                cam_any_start: None,
+                cam_any_end: None,
+                cam_easing: Linear,
                 cam_easing_uniform: None,
             ),
         ),

@@ -1712,6 +1712,7 @@ impl SceneRenderer {
             "v4.golden.0",
             "v4.golden.1",
             "v4.golden.2",
+            "v4.thumbnail.2",
         ]
         .contains(&animation_name)
         {
