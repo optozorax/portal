@@ -1559,21 +1559,25 @@ impl SceneRenderer {
             ui.label("If you have ghosting on your anaglyph glasses (you can see other's eye image), you can tweaks these two values to get minimal ghosting. Note that blue lens may have no ghosting at all, but red lens may have a bit. Also note that ghosting may always be presented on pitch black background (in pocket dimension for example). So, anaglyph works best in room scenes.");
             ui.horizontal(|ui| {
                 ui.label("Anaglyph P (red lens):");
-                changed.uniform |= ui.add(
-                    egui::Slider::new(&mut self.anaglyph_p, 0.15..=0.6)
-                        .clamping(egui::widgets::SliderClamping::Always)
-                        .min_decimals(0)
-                        .max_decimals(3),
-                ).changed();
+                changed.uniform |= ui
+                    .add(
+                        egui::Slider::new(&mut self.anaglyph_p, 0.15..=0.6)
+                            .clamping(egui::widgets::SliderClamping::Always)
+                            .min_decimals(0)
+                            .max_decimals(3),
+                    )
+                    .changed();
             });
             ui.horizontal(|ui| {
                 ui.label("Anaglyph Q (blue lens):");
-                changed.uniform |= ui.add(
-                    egui::Slider::new(&mut self.anaglyph_q, 0.0..=0.25)
-                        .clamping(egui::widgets::SliderClamping::Always)
-                        .min_decimals(0)
-                        .max_decimals(3),
-                ).changed();
+                changed.uniform |= ui
+                    .add(
+                        egui::Slider::new(&mut self.anaglyph_q, 0.0..=0.25)
+                            .clamping(egui::widgets::SliderClamping::Always)
+                            .min_decimals(0)
+                            .max_decimals(3),
+                    )
+                    .changed();
             });
         }
         changed.uniform |= ui
@@ -2714,6 +2718,40 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum CliCommand {
     Render(RenderCliOptions),
+    RenderFrame(RenderFrameCliOptions),
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Args)]
+struct RenderFrameCliOptions {
+    scene: String,
+
+    #[arg(long, conflicts_with = "animation")]
+    stage: Option<String>,
+
+    #[arg(long, conflicts_with = "stage")]
+    animation: Option<String>,
+
+    #[arg(long)]
+    camera: Option<String>,
+
+    #[arg(long, default_value_t = 0.0)]
+    time: f64,
+
+    #[arg(long)]
+    output: String,
+
+    #[arg(long, default_value_t = 1920)]
+    width: u32,
+
+    #[arg(long, default_value_t = 1080)]
+    height: u32,
+
+    #[arg(long, alias = "aa_count", default_value_t = 1)]
+    aa_count: i32,
+
+    #[arg(long, alias = "render_depth", default_value_t = 100)]
+    render_depth: i32,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -2834,6 +2872,79 @@ async fn render(options: RenderCliOptions) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+async fn render_frame(options: RenderFrameCliOptions) -> Result<(), String> {
+    let scenes = Scenes::default();
+    let scene_content = scenes
+        .get_by_link(&options.scene)
+        .map(|(content, _)| content)
+        .ok_or_else(|| format!("Unknown scene `{}`", options.scene))?;
+    let scene: SerializedScene = ron::from_str(scene_content)
+        .map_err(|err| format!("Failed to parse scene `{}`: {err}", options.scene))?;
+    let mut renderer = SceneRenderer::new(
+        Scene::from_serialized(scene),
+        options.width,
+        options.height,
+        &options.scene,
+    )
+    .await;
+    renderer.aa_count = options.aa_count;
+    renderer.render_depth = options.render_depth;
+
+    let mut memory = egui::Memory::default();
+    memory.data.insert_persisted(
+        egui::Id::new("OriginalCam"),
+        OriginalCam(renderer.cam.get_calculated_cam()),
+    );
+
+    if let Some(stage) = &options.stage {
+        renderer
+            .scene
+            .init_stage_by_name(stage, &mut memory)
+            .ok_or_else(|| format!("Scene `{}` has no stage named `{stage}`", options.scene))?;
+    }
+    if let Some(animation) = &options.animation {
+        renderer
+            .scene
+            .init_animation_by_name(animation, &mut memory)
+            .ok_or_else(|| {
+                format!(
+                    "Scene `{}` has no animation named `{animation}`",
+                    options.scene
+                )
+            })?;
+        renderer.update_inner_variables(animation);
+    }
+    if let Some(camera) = &options.camera {
+        let camera_id =
+            renderer.scene.cameras.find_id(camera).ok_or_else(|| {
+                format!("Scene `{}` has no camera named `{camera}`", options.scene)
+            })?;
+        memory
+            .data
+            .insert_persisted(egui::Id::new("CurrentCam"), CurrentCam(Some(camera_id)));
+    }
+
+    renderer.update(&mut memory, options.time);
+    renderer.draw_texture(options.width as f32, options.height as f32, true);
+
+    let output = std::path::Path::new(&options.output);
+    if let Some(parent) = output
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        std::fs::create_dir_all(parent)
+            .map_err(|err| format!("Failed to create `{}`: {err}", parent.display()))?;
+    }
+    renderer
+        .render_target
+        .texture
+        .get_texture_data()
+        .export_png(&options.output);
+    println!("Rendered `{}` to `{}`", options.scene, options.output);
+    Ok(())
+}
+
 #[macroquad::main(window_conf)]
 async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
@@ -2846,6 +2957,13 @@ async fn main() {
             let result = render(options).await;
             println!("Total render time: {:?}", render_start.elapsed());
             if let Err(err) = result {
+                eprintln!("{err}");
+                std::process::exit(1);
+            }
+            return;
+        }
+        Some(CliCommand::RenderFrame(options)) => {
+            if let Err(err) = render_frame(options).await {
                 eprintln!("{err}");
                 std::process::exit(1);
             }

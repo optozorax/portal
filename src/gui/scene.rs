@@ -1089,7 +1089,9 @@ impl Scene {
                         end = end.min(pos);
                     }
                     let line = line[..end].trim_end();
-                    if cfg!(target_os = "macos") && data.use_300_version && line == "#version 300 es"
+                    if cfg!(target_os = "macos")
+                        && data.use_300_version
+                        && line == "#version 300 es"
                     {
                         "#version 330 core"
                     } else {
