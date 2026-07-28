@@ -44,14 +44,12 @@
 //!    backbuffer into that eye's half of the shared texture.
 //! 4. Hand the texture back and report the frame.
 //!
-//! Drawing the window twice is forced, not sloppiness: `egui_miniquad::Painter`
-//! hardcodes `begin_default_pass`, so egui can only ever paint into the
-//! backbuffer, and `draw` consumes its shapes so it can only do it once per
-//! run. Since egui has to end up *on top of* each eye's canvas rather than
-//! under it, two runs are the only way to get two correctly layered images.
-//! egui is immediate mode and does not mind; the app logic threaded through the
-//! same closure does, which is what the caller's `apply_input` guard is for.
-//! The raytrace, the expensive part, still happens at most once.
+//! The window is composited twice but *built* once. The expensive raytrace
+//! happens at most once per frame, and so does the UI: the caller renders egui
+//! into a texture through miniquad's default-pass override and blits it over
+//! each eye. Every request is answered -- with `FrameReady` or `FrameSkipped`,
+//! never with silence -- because the compositor allows a single request in
+//! flight and would otherwise wait forever for an answer that is not coming.
 //!
 //! Getting OpenGL pixels into a D3D11 texture
 //! ------------------------------------------
@@ -84,7 +82,7 @@ use portal_vr_protocol as proto;
 use std::ffi::c_void;
 use std::time::Instant;
 use windows::core::Interface;
-use windows::Win32::Foundation::{CloseHandle, GENERIC_READ, GENERIC_WRITE, HANDLE, HWND, RECT};
+use windows::Win32::Foundation::{CloseHandle, GENERIC_READ, GENERIC_WRITE, HANDLE};
 use windows::Win32::Graphics::Direct3D::{D3D_DRIVER_TYPE_UNKNOWN, D3D_FEATURE_LEVEL_11_0};
 use windows::Win32::Graphics::Direct3D11::{
     D3D11CreateDevice, ID3D11Device, ID3D11Device1, ID3D11DeviceContext, ID3D11Texture2D,
@@ -98,14 +96,9 @@ use windows::Win32::Graphics::Dxgi::Common::{
 use windows::Win32::Graphics::Dxgi::{
     CreateDXGIFactory1, IDXGIAdapter, IDXGIFactory1, IDXGIKeyedMutex, DXGI_ERROR_NOT_FOUND,
 };
-use windows::Win32::UI::WindowsAndMessaging::{
-    GetClientRect, GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOZORDER,
-};
 
 pub use portal_vr_protocol::Eye;
 
-/// `GL_FRAMEBUFFER_SRGB`, which miniquad's GL bindings do not declare.
-const GL_FRAMEBUFFER_SRGB: gl::GLenum = 0x8DB9;
 
 /// `WGL_ACCESS_READ_WRITE_NV`.
 ///
@@ -129,6 +122,17 @@ const WAIT_ABANDONED_HRESULT: u32 = 0x0000_0080;
 /// this app's window.
 const ACQUIRE_TIMEOUT_MS: u32 = 4;
 
+/// How long the compositor may say nothing before this app gives up on it.
+///
+/// Generous: the compositor speaks every frame, so seconds of silence means it
+/// is gone or wedged, not merely busy.
+const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// How long a single wait for a message lasts before looking at the clock
+/// again. Only reached when nothing has arrived, so it costs nothing on the
+/// normal path.
+const REQUEST_POLL: std::time::Duration = std::time::Duration::from_millis(250);
+
 /// The app's connection to the compositor.
 ///
 /// [`Client::frame`] is the whole per-frame interface; see the module docs.
@@ -143,11 +147,13 @@ pub struct Client {
     /// The compositor's textures, opened here. Never touched by OpenGL.
     slots: Vec<Slot>,
     transport: Transport,
-    /// Framebuffer object the staging texture is attached to for the blit. The
-    /// read side is the backbuffer, which is framebuffer zero.
-    draw_fbo: gl::GLuint,
-    /// Local mirror of the compositor's screen settings. See [`ScreenSettings`].
-    pub screen: ScreenSettings,
+    /// Where the virtual screen hangs, as far as this app knows.
+    ///
+    /// The compositor owns these; this is a mirror the settings panel can move.
+    /// It starts from what `Welcome` said and is refreshed whenever the
+    /// compositor changes them itself, by hotkey or command line -- so a slider
+    /// cannot sit there showing a value that stopped being true.
+    pub screen: proto::ScreenSettings,
     /// Why the connection ended, if it has. Kept rather than dropped on the
     /// floor, because someone wearing a headset cannot read stderr and the
     /// settings panel is the only place left to say it.
@@ -162,61 +168,8 @@ pub struct Client {
     /// of it -- comfortable for a while, tiring for long. Positive values push
     /// the scene back behind the screen, which is the classic fix.
     pub convergence_px: f32,
-    /// Whether the compositor should flip the client image inside its window.
-    ///
-    /// The transport keeps the raw OpenGL row order; the compositor applies
-    /// this only while sampling the client rectangle, so its desktop and
-    /// border remain upright.
-    pub flip_y: bool,
     /// Frames handed over, for the settings panel.
     frames: u64,
-    /// A resize requested by the compositor but not visible in miniquad's
-    /// framebuffer yet. `set_window_size` is delivered through miniquad's
-    /// native request queue, so the current draw must finish before
-    /// `screen_size()` changes.
-    pending_resize: Option<(u32, u32)>,
-}
-
-/// Where the virtual screen hangs, as far as this app knows.
-///
-/// The compositor is the authority on all of it; this is a write-through mirror
-/// so the settings panel has something to move. That is why the values start at
-/// the compositor's documented defaults rather than being read back: there is
-/// no message to ask, because nothing needs one -- whoever moves a slider is
-/// looking at the screen while they do it.
-#[derive(Clone, Copy, Debug)]
-pub struct ScreenSettings {
-    /// Metres in front of you.
-    pub distance: f32,
-    /// Metres above the anchor.
-    pub height: f32,
-    /// Metres to the right of the anchor.
-    pub lateral: f32,
-    /// Width of the screen in metres; height follows its aspect ratio.
-    pub width_meters: f32,
-    /// Rotation about Y, radians.
-    pub yaw: f32,
-    /// Rotation about X, radians.
-    pub pitch: f32,
-    /// Reserved size multiplier for a future compositor-drawn VR cursor.
-    pub cursor_scale: f32,
-    /// Compositor MSAA setting for the desktop border, frame and cursor.
-    pub msaa_samples: u32,
-}
-
-impl Default for ScreenSettings {
-    fn default() -> Self {
-        Self {
-            distance: 1.6,
-            height: 0.0,
-            lateral: 0.0,
-            width_meters: 1.6,
-            yaw: 0.0,
-            pitch: 0.0,
-            cursor_scale: 2.0,
-            msaa_samples: 4,
-        }
-    }
 }
 
 /// One of the compositor's shared textures, opened in this process.
@@ -327,7 +280,7 @@ impl Client {
             .slots
             .iter()
             .enumerate()
-            .map(|(index, slot)| open_slot(&device1, slot, index))
+            .map(|(index, handle)| open_slot(&device1, *handle, index))
             .collect::<Result<Vec<_>, String>>()?;
         let transport = Transport::new(&device, &welcome.layout)?;
         log(format!(
@@ -338,9 +291,6 @@ impl Client {
             welcome.layout.eye_height
         ));
 
-        let mut draw_fbo = 0;
-        unsafe { gl::glGenFramebuffers(1, &mut draw_fbo) };
-
         Ok(Self {
             pipe,
             device,
@@ -348,14 +298,11 @@ impl Client {
             layout: welcome.layout,
             slots,
             transport,
-            draw_fbo,
-            screen: ScreenSettings::default(),
+            screen: welcome.screen,
             stopped: None,
             system_name: welcome.system_name,
             convergence_px: 120.0,
-            flip_y: true,
             frames: 0,
-            pending_resize: None,
         })
     }
 
@@ -378,7 +325,7 @@ impl Client {
     /// with a millisecond sleep. The caller has no visible window to keep
     /// refreshing, and waiting on the pipe avoids Windows' coarse sleep
     /// quantization that otherwise turns a 120 Hz client into a 60 Hz client.
-    pub fn frame(&mut self, draw_eye: impl FnMut(Eye, &mut Client)) -> bool {
+    pub fn frame(&mut self, draw_eye: impl FnMut(Eye)) -> bool {
         if self.stopped.is_some() {
             return false;
         }
@@ -392,86 +339,111 @@ impl Client {
         }
     }
 
-    fn try_frame(&mut self, mut draw_eye: impl FnMut(Eye, &mut Client)) -> Result<bool, String> {
-        // Only the newest request matters. An older one describes a moment the
-        // compositor has already moved past, and answering it would put a stale
-        // image on screen.
-        let mut request = None;
-        while let Some(message) = self.pipe.try_recv()? {
-            self.handle_server_message(message, &mut request)?;
-        }
-        let request = loop {
-            if let Some(request) = request.take() {
-                break request;
-            }
-
-            // A Windows sleep of one millisecond is normally rounded to the
-            // system timer quantum (often 15.6 ms). That was the hidden 60 Hz
-            // cap: the client simply did not inspect the pipe in time for
-            // every 120 Hz compositor request. ReadFile blocks in the kernel
-            // until the next complete protocol message instead.
-            let message = self.pipe.recv_blocking()?;
-            self.handle_server_message(message, &mut request)?;
+    fn try_frame(&mut self, mut draw_eye: impl FnMut(Eye)) -> Result<bool, String> {
+        let Some(request) = self.next_request()? else {
+            return Ok(false);
         };
-        if !request.should_render {
-            // A skipped request still has to acknowledge the compositor's
-            // single in-flight request. Otherwise one OpenXR frame that the
-            // runtime does not intend to display permanently wedges the
-            // pipeline: the compositor waits for FrameReady and the client
-            // quite correctly never renders one.
-            self.pipe.send(&proto::ClientMessage::FrameSkipped {
+
+        // From here on the request *must* be answered. The compositor allows a
+        // single request in flight, so returning without a FrameReady or a
+        // FrameSkipped stops it ever asking again -- and this side then blocks
+        // forever waiting for the request that will never come. Both processes
+        // idle, nothing in either log.
+        let skip = |client: &mut Self| {
+            client.pipe.send(&proto::ClientMessage::FrameSkipped {
                 frame_id: request.frame_id,
                 slot: request.slot,
-                slot_released: false,
-            })?;
+            })
+        };
+
+        if !request.should_render {
+            skip(self)?;
             return Ok(false);
         }
 
         let index = request.slot as usize;
-        let slot = self.slots.get(index).ok_or_else(|| {
-            format!("the compositor asked for slot {index}, which does not exist")
-        })?;
+        let Some(slot) = self.slots.get(index) else {
+            skip(self)?;
+            return Err(format!(
+                "the compositor asked for slot {index}, which does not exist"
+            ));
+        };
 
-        let acquired = acquire(&slot.mutex, proto::KEY_CLIENT, ACQUIRE_TIMEOUT_MS)?;
-        if !acquired {
-            // The compositor still has it. Not an error and not worth waiting
-            // for; it will ask again.
+        if !acquire(&slot.mutex, proto::KEY_CLIENT, ACQUIRE_TIMEOUT_MS)? {
+            // Somebody else still holds it. Not an error, and not worth waiting
+            // for -- but it is still an answer we owe.
+            skip(self)?;
             return Ok(false);
         }
         let frame_started = Instant::now();
 
-        // The compositor's preview is the client's emulated ordinary window.
-        // Ask the hidden native window to follow it, but do not make a resize
-        // acknowledgement a prerequisite for rendering. Native window
-        // resizing is asynchronous and a headless surface may not report the
-        // new framebuffer immediately; rendering the current size is still
-        // useful and avoids turning a transient resize into a permanent black
-        // screen. `render_into` reports the actual rectangle it filled.
-        let _ = self.apply_requested_size(request.client_px)?;
+        // The compositor's preview is this app's emulated ordinary window, so
+        // follow its size. A resize is not a prerequisite for rendering: a
+        // headless surface may not report the new framebuffer immediately, and
+        // rendering at the current size is still useful. `render_into` reports
+        // what it actually filled.
+        apply_requested_size(request.client_px);
 
-        let result = self.render_into(index, &request, &mut draw_eye);
+        let result = self.render_into(index, &mut draw_eye);
 
         // The mutex has to go back whatever happened, or the compositor waits
         // for a slot that is never coming and the virtual screen freezes.
-        let released = release(&self.slots[index].mutex, proto::KEY_SERVER);
-        released?;
+        release(&self.slots[index].mutex, proto::KEY_SERVER)?;
 
-        let content = result?;
+        let content = match result {
+            Ok(content) => content,
+            Err(err) => {
+                // The slot is back at KEY_SERVER, so the compositor will
+                // reclaim it; all that is owed is the acknowledgement.
+                let _ = skip(self);
+                return Err(err);
+            }
+        };
 
-        // What was actually filled, not what was asked for. Normally this is
-        // exactly the emulated preview-window size; reporting the measured
-        // rectangle keeps a transient DPI or resize mismatch from exposing
-        // stale pixels in the shared texture.
+        // What was actually filled, not what was asked for. Normally these are
+        // the same; reporting the measured size keeps a transient DPI or resize
+        // mismatch from exposing stale pixels in the shared texture.
         let frame_time_us = frame_started.elapsed().as_micros().min(u32::MAX as u128) as u32;
-        let send_result = self.pipe.send(&proto::ClientMessage::FrameReady {
+        self.pipe.send(&proto::ClientMessage::FrameReady {
             frame_id: request.frame_id,
             slot: request.slot,
             content,
             frame_time_us,
-        });
-        send_result?;
+        })?;
         self.frames += 1;
         Ok(true)
+    }
+
+    /// The newest frame request, waiting for one if none has arrived.
+    ///
+    /// Older requests describe a moment the compositor has already moved past,
+    /// so only the last one is kept. When nothing is pending this blocks in the
+    /// kernel rather than polling: a Windows sleep of one millisecond is rounded
+    /// up to the system timer quantum, often 15.6 ms, which was a hidden 60 Hz
+    /// cap on a 120 Hz compositor.
+    ///
+    /// `None` if the compositor went quiet for [`REQUEST_TIMEOUT`]. Blocking
+    /// without a deadline turns a wedged compositor into a frozen application
+    /// with nothing on screen to explain it; the caller can at least say so.
+    fn next_request(&mut self) -> Result<Option<proto::FrameRequest>, String> {
+        let deadline = Instant::now() + REQUEST_TIMEOUT;
+        let mut request = None;
+        loop {
+            match self.pipe.try_recv()? {
+                Some(message) => self.handle_server_message(message, &mut request)?,
+                // Nothing more has arrived: take what we have, or wait.
+                None if request.is_some() => return Ok(request),
+                None => {
+                    if Instant::now() >= deadline {
+                        return Ok(None);
+                    }
+                    match self.pipe.recv_timeout(REQUEST_POLL)? {
+                        Some(message) => self.handle_server_message(message, &mut request)?,
+                        None => continue,
+                    }
+                }
+            }
+        }
     }
 
     fn handle_server_message(
@@ -489,146 +461,41 @@ impl Client {
             }
             proto::ServerMessage::Input(events) => {
                 for event in events {
-                    self.inject_input(event);
+                    inject_input(event);
                 }
+                Ok(())
+            }
+            // The compositor moved the screen itself, by hotkey or command
+            // line. Follow it, so the settings panel keeps telling the truth.
+            proto::ServerMessage::Screen(screen) => {
+                self.screen = screen;
                 Ok(())
             }
             proto::ServerMessage::Welcome(_) => Ok(()),
         }
     }
 
-    fn apply_requested_size(&mut self, requested: [u32; 2]) -> Result<bool, String> {
-        let target = (requested[0].max(1), requested[1].max(1));
-        let (width, height) = macroquad::miniquad::window::screen_size();
-        let actual = (width.round() as u32, height.round() as u32);
-        if actual == target {
-            self.pending_resize = None;
-            return Ok(true);
-        }
-
-        if self.pending_resize != Some(target) {
-            resize_hidden_window(target)?;
-            self.pending_resize = Some(target);
-        }
-        Ok(false)
-    }
-
-    /// Convert compositor-window coordinates from the shared virtual-screen
-    /// space into this client's actual framebuffer space, then feed them into
-    /// miniquad's normal event path.
-    fn inject_input(&self, event: proto::InputEvent) {
-        let (width, height) = macroquad::miniquad::window::screen_size();
-        let scale_x = width / self.layout.eye_width.max(1) as f32;
-        let scale_y = height / self.layout.eye_height.max(1) as f32;
-        let mods = |bits: u8| macroquad::miniquad::KeyMods {
-            shift: bits & proto::MOD_SHIFT != 0,
-            ctrl: bits & proto::MOD_CONTROL != 0,
-            alt: bits & proto::MOD_ALT != 0,
-            logo: bits & proto::MOD_LOGO != 0,
-        };
-        let event = match event {
-            proto::InputEvent::MouseMotion { x, y } => {
-                macroquad::miniquad::InjectedEvent::MouseMotion {
-                    x: x * scale_x,
-                    y: y * scale_y,
-                }
-            }
-            proto::InputEvent::MouseDown { x, y, button } => {
-                macroquad::miniquad::InjectedEvent::MouseDown {
-                    x: x * scale_x,
-                    y: y * scale_y,
-                    button: match button {
-                        proto::MouseButton::Left => macroquad::miniquad::MouseButton::Left,
-                        proto::MouseButton::Right => macroquad::miniquad::MouseButton::Right,
-                        proto::MouseButton::Middle => macroquad::miniquad::MouseButton::Middle,
-                    },
-                }
-            }
-            proto::InputEvent::MouseUp { x, y, button } => {
-                macroquad::miniquad::InjectedEvent::MouseUp {
-                    x: x * scale_x,
-                    y: y * scale_y,
-                    button: match button {
-                        proto::MouseButton::Left => macroquad::miniquad::MouseButton::Left,
-                        proto::MouseButton::Right => macroquad::miniquad::MouseButton::Right,
-                        proto::MouseButton::Middle => macroquad::miniquad::MouseButton::Middle,
-                    },
-                }
-            }
-            proto::InputEvent::MouseWheel { dx, dy } => {
-                macroquad::miniquad::InjectedEvent::MouseWheel { dx, dy }
-            }
-            proto::InputEvent::KeyDown {
-                keycode,
-                modifiers,
-                repeat,
-            } => macroquad::miniquad::InjectedEvent::KeyDown {
-                scancode: keycode,
-                mods: mods(modifiers),
-                repeat,
-            },
-            proto::InputEvent::KeyUp { keycode, modifiers } => {
-                macroquad::miniquad::InjectedEvent::KeyUp {
-                    scancode: keycode,
-                    mods: mods(modifiers),
-                }
-            }
-            proto::InputEvent::Char {
-                character,
-                modifiers,
-            } => macroquad::miniquad::InjectedEvent::Char {
-                character,
-                mods: mods(modifiers),
-                repeat: false,
-            },
-            proto::InputEvent::Focus(focused) => macroquad::miniquad::InjectedEvent::Focus(focused),
-        };
-        macroquad::miniquad::window::inject_event(event);
-    }
-
-    /// Draw both eyes and get them into the shared texture, returning the
-    /// rectangles actually filled. The keyed mutex is held for the whole of it.
+    /// Draw both eyes and get them into the shared texture, returning the size
+    /// actually filled. The keyed mutex is held for the whole of it.
     fn render_into(
         &mut self,
         index: usize,
-        request: &proto::FrameRequest,
-        draw_eye: &mut impl FnMut(Eye, &mut Client),
-    ) -> Result<[proto::Rect; 2], String> {
+        draw_eye: &mut impl FnMut(Eye),
+    ) -> Result<[u32; 2], String> {
         // What this window can actually supply: its current framebuffer size,
-        // capped only at the shared texture's per-eye capacity. It is allowed
-        // to differ from the compositor's requested size while a native resize
-        // is pending; the compositor scales the reported rectangle into the
-        // emulated window.
+        // capped at one eye's capacity. It may differ from what the compositor
+        // asked for while a resize is still landing.
         let (width, height) = macroquad::miniquad::window::screen_size();
-        let content = Eye::BOTH.map(|eye| {
-            let asked = request.content[eye.index()];
-            // `asked.x` is an absolute x-coordinate in the double-wide
-            // shared texture. The framebuffer we render is local to one eye,
-            // so the available width must be measured against the full
-            // double-wide texture, not against `eye_width`. Otherwise the
-            // right eye (whose x is `eye_width`) is reported as width zero and
-            // the compositor rejects every otherwise valid stereo frame.
-            let bounds_width = self.layout.width.saturating_sub(asked.x);
-            let bounds_height = self.layout.eye_height.saturating_sub(asked.y);
-            proto::Rect::new(
-                asked.x,
-                asked.y,
-                (width.max(1.0) as u32).min(bounds_width),
-                (height.max(1.0) as u32).min(bounds_height),
-            )
-        });
+        let content = self
+            .layout
+            .clamp_to_eye([width.max(1.0) as u32, height.max(1.0) as u32]);
 
         // Copied out so the transport can be borrowed mutably below without
-        // taking the rest of `self` with it. Both are cheap: a COM pointer and
-        // an integer.
+        // taking the rest of `self` with it. A COM pointer clone is cheap.
         let context = self.context.clone();
-        let draw_fbo = self.draw_fbo;
-        let test_pattern = interop_test_pattern();
 
         // GL may only touch the interop texture between lock and unlock. Keep
-        // the lock across both eyes, but do not keep a mutable borrow of the
-        // transport across `draw_eye`: the callback also needs `&mut Client`
-        // so it can render the Virtual screen settings window.
+        // the lock across both eyes.
         let interop_gl_name = match &mut self.transport {
             Transport::Interop(staging) => {
                 staging.lock()?;
@@ -639,38 +506,34 @@ impl Client {
 
         let render_result = (|| -> Result<(), String> {
             for eye in Eye::BOTH {
-                draw_eye(eye, self);
+                let origin = self.layout.eye_origin(eye);
+                draw_eye(eye);
                 flush_gl();
                 if let Some(gl_name) = interop_gl_name {
-                    copy_backbuffer(draw_fbo, gl_name, content[eye.index()], test_pattern)?;
+                    copy_backbuffer(gl_name, origin, content)?;
                 } else if let Transport::Readback(readback) = &mut self.transport {
-                    // Keep the shared texture in the same raw OpenGL row
-                    // order as the GPU interop path. The compositor flips
-                    // only this client rectangle when it draws the desktop;
-                    // flipping here too would undo that there.
-                    readback.capture(&context, content[eye.index()], false)?;
+                    // Keep the shared texture in the same raw OpenGL row order
+                    // as the GPU interop path. The compositor flips only this
+                    // client rectangle when it draws the desktop; flipping here
+                    // too would undo that there.
+                    readback.capture(&context, origin, content)?;
                 }
             }
             Ok(())
         })();
 
-        // Always unlock, including when framebuffer validation or the blit
-        // itself fails. Leaving the interop object locked makes even a clean
-        // shutdown impossible.
-        let unlock_result = if interop_gl_name.is_some() {
-            match &mut self.transport {
-                Transport::Interop(staging) => staging.unlock(),
-                Transport::Readback(_) => Ok(()),
-            }
-        } else {
-            Ok(())
+        // Always unlock, including when the blit itself failed. Leaving the
+        // interop object locked makes even a clean shutdown impossible.
+        let unlock_result = match &mut self.transport {
+            Transport::Interop(staging) if interop_gl_name.is_some() => staging.unlock(),
+            _ => Ok(()),
         };
         render_result?;
         unlock_result?;
 
         let source = self.transport_texture();
         for eye in Eye::BOTH {
-            self.copy_to_shared(index, &source, content[eye.index()]);
+            self.copy_to_shared(index, &source, self.layout.eye_origin(eye), content);
         }
         // Submitted before the mutex is released, or the compositor can start
         // reading a texture whose commands are still queued here.
@@ -688,21 +551,27 @@ impl Client {
 
     /// Copy one eye's rectangle from the transport's texture into the shared
     /// one.
-    fn copy_to_shared(&self, index: usize, source: &ID3D11Texture2D, rect: proto::Rect) {
+    fn copy_to_shared(
+        &self,
+        index: usize,
+        source: &ID3D11Texture2D,
+        origin: (u32, u32),
+        size: [u32; 2],
+    ) {
         let box_ = D3D11_BOX {
-            left: rect.x,
-            top: rect.y,
+            left: origin.0,
+            top: origin.1,
             front: 0,
-            right: rect.x + rect.width,
-            bottom: rect.y + rect.height,
+            right: origin.0 + size[0],
+            bottom: origin.1 + size[1],
             back: 1,
         };
         unsafe {
             self.context.CopySubresourceRegion(
                 &self.slots[index].texture,
                 0,
-                rect.x,
-                rect.y,
+                origin.0,
+                origin.1,
                 0,
                 source,
                 0,
@@ -710,13 +579,97 @@ impl Client {
             );
         }
     }
+}
 
+/// Ask the hidden window to match the size the compositor is emulating.
+///
+/// `set_client_size` names the framebuffer directly and applies immediately, so
+/// the next frame already sees the new `screen_size()`. That is a fork addition;
+/// upstream's `set_window_size` is queued and names the outer window, which is
+/// why this used to be 40 lines of `AdjustWindowRectEx` arithmetic here.
+fn apply_requested_size(requested: [u32; 2]) {
+    let target = (requested[0].max(1), requested[1].max(1));
+    let (width, height) = macroquad::miniquad::window::screen_size();
+    if (width.round() as u32, height.round() as u32) != target {
+        macroquad::miniquad::window::set_client_size(target.0, target.1);
+    }
+}
+
+/// Feed one compositor input event into miniquad's normal event path.
+///
+/// No coordinate conversion: the compositor sends positions in the emulated
+/// window's client area, which is exactly what Win32 would deliver to a real
+/// window of that size. It used to scale them into virtual-screen pixels and
+/// this side scaled them straight back, which was the identity function with
+/// two chances to be wrong.
+fn inject_input(event: proto::InputEvent) {
+    let mods = |bits: u8| macroquad::miniquad::KeyMods {
+        shift: bits & proto::MOD_SHIFT != 0,
+        ctrl: bits & proto::MOD_CONTROL != 0,
+        alt: bits & proto::MOD_ALT != 0,
+        logo: bits & proto::MOD_LOGO != 0,
+    };
+    let button = |button| match button {
+        proto::MouseButton::Left => macroquad::miniquad::MouseButton::Left,
+        proto::MouseButton::Right => macroquad::miniquad::MouseButton::Right,
+        proto::MouseButton::Middle => macroquad::miniquad::MouseButton::Middle,
+    };
+    let event = match event {
+        proto::InputEvent::MouseMotion { x, y } => {
+            macroquad::miniquad::InjectedEvent::MouseMotion { x, y }
+        }
+        proto::InputEvent::MouseDown { x, y, button: b } => {
+            macroquad::miniquad::InjectedEvent::MouseDown {
+                x,
+                y,
+                button: button(b),
+            }
+        }
+        proto::InputEvent::MouseUp { x, y, button: b } => {
+            macroquad::miniquad::InjectedEvent::MouseUp {
+                x,
+                y,
+                button: button(b),
+            }
+        }
+        proto::InputEvent::MouseWheel { dx, dy } => {
+            macroquad::miniquad::InjectedEvent::MouseWheel { dx, dy }
+        }
+        proto::InputEvent::KeyDown {
+            keycode,
+            modifiers,
+            repeat,
+        } => macroquad::miniquad::InjectedEvent::KeyDown {
+            scancode: keycode,
+            mods: mods(modifiers),
+            repeat,
+        },
+        proto::InputEvent::KeyUp { keycode, modifiers } => {
+            macroquad::miniquad::InjectedEvent::KeyUp {
+                scancode: keycode,
+                mods: mods(modifiers),
+            }
+        }
+        proto::InputEvent::Char {
+            character,
+            modifiers,
+        } => macroquad::miniquad::InjectedEvent::Char {
+            character,
+            mods: mods(modifiers),
+            repeat: false,
+        },
+    };
+    macroquad::miniquad::window::inject_event(event);
+}
+
+impl Client {
     /// Settings for the virtual screen.
     ///
     /// Most of them belong to the compositor, so this sends them over rather
     /// than applying them: the compositor is what decides where the screen
-    /// hangs. Convergence is the exception -- that is about how this app draws
-    /// stereo, so it stays here.
+    /// hangs, and it echoes any change back so these sliders stay honest even
+    /// when a hotkey moved the screen. Convergence is the exception -- that is
+    /// about how this app draws stereo, so it stays here.
     pub fn ui(&mut self, ui: &mut egui::Ui, send_controls: bool) {
         if let Some(stopped) = &self.stopped {
             ui.colored_label(egui::Color32::RED, format!("VR stopped: {stopped}"));
@@ -744,9 +697,8 @@ impl Client {
             changed = true;
         }
 
-        // Local mirrors of the compositor's values. It owns them, so these are
-        // only ever write-through -- which is why they start at the compositor's
-        // documented defaults rather than being read back.
+        // Mirrors of the compositor's values: it owns them, and it tells us
+        // what they are in `Welcome` and again whenever it changes them itself.
         if slider(ui, &mut self.screen.width_meters, 0.2..=3.0, "width, m") {
             control.width_meters = Some(self.screen.width_meters);
             changed = true;
@@ -797,15 +749,6 @@ impl Client {
         }
         ui.label("MSAA affects the compositor's screen border, window frame and cursor.");
 
-        if changed && send_controls {
-            if let Err(err) = self
-                .pipe
-                .send(&proto::ClientMessage::ScreenControl(control))
-            {
-                log(format!("could not send screen settings: {err}"));
-            }
-        }
-
         ui.separator();
         ui.add(
             egui::Slider::new(&mut self.convergence_px, -120.0..=120.0)
@@ -822,9 +765,16 @@ impl Client {
 
         ui.separator();
         ui.collapsing("If it looks wrong", |ui| {
-            let flip_changed = ui
-                .checkbox(&mut self.flip_y, "Screen is upside down")
-                .changed();
+            if ui
+                .checkbox(&mut self.screen.flip_y, "Screen is upside down")
+                .changed()
+            {
+                // The compositor owns the actual flip, because it is the
+                // process that samples the shared texture into OpenXR. Send it
+                // down the same channel as every other screen setting.
+                control.flip_y = Some(self.screen.flip_y);
+                changed = true;
+            }
             ui.label(
                 "An OpenGL backbuffer is bottom-up while a D3D11 texture is top-down, so the \
                  image is flipped on its way across. If it comes out inverted anyway, untick \
@@ -843,85 +793,31 @@ impl Client {
                  pixels across, however many the desktop actually has. Make the screen bigger \
                  and closer, and raise `Interface DPI`.",
             );
-
-            // The compositor owns the actual flip because it is the process
-            // that samples the shared D3D11 texture into OpenXR. Keep this
-            // diagnostic checkbox useful by sending the setting over the same
-            // control channel as the other virtual-screen settings.
-            if flip_changed && send_controls {
-                if let Err(err) =
-                    self.pipe
-                        .send(&proto::ClientMessage::ScreenControl(proto::ScreenControl {
-                            flip_y: Some(self.flip_y),
-                            ..Default::default()
-                        }))
-                {
-                    log(format!("could not send flip setting: {err}"));
-                }
-            }
         });
+
+        if changed && send_controls {
+            if let Err(err) = self
+                .pipe
+                .send(&proto::ClientMessage::ScreenControl(control))
+            {
+                log(format!("could not send screen settings: {err}"));
+            }
+        }
     }
 }
 
-/// Resize the actual hidden miniquad window, preserving its non-client frame.
+/// Copy the backbuffer into the interop staging texture at `origin`.
 ///
-/// `miniquad::window::set_window_size` queues a native request. That request is
-/// not reliable for this headless configuration: the hidden window can keep
-/// reporting its old framebuffer forever, which makes every compositor frame
-/// get skipped. The HWND is deliberately exposed by `miniquad-vr`, so apply
-/// the resize synchronously and let miniquad observe it on its next dimension
-/// update.
-fn resize_hidden_window(target: (u32, u32)) -> Result<(), String> {
-    let handle = macroquad::miniquad::window::native_window_handle()
-        .ok_or_else(|| "miniquad has not created the hidden Portal window".to_owned())?;
-    let hwnd = HWND(handle.get() as *mut c_void);
-    let mut outer = RECT::default();
-    let mut client = RECT::default();
-    unsafe {
-        GetWindowRect(hwnd, &mut outer)
-            .map_err(|err| format!("GetWindowRect for hidden Portal window failed: {err}"))?;
-        GetClientRect(hwnd, &mut client)
-            .map_err(|err| format!("GetClientRect for hidden Portal window failed: {err}"))?;
-    }
-
-    let outer_width = (outer.right - outer.left).max(0) as u32;
-    let outer_height = (outer.bottom - outer.top).max(0) as u32;
-    let client_width = (client.right - client.left).max(0) as u32;
-    let client_height = (client.bottom - client.top).max(0) as u32;
-    let frame_width = outer_width.saturating_sub(client_width);
-    let frame_height = outer_height.saturating_sub(client_height);
-    let outer_size = (
-        target.0.saturating_add(frame_width),
-        target.1.saturating_add(frame_height),
-    );
-
-    unsafe {
-        SetWindowPos(
-            hwnd,
-            None,
-            0,
-            0,
-            outer_size.0.min(i32::MAX as u32) as i32,
-            outer_size.1.min(i32::MAX as u32) as i32,
-            SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
-        )
-    }
-    .map_err(|err| format!("SetWindowPos for hidden Portal window failed: {err}"))
-}
-
-/// Copy the backbuffer into `rect` of the interop staging texture.
-///
-/// The normal path uses `glCopyTexSubImage2D`: it is a GPU copy from the
-/// current read buffer directly into the registered D3D11 texture and avoids
-/// the NVIDIA driver's problematic default-framebuffer-to-interop-FBO blit.
-/// The FBO is retained only for the GPU test pattern.
+/// `glCopyTexSubImage2D` rather than an FBO blit: it is a GPU copy from the
+/// current read buffer straight into the registered D3D11 texture, and it
+/// avoids the NVIDIA driver's problematic default-framebuffer-to-interop-FBO
+/// path.
 fn copy_backbuffer(
-    draw_fbo: gl::GLuint,
     gl_name: gl::GLuint,
-    rect: proto::Rect,
-    test_pattern: bool,
+    origin: (u32, u32),
+    size: [u32; 2],
 ) -> Result<(), String> {
-    let (width, height) = (rect.width as i32, rect.height as i32);
+    let (width, height) = (size[0] as i32, size[1] as i32);
     if width <= 0 || height <= 0 {
         return Ok(());
     }
@@ -935,46 +831,19 @@ fn copy_backbuffer(
         gl::glBindFramebuffer(gl::GL_READ_FRAMEBUFFER, 0);
         gl::glReadBuffer(gl::GL_BACK);
 
-        if test_pattern {
-            // GPU-only diagnostic. Attach the registered texture as an FBO
-            // target and clear it. If this solid color reaches the headset,
-            // interop registration and the D3D11 copy are alive.
-            gl::glBindFramebuffer(gl::GL_DRAW_FRAMEBUFFER, draw_fbo);
-            gl::glFramebufferTexture2D(
-                gl::GL_DRAW_FRAMEBUFFER,
-                gl::GL_COLOR_ATTACHMENT0,
-                gl::GL_TEXTURE_2D,
-                gl_name,
-                0,
-            );
-            let draw_buffer = gl::GL_COLOR_ATTACHMENT0;
-            gl::glDrawBuffers(1, &draw_buffer);
-            gl::glDisable(GL_FRAMEBUFFER_SRGB);
-            gl::glDisable(gl::GL_SCISSOR_TEST);
-            let status = gl::glCheckFramebufferStatus(gl::GL_DRAW_FRAMEBUFFER);
-            if status != gl::GL_FRAMEBUFFER_COMPLETE {
-                gl::glBindFramebuffer(gl::GL_FRAMEBUFFER, 0);
-                return Err(format!(
-                    "interop staging framebuffer is incomplete: status {status:#x}"
-                ));
-            }
-            gl::glClearColor(1.0, 0.0, 1.0, 1.0);
-            gl::glClear(gl::GL_COLOR_BUFFER_BIT);
-            gl::glBindFramebuffer(gl::GL_FRAMEBUFFER, 0);
-        } else {
-            gl::glBindTexture(gl::GL_TEXTURE_2D, gl_name);
-            gl::glCopyTexSubImage2D(
-                gl::GL_TEXTURE_2D,
-                0,
-                rect.x as i32,
-                rect.y as i32,
-                0,
-                0,
-                width,
-                height,
-            );
-            gl::glBindTexture(gl::GL_TEXTURE_2D, 0);
-        }
+        gl::glBindTexture(gl::GL_TEXTURE_2D, gl_name);
+        gl::glCopyTexSubImage2D(
+            gl::GL_TEXTURE_2D,
+            0,
+            origin.0 as i32,
+            origin.1 as i32,
+            0,
+            0,
+            width,
+            height,
+        );
+        gl::glBindTexture(gl::GL_TEXTURE_2D, 0);
+
         // WGL interop lock/unlock is the resource ownership boundary, but an
         // explicit flush makes the GL->D3D ordering unambiguous on drivers
         // that do not treat unlock as a sufficient command submission point.
@@ -1031,15 +900,19 @@ impl Readback {
         })
     }
 
-    /// Read the backbuffer and write it into the staging texture at `rect`.
+    /// Read the backbuffer and write it into the staging texture at `origin`.
+    ///
+    /// Rows are kept in OpenGL's bottom-up order, the same as the interop path:
+    /// the compositor flips the client rectangle when it composes the desktop,
+    /// so flipping here as well would undo that.
     fn capture(
         &mut self,
         context: &ID3D11DeviceContext,
-        rect: proto::Rect,
-        flip_y: bool,
+        origin: (u32, u32),
+        size: [u32; 2],
     ) -> Result<(), String> {
-        let stride = rect.width as usize * 4;
-        let needed = stride * rect.height as usize;
+        let stride = size[0] as usize * 4;
+        let needed = stride * size[1] as usize;
         if self.pixels.len() < needed {
             self.pixels.resize(needed, 0);
         }
@@ -1053,8 +926,8 @@ impl Readback {
             gl::glReadPixels(
                 0,
                 0,
-                rect.width as i32,
-                rect.height as i32,
+                size[0] as i32,
+                size[1] as i32,
                 GL_BGRA,
                 gl::GL_UNSIGNED_BYTE,
                 self.pixels.as_mut_ptr() as *mut _,
@@ -1066,19 +939,12 @@ impl Readback {
         unsafe { context.Map(&self.texture, 0, D3D11_MAP_WRITE, 0, Some(&mut mapped)) }
             .map_err(|err| format!("Map of the readback texture failed: {err}"))?;
 
-        for row in 0..rect.height as usize {
-            // glReadPixels hands back bottom-up rows; a D3D11 texture is
-            // top-down, so the source row is normally counted from the end.
-            let source_row = if flip_y {
-                rect.height as usize - 1 - row
-            } else {
-                row
-            };
-            let Some(source) = pixels.get(source_row * stride..source_row * stride + stride) else {
+        for row in 0..size[1] as usize {
+            let Some(source) = pixels.get(row * stride..row * stride + stride) else {
                 continue;
             };
             let destination =
-                (rect.y as usize + row) * mapped.RowPitch as usize + rect.x as usize * 4;
+                (origin.1 as usize + row) * mapped.RowPitch as usize + origin.0 as usize * 4;
             unsafe {
                 std::ptr::copy_nonoverlapping(
                     source.as_ptr(),
@@ -1111,7 +977,6 @@ fn slider(
 impl Drop for Client {
     fn drop(&mut self) {
         let _ = self.pipe.send(&proto::ClientMessage::Goodbye);
-        unsafe { gl::glDeleteFramebuffers(1, &self.draw_fbo) };
     }
 }
 
@@ -1370,11 +1235,6 @@ fn force_readback() -> bool {
         .is_ok_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
 }
 
-fn interop_test_pattern() -> bool {
-    std::env::var("PORTAL_VR_INTEROP_TEST_PATTERN")
-        .is_ok_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
-}
-
 #[link(name = "opengl32")]
 unsafe extern "system" {
     fn wglGetProcAddress(name: *const std::os::raw::c_char) -> *const c_void;
@@ -1428,18 +1288,28 @@ fn find_adapter(luid: i64) -> Result<IDXGIAdapter, String> {
     ))
 }
 
-fn open_slot(
-    device: &ID3D11Device1,
-    slot: &proto::SlotHandles,
-    index: usize,
-) -> Result<Slot, String> {
-    let texture: ID3D11Texture2D =
-        unsafe { device.OpenSharedResource1(HANDLE(slot.texture as *mut c_void)) }
-            .map_err(|err| format!("OpenSharedResource1 failed for slot {index}: {err}"))?;
+fn open_slot(device: &ID3D11Device1, handle: u64, index: usize) -> Result<Slot, String> {
+    // Closed however this turns out. `OpenSharedResource1` does not consume the
+    // handle -- the texture it returns holds its own reference -- so the
+    // duplicate the compositor made for us is ours to release.
+    let handle = OwnedHandle(HANDLE(handle as *mut c_void));
+    let texture: ID3D11Texture2D = unsafe { device.OpenSharedResource1(handle.0) }
+        .map_err(|err| format!("OpenSharedResource1 failed for slot {index}: {err}"))?;
     let mutex: IDXGIKeyedMutex = texture
         .cast()
         .map_err(|err| format!("slot {index} has no keyed mutex: {err}"))?;
     Ok(Slot { texture, mutex })
+}
+
+/// An NT handle this process owns and must close.
+struct OwnedHandle(HANDLE);
+
+impl Drop for OwnedHandle {
+    fn drop(&mut self) {
+        if !self.0.is_invalid() {
+            let _ = unsafe { CloseHandle(self.0) };
+        }
+    }
 }
 
 /// Take a keyed mutex, reporting a timeout as `false` rather than an error.
@@ -1474,16 +1344,33 @@ fn release(mutex: &IDXGIKeyedMutex, key: u64) -> Result<(), String> {
 
 /// The named pipe to the compositor.
 ///
-/// Synchronous, and used from the render thread only: unlike the compositor,
-/// which reads and writes from two threads and therefore needs overlapped I/O,
-/// this side never has a read and a write outstanding at once.
-struct Pipe(HANDLE);
+/// Overlapped, and used from the render thread only. Overlapped is not for
+/// concurrency here -- this side never has a read and a write outstanding at
+/// once -- but so that a read can be given a deadline. A plain blocking read is
+/// right almost all of the time and is what keeps this client paced by the
+/// headset rather than by Windows' 15.6 ms timer quantum; it just must not be
+/// the *only* option, because a compositor that stops sending would otherwise
+/// freeze the app with nothing on screen to explain it.
+///
+/// Bytes are buffered on arrival, so a timeout can never land in the middle of
+/// a message and desynchronise the stream.
+struct Pipe {
+    handle: HANDLE,
+    /// Manual-reset event for this pipe's operations. Owned; closed on drop.
+    event: HANDLE,
+    /// Received but not yet decoded.
+    buffer: std::collections::VecDeque<u8>,
+    /// Scratch for one overlapped read.
+    scratch: Vec<u8>,
+}
 
 impl Pipe {
     fn connect() -> Result<Self, String> {
         use windows::Win32::Storage::FileSystem::{
-            CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_MODE, OPEN_EXISTING,
+            CreateFileW, FILE_FLAG_OVERLAPPED, FILE_SHARE_MODE, OPEN_EXISTING,
         };
+        use windows::Win32::System::Threading::CreateEventW;
+
         let name: Vec<u16> = proto::PIPE_NAME
             .encode_utf16()
             .chain(std::iter::once(0))
@@ -1495,7 +1382,7 @@ impl Pipe {
                 FILE_SHARE_MODE(0),
                 None,
                 OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL,
+                FILE_FLAG_OVERLAPPED,
                 None,
             )
         }
@@ -1506,79 +1393,184 @@ impl Pipe {
                 proto::PIPE_NAME
             )
         })?;
-        Ok(Self(handle))
+        let event = unsafe { CreateEventW(None, true, false, None) }.map_err(|err| {
+            let _ = unsafe { CloseHandle(handle) };
+            format!("CreateEventW for pipe I/O failed: {err}")
+        })?;
+        Ok(Self {
+            handle,
+            event,
+            buffer: std::collections::VecDeque::new(),
+            scratch: vec![0u8; 4096],
+        })
     }
 
     fn send(&mut self, message: &proto::ClientMessage) -> Result<(), String> {
-        use std::io::Write;
         let bytes = proto::encode(message).map_err(|err| err.to_string())?;
-        Stream(self.0)
-            .write_all(&bytes)
-            .map_err(|err| format!("could not send to the compositor: {err}"))
+        let mut written = 0;
+        while written < bytes.len() {
+            written += self.write(&bytes[written..])?;
+        }
+        Ok(())
     }
 
-    /// Read one message, waiting for it. Only used for the handshake.
-    fn recv_blocking(&mut self) -> Result<proto::ServerMessage, String> {
-        proto::decode(&mut Stream(self.0)).map_err(|err| err.to_string())
-    }
-
-    /// Read one message if one has already arrived.
-    ///
-    /// `PeekNamedPipe` rather than a blocking read, because this runs on the
-    /// render thread: waiting on the compositor here would make the app's own
-    /// window stutter whenever the compositor was busy, which is exactly the
-    /// coupling the two-process design exists to remove.
+    /// Decode one message if a whole one is already buffered.
     fn try_recv(&mut self) -> Result<Option<proto::ServerMessage>, String> {
-        use windows::Win32::System::Pipes::PeekNamedPipe;
-        let mut available = 0u32;
-        unsafe { PeekNamedPipe(self.0, None, 0, None, Some(&mut available), None) }
-            .map_err(|err| format!("the compositor closed the connection: {err}"))?;
-        // A length prefix is four bytes; less than that is not a message yet.
-        if available < 4 {
+        self.decode_buffered()
+    }
+
+    /// Wait up to `timeout` for a message.
+    ///
+    /// `None` means the compositor said nothing in that time, which is a
+    /// diagnosis rather than an error: the caller decides whether it has waited
+    /// long enough to give up.
+    fn recv_timeout(
+        &mut self,
+        timeout: std::time::Duration,
+    ) -> Result<Option<proto::ServerMessage>, String> {
+        let deadline = Instant::now() + timeout;
+        loop {
+            if let Some(message) = self.decode_buffered()? {
+                return Ok(Some(message));
+            }
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() || !self.fill(remaining)? {
+                return Ok(None);
+            }
+        }
+    }
+
+    /// Read one message, waiting as long as it takes. Used for the handshake.
+    fn recv_blocking(&mut self) -> Result<proto::ServerMessage, String> {
+        loop {
+            if let Some(message) = self.decode_buffered()? {
+                return Ok(message);
+            }
+            self.fill(std::time::Duration::MAX)?;
+        }
+    }
+
+    fn decode_buffered(&mut self) -> Result<Option<proto::ServerMessage>, String> {
+        if self.buffer.len() < 4 {
             return Ok(None);
         }
-        proto::decode(&mut Stream(self.0))
+        let mut length = [0u8; 4];
+        for (slot, byte) in length.iter_mut().zip(self.buffer.iter()) {
+            *slot = *byte;
+        }
+        let length = u32::from_le_bytes(length) as usize;
+        if length > proto::MAX_MESSAGE_BYTES {
+            return Err(format!(
+                "refusing a {length} byte message, the stream is out of sync"
+            ));
+        }
+        if self.buffer.len() < 4 + length {
+            return Ok(None);
+        }
+        // Handed to the protocol's own decoder, prefix included, so the framing
+        // is defined in exactly one place.
+        let framed: Vec<u8> = self.buffer.drain(..4 + length).collect();
+        proto::decode(&mut framed.as_slice())
             .map(Some)
             .map_err(|err| err.to_string())
+    }
+
+    /// Wait for more bytes and buffer them. `false` on timeout.
+    fn fill(&mut self, timeout: std::time::Duration) -> Result<bool, String> {
+        use windows::Win32::Foundation::{ERROR_IO_PENDING, WAIT_OBJECT_0, WAIT_TIMEOUT};
+        use windows::Win32::Storage::FileSystem::ReadFile;
+        use windows::Win32::System::Threading::WaitForSingleObject;
+        use windows::Win32::System::IO::{CancelIo, GetOverlappedResult, OVERLAPPED};
+
+        let mut overlapped = OVERLAPPED {
+            hEvent: self.event,
+            ..Default::default()
+        };
+        if let Err(err) = unsafe {
+            ReadFile(
+                self.handle,
+                Some(&mut self.scratch),
+                None,
+                Some(&mut overlapped),
+            )
+        } {
+            if err.code() != ERROR_IO_PENDING.to_hresult() {
+                return Err(format!("the compositor closed the connection: {err}"));
+            }
+        }
+
+        let millis = timeout
+            .as_millis()
+            .min(u32::MAX as u128 - 1) as u32;
+        let waited = unsafe { WaitForSingleObject(self.event, millis) };
+        if waited == WAIT_TIMEOUT {
+            // Cancel, then collect whatever did land: a read that completed
+            // between the timeout and the cancel still transferred bytes, and
+            // dropping them would desynchronise every message after it.
+            unsafe {
+                let _ = CancelIo(self.handle);
+            }
+            let mut transferred = 0u32;
+            let landed = unsafe {
+                GetOverlappedResult(self.handle, &overlapped, &mut transferred, true).is_ok()
+            };
+            if landed && transferred > 0 {
+                self.buffer
+                    .extend(&self.scratch[..transferred as usize]);
+                return Ok(true);
+            }
+            return Ok(false);
+        }
+        if waited != WAIT_OBJECT_0 {
+            return Err(format!("waiting on the compositor failed: {waited:?}"));
+        }
+
+        let mut transferred = 0u32;
+        unsafe { GetOverlappedResult(self.handle, &overlapped, &mut transferred, true) }
+            .map_err(|err| format!("the compositor closed the connection: {err}"))?;
+        if transferred == 0 {
+            return Err("the compositor closed the connection".to_owned());
+        }
+        self.buffer.extend(&self.scratch[..transferred as usize]);
+        Ok(true)
+    }
+
+    fn write(&mut self, buffer: &[u8]) -> Result<usize, String> {
+        use windows::Win32::Foundation::ERROR_IO_PENDING;
+        use windows::Win32::Storage::FileSystem::WriteFile;
+        use windows::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
+
+        let mut overlapped = OVERLAPPED {
+            hEvent: self.event,
+            ..Default::default()
+        };
+        if let Err(err) =
+            unsafe { WriteFile(self.handle, Some(buffer), None, Some(&mut overlapped)) }
+        {
+            if err.code() != ERROR_IO_PENDING.to_hresult() {
+                return Err(format!("could not send to the compositor: {err}"));
+            }
+        }
+        let mut transferred = 0u32;
+        unsafe { GetOverlappedResult(self.handle, &overlapped, &mut transferred, true) }
+            .map_err(|err| format!("could not send to the compositor: {err}"))?;
+        Ok(transferred as usize)
     }
 }
 
 impl Drop for Pipe {
     fn drop(&mut self) {
-        if !self.0.is_invalid() {
-            let _ = unsafe { CloseHandle(self.0) };
+        unsafe {
+            if !self.handle.is_invalid() {
+                let _ = CloseHandle(self.handle);
+            }
+            if !self.event.is_invalid() {
+                let _ = CloseHandle(self.event);
+            }
         }
     }
 }
 
-/// `Read`/`Write` over the pipe handle, which [`Pipe`] owns.
-struct Stream(HANDLE);
-
-impl std::io::Read for Stream {
-    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
-        use windows::Win32::Storage::FileSystem::ReadFile;
-        let mut read = 0u32;
-        unsafe { ReadFile(self.0, Some(buffer), Some(&mut read), None) }.map_err(|err| {
-            std::io::Error::from_raw_os_error((err.code().0 as u32 & 0xffff) as i32)
-        })?;
-        Ok(read as usize)
-    }
-}
-
-impl std::io::Write for Stream {
-    fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
-        use windows::Win32::Storage::FileSystem::WriteFile;
-        let mut written = 0u32;
-        unsafe { WriteFile(self.0, Some(buffer), Some(&mut written), None) }.map_err(|err| {
-            std::io::Error::from_raw_os_error((err.code().0 as u32 & 0xffff) as i32)
-        })?;
-        Ok(written as usize)
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-}
 
 fn log(message: String) {
     eprintln!("[vr] {message}");

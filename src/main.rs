@@ -27,6 +27,8 @@ use macroquad::prelude::{
     mouse_wheel, next_frame, screen_height, screen_width, set_default_camera, Conf,
     DrawTextureParams, MouseButton, Texture2D, BLACK, WHITE,
 };
+#[cfg(vr)]
+use macroquad::prelude::{load_material, set_camera, Material, MaterialParams};
 use portal::gui::scene_serialized::{normalize_pretty_output, pretty_config, SerializedScene};
 use portal::gui::scenes::Scenes;
 use portal::gui::{common::*, scene::*, texture::*};
@@ -2109,6 +2111,13 @@ struct Window {
     client: Option<portal::vr::Client>,
     #[cfg(vr)]
     vr_window_opened: bool,
+    /// One frame of egui, drawn once and composited over both eyes. See
+    /// [`Window::render_egui_to_texture`].
+    #[cfg(vr)]
+    egui_target: Option<macroquad::prelude::RenderTarget>,
+    /// Premultiplied-alpha material used to composite `egui_target`.
+    #[cfg(vr)]
+    egui_material: Option<Material>,
 }
 
 #[cfg(vr)]
@@ -2116,12 +2125,11 @@ fn draw_virtual_screen_ui(
     ctx: &egui::Context,
     opened: &mut bool,
     client: &mut portal::vr::Client,
-    send_controls: bool,
 ) {
     egui::Window::new("Virtual screen")
         .open(opened)
         .vscroll(true)
-        .show(ctx, |ui| client.ui(ui, send_controls));
+        .show(ctx, |ui| client.ui(ui, true));
 }
 
 impl Window {
@@ -2190,6 +2198,13 @@ impl Window {
                 Ok(client) => Some(client),
                 Err(err) => {
                     eprintln!("VR disabled: {err}");
+                    // The window was created hidden because `--vr` was on the
+                    // command line, before anyone could know whether a
+                    // compositor was actually there. Show it, or this is a
+                    // running application with no window and no way to reach
+                    // it -- which is what "VR disabled" used to mean in
+                    // practice.
+                    macroquad::miniquad::window::set_window_visible(true);
                     None
                 }
             })
@@ -2221,6 +2236,10 @@ impl Window {
             client,
             #[cfg(vr)]
             vr_window_opened: false,
+            #[cfg(vr)]
+            egui_target: None,
+            #[cfg(vr)]
+            egui_material: None,
             edit_scene_side_panel: true,
             scene_viewport: None,
             should_recompile: false,
@@ -2258,15 +2277,12 @@ impl Window {
         }
     }
 
-    /// Build the UI and, when `apply_input`, act on this frame's input.
+    /// Build the UI and act on this frame's input.
     ///
-    /// In VR the whole frame is drawn twice, once per eye, because egui can only
-    /// paint into the backbuffer and has to end up on top of each eye's canvas.
-    /// egui itself is happy to run twice -- it is immediate mode, and the second
-    /// run sees no input events because the first consumed them -- but the app
-    /// logic threaded through here is not, so movement and shortcuts would be
-    /// applied twice. `apply_input` is false on the second pass.
-    fn process_mouse_and_keys(&mut self, ctx: &egui::Context, apply_input: bool) -> bool {
+    /// Runs exactly once per frame, including in VR: the two eyes differ only
+    /// in the canvas underneath the UI, so the UI itself is built once and
+    /// composited twice. See [`Window::render_egui_to_texture`].
+    fn process_mouse_and_keys(&mut self, ctx: &egui::Context) -> bool {
         let mut is_something_changed = false;
 
         if !self.dpi_set {
@@ -2293,7 +2309,7 @@ impl Window {
 
         let mut menu_height_points = 0.0f32;
 
-        if apply_input && is_key_pressed(macroquad::input::KeyCode::Escape) {
+        if is_key_pressed(macroquad::input::KeyCode::Escape) {
             self.draw_menu = !self.draw_menu;
         }
         if self.draw_menu {
@@ -2730,7 +2746,7 @@ First, predefined library is included, then uniforms, then user library, then in
 
         #[cfg(vr)]
         if let Some(client) = &mut self.client {
-            draw_virtual_screen_ui(ctx, &mut self.vr_window_opened, client, true);
+            draw_virtual_screen_ui(ctx, &mut self.vr_window_opened, client);
         }
 
         {
@@ -2773,24 +2789,20 @@ First, predefined library is included, then uniforms, then user library, then in
             self.renderer.cam.new_dpi = None;
             is_something_changed = true;
         }
-        if apply_input {
-            if let Some(new_render_scale) = self.renderer.cam.new_render_scale {
-                self.render_scale = new_render_scale;
-                self.renderer.cam.new_render_scale = None;
-                is_something_changed = true;
-            }
+        if let Some(new_render_scale) = self.renderer.cam.new_render_scale {
+            self.render_scale = new_render_scale;
+            self.renderer.cam.new_render_scale = None;
+            is_something_changed = true;
         }
-        let cam_changed = apply_input
-            && self
-                .renderer
-                .cam
-                .process_mouse_and_keys(mouse_over_canvas, egui_using_keyboard);
-        if apply_input
-            && (changed.uniform
-                || self.renderer.scene.use_time
-                || cam_changed
-                || self.renderer.scene.is_current_stage_real_animation()
-                || self.renderer.scene.animation_stage_edit_state)
+        let cam_changed = self
+            .renderer
+            .cam
+            .process_mouse_and_keys(mouse_over_canvas, egui_using_keyboard);
+        if changed.uniform
+            || self.renderer.scene.use_time
+            || cam_changed
+            || self.renderer.scene.is_current_stage_real_animation()
+            || self.renderer.scene.animation_stage_edit_state
         {
             ctx.memory_mut(|memory| {
                 self.renderer
@@ -2866,7 +2878,7 @@ First, predefined library is included, then uniforms, then user library, then in
         #[cfg(vr)]
         if self.renderer.vr_active {
             self.render_scene_stereo(viewport);
-            self.draw_canvas_half(Eye::Left, viewport, 0.0);
+            Window::draw_canvas_half(&self.renderer, self.render_scale, Eye::Left, viewport, 0.0);
             return;
         }
 
@@ -2918,12 +2930,22 @@ First, predefined library is included, then uniforms, then user library, then in
     /// it: reading it per eye lets opening a side panel put the two eyes'
     /// canvases in different places for a frame, which in stereo is very
     /// visible.
+    ///
+    /// Free rather than a method, so that `Client::frame` can hold `self.client`
+    /// while this holds `self.renderer`: two disjoint fields, which the borrow
+    /// checker allows only if nothing takes `&self` as a whole.
     #[cfg(vr)]
-    fn draw_canvas_half(&self, eye: Eye, viewport: ViewportRect, convergence_px: f32) {
-        let Some(target) = self.renderer.vr_render_target.as_ref() else {
+    fn draw_canvas_half(
+        renderer: &SceneRenderer,
+        render_scale: f32,
+        eye: Eye,
+        viewport: ViewportRect,
+        convergence_px: f32,
+    ) {
+        let Some(target) = renderer.vr_render_target.as_ref() else {
             return;
         };
-        let (render_width, render_height) = self.render_dimensions(viewport);
+        let (render_width, render_height) = scaled_render_dimensions(viewport, render_scale);
 
         // Convergence slides the two eyes' images apart, which moves the plane
         // the scene sits at relative to the screen. Content behind the screen
@@ -2962,47 +2984,67 @@ First, predefined library is included, then uniforms, then user library, then in
     /// Draw and mirror one frame with the headset attached.
     ///
     /// Unlike the plain path this draws the whole window twice, once per eye,
-    /// because egui can only ever paint into the backbuffer (its painter hard
-    /// codes `begin_default_pass`) and it has to land on top of each eye's
-    /// canvas rather than under it. The raytrace itself still happens at most
-    /// once, into a side-by-side target both passes sample from.
+    /// because the canvas underneath it is different for each eye. Everything
+    /// expensive still happens once: the raytrace produces a side-by-side pair,
+    /// and the UI is built and tessellated once into `egui_target`, which is
+    /// then blitted over each eye.
     ///
-    /// `Some(changed)` when the window was mirrored, carrying the usual "redraw
-    /// next frame" flag. `None` means nothing was drawn and the caller should
-    /// draw the window the ordinary way: the session may not be running yet,
-    /// the window may be minimised, or mirroring may have stopped for good.
+    /// `Some(changed)` whenever this path ran, carrying the usual "redraw next
+    /// frame" flag. `None` only when there is no compositor connection at all,
+    /// and then the caller draws the window the ordinary way.
+    ///
+    /// Note that `Some` is returned even when the compositor did not take the
+    /// frame. The UI has still been built and consumed for this iteration, so
+    /// falling through to the ordinary path would build it a second time --
+    /// which is exactly what this rework exists to stop.
     #[cfg(vr)]
     fn vr_frame(&mut self, needs_render: bool) -> Option<bool> {
-        // Out of `self` for the duration, so that the closure below can have
-        // all the rest of the window.
-        let mut client = self.client.take()?;
-        let convergence = client.convergence_px;
+        self.client.as_ref()?;
         // One viewport for both eyes: see `draw_canvas_half`.
         let viewport = self.viewport();
 
+        // Everything that builds state happens before the frame is handed over,
+        // once, in the ordinary order. That is what lets the per-eye work below
+        // be a pure redraw.
+        if needs_render {
+            self.render_scene_stereo(viewport);
+        }
         let mut changed = false;
-        let mirrored = client.frame(|eye, client_ref| {
-            // Inside the closure, so the raytrace happens while this app holds
-            // the shared texture and the compositor is busy with its own frame.
-            if eye == Eye::Left && needs_render {
-                self.render_scene_stereo(viewport);
+        egui_macroquad::ui(|ctx| {
+            changed = self.process_mouse_and_keys(ctx);
+            if let Some(client) = self.client.as_mut() {
+                draw_virtual_screen_ui(ctx, &mut self.vr_window_opened, client);
             }
+        });
+        // Consumes the egui frame either way, so nothing further on can hit
+        // egui's "contents not drawn" warning.
+        self.render_egui_to_texture();
+
+        // Borrow the client and the renderer as separate fields, so the closure
+        // can draw while `Client::frame` holds the connection. Destructuring is
+        // what makes that legal -- `self.draw_canvas_half(..)` would borrow the
+        // whole window and collide.
+        if self.egui_material.is_none() {
+            self.egui_material = Some(premultiplied_material());
+        }
+        let Window {
+            client,
+            renderer,
+            render_scale,
+            egui_target,
+            egui_material,
+            ..
+        } = self;
+        let Some(client) = client.as_mut() else {
+            return Some(changed);
+        };
+        let convergence = client.convergence_px;
+        client.frame(|eye| {
             clear_background(BLACK);
-            self.draw_canvas_half(eye, viewport, convergence);
-            egui_macroquad::ui(|ctx| {
-                // Only the first pass may act on this frame's input, or every
-                // keypress and every mouse drag would be applied twice.
-                let apply_input = eye == Eye::Left;
-                let this_pass = self.process_mouse_and_keys(ctx, apply_input);
-                // `client` is temporarily outside `self` while the shared
-                // texture is being rendered. Draw its settings panel here so
-                // the client can still control the compositor in headless VR.
-                draw_virtual_screen_ui(ctx, &mut self.vr_window_opened, client_ref, apply_input);
-                if apply_input {
-                    changed = this_pass;
-                }
-            });
-            egui_macroquad::draw();
+            Window::draw_canvas_half(renderer, *render_scale, eye, viewport, convergence);
+            if let (Some(target), Some(material)) = (egui_target.as_ref(), egui_material.as_ref()) {
+                blit_egui_overlay(target, material);
+            }
         });
 
         // The backbuffer is left holding whichever eye was drawn last, which is
@@ -3013,10 +3055,137 @@ First, predefined library is included, then uniforms, then user library, then in
             // Given up for good. The scene goes back to rendering one image,
             // and the client is kept only so its panel can say what happened.
             self.renderer.vr_active = false;
+            // The window was created hidden because `--vr` was on the command
+            // line. Nothing else will ever show it, so a failed or lost VR
+            // session would otherwise leave a live application that the user
+            // cannot see and has no obvious way to close.
+            macroquad::miniquad::window::set_window_visible(true);
         }
-        self.client = Some(client);
-        mirrored.then_some(changed)
+        Some(changed)
     }
+
+    /// Build the egui frame into `egui_target` instead of the backbuffer.
+    ///
+    /// `egui_miniquad::Painter` renders through `begin_default_pass`, so it can
+    /// only ever paint into the backbuffer and it consumes its shapes doing so.
+    /// Rather than run the whole UI a second time for the second eye -- which
+    /// forces every piece of app logic beside it to be safe to run twice -- the
+    /// miniquad fork can redirect the default pass, so egui paints once into a
+    /// texture and each eye composites it.
+    #[cfg(vr)]
+    fn render_egui_to_texture(&mut self) {
+        let (width, height) = macroquad::miniquad::window::screen_size();
+        let (width, height) = (width.max(1.0) as u32, height.max(1.0) as u32);
+        // The painter derives its projection from `screen_size()`, so a target
+        // of any other size silently misplaces every widget.
+        let matches = self.egui_target.as_ref().is_some_and(|target| {
+            let size = target.texture.size();
+            size.x as u32 == width && size.y as u32 == height
+        });
+        if !matches {
+            let target = macroquad::prelude::render_target(width, height);
+            target
+                .texture
+                .set_filter(macroquad::prelude::FilterMode::Nearest);
+            self.egui_target = Some(target);
+        }
+        let Some(target) = self.egui_target.as_ref() else {
+            return;
+        };
+
+        // Transparent, so only what egui actually draws lands on the canvas.
+        set_camera(&macroquad::prelude::Camera2D {
+            render_target: Some(target.clone()),
+            ..Default::default()
+        });
+        clear_background(macroquad::prelude::Color::new(0.0, 0.0, 0.0, 0.0));
+        set_default_camera();
+
+        // Drain macroquad's batch *before* the redirect goes up. The redirect
+        // is global and applies at execution time, and `egui_macroquad::draw`
+        // opens by flushing that batch -- so anything macroquad still had
+        // queued against the default pass (the scene quad, most obviously)
+        // would be replayed into the egui texture instead of the backbuffer.
+        unsafe { macroquad::window::get_internal_gl() }.flush();
+
+        macroquad::miniquad::set_default_pass_override(Some(
+            target.render_pass.raw_miniquad_id(),
+        ));
+        egui_macroquad::draw();
+        // Back to the backbuffer before anything else draws.
+        macroquad::miniquad::set_default_pass_override(None);
+        unsafe { macroquad::window::get_internal_gl() }.flush();
+    }
+}
+
+/// A material that composites premultiplied-alpha pixels.
+///
+/// egui's painter writes premultiplied alpha. macroquad's default blending is
+/// straight alpha, which multiplies by the source alpha a second time and
+/// darkens the edge of every antialiased glyph -- subtle enough to look like
+/// "the font is a bit wrong" rather than like a blending bug.
+#[cfg(vr)]
+fn premultiplied_material() -> Material {
+    use macroquad::miniquad::graphics::{BlendFactor, BlendState, BlendValue, Equation};
+
+    let blend = Some(BlendState::new(
+        Equation::Add,
+        BlendFactor::One,
+        BlendFactor::OneMinusValue(BlendValue::SourceAlpha),
+    ));
+    load_material(
+        macroquad::prelude::ShaderSource::Glsl {
+            vertex: r#"#version 100
+            attribute vec3 position;
+            attribute vec2 texcoord;
+            attribute vec4 color0;
+            varying lowp vec2 uv;
+            varying lowp vec4 color;
+            uniform mat4 Model;
+            uniform mat4 Projection;
+            void main() {
+                gl_Position = Projection * Model * vec4(position, 1);
+                color = color0 / 255.0;
+                uv = texcoord;
+            }"#,
+            fragment: r#"#version 100
+            varying lowp vec4 color;
+            varying lowp vec2 uv;
+            uniform sampler2D Texture;
+            void main() {
+                gl_FragColor = color * texture2D(Texture, uv);
+            }"#,
+        },
+        MaterialParams {
+            pipeline_params: macroquad::miniquad::graphics::PipelineParams {
+                color_blend: blend,
+                alpha_blend: blend,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    )
+    .expect("the premultiplied overlay shader is a literal and compiles")
+}
+
+/// Draw the finished egui frame over whatever is currently in the backbuffer.
+#[cfg(vr)]
+fn blit_egui_overlay(target: &macroquad::prelude::RenderTarget, material: &Material) {
+    gl_use_material(material);
+    draw_texture_ex(
+        &target.texture,
+        0.0,
+        0.0,
+        WHITE,
+        DrawTextureParams {
+            dest_size: Some(macroquad::prelude::vec2(screen_width(), screen_height())),
+            // A render target is bottom-up relative to the screen it is drawn
+            // onto.
+            flip_y: true,
+            ..Default::default()
+        },
+    );
+    gl_use_default_material();
 }
 
 fn window_conf() -> Conf {
@@ -3032,10 +3201,10 @@ fn window_conf() -> Conf {
             // needs a real HWND for its WGL context, but miniquad-vr keeps it
             // hidden. The compositor owns input and forwards it into this
             // hidden client.
+            // `hidden` already forces a zero swap interval in the fork, so
+            // there is nothing to say about pacing here.
             #[cfg(vr)]
             hidden: vr_requested(),
-            #[cfg(vr)]
-            swap_interval: if vr_requested() { Some(0) } else { None },
             ..Default::default()
         },
         ..Default::default()
@@ -3375,20 +3544,15 @@ async fn main() {
         // covers the whole non-VR case and every frame the compositor did not
         // ask for one.
         #[cfg(vr)]
-        let mirrored = {
+        let (mirrored, vr_gave_up) = {
             let was_active = window.renderer.vr_active;
             let mirrored = was_active
                 .then(|| window.vr_frame(image_size_changed || ui_changed_image))
                 .flatten();
-            if was_active && !window.renderer.vr_active {
-                // Mirroring just gave up. Whatever is in `texture` is a stale VR
-                // frame, so it has to be drawn again rather than shown again.
-                ui_changed_image = true;
-            }
-            mirrored
+            (mirrored, was_active && !window.renderer.vr_active)
         };
         #[cfg(not(vr))]
-        let mirrored: Option<bool> = None;
+        let (mirrored, vr_gave_up): (Option<bool>, bool) = (None, false);
 
         if let Some(changed) = mirrored {
             ui_changed_image = changed;
@@ -3422,9 +3586,16 @@ async fn main() {
             }
 
             egui_macroquad::ui(|ctx| {
-                ui_changed_image = window.process_mouse_and_keys(ctx, true);
+                ui_changed_image = window.process_mouse_and_keys(ctx);
             });
             egui_macroquad::draw();
+        }
+
+        if vr_gave_up {
+            // Mirroring just stopped. Whatever is cached in `texture` is a
+            // stale VR frame, so the next iteration has to redraw rather than
+            // blit it. Set after the branch above, which assigns this flag.
+            ui_changed_image = true;
         }
 
         window.renderer.reload_textures().await;
