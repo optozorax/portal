@@ -26,8 +26,45 @@ similar = { version = "2", optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 clap = { version = "4", features = ["derive"] }
 color-backtrace = "0.5.0"
+portal-vr-protocol = { path = "../portal-compositor/protocol", optional = true }
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+optional = true
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Pipes",
+    "Win32_System_SystemInformation",
+    "Win32_UI_WindowsAndMessaging",
+]
 
 [[bin]]
 name = "roundtrip_diff"
 path = "src/bin/roundtrip_diff.rs"
 required-features = ["similar"]
+
+[features]
+# Render this app onto a virtual stereo screen in a VR headset, by handing each
+# eye's image to the portal-compositor process. See src/vr.rs.
+#
+# The app itself owns no OpenXR session and knows nothing about the headset: it
+# draws itself twice, once per eye, into a texture the compositor allocated, and
+# the compositor does everything else. Run the compositor first, then this with
+# `--vr`.
+#
+# Windows only -- the transport is a DXGI shared NT handle. The feature is
+# accepted elsewhere and does nothing, so `--all-features` keeps working.
+vr = ["dep:portal-vr-protocol", "dep:windows"]
+
+# Use the small Windows backend fork that can create an OpenGL context without
+# showing a client window. The package name is deliberately `miniquad`, so this
+# replaces the registry copy used by macroquad and egui-miniquad as well.
+[patch.crates-io]
+miniquad = { path = "../miniquad-vr" }

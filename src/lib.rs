@@ -7,6 +7,10 @@ pub mod code_generation;
 
 pub mod shader_error_parser;
 
+// `vr` rather than `feature = "vr"`: see build.rs.
+#[cfg(vr)]
+pub mod vr;
+
 #[macro_export]
 macro_rules! error {
 	(format, $format_string:literal, $($args:expr),*) => {

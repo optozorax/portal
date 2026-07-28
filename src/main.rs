@@ -16,6 +16,8 @@ use portal::gui::eng_rus::EngRusText;
 use portal::gui::scenes::ShowHiddenScenes;
 use portal::gui::uniform::AnyUniform;
 use portal::gui::uniform::ClampedValue;
+#[cfg(vr)]
+use portal::vr::Eye;
 use portal::with_swapped;
 use std::f64::consts::PI;
 
@@ -394,6 +396,7 @@ impl GestureEvents for RotateAroundCam {
         self.render_scale_change_start_pos = pos.clone();
         self.render_scale_change_start_value = self.current_render_scale;
     }
+
     fn touch_four_move(&mut self, pos: &Point, _offset: &Point) {
         let offset = pos.clone() - &self.render_scale_change_start_pos;
         self.new_render_scale = Some(clamp(
@@ -729,6 +732,14 @@ struct ViewportRect {
     height: f32,
 }
 
+fn scaled_render_dimensions(viewport: ViewportRect, render_scale: f32) -> (f32, f32) {
+    let scale = render_scale.clamp(0.01, 1.0);
+    (
+        (viewport.width * scale).max(1.0).round(),
+        (viewport.height * scale).max(1.0).round(),
+    )
+}
+
 struct SceneRenderer {
     scene: Scene,
     cam: RotateAroundCam,
@@ -756,6 +767,15 @@ struct SceneRenderer {
     black_border_disable: bool,
     darken_by_distance: bool,
     render_target: macroquad::prelude::RenderTarget,
+    /// Side-by-side render target feeding the VR virtual screen: twice as wide
+    /// as `render_target`, left half for the left eye. Allocated on first use,
+    /// since it is a lot of pixels nobody wants unless VR is on.
+    #[cfg(vr)]
+    vr_render_target: Option<macroquad::prelude::RenderTarget>,
+    /// Set while the window is being mirrored into a headset. Makes the scene
+    /// render side-by-side and turns on per-eye portal teleportation, without
+    /// disturbing the user's own `draw_side_by_side` checkbox.
+    vr_active: bool,
     external_ray_render_target: macroquad::prelude::RenderTarget,
     width: u32,
     height: u32,
@@ -1039,6 +1059,9 @@ impl SceneRenderer {
             black_border_disable: false,
             darken_by_distance: true,
             render_target: macroquad::prelude::render_target(max_width, max_height),
+            #[cfg(vr)]
+            vr_render_target: None,
+            vr_active: false,
             external_ray_render_target: macroquad::prelude::render_target(2, 3),
             width: max_width,
             height: max_height,
@@ -1118,8 +1141,25 @@ impl SceneRenderer {
         Some(Ok(()))
     }
 
+    /// Whether the scene should be rendered as a side-by-side stereo pair.
+    ///
+    /// The VR virtual screen always needs this, whether or not the user ticked
+    /// the checkbox for the desktop window.
+    fn stereo_side_by_side(&self) -> bool {
+        self.draw_side_by_side || self.vr_active
+    }
+
+    /// Work out where each eye's camera is.
+    ///
+    /// Two separate things happen here, and only the second one is about
+    /// portals: an eye is half the eye distance to one side of the camera, and
+    /// *then* it may have to be pushed through a portal the camera itself is
+    /// not through yet. Only the second part is worth the ray cast, and only the
+    /// second part is what `allow_teleport` is about -- with it off, the eyes
+    /// still have to be in the right places, or stereo silently renders both
+    /// eyes from an identity matrix.
     fn teleport_eye_matrices(&mut self) {
-        if !((self.draw_anaglyph || self.draw_side_by_side) && self.cam.allow_teleport) {
+        if !(self.draw_anaglyph || self.stereo_side_by_side()) {
             return;
         }
 
@@ -1128,6 +1168,7 @@ impl SceneRenderer {
         } else {
             self.eye_distance
         };
+        let allow_teleport = self.cam.allow_teleport;
 
         let mut process_one_eye = |eye_vector: DVec4| -> (DMat4, bool) {
             let start_pos = self.cam.get_cam_pos();
@@ -1136,6 +1177,9 @@ impl SceneRenderer {
                 DMat4::from_translation(direction_pos - start_pos) * self.cam.get_matrix(),
                 self.cam.in_subspace,
             );
+            if !allow_teleport {
+                return result;
+            }
 
             let (teleported, _, change_subspace) =
                 self.teleport_external_ray(start_pos, direction_pos);
@@ -1304,9 +1348,13 @@ impl SceneRenderer {
         self.material.set_uniform("_aa_count", self.aa_count);
         self.material.set_uniform("_aa_start", self.aa_start);
         self.material
-            .set_uniform("_draw_side_by_side", self.draw_side_by_side as i32);
-        self.material
-            .set_uniform("_draw_anaglyph", self.draw_anaglyph as i32);
+            .set_uniform("_draw_side_by_side", self.stereo_side_by_side() as i32);
+        // The shader checks anaglyph first, so leaving it on in VR would hand
+        // both eyes the same red-cyan image instead of a stereo pair.
+        self.material.set_uniform(
+            "_draw_anaglyph",
+            (self.draw_anaglyph && !self.vr_active) as i32,
+        );
         self.material
             .set_uniform("_anaglyph_p", self.anaglyph_p as f32);
         self.material
@@ -1409,22 +1457,65 @@ impl SceneRenderer {
     }
 
     fn draw_texture(&mut self, width: f32, height: f32, flip_y: bool) {
+        self.draw_texture_into(self.render_target.clone(), width, height, flip_y);
+    }
+
+    /// Render `width` by `height` pixels of the scene into an arbitrary target.
+    ///
+    /// `RenderTarget` is reference counted, so passing it by value is cheap and
+    /// avoids borrowing `self` twice.
+    fn draw_texture_into(
+        &mut self,
+        target: macroquad::prelude::RenderTarget,
+        width: f32,
+        height: f32,
+        flip_y: bool,
+    ) {
         let flip_y = if flip_y { -1. } else { 1. };
         self.scene.set_uniforms(&mut self.material, &mut self.data);
         self.set_uniforms(width, height);
         macroquad::prelude::set_camera(&macroquad::prelude::Camera2D {
             zoom: macroquad::prelude::vec2(
-                1. / (self.render_target.texture.size().x / 2.),
-                1. / (self.render_target.texture.size().y / 2.) * flip_y,
+                1. / (target.texture.size().x / 2.),
+                1. / (target.texture.size().y / 2.) * flip_y,
             ),
             offset: macroquad::prelude::vec2(-1., -1. * flip_y),
-            render_target: Some(self.render_target.clone()),
+            render_target: Some(target),
             ..Default::default()
         });
         gl_use_material(&self.material);
         draw_rectangle(0., 0., width, height, WHITE);
         gl_use_default_material();
         set_default_camera();
+    }
+
+    /// The side-by-side target for the headset, at least `width` by `height`.
+    ///
+    /// Unlike `render_target`, which is allocated once at a generous maximum,
+    /// this one starts at the size actually needed and only ever grows: doubling
+    /// a 4000x4000 target would cost 128 MB of video memory for pixels nobody
+    /// renders, while growing only on demand also avoids reallocating on every
+    /// frame of a window resize.
+    #[cfg(vr)]
+    fn ensure_vr_target(&mut self, width: u32, height: u32) -> macroquad::prelude::RenderTarget {
+        let have = self.vr_render_target.as_ref().map(|target| {
+            let size = target.texture.size();
+            (size.x as u32, size.y as u32)
+        });
+        if !have.is_some_and(|(w, h)| w >= width && h >= height) {
+            let (w, h) = have.unwrap_or((0, 0));
+            let target = macroquad::prelude::render_target(width.max(w), height.max(h));
+            // Linear rather than the main target's Nearest: this one is
+            // essentially always being rescaled on its way to the headset, and
+            // nearest-neighbour makes that look like large square pixels.
+            target
+                .texture
+                .set_filter(macroquad::prelude::FilterMode::Linear);
+            self.vr_render_target = Some(target);
+        }
+        self.vr_render_target
+            .clone()
+            .expect("just allocated if missing")
     }
 
     fn update(&mut self, memory: &mut egui::Memory, time: f64) {
@@ -2005,10 +2096,32 @@ struct Window {
     gesture_recognizer: GestureRecognizer,
     input_subscriber_id: usize,
 
+    /// Fraction of the scene viewport raytraced before it is enlarged back
+    /// into the full-resolution application window.
     render_scale: f32,
 
     edit_scene_side_panel: bool,
     scene_viewport: Option<ViewportRect>,
+
+    /// Connection to the compositor, if `--vr` was passed and one was running.
+    /// It owns everything the handover needs; see [`portal::vr`].
+    #[cfg(vr)]
+    client: Option<portal::vr::Client>,
+    #[cfg(vr)]
+    vr_window_opened: bool,
+}
+
+#[cfg(vr)]
+fn draw_virtual_screen_ui(
+    ctx: &egui::Context,
+    opened: &mut bool,
+    client: &mut portal::vr::Client,
+    send_controls: bool,
+) {
+    egui::Window::new("Virtual screen")
+        .open(opened)
+        .vscroll(true)
+        .show(ctx, |ui| client.ui(ui, send_controls));
 }
 
 impl Window {
@@ -2038,7 +2151,9 @@ impl Window {
         }
     }
 
-    async fn new() -> Self {
+    /// `vr` asks for the headset mirror; it is only a request, since the session
+    /// may fail to start and the app has to keep working when it does.
+    async fn new(vr: bool) -> Self {
         let available_scenes: Scenes = Default::default();
 
         let required_scene = quad_url::get_program_parameters()
@@ -2067,9 +2182,45 @@ impl Window {
             Err(_) => ron::from_str::<Scene>(scene_content).unwrap(),
         };
 
+        // The GL context exists by now, which the interop needs in order to
+        // register a texture against it.
+        #[cfg(vr)]
+        let client = vr
+            .then(|| match portal::vr::Client::open() {
+                Ok(client) => Some(client),
+                Err(err) => {
+                    eprintln!("VR disabled: {err}");
+                    None
+                }
+            })
+            .flatten();
+        #[cfg(not(vr))]
+        if vr {
+            eprintln!(
+                "VR disabled: this binary was built without the `vr` cargo feature, or is not \
+                 on Windows"
+            );
+        }
+
+        #[cfg_attr(not(vr), allow(unused_mut))]
+        let mut renderer = SceneRenderer::new(scene, 4000, 4000, scene_name).await;
+        // Makes the scene render side-by-side so each eye can be fed its own half.
+        #[cfg(vr)]
+        {
+            renderer.vr_active = client.is_some();
+            // The eye matrices are only recomputed when something changes, and
+            // `SceneRenderer::new` worked them out before it knew about VR --
+            // which for a still scene nobody has touched yet means never again.
+            renderer.teleport_eye_matrices();
+        }
+
         Window {
-            renderer: SceneRenderer::new(scene, 4000, 4000, scene_name).await,
+            renderer,
             render_scale: 0.5,
+            #[cfg(vr)]
+            client,
+            #[cfg(vr)]
+            vr_window_opened: false,
             edit_scene_side_panel: true,
             scene_viewport: None,
             should_recompile: false,
@@ -2107,7 +2258,15 @@ impl Window {
         }
     }
 
-    fn process_mouse_and_keys(&mut self, ctx: &egui::Context) -> bool {
+    /// Build the UI and, when `apply_input`, act on this frame's input.
+    ///
+    /// In VR the whole frame is drawn twice, once per eye, because egui can only
+    /// paint into the backbuffer and has to end up on top of each eye's canvas.
+    /// egui itself is happy to run twice -- it is immediate mode, and the second
+    /// run sees no input events because the first consumed them -- but the app
+    /// logic threaded through here is not, so movement and shortcuts would be
+    /// applied twice. `apply_input` is false on the second pass.
+    fn process_mouse_and_keys(&mut self, ctx: &egui::Context, apply_input: bool) -> bool {
         let mut is_something_changed = false;
 
         if !self.dpi_set {
@@ -2134,7 +2293,7 @@ impl Window {
 
         let mut menu_height_points = 0.0f32;
 
-        if is_key_pressed(macroquad::input::KeyCode::Escape) {
+        if apply_input && is_key_pressed(macroquad::input::KeyCode::Escape) {
             self.draw_menu = !self.draw_menu;
         }
         if self.draw_menu {
@@ -2186,6 +2345,12 @@ impl Window {
                     }
                     if ui.button("⛭ Rendering options").clicked() {
                         self.render_options_opened = true;
+                    }
+                    #[cfg(vr)]
+                    if (self.client.is_some() || self.renderer.vr_active)
+                        && ui.button("🕶 Virtual screen").clicked()
+                    {
+                        self.vr_window_opened = true;
                     }
                     if ui.button("❓ About").clicked() {
                         self.about_opened = true;
@@ -2537,7 +2702,10 @@ First, predefined library is included, then uniforms, then user library, then in
                 .show(ctx, |ui| {
                     ui.label("Lower rendering resolution ratio (can significantly increase FPS):");
                     changed.uniform |= check_changed(&mut self.render_scale, |scale| {
-                        ui.add(egui::Slider::new(scale, 0.01..=1.0).clamping(egui::widgets::SliderClamping::Always));
+                        ui.add(
+                            egui::Slider::new(scale, 0.01..=1.0)
+                                .clamping(egui::widgets::SliderClamping::Always),
+                        );
                     });
                     ui.label("(Render scale can be changed using four fingers, add one finger at a time to prevent triggering system four-finger gestures)");
                     ui.separator();
@@ -2558,6 +2726,11 @@ First, predefined library is included, then uniforms, then user library, then in
                     changed |= self.renderer.egui_rendering_settings(ui);
                 });
             self.render_options_opened = render_options_opened;
+        }
+
+        #[cfg(vr)]
+        if let Some(client) = &mut self.client {
+            draw_virtual_screen_ui(ctx, &mut self.vr_window_opened, client, true);
         }
 
         {
@@ -2600,21 +2773,24 @@ First, predefined library is included, then uniforms, then user library, then in
             self.renderer.cam.new_dpi = None;
             is_something_changed = true;
         }
-        if let Some(new_render_scale) = self.renderer.cam.new_render_scale {
-            self.render_scale = new_render_scale;
-            self.renderer.cam.new_render_scale = None;
-            is_something_changed = true;
+        if apply_input {
+            if let Some(new_render_scale) = self.renderer.cam.new_render_scale {
+                self.render_scale = new_render_scale;
+                self.renderer.cam.new_render_scale = None;
+                is_something_changed = true;
+            }
         }
-
-        let cam_changed = self
-            .renderer
-            .cam
-            .process_mouse_and_keys(mouse_over_canvas, egui_using_keyboard);
-        if changed.uniform
-            || self.renderer.scene.use_time
-            || cam_changed
-            || self.renderer.scene.is_current_stage_real_animation()
-            || self.renderer.scene.animation_stage_edit_state
+        let cam_changed = apply_input
+            && self
+                .renderer
+                .cam
+                .process_mouse_and_keys(mouse_over_canvas, egui_using_keyboard);
+        if apply_input
+            && (changed.uniform
+                || self.renderer.scene.use_time
+                || cam_changed
+                || self.renderer.scene.is_current_stage_real_animation()
+                || self.renderer.scene.animation_stage_edit_state)
         {
             ctx.memory_mut(|memory| {
                 self.renderer
@@ -2662,16 +2838,39 @@ First, predefined library is included, then uniforms, then user library, then in
         is_something_changed
     }
 
-    fn draw(&mut self) {
-        let viewport = self.scene_viewport.unwrap_or(ViewportRect {
+    fn viewport(&self) -> ViewportRect {
+        self.scene_viewport.unwrap_or(ViewportRect {
             x: 0.0,
             y: 0.0,
             width: screen_width(),
             height: screen_height(),
-        });
+        })
+    }
 
-        let render_width = (viewport.width * self.render_scale).max(1.0);
-        let render_height = (viewport.height * self.render_scale).max(1.0);
+    /// Size the scene is raytraced at, in whole pixels.
+    ///
+    /// Whole, because the VR path slices a side-by-side pair down the middle and
+    /// a fractional half puts the seam inside a texel, where linear filtering
+    /// blends one eye into the other.
+    fn render_dimensions(&self, viewport: ViewportRect) -> (f32, f32) {
+        scaled_render_dimensions(viewport, self.render_scale)
+    }
+
+    fn draw(&mut self) {
+        let viewport = self.viewport();
+
+        // VR keeps the scene rendering as a stereo pair whether or not the
+        // headset took this particular frame, so on the frames it did not --
+        // session not started yet, window just restored -- show the left eye of
+        // that pair rather than a squashed side-by-side image.
+        #[cfg(vr)]
+        if self.renderer.vr_active {
+            self.render_scene_stereo(viewport);
+            self.draw_canvas_half(Eye::Left, viewport, 0.0);
+            return;
+        }
+
+        let (render_width, render_height) = self.render_dimensions(viewport);
 
         self.renderer
             .draw_texture(render_width, render_height, false);
@@ -2693,6 +2892,131 @@ First, predefined library is included, then uniforms, then user library, then in
             },
         );
     }
+
+    /// Raytrace the scene once as a side-by-side stereo pair. Expensive, so this
+    /// only runs when something actually changed, while the cheap per-eye draws
+    /// below run every frame.
+    ///
+    /// Each half comes out at exactly the scaled size the plain windowed path
+    /// renders at, then is enlarged into the full-resolution app window before
+    /// the compositor copies that window to its virtual-screen quad.
+    #[cfg(vr)]
+    fn render_scene_stereo(&mut self, viewport: ViewportRect) {
+        let (render_width, render_height) = self.render_dimensions(viewport);
+        let target = self
+            .renderer
+            .ensure_vr_target(render_width as u32 * 2, render_height as u32);
+        self.renderer
+            .draw_texture_into(target, render_width * 2.0, render_height, false);
+    }
+
+    /// Draw one eye's half of that stereo pair into the window, where egui then
+    /// paints on top of it.
+    ///
+    /// `viewport` is handed in rather than read from `self`, because the two
+    /// eyes are drawn either side of a `process_mouse_and_keys` that can move
+    /// it: reading it per eye lets opening a side panel put the two eyes'
+    /// canvases in different places for a frame, which in stereo is very
+    /// visible.
+    #[cfg(vr)]
+    fn draw_canvas_half(&self, eye: Eye, viewport: ViewportRect, convergence_px: f32) {
+        let Some(target) = self.renderer.vr_render_target.as_ref() else {
+            return;
+        };
+        let (render_width, render_height) = self.render_dimensions(viewport);
+
+        // Convergence slides the two eyes' images apart, which moves the plane
+        // the scene sits at relative to the screen. Content behind the screen
+        // has the left eye's image further left, so a positive value shifts the
+        // left image left. It costs a sliver of blank along one edge per eye.
+        let shift = convergence_px
+            * 0.5
+            * match eye {
+                Eye::Left => -1.0,
+                Eye::Right => 1.0,
+            };
+
+        // Half a texel in on every side. The two halves are neighbours in one
+        // texture, so a source rect ending exactly on the seam has linear
+        // filtering blend the other eye's first column into this one; the same
+        // goes for the unrendered region above the pair.
+        let inset = 0.5;
+        draw_texture_ex(
+            &target.texture,
+            viewport.x + shift,
+            viewport.y,
+            WHITE,
+            DrawTextureParams {
+                source: Some(macroquad::math::Rect::new(
+                    render_width * eye.index() as f32 + inset,
+                    inset,
+                    render_width - inset * 2.0,
+                    render_height - inset * 2.0,
+                )),
+                dest_size: Some(macroquad::prelude::vec2(viewport.width, viewport.height)),
+                ..Default::default()
+            },
+        );
+    }
+
+    /// Draw and mirror one frame with the headset attached.
+    ///
+    /// Unlike the plain path this draws the whole window twice, once per eye,
+    /// because egui can only ever paint into the backbuffer (its painter hard
+    /// codes `begin_default_pass`) and it has to land on top of each eye's
+    /// canvas rather than under it. The raytrace itself still happens at most
+    /// once, into a side-by-side target both passes sample from.
+    ///
+    /// `Some(changed)` when the window was mirrored, carrying the usual "redraw
+    /// next frame" flag. `None` means nothing was drawn and the caller should
+    /// draw the window the ordinary way: the session may not be running yet,
+    /// the window may be minimised, or mirroring may have stopped for good.
+    #[cfg(vr)]
+    fn vr_frame(&mut self, needs_render: bool) -> Option<bool> {
+        // Out of `self` for the duration, so that the closure below can have
+        // all the rest of the window.
+        let mut client = self.client.take()?;
+        let convergence = client.convergence_px;
+        // One viewport for both eyes: see `draw_canvas_half`.
+        let viewport = self.viewport();
+
+        let mut changed = false;
+        let mirrored = client.frame(|eye, client_ref| {
+            // Inside the closure, so the raytrace happens while this app holds
+            // the shared texture and the compositor is busy with its own frame.
+            if eye == Eye::Left && needs_render {
+                self.render_scene_stereo(viewport);
+            }
+            clear_background(BLACK);
+            self.draw_canvas_half(eye, viewport, convergence);
+            egui_macroquad::ui(|ctx| {
+                // Only the first pass may act on this frame's input, or every
+                // keypress and every mouse drag would be applied twice.
+                let apply_input = eye == Eye::Left;
+                let this_pass = self.process_mouse_and_keys(ctx, apply_input);
+                // `client` is temporarily outside `self` while the shared
+                // texture is being rendered. Draw its settings panel here so
+                // the client can still control the compositor in headless VR.
+                draw_virtual_screen_ui(ctx, &mut self.vr_window_opened, client_ref, apply_input);
+                if apply_input {
+                    changed = this_pass;
+                }
+            });
+            egui_macroquad::draw();
+        });
+
+        // The backbuffer is left holding whichever eye was drawn last, which is
+        // the right one, so that is what the preview window shows. Either half
+        // of a stereo pair is a perfectly good picture of the app; it is only
+        // offset by half the convergence.
+        if !client.is_active() {
+            // Given up for good. The scene goes back to rendering one image,
+            // and the client is kept only so its panel can say what happened.
+            self.renderer.vr_active = false;
+        }
+        self.client = Some(client);
+        mirrored.then_some(changed)
+    }
 }
 
 fn window_conf() -> Conf {
@@ -2703,8 +3027,24 @@ fn window_conf() -> Conf {
         // fullscreen: true,
         window_width: 1920,
         window_height: 1080,
+        platform: macroquad::miniquad::conf::Platform {
+            // In VR the compositor is the visible window. The client still
+            // needs a real HWND for its WGL context, but miniquad-vr keeps it
+            // hidden. The compositor owns input and forwards it into this
+            // hidden client.
+            #[cfg(vr)]
+            hidden: vr_requested(),
+            #[cfg(vr)]
+            swap_interval: if vr_requested() { Some(0) } else { None },
+            ..Default::default()
+        },
         ..Default::default()
     }
+}
+
+#[cfg(vr)]
+fn vr_requested() -> bool {
+    std::env::args().any(|arg| arg == "--vr")
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -2712,6 +3052,15 @@ fn window_conf() -> Conf {
 struct Cli {
     #[command(subcommand)]
     command: Option<CliCommand>,
+
+    /// Show this app on a virtual stereo screen in a VR headset.
+    ///
+    /// Needs the `vr` cargo feature and a running `portal-compositor`, which
+    /// owns the headset; this app only draws itself once per eye. See
+    /// src/vr.rs. The OpenGL helper window is hidden while VR is active; the
+    /// compositor preview supplies its mouse and keyboard input.
+    #[arg(long)]
+    vr: bool,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -2951,7 +3300,10 @@ async fn main() {
     color_backtrace::install();
 
     #[cfg(not(target_arch = "wasm32"))]
-    match Cli::parse().command {
+    let cli = Cli::parse();
+
+    #[cfg(not(target_arch = "wasm32"))]
+    match cli.command {
         Some(CliCommand::Render(options)) => {
             let render_start = std::time::Instant::now();
             let result = render(options).await;
@@ -2972,7 +3324,13 @@ async fn main() {
         None => {}
     }
 
-    let mut window = Window::new().await;
+    // The parsed flag, not `vr_requested`: that one only exists because
+    // `window_conf` runs before any of this.
+    #[cfg(not(target_arch = "wasm32"))]
+    let vr = cli.vr;
+    #[cfg(target_arch = "wasm32")]
+    let vr = false;
+    let mut window = Window::new(vr).await;
 
     let mut texture = Texture2D::from_image(&get_screen_data());
     let mut w = screen_width();
@@ -2985,13 +3343,19 @@ async fn main() {
 
     // Always show hidden scenes on native (mostly for me to code)
     #[cfg(not(target_arch = "wasm32"))]
-    egui_macroquad::ui(|ctx| {
-        ctx.memory_mut(|memory| {
-            memory
-                .data
-                .insert_persisted(egui::Id::new("ShowHiddenScenes"), ShowHiddenScenes(true))
+    {
+        egui_macroquad::ui(|ctx| {
+            ctx.memory_mut(|memory| {
+                memory
+                    .data
+                    .insert_persisted(egui::Id::new("ShowHiddenScenes"), ShowHiddenScenes(true))
+            });
         });
-    });
+        // This only pokes at egui's memory, but `ui` still runs a whole egui
+        // frame, and leaving its output undrawn makes the next `ui` call warn
+        // "Egui contents not drawn". Consume it.
+        egui_macroquad::draw();
+    }
 
     loop {
         clear_background(BLACK);
@@ -3004,40 +3368,84 @@ async fn main() {
             h = screen_height();
             image_size_changed = true;
         }
-        if image_size_changed {
-            texture = Texture2D::from_image(&get_screen_data());
-        }
 
-        if image_size_changed || ui_changed_image {
-            window.draw();
-            set_default_camera();
-            texture.grab_screen();
+        // `Some(changed)` when a frame went to the compositor, and the flags
+        // below do not apply to it -- that path draws the whole window once per
+        // eye. `None` when the window has to be drawn the ordinary way, which
+        // covers the whole non-VR case and every frame the compositor did not
+        // ask for one.
+        #[cfg(vr)]
+        let mirrored = {
+            let was_active = window.renderer.vr_active;
+            let mirrored = was_active
+                .then(|| window.vr_frame(image_size_changed || ui_changed_image))
+                .flatten();
+            if was_active && !window.renderer.vr_active {
+                // Mirroring just gave up. Whatever is in `texture` is a stale VR
+                // frame, so it has to be drawn again rather than shown again.
+                ui_changed_image = true;
+            }
+            mirrored
+        };
+        #[cfg(not(vr))]
+        let mirrored: Option<bool> = None;
+
+        if let Some(changed) = mirrored {
+            ui_changed_image = changed;
             image_size_changed = false;
-            ui_changed_image = false;
         } else {
-            draw_texture_ex(
-                &texture,
-                0.,
-                0.,
-                WHITE,
-                DrawTextureParams {
-                    dest_size: Some(macroquad::prelude::Vec2::new(
-                        screen_width(),
-                        screen_height(),
-                    )),
-                    flip_y: true,
-                    ..Default::default()
-                },
-            );
-        }
+            if image_size_changed {
+                texture = Texture2D::from_image(&get_screen_data());
+            }
 
-        egui_macroquad::ui(|ctx| {
-            ui_changed_image = window.process_mouse_and_keys(ctx);
-        });
-        egui_macroquad::draw();
+            if image_size_changed || ui_changed_image {
+                window.draw();
+                set_default_camera();
+                texture.grab_screen();
+                image_size_changed = false;
+                ui_changed_image = false;
+            } else {
+                draw_texture_ex(
+                    &texture,
+                    0.,
+                    0.,
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(macroquad::prelude::Vec2::new(
+                            screen_width(),
+                            screen_height(),
+                        )),
+                        flip_y: true,
+                        ..Default::default()
+                    },
+                );
+            }
+
+            egui_macroquad::ui(|ctx| {
+                ui_changed_image = window.process_mouse_and_keys(ctx, true);
+            });
+            egui_macroquad::draw();
+        }
 
         window.renderer.reload_textures().await;
 
         next_frame().await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{scaled_render_dimensions, ViewportRect};
+
+    #[test]
+    fn render_scale_reduces_and_rounds_the_scene_target() {
+        let viewport = ViewportRect {
+            x: 0.0,
+            y: 0.0,
+            width: 1920.0,
+            height: 1080.0,
+        };
+        assert_eq!(scaled_render_dimensions(viewport, 0.5), (960.0, 540.0));
+        assert_eq!(scaled_render_dimensions(viewport, 1.0), (1920.0, 1080.0));
     }
 }
