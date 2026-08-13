@@ -3012,9 +3012,6 @@ First, predefined library is included, then uniforms, then user library, then in
         let mut changed = false;
         egui_macroquad::ui(|ctx| {
             changed = self.process_mouse_and_keys(ctx);
-            if let Some(client) = self.client.as_mut() {
-                draw_virtual_screen_ui(ctx, &mut self.vr_window_opened, client);
-            }
         });
         // Consumes the egui frame either way, so nothing further on can hit
         // egui's "contents not drawn" warning.
