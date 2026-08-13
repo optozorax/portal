@@ -1011,6 +1011,7 @@ dependencies = [
 [[package]]
 name = "miniquad"
 version = "0.4.8"
+source = "git+https://github.com/optozorax/miniquad-vr?branch=headless-input-and-pass-override#b9269b4b1ba8f983189d9b2dddfde7bc9f2df114"
 dependencies = [
  "libc",
  "ndk-sys",

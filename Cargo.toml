@@ -68,4 +68,4 @@ vr = ["dep:portal-vr-protocol", "dep:windows"]
 # showing a client window. The package name is deliberately `miniquad`, so this
 # replaces the registry copy used by macroquad and egui-miniquad as well.
 [patch.crates-io]
-miniquad = { path = "../miniquad-vr" }
+miniquad = { git = "https://github.com/optozorax/miniquad-vr", branch = "headless-input-and-pass-override" }
