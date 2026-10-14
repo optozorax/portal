@@ -2189,7 +2189,7 @@ mat3 object2_transform_matrix(float u, float v) {
             name: "v3.next.2",
             data: (
                 duration: 1.0,
-                animation_stage: RealAnimation("v3.next.2"),
+                animation_stage: RealAnimation("v3.next.1"),
                 uniforms: ({
                     "debug_matrix": CopyPrev,
                     "debug_object1": CopyPrev,

@@ -1378,6 +1378,12 @@ one Möbius monoportal.",
                 rotate: (0.0, 0.0, 0.0),
                 mirror: (false, false, false),
             ),
+            "portal_b_user": Simple(
+                offset: (0.0, 0.0, 0.0),
+                scale: 1.0,
+                rotate: (0.0, 0.0, 0.0),
+                mirror: (false, false, false),
+            ),
             "room_origin": Simple(
                 offset: (0.0, 0.0, 0.0),
                 scale: 1.0,
